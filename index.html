@@ -104,12 +104,13 @@
         .kpi-tile:hover { transform: translateY(-3px); box-shadow: 0 4px 12px rgba(0,0,0,0.12); }
         .kpi-name { font-size: 20px; font-weight: 800; margin-bottom: 15px; color: #333; }
         
-        /* Master Dashboard Tile Expansion & Layout */
-        .home-master-tile { grid-column: 1 / -1; cursor: default; }
+        /* Master Dashboard Tile Fixed Width Layout (Side-by-Side) */
+        .home-kpi-container { display: flex; flex-wrap: wrap; gap: 20px; }
+        .home-master-tile { width: 520px; max-width: 100%; cursor: default; }
         .home-master-tile:hover { transform: none; box-shadow: 0 2px 6px rgba(0,0,0,0.08); }
-        .flex-tile { display: flex; align-items: center; justify-content: space-between; gap: 40px; flex-wrap: wrap; }
-        .flex-tile-left { flex: 1; min-width: 300px; }
-        .flex-tile-right { width: 180px; height: 180px; flex-shrink: 0; margin: 0 auto; position: relative; }
+        .flex-tile { display: flex; align-items: center; justify-content: space-between; gap: 20px; }
+        .flex-tile-left { flex: 1; min-width: 250px; }
+        .flex-tile-right { width: 160px; height: 160px; flex-shrink: 0; position: relative; display: flex; align-items: center; justify-content: center; margin: 0 auto; }
 
         /* Highlight Boxes (Open & Urgent) */
         .kpi-top-metrics { display: flex; gap: 15px; margin-bottom: 15px; }
@@ -253,7 +254,7 @@
                         <option value="FERGUSON">Ferguson Only</option>
                     </select>
                 </div>
-                <div class="kpi-grid" id="home-kpi-container">
+                <div class="home-kpi-container" id="home-kpi-container">
                     </div>
             </div>
         </div>
@@ -344,7 +345,7 @@
         let currentFilter = 'ALL';
         let currentOwnerView = '';
         let currentParentView = '';
-        let globalChartInstances = {}; // Store charts to destroy them before re-rendering
+        let globalChartInstances = {}; 
         
         const excludedStatuses = ['COMPLETED', 'FINAL CHARGES SUBMITTED', 'CREDIT VROS'];
 
@@ -352,6 +353,7 @@
         const vendedOwners = ["Michelle McCoy", "Ryan Barnett", "Daniel Florida", "Brittany Williams", "Hollie Francis", "Ralph Mann", "James Hopkins", "Joe Stephens"];
         
         let lastActiveView = 'home-view';
+        let searchTimeout = null;
 
         // --- PRECISE DATA PARSER ---
         function getCol(row, possibleNames) {
@@ -477,13 +479,20 @@
             const today = new Date();
             today.setHours(0, 0, 0, 0);
 
+            // 1. Build OOS Set
             let oosSet = new Set();
             oosRaw.forEach(row => {
                 let unit = getCol(row, ['UNITNUMBER', 'Unit No', 'Vehicle']);
                 let oosFlag = getCol(row, ['OOS Flag', 'Open RO Category']);
-                if(unit && (oosFlag.toUpperCase() === 'OOS' || oosFlag === '')) oosSet.add(unit.toUpperCase());
+                
+                if(unit) {
+                    if (oosFlag.toUpperCase() === 'OOS' || oosFlag === '') {
+                        oosSet.add(unit.toUpperCase());
+                    }
+                }
             });
 
+            // 2. Build Garda Assignments & Location Map
             let unitToGardaOwner = {};
             let unitToLocation = {};
             assignmentsRaw.forEach(row => {
@@ -503,12 +512,16 @@
                 }
             });
 
+            // 3. Track RO counts
             let unitROCounts = {};
             vroRaw.forEach(row => {
                 let unit = getCol(row, ['Unit No', 'UNITNUMBER', 'Vehicle']).toUpperCase();
-                if(unit) unitROCounts[unit] = (unitROCounts[unit] || 0) + 1;
+                if(unit) {
+                    unitROCounts[unit] = (unitROCounts[unit] || 0) + 1;
+                }
             });
 
+            // 4. Process Main VRO Data
             processedData = vroRaw.map(row => {
                 let roNum = getCol(row, ['Order', 'RO Number', 'RONum', 'AFS RO #']);
                 let customer = getCol(row, ['Customer', 'CUSTOMERNAME', 'Customer Name']); 
@@ -524,7 +537,6 @@
                 let loc = unitToLocation[unit] || { region: 'Unknown Region', subregion: 'Unknown Subregion', branch: 'Unknown Branch' };
                 let drillTopLevel = 'Uncategorized';
 
-                // Smart Fallback Parser
                 let fallbackLoc = { region: 'Unknown Region', subregion: 'Unknown Subregion', branch: customer.trim() };
                 if(customer.includes('-')) {
                     let locPart = customer.substring(customer.lastIndexOf('-') + 1).trim(); 
@@ -730,7 +742,6 @@
         }
 
         // --- CHART GENERATION ---
-        // Custom plugin to put the percentage text in the center of the Doughnut Chart
         Chart.register({
             id: 'centerText',
             beforeDraw: function(chart) {
@@ -849,7 +860,6 @@
             vendedTile.innerHTML = generateTileHTML('Total Vended Repair Dashboard', vendedData, 'chart-vended');
             container.appendChild(vendedTile);
 
-            // Initialize Interactive Charts
             initChart('chart-pm');
             initChart('chart-vended');
         }
@@ -926,6 +936,7 @@
                             const pA = priorityOrder[a.priority] || 4;
                             const pB = priorityOrder[b.priority] || 4;
                             if (pA !== pB) return pA - pB;
+                            
                             if (a.isOOS && !b.isOOS) return -1;
                             if (!a.isOOS && b.isOOS) return 1;
                             return 0;
@@ -993,47 +1004,51 @@
             });
         }
 
-        // --- GLOBAL SEARCH ---
+        // --- GLOBAL SEARCH (DEBOUNCED) ---
         function handleSearch() {
-            const searchTerm = document.getElementById('global-search').value.toLowerCase();
-            
-            if(searchTerm.length === 0) {
-                document.querySelectorAll('.view-section').forEach(v => v.classList.remove('active'));
-                document.getElementById(lastActiveView).classList.add('active');
-                return;
-            }
-
-            document.querySelectorAll('.view-section').forEach(v => v.classList.remove('active'));
-            document.getElementById('search-view').classList.add('active');
-            document.getElementById('search-term-display').innerText = searchTerm;
-
-            const tbody = document.getElementById('search-table-body');
-            tbody.innerHTML = '';
-
-            const results = processedData.filter(ro => ro.unitNo.toLowerCase().includes(searchTerm));
-
-            if(results.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;">No units found matching "${searchTerm}"</td></tr>`;
-                return;
-            }
-
-            results.forEach(ro => {
-                const oosBadge = ro.isOOS ? `<span class="badge badge-oos">OOS</span>` : `<span class="badge badge-active">ACTIVE</span>`;
-                const priorityBadge = `<span class="badge ${ro.priorityClass}">${ro.priority}</span>`;
+            clearTimeout(searchTimeout);
+            searchTimeout = setTimeout(() => {
+                const searchTerm = document.getElementById('global-search').value.toLowerCase();
                 
-                tbody.innerHTML += `
-                    <tr>
-                        <td><a href="https://afshub.azurewebsites.net/Vendors/VendedRepairOrder/Estimate/${ro.roNum}" target="_blank" class="ro-link">${ro.roNum}</a></td>
-                        <td><strong>${ro.unitNo}</strong></td>
-                        <td>${priorityBadge}</td>
-                        <td>${oosBadge}</td>
-                        <td>${ro.roCount}</td>
-                        <td>${ro.owner}</td>
-                        <td>${ro.status}</td>
-                        <td>${ro.vmrs}</td>
-                    </tr>
-                `;
-            });
+                if(searchTerm.length === 0) {
+                    document.querySelectorAll('.view-section').forEach(v => v.classList.remove('active'));
+                    document.getElementById(lastActiveView).classList.add('active');
+                    return;
+                }
+
+                document.querySelectorAll('.view-section').forEach(v => v.classList.remove('active'));
+                document.getElementById('search-view').classList.add('active');
+                document.getElementById('search-term-display').innerText = searchTerm;
+
+                const tbody = document.getElementById('search-table-body');
+                
+                const results = processedData.filter(ro => ro.unitNo.toLowerCase().includes(searchTerm));
+
+                if(results.length === 0) {
+                    tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;">No units found matching "${searchTerm}"</td></tr>`;
+                    return;
+                }
+
+                let searchHtml = '';
+                results.forEach(ro => {
+                    const oosBadge = ro.isOOS ? `<span class="badge badge-oos">OOS</span>` : `<span class="badge badge-active">ACTIVE</span>`;
+                    const priorityBadge = `<span class="badge ${ro.priorityClass}">${ro.priority}</span>`;
+                    
+                    searchHtml += `
+                        <tr>
+                            <td><a href="https://afshub.azurewebsites.net/Vendors/VendedRepairOrder/Estimate/${ro.roNum}" target="_blank" class="ro-link">${ro.roNum}</a></td>
+                            <td><strong>${ro.unitNo}</strong></td>
+                            <td>${priorityBadge}</td>
+                            <td>${oosBadge}</td>
+                            <td>${ro.roCount}</td>
+                            <td>${ro.owner}</td>
+                            <td>${ro.status}</td>
+                            <td>${ro.vmrs}</td>
+                        </tr>
+                    `;
+                });
+                tbody.innerHTML = searchHtml;
+            }, 300);
         }
 
         // --- NAVIGATION ROUTING ---
