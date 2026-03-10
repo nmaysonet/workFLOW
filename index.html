@@ -98,7 +98,7 @@
         .filter-btn.active { background-color: var(--gold); color: #fff; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
         .filter-btn.active:hover { background-color: var(--gold-hover); }
 
-        /* General KPI Tiles Grid (For Queues) */
+        /* General KPI Tiles Grid */
         .kpi-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 20px; }
         .kpi-tile { background: #fff; padding: 25px 20px; border-radius: 8px; box-shadow: 0 2px 6px rgba(0,0,0,0.08); cursor: pointer; border-top: 4px solid var(--gold); transition: transform 0.2s; display: flex; flex-direction: column;}
         .kpi-tile:hover { transform: translateY(-3px); box-shadow: 0 4px 12px rgba(0,0,0,0.12); }
@@ -131,7 +131,7 @@
         .flex-tile-left { flex: 1; min-width: 0; }
         .flex-tile-right { width: 220px; height: 220px; flex-shrink: 0; position: relative; display: flex; align-items: center; justify-content: center; }
 
-        /* Highlight Boxes (Open & Urgent) */
+        /* Highlight Boxes */
         .kpi-top-metrics { display: flex; gap: 15px; margin-bottom: 15px; }
         .highlight-box { flex: 1; background: #fffaf0; border: 1px solid var(--gold); border-radius: 6px; padding: 15px 20px; display: flex; flex-direction: column; justify-content: center;}
         .highlight-box.urgent-box { background: #fff0f0; border-color: var(--urgent-red); }
@@ -139,11 +139,10 @@
         .highlight-box .num { font-size: 46px; font-weight: 800; color: var(--gold); line-height: 1; text-align: right; }
         .highlight-box.urgent-box .num { color: var(--urgent-red); }
 
-        /* Master Dashboard Size Adjustments for Highlight Boxes */
         .home-master-tile .highlight-box .title { font-size: 20px; }
         .home-master-tile .highlight-box .num { font-size: 56px; }
 
-        /* Advanced KPI Layout (Compliance) */
+        /* Advanced KPI Layout */
         .kpi-stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; border-top: 1px solid #eee; padding-top: 15px; flex-grow: 1;}
         .stat-box { background: #f9f9f9; padding: 10px; border-radius: 4px; text-align: center; }
         .stat-box .title { font-size: 12px; color: #666; text-transform: uppercase; font-weight: 700; margin-bottom: 5px; }
@@ -151,7 +150,6 @@
         .stat-box .num.urgent { color: var(--urgent-red); }
         .stat-box .num.good { color: var(--low-green); }
 
-        /* Master Dashboard Inline Stats */
         .home-master-tile .kpi-stats-grid { 
             grid-template-columns: repeat(4, 1fr); 
             gap: 15px; 
@@ -166,6 +164,8 @@
         
         .controls-group button { padding: 8px 15px; margin-left: 10px; cursor: pointer; background: #666; color: #fff; border: none; border-radius: 4px; font-weight: bold; transition: 0.2s; }
         .controls-group button:hover { background: #444; }
+        .btn-export { background: #5cb85c !important; } /* Green for Export */
+        .btn-export:hover { background: #449d44 !important; }
         
         .drilldown-container { background: #fff; border-radius: 6px; box-shadow: 0 2px 6px rgba(0,0,0,0.08); padding: 20px; margin-top: 10px; }
         
@@ -261,19 +261,16 @@
 
         <div id="home-view" class="view-section active">
             <h1 class="home-title">Welcome to workFLOW +</h1>
-            
             <div class="upload-container" id="upload-box">
                 <h3>Loading Dashboard Data</h3>
                 <p style="color: #666; margin-bottom: 15px; font-size: 14px;">Attempting to automatically fetch <b>master_workFLOW.xlsx</b> from the repository...</p>
                 <div id="upload-status" style="font-size: 15px; font-weight: bold; color: #888;">Initializing...</div>
-                
                 <div id="manual-upload-section" style="display: none; margin-top: 25px; padding-top: 20px; border-top: 1px dashed #ccc;">
-                    <p style="font-size: 13px; color: #888; margin-bottom: 10px;">Fallback: File not found automatically. Please upload your files manually.</p>
+                    <p style="font-size: 13px; color: #888; margin-bottom: 10px;">Fallback: File not found. Upload manually below.</p>
                     <label for="excelFileInput" class="upload-btn">Browse Files</label>
                     <input type="file" id="excelFileInput" accept=".xlsx, .xls, .csv" multiple />
                 </div>
             </div>
-
             <div id="home-dashboard" style="display:none;">
                 <div class="home-dashboard-header">
                     <h2>Aggregate Performance Overview</h2>
@@ -283,15 +280,12 @@
                         <option value="FERGUSON">Ferguson Only</option>
                     </select>
                 </div>
-                
-                <div class="home-kpi-container" id="home-kpi-container">
-                    </div>
+                <div class="home-kpi-container" id="home-kpi-container"></div>
             </div>
         </div>
 
         <div id="pm-view" class="view-section">
             <h2 class="view-title">PM Queue</h2>
-            
             <div class="filter-bar">
                 <button class="filter-btn active" data-filter="ALL" onclick="setFilter('ALL')">All Active</button>
                 <button class="filter-btn" data-filter="URGENT" onclick="setFilter('URGENT')">Urgent</button>
@@ -299,13 +293,11 @@
                 <button class="filter-btn" data-filter="LOW" onclick="setFilter('LOW')">Low</button>
                 <button class="filter-btn" data-filter="OOS" onclick="setFilter('OOS')">OOS Only</button>
             </div>
-
             <div class="kpi-grid" id="pm-kpi-container"></div>
         </div>
 
         <div id="vended-view" class="view-section">
             <h2 class="view-title">Vended Repair Queue</h2>
-            
             <div class="filter-bar">
                 <button class="filter-btn active" data-filter="ALL" onclick="setFilter('ALL')">All Active</button>
                 <button class="filter-btn" data-filter="URGENT" onclick="setFilter('URGENT')">Urgent</button>
@@ -313,7 +305,6 @@
                 <button class="filter-btn" data-filter="LOW" onclick="setFilter('LOW')">Low</button>
                 <button class="filter-btn" data-filter="OOS" onclick="setFilter('OOS')">OOS Only</button>
             </div>
-
             <div class="kpi-grid" id="vended-kpi-container"></div>
         </div>
 
@@ -321,12 +312,12 @@
             <div class="view-title">
                 <span id="person-name-title">Owner Details</span>
                 <div class="controls-group">
+                    <button class="btn-export" onclick="exportDrilldownToExcel()">Export to XLSX</button>
                     <button onclick="toggleAllDetails(true)">Expand All</button>
                     <button onclick="toggleAllDetails(false)">Collapse All</button>
                     <button id="dynamic-back-btn">&larr; Back</button>
                 </div>
             </div>
-
             <div class="filter-bar">
                 <button class="filter-btn active" data-filter="ALL" onclick="setFilter('ALL')">All Active</button>
                 <button class="filter-btn" data-filter="URGENT" onclick="setFilter('URGENT')">Urgent</button>
@@ -334,27 +325,23 @@
                 <button class="filter-btn" data-filter="LOW" onclick="setFilter('LOW')">Low</button>
                 <button class="filter-btn" data-filter="OOS" onclick="setFilter('OOS')">OOS Only</button>
             </div>
-
-            <div class="drilldown-container" id="drilldown-body">
-                </div>
+            <div class="drilldown-container" id="drilldown-body"></div>
         </div>
 
         <div id="search-view" class="view-section">
-            <h2 class="view-title">Search Results for Unit: <span id="search-term-display"></span></h2>
+            <h2 class="view-title">Search Results: <span id="search-term-display"></span></h2>
             <div class="drilldown-container table-wrapper">
                 <table>
                     <colgroup>
-                        <col style="width: 13%;"> <col style="width: 11%;"> <col style="width: 9%;">  <col style="width: 8%;">  <col style="width: 9%;">  <col style="width: 12%;"> <col style="width: 13%;"> <col style="width: 25%;"> </colgroup>
+                        <col style="width: 13%;"><col style="width: 11%;"><col style="width: 9%;">
+                        <col style="width: 8%;"><col style="width: 9%;"><col style="width: 12%;">
+                        <col style="width: 13%;"><col style="width: 25%;">
+                    </colgroup>
                     <thead>
                         <tr>
-                            <th>AFS RO #</th>
-                            <th>Unit No</th>
-                            <th>Priority</th>
-                            <th>OOS Status</th>
-                            <th>Total Unit ROs</th>
-                            <th>Owner</th>
-                            <th>Status</th>
-                            <th>Task / VMRS</th>
+                            <th>AFS RO #</th><th>Unit No</th><th>Priority</th>
+                            <th>OOS Status</th><th>Total Unit ROs</th><th>Owner</th>
+                            <th>Status</th><th>Task / VMRS</th>
                         </tr>
                     </thead>
                     <tbody id="search-table-body"></tbody>
@@ -370,14 +357,12 @@
         let currentOwnerView = '';
         let currentParentView = '';
         let globalChartInstances = {}; 
-        
-        const excludedStatuses = ['COMPLETED', 'FINAL CHARGES SUBMITTED', 'CREDIT VROS'];
+        let searchTimeout = null;
 
+        const excludedStatuses = ['COMPLETED', 'FINAL CHARGES SUBMITTED', 'CREDIT VROS'];
         const pmOwners = ["Chad Caylor", "Kevin Anguzza"];
         const vendedOwners = ["Michelle McCoy", "Ryan Barnett", "Daniel Florida", "Brittany Williams", "Hollie Francis", "Ralph Mann", "James Hopkins", "Joe Stephens"];
-        
         let lastActiveView = 'home-view';
-        let searchTimeout = null;
 
         // --- PRECISE DATA PARSER ---
         function getCol(row, possibleNames) {
@@ -385,17 +370,56 @@
             for (let name of possibleNames) {
                 const target = name.toLowerCase().replace(/[^a-z0-9]/g, '');
                 const foundKey = rowKeys.find(k => k.toLowerCase().replace(/[^a-z0-9]/g, '') === target);
-                if (foundKey && row[foundKey] !== undefined && row[foundKey] !== null) {
-                    return String(row[foundKey]).trim();
-                }
+                if (foundKey && row[foundKey] !== undefined && row[foundKey] !== null) return String(row[foundKey]).trim();
             }
             return '';
+        }
+
+        // --- EXPORT LOGIC ---
+        function exportDrilldownToExcel() {
+            if (!currentOwnerView || processedData.length === 0) return;
+
+            // 1. Filter data based on current context (Owner + Active Filter)
+            let ownerDataAll = processedData.filter(ro => ro.owner === currentOwnerView);
+            let targetData = ownerDataAll.filter(ro => ro.isOpen);
+
+            if(currentFilter === 'URGENT') targetData = targetData.filter(ro => ro.priority === 'URGENT');
+            else if(currentFilter === 'MEDIUM') targetData = targetData.filter(ro => ro.priority === 'MEDIUM');
+            else if(currentFilter === 'LOW') targetData = targetData.filter(ro => ro.priority === 'LOW');
+            else if(currentFilter === 'OOS') targetData = targetData.filter(ro => ro.isOOS);
+
+            if (targetData.length === 0) {
+                alert("No data available to export for the current filter.");
+                return;
+            }
+
+            // 2. Format data for Excel
+            const excelRows = targetData.map(ro => ({
+                "AFS RO #": ro.roNum,
+                "Unit No": ro.unitNo,
+                "Priority": ro.priority,
+                "OOS Status": ro.isOOS ? "OOS" : "Active",
+                "Total Unit ROs": ro.roCount,
+                "Status": ro.status,
+                "Task / VMRS": ro.vmrs,
+                "Customer Group": ro.drillTopLevel,
+                "Subregion": ro.subregion,
+                "Branch": ro.branch
+            }));
+
+            // 3. Create Workbook
+            const worksheet = XLSX.utils.json_to_sheet(excelRows);
+            const workbook = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(workbook, worksheet, "Filtered ROs");
+
+            // 4. Download
+            const fileName = `workflow_export_${currentOwnerView.replace(/\s+/g, '_')}_${currentFilter.toLowerCase()}.xlsx`;
+            XLSX.writeFile(workbook, fileName);
         }
 
         // --- FILTER TAB LOGIC ---
         function setFilter(val) {
             currentFilter = val;
-            
             document.querySelectorAll('.filter-btn').forEach(btn => {
                 if(btn.dataset.filter === val) {
                     btn.classList.add('active');
@@ -405,147 +429,90 @@
                     btn.style.background = '#e0e0e0';
                 }
             });
-
             if(lastActiveView === 'pm-view') renderKPITiles(pmOwners, 'pm-kpi-container', 'pm-view');
             else if(lastActiveView === 'vended-view') renderKPITiles(vendedOwners, 'vended-kpi-container', 'vended-view');
-            else if(lastActiveView === 'person-view') {
-                if(currentOwnerView) loadPersonDrilldown(currentOwnerView, currentParentView);
-            }
+            else if(lastActiveView === 'person-view') { if(currentOwnerView) loadPersonDrilldown(currentOwnerView, currentParentView); }
         }
 
-        // --- AUTO-FETCH LOGIC FOR GITHUB PAGES ---
+        // --- AUTO-FETCH LOGIC ---
         window.onload = async () => {
             const statusEl = document.getElementById('upload-status');
-            
             try {
                 const response = await fetch('master_workFLOW.xlsx');
-                
                 if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-                
                 statusEl.innerText = "File found! Processing data...";
                 const data = await response.arrayBuffer();
                 const workbook = XLSX.read(data, {type: 'array'});
-                
                 let vroRaw = [], assignmentsRaw = [], oosRaw = [];
-                
                 workbook.SheetNames.forEach(sheetName => {
                     const sheetData = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], {defval: ''});
                     if(sheetData.length === 0) return;
-                    
                     const firstRow = sheetData[0];
                     const keys = Object.keys(firstRow).map(k => k.toLowerCase());
-                    
-                    if (keys.includes('order') || keys.includes('task') || keys.includes('opened')) {
-                        vroRaw = vroRaw.concat(sheetData);
-                    } else if (keys.includes('region') && keys.includes('subregion') && keys.includes('branch')) {
-                        assignmentsRaw = assignmentsRaw.concat(sheetData);
-                    } else if (keys.includes('oos flag') || keys.includes('garda region') || keys.includes('roopeneddate')) {
-                        oosRaw = oosRaw.concat(sheetData);
-                    } else {
-                        vroRaw = vroRaw.concat(sheetData);
-                    }
+                    if (keys.includes('order') || keys.includes('task') || keys.includes('opened')) vroRaw = vroRaw.concat(sheetData);
+                    else if (keys.includes('region') && keys.includes('subregion') && keys.includes('branch')) assignmentsRaw = assignmentsRaw.concat(sheetData);
+                    else if (keys.includes('oos flag') || keys.includes('garda region') || keys.includes('roopeneddate')) oosRaw = oosRaw.concat(sheetData);
+                    else vroRaw = vroRaw.concat(sheetData);
                 });
-
                 processExcelData(vroRaw, assignmentsRaw, oosRaw);
-
             } catch (error) {
                 console.error("Auto-fetch failed:", error);
-                statusEl.innerText = "Auto-load failed. Please ensure 'master_workFLOW.xlsx' is in the folder.";
+                statusEl.innerText = "Auto-load failed. Use manual upload.";
                 statusEl.style.color = "red";
                 document.getElementById('manual-upload-section').style.display = 'block';
             }
         };
 
-        // --- FILE UPLOAD LOGIC (FALLBACK) ---
+        // --- MANUAL UPLOAD FALLBACK ---
         document.getElementById('excelFileInput').addEventListener('change', async function(e) {
             const files = Array.from(e.target.files);
             if (files.length === 0) return;
-
             document.getElementById('upload-status').innerText = "Reading manual upload...";
-            document.getElementById('upload-status').style.color = "#888";
-
             let vroRaw = [], assignmentsRaw = [], oosRaw = [];
-
             try {
                 for(let file of files) {
                     const data = await file.arrayBuffer();
                     const workbook = XLSX.read(data, {type: 'array'});
-                    
                     workbook.SheetNames.forEach(sheetName => {
                         const sheetData = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], {defval: ''});
                         if(sheetData.length === 0) return;
-                        
                         const firstRow = sheetData[0];
                         const keys = Object.keys(firstRow).map(k => k.toLowerCase());
-                        
-                        if (keys.includes('order') || keys.includes('task') || keys.includes('opened')) {
-                            vroRaw = vroRaw.concat(sheetData);
-                        } else if (keys.includes('region') && keys.includes('subregion') && keys.includes('branch')) {
-                            assignmentsRaw = assignmentsRaw.concat(sheetData);
-                        } else if (keys.includes('oos flag') || keys.includes('garda region') || keys.includes('roopeneddate')) {
-                            oosRaw = oosRaw.concat(sheetData);
-                        } else {
-                            vroRaw = vroRaw.concat(sheetData);
-                        }
+                        if (keys.includes('order') || keys.includes('task') || keys.includes('opened')) vroRaw = vroRaw.concat(sheetData);
+                        else if (keys.includes('region') && keys.includes('subregion') && keys.includes('branch')) assignmentsRaw = assignmentsRaw.concat(sheetData);
+                        else if (keys.includes('oos flag') || keys.includes('garda region') || keys.includes('roopeneddate')) oosRaw = oosRaw.concat(sheetData);
+                        else vroRaw = vroRaw.concat(sheetData);
                     });
                 }
-
                 processExcelData(vroRaw, assignmentsRaw, oosRaw);
-
-            } catch (error) {
-                console.error(error);
-                document.getElementById('upload-status').innerText = "Error parsing files. Check console.";
-                document.getElementById('upload-status').style.color = "red";
-            }
+            } catch (error) { console.error(error); statusEl.innerText = "Error parsing files."; }
         });
 
         function processExcelData(vroRaw, assignmentsRaw, oosRaw) {
-            const today = new Date();
-            today.setHours(0, 0, 0, 0);
-
-            // 1. Build OOS Set
+            const today = new Date(); today.setHours(0, 0, 0, 0);
             let oosSet = new Set();
             oosRaw.forEach(row => {
                 let unit = getCol(row, ['UNITNUMBER', 'Unit No', 'Vehicle']);
                 let oosFlag = getCol(row, ['OOS Flag', 'Open RO Category']);
-                
-                if(unit) {
-                    if (oosFlag.toUpperCase() === 'OOS' || oosFlag === '') {
-                        oosSet.add(unit.toUpperCase());
-                    }
-                }
+                if(unit && (oosFlag.toUpperCase() === 'OOS' || oosFlag === '')) oosSet.add(unit.toUpperCase());
             });
-
-            // 2. Build Garda Assignments & Location Map
-            let unitToGardaOwner = {};
-            let unitToLocation = {};
+            let unitToGardaOwner = {}; let unitToLocation = {};
             assignmentsRaw.forEach(row => {
                 let unit = getCol(row, ['UNITNUMBER', 'Unit No', 'Vehicle']);
                 let owner = getCol(row, ['Owner', 'Assigned To']);
                 let region = getCol(row, ['Region', 'GARDA REGION']);
                 let subregion = getCol(row, ['Subregion', 'GARDA SUBREGION']);
                 let branch = getCol(row, ['Branch']);
-                
                 if(unit) {
                     unitToGardaOwner[unit.toUpperCase()] = owner;
-                    unitToLocation[unit.toUpperCase()] = {
-                        region: region || 'Unspecified Region',
-                        subregion: subregion || 'Unspecified Subregion',
-                        branch: branch || 'Unspecified Branch'
-                    };
+                    unitToLocation[unit.toUpperCase()] = { region: region || 'Unspecified Region', subregion: subregion || 'Unspecified Subregion', branch: branch || 'Unspecified Branch' };
                 }
             });
-
-            // 3. Track RO counts
             let unitROCounts = {};
             vroRaw.forEach(row => {
                 let unit = getCol(row, ['Unit No', 'UNITNUMBER', 'Vehicle']).toUpperCase();
-                if(unit) {
-                    unitROCounts[unit] = (unitROCounts[unit] || 0) + 1;
-                }
+                if(unit) unitROCounts[unit] = (unitROCounts[unit] || 0) + 1;
             });
-
-            // 4. Process Main VRO Data
             processedData = vroRaw.map(row => {
                 let roNum = getCol(row, ['Order', 'RO Number', 'RONum', 'AFS RO #']);
                 let customer = getCol(row, ['Customer', 'CUSTOMERNAME', 'Customer Name']); 
@@ -556,142 +523,68 @@
                 let openedRaw = getCol(row, ['Opened', 'ROOpenedDate']);
                 let dueRaw = getCol(row, ['Unit Due Date', 'Estimate Due Date', 'Due Date', 'L']);
                 let compRaw = getCol(row, ['Completed Date', 'Completed', 'P']);
-                
                 let finalOwner = ownerCol;
                 let loc = unitToLocation[unit] || { region: 'Unknown Region', subregion: 'Unknown Subregion', branch: 'Unknown Branch' };
-                let drillTopLevel = 'Uncategorized';
-
                 let fallbackLoc = { region: 'Unknown Region', subregion: 'Unknown Subregion', branch: customer.trim() };
                 if(customer.includes('-')) {
                     let locPart = customer.substring(customer.lastIndexOf('-') + 1).trim(); 
-                    let stateName = 'Unknown State';
-                    let cityName = 'Unknown City';
-
+                    let stateName = 'Unknown State'; let cityName = 'Unknown City';
                     if(locPart.includes(',')) {
-                        let splitComma = locPart.split(','); 
-                        cityName = splitComma[0].trim();
+                        let splitComma = locPart.split(','); cityName = splitComma[0].trim();
                         let stateZip = splitComma[1].trim().split(' ').filter(s => s.trim() !== ''); 
                         if(stateZip.length > 0) stateName = stateZip[0].trim();
                     } else {
                         let parts = locPart.split(' ').filter(s => s.trim() !== '');
-                        if (parts.length >= 2) {
-                            let stateIdx = parts.length - 2;
-                            stateName = parts[stateIdx].trim();
-                            cityName = parts.slice(0, stateIdx).join(' ').trim();
-                        } else {
-                            cityName = locPart;
-                        }
+                        if (parts.length >= 2) { let stateIdx = parts.length - 2; stateName = parts[stateIdx].trim(); cityName = parts.slice(0, stateIdx).join(' ').trim(); }
+                        else cityName = locPart;
                     }
                     fallbackLoc = { region: stateName, subregion: cityName, branch: customer.trim() };
                 }
-
                 if(customer.toLowerCase().includes('ferguson')) {
                     if (finalOwner !== 'Kevin Anguzza') finalOwner = 'Chad Caylor';
                     loc = fallbackLoc;
-                    drillTopLevel = 'Ferguson ' + loc.region;
-                }
-                else if(customer.toLowerCase().includes('garda')) {
-                    if (finalOwner !== 'Kevin Anguzza' && unitToGardaOwner[unit]) {
-                        finalOwner = unitToGardaOwner[unit];
-                    }
+                } else if(customer.toLowerCase().includes('garda')) {
+                    if (finalOwner !== 'Kevin Anguzza' && unitToGardaOwner[unit]) finalOwner = unitToGardaOwner[unit];
                     if(loc.region === 'Unknown Region' || loc.region === 'Unspecified Region') loc = fallbackLoc;
-                    drillTopLevel = 'Garda ' + loc.region;
-                } else {
-                    if(loc.region === 'Unknown Region' || loc.region === 'Unspecified Region') loc = fallbackLoc;
-                    drillTopLevel = customer || 'Unknown Customer';
-                }
+                } else if(loc.region === 'Unknown Region' || loc.region === 'Unspecified Region') loc = fallbackLoc;
+                if(ownerCol.toLowerCase().includes('kanguzza@ameritfleet.com') || ownerCol.toLowerCase() === 'kanguzza') finalOwner = 'Kevin Anguzza';
 
-                if(ownerCol.toLowerCase().includes('kanguzza@ameritfleet.com') || ownerCol.toLowerCase() === 'kanguzza') {
-                    finalOwner = 'Kevin Anguzza';
-                }
-
-                let isOOS = oosSet.has(unit);
-                let isOpen = !excludedStatuses.includes(status.toUpperCase());
-
-                let priorityStr = 'LOW';
-                let priorityClass = 'badge-low';
-                let isPM = pmOwners.includes(finalOwner);
+                let isOOS = oosSet.has(unit); let isOpen = !excludedStatuses.includes(status.toUpperCase());
+                let priorityStr = 'LOW'; let priorityClass = 'badge-low'; let isPM = pmOwners.includes(finalOwner);
 
                 if (isOpen) {
                     if (isPM) {
                         let dueDate = new Date(dueRaw);
                         if (!isNaN(dueDate.getTime())) {
-                            dueDate.setHours(0,0,0,0);
                             let diffDays = Math.ceil((dueDate - today) / (1000 * 60 * 60 * 24));
                             if (diffDays <= 0) { priorityStr = 'URGENT'; priorityClass = 'badge-urgent'; }
                             else if (diffDays <= 10) { priorityStr = 'MEDIUM'; priorityClass = 'badge-medium'; }
-                            else { priorityStr = 'LOW'; priorityClass = 'badge-low'; }
-                        } else { priorityStr = 'LOW'; priorityClass = 'badge-low'; }
+                        }
                     } else {
                         let openedDate = new Date(openedRaw);
                         if (!isNaN(openedDate.getTime())) {
-                            openedDate.setHours(0,0,0,0);
                             let diffDays = Math.floor((today - openedDate) / (1000 * 60 * 60 * 24));
                             if (diffDays > 7 || isOOS) { priorityStr = 'URGENT'; priorityClass = 'badge-urgent'; }
-                            else if (diffDays <= 3) { priorityStr = 'LOW'; priorityClass = 'badge-low'; }
-                            else { priorityStr = 'MEDIUM'; priorityClass = 'badge-medium'; }
-                        } else {
-                            priorityStr = isOOS ? 'URGENT' : 'LOW'; 
-                            priorityClass = isOOS ? 'badge-urgent' : 'badge-low';
-                        }
+                            else if (diffDays > 3) { priorityStr = 'MEDIUM'; priorityClass = 'badge-medium'; }
+                        } else if (isOOS) { priorityStr = 'URGENT'; priorityClass = 'badge-urgent'; }
                     }
-                } else {
-                    priorityStr = 'COMPLETED';
-                    priorityClass = 'badge-active';
-                }
+                } else { priorityStr = 'COMPLETED'; priorityClass = 'badge-active'; }
 
-                let isCompletedKPI = false;
-                let isOnTimeKPI = false;
-                let isLateKPI = false;
-
+                let isCompletedKPI = false; let isOnTimeKPI = false; let isLateKPI = false;
                 if (['COMPLETED', 'FINAL CHARGES SUBMITTED'].includes(status.toUpperCase()) && compRaw !== '') {
-                    isCompletedKPI = true;
-                    let cDate = new Date(compRaw);
+                    isCompletedKPI = true; let cDate = new Date(compRaw);
                     if (!isNaN(cDate.getTime())) {
-                        cDate.setHours(0,0,0,0);
                         let dDate = new Date(dueRaw);
-                        if (!isNaN(dDate.getTime())) {
-                            dDate.setHours(0,0,0,0);
-                            if (cDate <= dDate) isOnTimeKPI = true;
-                            else isLateKPI = true;
-                        } else {
-                            isOnTimeKPI = true;
-                        }
-                    } else {
-                        isCompletedKPI = false;
-                    }
+                        if (!isNaN(dDate.getTime()) && cDate <= dDate) isOnTimeKPI = true;
+                        else if (!isNaN(dDate.getTime())) isLateKPI = true;
+                        else isOnTimeKPI = true;
+                    } else isCompletedKPI = false;
                 }
-
-                return {
-                    roNum: roNum,
-                    customer: customer,
-                    drillTopLevel: drillTopLevel,
-                    owner: finalOwner,
-                    unitNo: unit,
-                    status: status,
-                    vmrs: vmrs,
-                    isOOS: isOOS,
-                    isOpen: isOpen,
-                    isCompletedKPI: isCompletedKPI,
-                    isOnTimeKPI: isOnTimeKPI,
-                    isLateKPI: isLateKPI,
-                    roCount: unitROCounts[unit] || 1,
-                    subregion: loc.subregion,
-                    branch: loc.branch,
-                    priority: priorityStr,
-                    priorityClass: priorityClass
-                };
+                return { roNum, customer, drillTopLevel: customer.toLowerCase().includes('ferguson') ? 'Ferguson ' + loc.region : (customer.toLowerCase().includes('garda') ? 'Garda ' + loc.region : customer), owner: finalOwner, unitNo: unit, status, vmrs, isOOS, isOpen, isCompletedKPI, isOnTimeKPI, isLateKPI, roCount: unitROCounts[unit] || 1, subregion: loc.subregion, branch: loc.branch, priority: priorityStr, priorityClass };
             }).filter(ro => ro.roNum !== '');
-
-            if(processedData.length === 0) {
-                document.getElementById('upload-status').innerText = "Data loaded, but 0 valid Repair Orders found. Check file columns.";
-                document.getElementById('upload-status').style.color = "red";
-                return;
-            }
 
             document.getElementById('upload-box').style.display = 'none';
             document.getElementById('home-dashboard').style.display = 'block';
-            
             renderHomeDashboard();
             renderKPITiles(pmOwners, 'pm-kpi-container', 'pm-view');
             renderKPITiles(vendedOwners, 'vended-kpi-container', 'vended-view');
@@ -706,312 +599,111 @@
             else if(currentFilter === 'OOS') filteredOpen = filteredOpen.filter(ro => ro.isOOS);
             
             let urgentCount = filteredOpen.filter(ro => ro.priority === 'URGENT').length;
-            
             let completedOrders = dataSet.filter(ro => ro.isCompletedKPI);
             let compCount = completedOrders.length;
             let onTimeCount = completedOrders.filter(ro => ro.isOnTimeKPI).length;
             let lateCount = completedOrders.filter(ro => ro.isLateKPI).length;
-            
             let compPct = compCount > 0 ? Math.round((onTimeCount / compCount) * 100) : 0;
             let latePct = compCount > 0 ? Math.round((lateCount / compCount) * 100) : 0;
-
             let filterLabel = currentFilter === 'ALL' ? 'Open ROs' : `${currentFilter} ROs`;
-            if(currentFilter === 'OOS') filterLabel = 'OOS ROs';
 
-            let innerHtml = `
-                <div class="kpi-name">${name}</div>
-                <div class="kpi-top-metrics">
-                    <div class="highlight-box">
-                        <div class="title">${filterLabel}</div>
-                        <div class="num">${filteredOpen.length}</div>
-                    </div>
-                    <div class="highlight-box urgent-box">
-                        <div class="title">Urgent</div>
-                        <div class="num">${urgentCount}</div>
-                    </div>
-                </div>
-                <div class="kpi-stats-grid">
-                    <div class="stat-box">
-                        <div class="title">Completed</div>
-                        <div class="num">${compCount}</div>
-                    </div>
-                    <div class="stat-box">
-                        <div class="title">On-Time</div>
-                        <div class="num">${onTimeCount}</div>
-                    </div>
-                    <div class="stat-box">
-                        <div class="title">% Compliance</div>
-                        <div class="num good">${compPct}%</div>
-                    </div>
-                    <div class="stat-box">
-                        <div class="title">% Late</div>
-                        <div class="num urgent">${latePct}%</div>
-                    </div>
-                </div>
-            `;
-
-            if (chartId) {
-                return `
-                    <div class="flex-tile">
-                        <div class="flex-tile-left">
-                            ${innerHtml}
-                        </div>
-                        <div class="flex-tile-right">
-                            <canvas id="${chartId}" data-comp="${compPct}" data-late="${latePct}"></canvas>
-                        </div>
-                    </div>
-                `;
-            }
+            let innerHtml = `<div class="kpi-name">${name}</div><div class="kpi-top-metrics"><div class="highlight-box"><div class="title">${filterLabel}</div><div class="num">${filteredOpen.length}</div></div><div class="highlight-box urgent-box"><div class="title">Urgent</div><div class="num">${urgentCount}</div></div></div><div class="kpi-stats-grid"><div class="stat-box"><div class="title">Completed</div><div class="num">${compCount}</div></div><div class="stat-box"><div class="title">On-Time</div><div class="num">${onTimeCount}</div></div><div class="stat-box"><div class="title">% Compliance</div><div class="num good">${compPct}%</div></div><div class="stat-box"><div class="title">% Late</div><div class="num urgent">${latePct}%</div></div></div>`;
+            if (chartId) return `<div class="flex-tile"><div class="flex-tile-left">${innerHtml}</div><div class="flex-tile-right"><canvas id="${chartId}" data-comp="${compPct}" data-late="${latePct}"></canvas></div></div>`;
             return innerHtml;
         }
 
-        // --- CHART GENERATION ---
         Chart.register({
             id: 'centerText',
             beforeDraw: function(chart) {
                 if (chart.config.options.elements.center) {
-                    var ctx = chart.ctx;
-                    var centerConfig = chart.config.options.elements.center;
-                    var fontStyle = centerConfig.fontStyle || 'bold';
+                    var ctx = chart.ctx; var centerConfig = chart.config.options.elements.center;
                     var txt = centerConfig.text;
-                    var color = centerConfig.color || '#333';
-                    var maxFontSize = centerConfig.maxFontSize || 40;
-                    var sidePadding = centerConfig.sidePadding || 20;
-                    var sidePaddingCalculated = (sidePadding / 100) * (chart.innerRadius * 2);
-                    
-                    ctx.font = "30px Raleway";
-                    var stringWidth = ctx.measureText(txt).width;
-                    var elementWidth = (chart.innerRadius * 2) - sidePaddingCalculated;
-                    var widthRatio = elementWidth / stringWidth;
-                    var newFontSize = Math.floor(30 * widthRatio);
-                    var elementHeight = (chart.innerRadius * 2);
-                    var fontSizeToUse = Math.min(newFontSize, elementHeight, maxFontSize);
-                    
-                    ctx.textAlign = 'center';
-                    ctx.textBaseline = 'middle';
+                    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
                     var centerX = ((chart.chartArea.left + chart.chartArea.right) / 2);
                     var centerY = ((chart.chartArea.top + chart.chartArea.bottom) / 2);
-                    ctx.font = fontStyle + " " + fontSizeToUse + "px Raleway";
-                    ctx.fillStyle = color;
+                    ctx.font = "bold 34px Raleway"; ctx.fillStyle = centerConfig.color || '#333';
                     ctx.fillText(txt, centerX, centerY);
                 }
             }
         });
 
         function initChart(chartId) {
-            if(globalChartInstances[chartId]) {
-                globalChartInstances[chartId].destroy();
-            }
-            
-            const canvas = document.getElementById(chartId);
-            if(!canvas) return;
-
+            const canvas = document.getElementById(chartId); if(!canvas) return;
             const comp = parseInt(canvas.getAttribute('data-comp')) || 0;
             const late = parseInt(canvas.getAttribute('data-late')) || 0;
-            
-            let chartData = [comp, late];
-            let bgColors = ['#5cb85c', '#d9534f'];
-            let centerText = comp + '%';
-            
-            if (comp === 0 && late === 0) {
-                chartData = [1];
-                bgColors = ['#e0e0e0'];
-                centerText = 'N/A';
-            }
-
-            const ctx = canvas.getContext('2d');
-            globalChartInstances[chartId] = new Chart(ctx, {
+            let chartData = [comp, late]; let bgColors = ['#5cb85c', '#d9534f'];
+            if (comp === 0 && late === 0) { chartData = [1]; bgColors = ['#e0e0e0']; }
+            if(globalChartInstances[chartId]) globalChartInstances[chartId].destroy();
+            globalChartInstances[chartId] = new Chart(canvas.getContext('2d'), {
                 type: 'doughnut',
-                data: {
-                    labels: (comp === 0 && late === 0) ? ['No Data'] : ['On-Time', 'Late'],
-                    datasets: [{
-                        data: chartData,
-                        backgroundColor: bgColors,
-                        borderWidth: 0,
-                        hoverOffset: 4
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    cutout: '75%',
-                    plugins: {
-                        legend: { display: false },
-                        tooltip: {
-                            callbacks: {
-                                label: function(context) {
-                                    if(comp === 0 && late === 0) return ' No Completed Data';
-                                    return ' ' + context.label + ': ' + context.raw + '%';
-                                }
-                            }
-                        }
-                    },
-                    elements: {
-                        center: {
-                            text: centerText,
-                            color: '#333', 
-                            fontStyle: 'bold', 
-                            sidePadding: 20, 
-                            maxFontSize: 40 
-                        }
-                    }
-                }
+                data: { labels: ['On-Time', 'Late'], datasets: [{ data: chartData, backgroundColor: bgColors, borderWidth: 0 }] },
+                options: { cutout: '75%', plugins: { legend: { display: false } }, elements: { center: { text: comp + '%' } } }
             });
         }
 
         function renderHomeDashboard() {
-            const container = document.getElementById('home-kpi-container');
-            container.innerHTML = '';
-            const customerFilter = document.getElementById('home-customer-filter').value;
-
+            const container = document.getElementById('home-kpi-container'); container.innerHTML = '';
+            const custFilt = document.getElementById('home-customer-filter').value;
             let aggData = processedData;
-            if (customerFilter !== 'ALL') {
-                aggData = aggData.filter(ro => ro.customer.toUpperCase().includes(customerFilter));
-            }
-
+            if (custFilt !== 'ALL') aggData = aggData.filter(ro => ro.customer.toUpperCase().includes(custFilt));
             let pmData = aggData.filter(ro => pmOwners.includes(ro.owner));
             let vendedData = aggData.filter(ro => vendedOwners.includes(ro.owner));
-
-            const pmTile = document.createElement('div');
-            pmTile.className = 'kpi-tile home-master-tile';
-            pmTile.innerHTML = generateTileHTML('Total PM Dashboard', pmData, 'chart-pm');
+            const pmTile = document.createElement('div'); pmTile.className = 'kpi-tile home-master-tile'; pmTile.innerHTML = generateTileHTML('Total PM Dashboard', pmData, 'chart-pm');
             container.appendChild(pmTile);
-
-            const vendedTile = document.createElement('div');
-            vendedTile.className = 'kpi-tile home-master-tile';
-            vendedTile.innerHTML = generateTileHTML('Total Vended Repair Dashboard', vendedData, 'chart-vended');
+            const vendedTile = document.createElement('div'); vendedTile.className = 'kpi-tile home-master-tile'; vendedTile.innerHTML = generateTileHTML('Total Vended Repair Dashboard', vendedData, 'chart-vended');
             container.appendChild(vendedTile);
-
-            initChart('chart-pm');
-            initChart('chart-vended');
+            initChart('chart-pm'); initChart('chart-vended');
         }
 
         function renderKPITiles(ownersList, containerId, parentViewId) {
-            const container = document.getElementById(containerId);
-            container.innerHTML = ''; 
-            if(processedData.length === 0) return;
-
+            const container = document.getElementById(containerId); container.innerHTML = ''; 
             ownersList.forEach(owner => {
                 let ownerDataAll = processedData.filter(ro => ro.owner === owner);
-                const tile = document.createElement('div');
-                tile.className = 'kpi-tile';
+                const tile = document.createElement('div'); tile.className = 'kpi-tile';
                 tile.onclick = () => loadPersonDrilldown(owner, parentViewId);
-                
                 tile.innerHTML = generateTileHTML(owner, ownerDataAll);
                 container.appendChild(tile);
             });
         }
 
-        // --- HIERARCHY DRILLDOWN ---
         function loadPersonDrilldown(owner, parentViewId) {
-            navigate('person-view');
-            currentOwnerView = owner;
-            currentParentView = parentViewId;
-            
+            navigate('person-view'); currentOwnerView = owner; currentParentView = parentViewId;
             document.getElementById('person-name-title').innerText = `RO Hierarchy: ${owner}`;
             document.getElementById('dynamic-back-btn').onclick = () => navigate(parentViewId);
-            
-            const container = document.getElementById('drilldown-body');
-            container.innerHTML = '';
-
+            const container = document.getElementById('drilldown-body'); container.innerHTML = '';
             let ownerDataAll = processedData.filter(ro => ro.owner === owner);
             let targetData = ownerDataAll.filter(ro => ro.isOpen);
-
             if(currentFilter === 'URGENT') targetData = targetData.filter(ro => ro.priority === 'URGENT');
             else if(currentFilter === 'MEDIUM') targetData = targetData.filter(ro => ro.priority === 'MEDIUM');
             else if(currentFilter === 'LOW') targetData = targetData.filter(ro => ro.priority === 'LOW');
             else if(currentFilter === 'OOS') targetData = targetData.filter(ro => ro.isOOS);
-
-            if(targetData.length === 0) {
-                container.innerHTML = `<p>No records for ${owner} under the '${currentFilter}' filter.</p>`;
-                return;
-            }
-
+            if(targetData.length === 0) { container.innerHTML = `<p>No records for ${owner} under the current filter.</p>`; return; }
             let hierarchy = {};
             targetData.forEach(ro => {
-                let topLevel = ro.drillTopLevel;
-                if(!hierarchy[topLevel]) hierarchy[topLevel] = {};
-                if(!hierarchy[topLevel][ro.subregion]) hierarchy[topLevel][ro.subregion] = {};
-                if(!hierarchy[topLevel][ro.subregion][ro.branch]) hierarchy[topLevel][ro.subregion][ro.branch] = [];
-                hierarchy[topLevel][ro.subregion][ro.branch].push(ro);
+                if(!hierarchy[ro.drillTopLevel]) hierarchy[ro.drillTopLevel] = {};
+                if(!hierarchy[ro.drillTopLevel][ro.subregion]) hierarchy[ro.drillTopLevel][ro.subregion] = {};
+                if(!hierarchy[ro.drillTopLevel][ro.subregion][ro.branch]) hierarchy[ro.drillTopLevel][ro.subregion][ro.branch] = [];
+                hierarchy[ro.drillTopLevel][ro.subregion][ro.branch].push(ro);
             });
-
-            const priorityOrder = { 'URGENT': 1, 'MEDIUM': 2, 'LOW': 3 };
-
             for(let topLvl in hierarchy) {
-                const regDetails = document.createElement('details');
-                regDetails.className = 'drill-node';
-                regDetails.innerHTML = `<summary>${topLvl}</summary>`; 
-                
+                const regDetails = document.createElement('details'); regDetails.innerHTML = `<summary>${topLvl}</summary>`; 
                 for(let sub in hierarchy[topLvl]) {
-                    const subDetails = document.createElement('details');
-                    subDetails.className = 'drill-node';
-                    subDetails.innerHTML = `<summary>${sub}</summary>`;
-                    
+                    const subDetails = document.createElement('details'); subDetails.innerHTML = `<summary>${sub}</summary>`;
                     for(let branch in hierarchy[topLvl][sub]) {
                         const branchDetails = document.createElement('details');
-                        branchDetails.className = 'drill-node';
-                        
                         let branchROs = hierarchy[topLvl][sub][branch];
-                        
-                        branchROs.sort((a, b) => {
-                            const pA = priorityOrder[a.priority] || 4;
-                            const pB = priorityOrder[b.priority] || 4;
-                            if (pA !== pB) return pA - pB;
-                            
-                            if (a.isOOS && !b.isOOS) return -1;
-                            if (!a.isOOS && b.isOOS) return 1;
-                            return 0;
+                        branchROs.sort((a,b) => { 
+                            const ord = {'URGENT':1,'MEDIUM':2,'LOW':3};
+                            if(ord[a.priority] !== ord[b.priority]) return ord[a.priority] - ord[b.priority];
+                            return (b.isOOS - a.isOOS);
                         });
-
                         branchDetails.innerHTML = `<summary>${branch} (${branchROs.length} ROs)</summary>`;
-                        
-                        let tableHTML = `
-                            <div class="table-wrapper">
-                            <table>
-                                <colgroup>
-                                    <col style="width: 13%;">
-                                    <col style="width: 11%;">
-                                    <col style="width: 9%;">
-                                    <col style="width: 8%;">
-                                    <col style="width: 9%;">
-                                    <col style="width: 15%;">
-                                    <col style="width: 35%;">
-                                </colgroup>
-                                <thead>
-                                    <tr>
-                                        <th>AFS RO #</th>
-                                        <th>Unit No</th>
-                                        <th>Priority</th>
-                                        <th>OOS Status</th>
-                                        <th>Total Unit ROs</th>
-                                        <th>Status</th>
-                                        <th>Task / VMRS</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                        `;
-                        
+                        let tableHTML = `<div class="table-wrapper"><table><colgroup><col style="width:13%"><col style="width:11%"><col style="width:9%"><col style="width:8%"><col style="width:9%"><col style="width:15%"><col style="width:35%"></colgroup><thead><tr><th>AFS RO #</th><th>Unit No</th><th>Priority</th><th>OOS Status</th><th>Total Unit ROs</th><th>Status</th><th>Task / VMRS</th></tr></thead><tbody>`;
                         branchROs.forEach(ro => {
-                            const oosBadge = ro.isOOS ? `<span class="badge badge-oos">OOS</span>` : `<span class="badge badge-active">ACTIVE</span>`;
-                            const priorityBadge = `<span class="badge ${ro.priorityClass}">${ro.priority}</span>`;
-                            
-                            tableHTML += `
-                                <tr>
-                                    <td><a href="https://afshub.azurewebsites.net/Vendors/VendedRepairOrder/Estimate/${ro.roNum}" target="_blank" class="ro-link">${ro.roNum}</a></td>
-                                    <td><strong>${ro.unitNo}</strong></td>
-                                    <td>${priorityBadge}</td>
-                                    <td>${oosBadge}</td>
-                                    <td>${ro.roCount}</td>
-                                    <td>${ro.status}</td>
-                                    <td>${ro.vmrs}</td>
-                                </tr>
-                            `;
+                            tableHTML += `<tr><td><a href="https://afshub.azurewebsites.net/Vendors/VendedRepairOrder/Estimate/${ro.roNum}" target="_blank" class="ro-link">${ro.roNum}</a></td><td><strong>${ro.unitNo}</strong></td><td><span class="badge ${ro.priorityClass}">${ro.priority}</span></td><td><span class="badge ${ro.isOOS ? 'badge-oos':'badge-active'}">${ro.isOOS ? 'OOS':'ACTIVE'}</span></td><td>${ro.roCount}</td><td>${ro.status}</td><td>${ro.vmrs}</td></tr>`;
                         });
-                        
-                        tableHTML += `</tbody></table></div>`;
-                        branchDetails.innerHTML += tableHTML;
-                        subDetails.appendChild(branchDetails);
+                        tableHTML += `</tbody></table></div>`; branchDetails.innerHTML += tableHTML; subDetails.appendChild(branchDetails);
+                    RegExp
                     }
                     regDetails.appendChild(subDetails);
                 }
@@ -1019,71 +711,35 @@
             }
         }
 
-        function toggleAllDetails(expand) {
-            document.querySelectorAll('#drilldown-body details').forEach(detail => {
-                if(expand) detail.setAttribute('open', '');
-                else detail.removeAttribute('open');
-            });
-        }
+        function toggleAllDetails(expand) { document.querySelectorAll('#drilldown-body details').forEach(d => { if(expand) d.setAttribute('open',''); else d.removeAttribute('open'); }); }
 
-        // --- GLOBAL SEARCH (DEBOUNCED) ---
         function handleSearch() {
             clearTimeout(searchTimeout);
             searchTimeout = setTimeout(() => {
                 const searchTerm = document.getElementById('global-search').value.toLowerCase();
-                
-                if(searchTerm.length === 0) {
-                    document.querySelectorAll('.view-section').forEach(v => v.classList.remove('active'));
-                    document.getElementById(lastActiveView).classList.add('active');
-                    return;
-                }
-
-                document.querySelectorAll('.view-section').forEach(v => v.classList.remove('active'));
-                document.getElementById('search-view').classList.add('active');
+                if(searchTerm.length === 0) { navigate(lastActiveView); return; }
+                navigate('search-view');
                 document.getElementById('search-term-display').innerText = searchTerm;
-
-                const tbody = document.getElementById('search-table-body');
-                
                 const results = processedData.filter(ro => ro.unitNo.toLowerCase().includes(searchTerm));
-
-                if(results.length === 0) {
-                    tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;">No units found matching "${searchTerm}"</td></tr>`;
-                    return;
-                }
-
                 let searchHtml = '';
-                results.forEach(ro => {
-                    const oosBadge = ro.isOOS ? `<span class="badge badge-oos">OOS</span>` : `<span class="badge badge-active">ACTIVE</span>`;
-                    const priorityBadge = `<span class="badge ${ro.priorityClass}">${ro.priority}</span>`;
-                    
-                    searchHtml += `
-                        <tr>
-                            <td><a href="https://afshub.azurewebsites.net/Vendors/VendedRepairOrder/Estimate/${ro.roNum}" target="_blank" class="ro-link">${ro.roNum}</a></td>
-                            <td><strong>${ro.unitNo}</strong></td>
-                            <td>${priorityBadge}</td>
-                            <td>${oosBadge}</td>
-                            <td>${ro.roCount}</td>
-                            <td>${ro.owner}</td>
-                            <td>${ro.status}</td>
-                            <td>${ro.vmrs}</td>
-                        </tr>
-                    `;
-                });
-                tbody.innerHTML = searchHtml;
+                if(results.length === 0) searchHtml = '<tr><td colspan="8" style="text-align:center;">No matching units.</td></tr>';
+                else {
+                    results.forEach(ro => {
+                        searchHtml += `<tr><td><a href="https://afshub.azurewebsites.net/Vendors/VendedRepairOrder/Estimate/${ro.roNum}" target="_blank" class="ro-link">${ro.roNum}</a></td><td><strong>${ro.unitNo}</strong></td><td><span class="badge ${ro.priorityClass}">${ro.priority}</span></td><td><span class="badge ${ro.isOOS ? 'badge-oos':'badge-active'}">${ro.isOOS ? 'OOS':'ACTIVE'}</span></td><td>${ro.roCount}</td><td>${ro.owner}</td><td>${ro.status}</td><td>${ro.vmrs}</td></tr>`;
+                    });
+                }
+                document.getElementById('search-table-body').innerHTML = searchHtml;
             }, 300);
         }
 
-        // --- NAVIGATION ROUTING ---
         function navigate(viewId, menuElement = null) {
             document.querySelectorAll('.view-section').forEach(v => v.classList.remove('active'));
             document.getElementById(viewId).classList.add('active');
-            lastActiveView = viewId;
-
+            if(viewId !== 'search-view') lastActiveView = viewId;
             if(menuElement) {
                 document.querySelectorAll('.menu-item').forEach(item => item.classList.remove('active'));
                 menuElement.classList.add('active');
             }
-
             if(viewId === 'pm-view') renderKPITiles(pmOwners, 'pm-kpi-container', 'pm-view');
             else if (viewId === 'vended-view') renderKPITiles(vendedOwners, 'vended-kpi-container', 'vended-view');
         }
