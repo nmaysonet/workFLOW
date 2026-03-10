@@ -28,7 +28,7 @@
         }
 
         /* Sidebar */
-        .sidebar { width: 280px; background-color: var(--sidebar-bg); color: var(--text-light); display: flex; flex-direction: column; }
+        .sidebar { width: 280px; background-color: var(--sidebar-bg); color: var(--text-light); display: flex; flex-direction: column; flex-shrink: 0; }
         .sidebar-header { padding: 20px; font-size: 24px; font-weight: bold; display: flex; align-items: center; border-bottom: 1px solid #2a2b30; color: var(--gold); }
         .sidebar-header .logo-text { color: white; margin-left: 8px; font-weight: 800; letter-spacing: 0.5px; }
         .sidebar-header .logo-plus { color: var(--gold); font-size: 34px; font-weight: 800; margin-left: 3px; line-height: 1; }
@@ -56,10 +56,10 @@
         .road-line { animation: moveRoad 0.4s linear infinite; }
 
         /* Main Content Area */
-        .main-content { flex-grow: 1; display: flex; flex-direction: column; overflow-y: auto; }
+        .main-content { flex-grow: 1; display: flex; flex-direction: column; overflow-y: auto; overflow-x: hidden; }
         
         /* Top Navigation Bar */
-        .top-bar { background: #fff; padding: 15px 30px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 5px rgba(0,0,0,0.05); z-index: 10; }
+        .top-bar { background: #fff; padding: 15px 30px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 5px rgba(0,0,0,0.05); z-index: 10; flex-shrink: 0; }
         .search-container input { padding: 10px 15px; width: 300px; border: 1px solid var(--border); border-radius: 4px; font-size: 14px; }
         .top-actions { display: flex; gap: 15px; }
         .btn-action { background-color: var(--gold); color: #fff; padding: 10px 20px; border-radius: 4px; font-weight: bold; transition: 0.2s; border: none; }
@@ -98,27 +98,50 @@
         .filter-btn.active { background-color: var(--gold); color: #fff; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
         .filter-btn.active:hover { background-color: var(--gold-hover); }
 
-        /* KPI Tiles Grid */
+        /* General KPI Tiles Grid (For Queues) */
         .kpi-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 20px; }
         .kpi-tile { background: #fff; padding: 25px 20px; border-radius: 8px; box-shadow: 0 2px 6px rgba(0,0,0,0.08); cursor: pointer; border-top: 4px solid var(--gold); transition: transform 0.2s; display: flex; flex-direction: column;}
         .kpi-tile:hover { transform: translateY(-3px); box-shadow: 0 4px 12px rgba(0,0,0,0.12); }
         .kpi-name { font-size: 20px; font-weight: 800; margin-bottom: 15px; color: #333; }
         
-        /* Master Dashboard Tile Fixed Width Layout (Side-by-Side) */
-        .home-kpi-container { display: flex; flex-wrap: wrap; gap: 20px; }
-        .home-master-tile { width: 520px; max-width: 100%; cursor: default; }
+        /* Master Dashboard Container & Tiles (Side-by-Side, One Line) */
+        .home-dashboard-header { display: flex; justify-content: space-between; align-items: center; margin-top: 40px; margin-bottom: 20px; padding-bottom: 10px; border-bottom: 2px solid var(--border); }
+        .filter-select { padding: 8px 15px; border-radius: 4px; border: 1px solid #ccc; font-weight: 700; font-size: 14px; }
+        
+        .home-kpi-container { 
+            display: flex; 
+            gap: 30px; 
+            flex-wrap: nowrap; /* Forces them onto one line */
+            width: 100%; 
+            overflow-x: auto;  /* Allows scrolling on tiny screens instead of stacking */
+            padding-bottom: 15px;
+        }
+        
+        .home-master-tile { 
+            flex: 1; 
+            min-width: 650px; /* Makes tiles much larger */
+            padding: 30px; 
+            cursor: default; 
+            border-top: 4px solid #333 !important; 
+        }
         .home-master-tile:hover { transform: none; box-shadow: 0 2px 6px rgba(0,0,0,0.08); }
-        .flex-tile { display: flex; align-items: center; justify-content: space-between; gap: 20px; }
-        .flex-tile-left { flex: 1; min-width: 250px; }
-        .flex-tile-right { width: 160px; height: 160px; flex-shrink: 0; position: relative; display: flex; align-items: center; justify-content: center; margin: 0 auto; }
+        .home-master-tile .kpi-name { font-size: 26px; margin-bottom: 20px; }
+        
+        .flex-tile { display: flex; align-items: center; justify-content: space-between; gap: 30px; }
+        .flex-tile-left { flex: 1; min-width: 0; }
+        .flex-tile-right { width: 220px; height: 220px; flex-shrink: 0; position: relative; display: flex; align-items: center; justify-content: center; }
 
         /* Highlight Boxes (Open & Urgent) */
         .kpi-top-metrics { display: flex; gap: 15px; margin-bottom: 15px; }
-        .highlight-box { flex: 1; background: #fffaf0; border: 1px solid var(--gold); border-radius: 6px; padding: 15px 20px; display: flex; flex-direction: column; }
+        .highlight-box { flex: 1; background: #fffaf0; border: 1px solid var(--gold); border-radius: 6px; padding: 15px 20px; display: flex; flex-direction: column; justify-content: center;}
         .highlight-box.urgent-box { background: #fff0f0; border-color: var(--urgent-red); }
         .highlight-box .title { font-size: 18px; font-weight: 800; color: #555; text-transform: uppercase; margin-bottom: 10px; text-align: left; }
         .highlight-box .num { font-size: 46px; font-weight: 800; color: var(--gold); line-height: 1; text-align: right; }
         .highlight-box.urgent-box .num { color: var(--urgent-red); }
+
+        /* Master Dashboard Size Adjustments for Highlight Boxes */
+        .home-master-tile .highlight-box .title { font-size: 20px; }
+        .home-master-tile .highlight-box .num { font-size: 56px; }
 
         /* Advanced KPI Layout (Compliance) */
         .kpi-stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; border-top: 1px solid #eee; padding-top: 15px; flex-grow: 1;}
@@ -127,6 +150,16 @@
         .stat-box .num { font-size: 20px; font-weight: 700; color: #444; }
         .stat-box .num.urgent { color: var(--urgent-red); }
         .stat-box .num.good { color: var(--low-green); }
+
+        /* Master Dashboard Inline Stats (One Line) */
+        .home-master-tile .kpi-stats-grid { 
+            grid-template-columns: repeat(4, 1fr); 
+            gap: 15px; 
+            padding-top: 20px;
+        }
+        .home-master-tile .stat-box { padding: 15px 10px; }
+        .home-master-tile .stat-box .title { font-size: 13px; }
+        .home-master-tile .stat-box .num { font-size: 26px; }
 
         /* Data Table & Drilldown */
         .view-title { font-size: 24px; margin-bottom: 15px; color: #333; display: flex; justify-content: space-between; align-items: center;}
@@ -158,10 +191,6 @@
         .badge-urgent { background-color: var(--urgent-red); color: white; }
         .badge-medium { background-color: var(--medium-yellow); color: white; text-shadow: 0px 1px 1px rgba(0,0,0,0.2); }
         .badge-low { background-color: var(--low-green); color: white; }
-        
-        /* Home Dashboard Specific */
-        .home-dashboard-header { display: flex; justify-content: space-between; align-items: center; margin-top: 40px; margin-bottom: 20px; padding-bottom: 10px; border-bottom: 2px solid var(--border); }
-        .filter-select { padding: 8px 15px; border-radius: 4px; border: 1px solid #ccc; font-weight: 700; font-size: 14px; }
     </style>
 </head>
 <body>
@@ -254,6 +283,7 @@
                         <option value="FERGUSON">Ferguson Only</option>
                     </select>
                 </div>
+                
                 <div class="home-kpi-container" id="home-kpi-container">
                     </div>
             </div>
@@ -828,7 +858,7 @@
                             color: '#333', 
                             fontStyle: 'bold', 
                             sidePadding: 20, 
-                            maxFontSize: 30 
+                            maxFontSize: 40 
                         }
                     }
                 }
@@ -850,13 +880,11 @@
 
             const pmTile = document.createElement('div');
             pmTile.className = 'kpi-tile home-master-tile';
-            pmTile.style.borderTopColor = '#333';
             pmTile.innerHTML = generateTileHTML('Total PM Dashboard', pmData, 'chart-pm');
             container.appendChild(pmTile);
 
             const vendedTile = document.createElement('div');
             vendedTile.className = 'kpi-tile home-master-tile';
-            vendedTile.style.borderTopColor = '#333';
             vendedTile.innerHTML = generateTileHTML('Total Vended Repair Dashboard', vendedData, 'chart-vended');
             container.appendChild(vendedTile);
 
