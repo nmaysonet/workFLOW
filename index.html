@@ -6,6 +6,8 @@
     <title>workFLOW + | Workflow Management</title>
     <link href="https://fonts.googleapis.com/css2?family=Raleway:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
     <style>
         /* Global Styles & Reset */
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Raleway', sans-serif; }
@@ -79,7 +81,7 @@
         .upload-btn:hover { background-color: #222; }
         #upload-status { margin-top: 15px; font-size: 14px; font-weight: bold; color: #2e7d32; }
 
-        /* Filter Tabs - RECTANGULAR STYLE */
+        /* Filter Tabs */
         .filter-bar { display: flex; gap: 10px; margin-bottom: 20px; padding-bottom: 15px; border-bottom: 1px solid var(--border); flex-wrap: wrap; }
         .filter-btn { 
             padding: 10px 20px; 
@@ -102,6 +104,13 @@
         .kpi-tile:hover { transform: translateY(-3px); box-shadow: 0 4px 12px rgba(0,0,0,0.12); }
         .kpi-name { font-size: 20px; font-weight: 800; margin-bottom: 15px; color: #333; }
         
+        /* Master Dashboard Tile Expansion & Layout */
+        .home-master-tile { grid-column: 1 / -1; cursor: default; }
+        .home-master-tile:hover { transform: none; box-shadow: 0 2px 6px rgba(0,0,0,0.08); }
+        .flex-tile { display: flex; align-items: center; justify-content: space-between; gap: 40px; flex-wrap: wrap; }
+        .flex-tile-left { flex: 1; min-width: 300px; }
+        .flex-tile-right { width: 180px; height: 180px; flex-shrink: 0; margin: 0 auto; position: relative; }
+
         /* Highlight Boxes (Open & Urgent) */
         .kpi-top-metrics { display: flex; gap: 15px; margin-bottom: 15px; }
         .highlight-box { flex: 1; background: #fffaf0; border: 1px solid var(--gold); border-radius: 6px; padding: 15px 20px; display: flex; flex-direction: column; }
@@ -121,18 +130,7 @@
         /* Data Table & Drilldown */
         .view-title { font-size: 24px; margin-bottom: 15px; color: #333; display: flex; justify-content: space-between; align-items: center;}
         
-        /* Darker Gray Controls */
-        .controls-group button { 
-            padding: 8px 15px; 
-            margin-left: 10px; 
-            cursor: pointer; 
-            background: #666; 
-            color: #fff; 
-            border: none; 
-            border-radius: 4px; 
-            font-weight: bold; 
-            transition: 0.2s; 
-        }
+        .controls-group button { padding: 8px 15px; margin-left: 10px; cursor: pointer; background: #666; color: #fff; border: none; border-radius: 4px; font-weight: bold; transition: 0.2s; }
         .controls-group button:hover { background: #444; }
         
         .drilldown-container { background: #fff; border-radius: 6px; box-shadow: 0 2px 6px rgba(0,0,0,0.08); padding: 20px; margin-top: 10px; }
@@ -146,8 +144,6 @@
         details details details summary { border-left: 3px solid #666; font-weight: 700; }
 
         .table-wrapper { overflow-x: auto; margin-top: 10px; margin-bottom: 10px; }
-        
-        /* Fixed Table Layout */
         table { width: 100%; border-collapse: collapse; min-width: 1000px; font-size: 13px; table-layout: fixed; }
         th { background: #f4f6f9; padding: 12px; text-align: left; color: #555; text-transform: uppercase; font-size: 11px; border-bottom: 2px solid var(--border); font-weight: 700;}
         td { padding: 12px; border-bottom: 1px solid var(--border); vertical-align: middle; font-weight: 500; word-wrap: break-word;}
@@ -348,6 +344,7 @@
         let currentFilter = 'ALL';
         let currentOwnerView = '';
         let currentParentView = '';
+        let globalChartInstances = {}; // Store charts to destroy them before re-rendering
         
         const excludedStatuses = ['COMPLETED', 'FINAL CHARGES SUBMITTED', 'CREDIT VROS'];
 
@@ -395,12 +392,9 @@
             const statusEl = document.getElementById('upload-status');
             
             try {
-                // Attempt to fetch the master_workFLOW.xlsx from the root directory
                 const response = await fetch('master_workFLOW.xlsx');
                 
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
+                if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
                 
                 statusEl.innerText = "File found! Processing data...";
                 const data = await response.arrayBuffer();
@@ -483,20 +477,13 @@
             const today = new Date();
             today.setHours(0, 0, 0, 0);
 
-            // 1. Build OOS Set
             let oosSet = new Set();
             oosRaw.forEach(row => {
                 let unit = getCol(row, ['UNITNUMBER', 'Unit No', 'Vehicle']);
                 let oosFlag = getCol(row, ['OOS Flag', 'Open RO Category']);
-                
-                if(unit) {
-                    if (oosFlag.toUpperCase() === 'OOS' || oosFlag === '') {
-                        oosSet.add(unit.toUpperCase());
-                    }
-                }
+                if(unit && (oosFlag.toUpperCase() === 'OOS' || oosFlag === '')) oosSet.add(unit.toUpperCase());
             });
 
-            // 2. Build Garda Assignments & Location Map
             let unitToGardaOwner = {};
             let unitToLocation = {};
             assignmentsRaw.forEach(row => {
@@ -516,16 +503,12 @@
                 }
             });
 
-            // 3. Track RO counts
             let unitROCounts = {};
             vroRaw.forEach(row => {
                 let unit = getCol(row, ['Unit No', 'UNITNUMBER', 'Vehicle']).toUpperCase();
-                if(unit) {
-                    unitROCounts[unit] = (unitROCounts[unit] || 0) + 1;
-                }
+                if(unit) unitROCounts[unit] = (unitROCounts[unit] || 0) + 1;
             });
 
-            // 4. Process Main VRO Data
             processedData = vroRaw.map(row => {
                 let roNum = getCol(row, ['Order', 'RO Number', 'RONum', 'AFS RO #']);
                 let customer = getCol(row, ['Customer', 'CUSTOMERNAME', 'Customer Name']); 
@@ -541,41 +524,44 @@
                 let loc = unitToLocation[unit] || { region: 'Unknown Region', subregion: 'Unknown Subregion', branch: 'Unknown Branch' };
                 let drillTopLevel = 'Uncategorized';
 
-                if(customer.toLowerCase().includes('ferguson')) {
-                    if (finalOwner !== 'Kevin Anguzza') finalOwner = 'Chad Caylor';
-                    
-                    let branchName = customer.trim();
+                // Smart Fallback Parser
+                let fallbackLoc = { region: 'Unknown Region', subregion: 'Unknown Subregion', branch: customer.trim() };
+                if(customer.includes('-')) {
+                    let locPart = customer.substring(customer.lastIndexOf('-') + 1).trim(); 
                     let stateName = 'Unknown State';
                     let cityName = 'Unknown City';
 
-                    if(customer.includes('-')) {
-                        let locPart = customer.substring(customer.indexOf('-') + 1).trim(); 
-                        
-                        if(locPart.includes(',')) {
-                            let splitComma = locPart.split(','); 
-                            cityName = splitComma[0].trim();
-                            let stateZip = splitComma[1].trim().split(' ').filter(s => s.trim() !== ''); 
-                            if(stateZip.length > 0) stateName = stateZip[0].trim();
+                    if(locPart.includes(',')) {
+                        let splitComma = locPart.split(','); 
+                        cityName = splitComma[0].trim();
+                        let stateZip = splitComma[1].trim().split(' ').filter(s => s.trim() !== ''); 
+                        if(stateZip.length > 0) stateName = stateZip[0].trim();
+                    } else {
+                        let parts = locPart.split(' ').filter(s => s.trim() !== '');
+                        if (parts.length >= 2) {
+                            let stateIdx = parts.length - 2;
+                            stateName = parts[stateIdx].trim();
+                            cityName = parts.slice(0, stateIdx).join(' ').trim();
                         } else {
-                            let parts = locPart.split(' ').filter(s => s.trim() !== '');
-                            if (parts.length >= 2) {
-                                let stateIdx = parts.length - 2;
-                                stateName = parts[stateIdx].trim();
-                                cityName = parts.slice(0, stateIdx).join(' ').trim();
-                            } else {
-                                cityName = locPart;
-                            }
+                            cityName = locPart;
                         }
                     }
-                    loc = { region: stateName, subregion: cityName, branch: branchName };
-                    drillTopLevel = 'Ferguson ' + stateName;
+                    fallbackLoc = { region: stateName, subregion: cityName, branch: customer.trim() };
+                }
+
+                if(customer.toLowerCase().includes('ferguson')) {
+                    if (finalOwner !== 'Kevin Anguzza') finalOwner = 'Chad Caylor';
+                    loc = fallbackLoc;
+                    drillTopLevel = 'Ferguson ' + loc.region;
                 }
                 else if(customer.toLowerCase().includes('garda')) {
                     if (finalOwner !== 'Kevin Anguzza' && unitToGardaOwner[unit]) {
                         finalOwner = unitToGardaOwner[unit];
                     }
+                    if(loc.region === 'Unknown Region' || loc.region === 'Unspecified Region') loc = fallbackLoc;
                     drillTopLevel = 'Garda ' + loc.region;
                 } else {
+                    if(loc.region === 'Unknown Region' || loc.region === 'Unspecified Region') loc = fallbackLoc;
                     drillTopLevel = customer || 'Unknown Customer';
                 }
 
@@ -586,7 +572,6 @@
                 let isOOS = oosSet.has(unit);
                 let isOpen = !excludedStatuses.includes(status.toUpperCase());
 
-                // --- PRIORITY SLA LOGIC (Only applies to Open) ---
                 let priorityStr = 'LOW';
                 let priorityClass = 'badge-low';
                 let isPM = pmOwners.includes(finalOwner);
@@ -619,7 +604,6 @@
                     priorityClass = 'badge-active';
                 }
 
-                // --- COMPLIANCE LOGIC ---
                 let isCompletedKPI = false;
                 let isOnTimeKPI = false;
                 let isLateKPI = false;
@@ -673,13 +657,12 @@
             document.getElementById('home-dashboard').style.display = 'block';
             
             renderHomeDashboard();
-            
             renderKPITiles(pmOwners, 'pm-kpi-container', 'pm-view');
             renderKPITiles(vendedOwners, 'vended-kpi-container', 'vended-view');
         }
 
         // --- HIERARCHY / KPI GENERATORS ---
-        function generateTileHTML(name, dataSet, hideOOS = false) {
+        function generateTileHTML(name, dataSet, chartId = null) {
             let filteredOpen = dataSet.filter(ro => ro.isOpen);
             if(currentFilter === 'URGENT') filteredOpen = filteredOpen.filter(ro => ro.priority === 'URGENT');
             else if(currentFilter === 'MEDIUM') filteredOpen = filteredOpen.filter(ro => ro.priority === 'MEDIUM');
@@ -699,7 +682,7 @@
             let filterLabel = currentFilter === 'ALL' ? 'Open ROs' : `${currentFilter} ROs`;
             if(currentFilter === 'OOS') filterLabel = 'OOS ROs';
 
-            let tileHTML = `
+            let innerHtml = `
                 <div class="kpi-name">${name}</div>
                 <div class="kpi-top-metrics">
                     <div class="highlight-box">
@@ -730,7 +713,115 @@
                     </div>
                 </div>
             `;
-            return tileHTML;
+
+            if (chartId) {
+                return `
+                    <div class="flex-tile">
+                        <div class="flex-tile-left">
+                            ${innerHtml}
+                        </div>
+                        <div class="flex-tile-right">
+                            <canvas id="${chartId}" data-comp="${compPct}" data-late="${latePct}"></canvas>
+                        </div>
+                    </div>
+                `;
+            }
+            return innerHtml;
+        }
+
+        // --- CHART GENERATION ---
+        // Custom plugin to put the percentage text in the center of the Doughnut Chart
+        Chart.register({
+            id: 'centerText',
+            beforeDraw: function(chart) {
+                if (chart.config.options.elements.center) {
+                    var ctx = chart.ctx;
+                    var centerConfig = chart.config.options.elements.center;
+                    var fontStyle = centerConfig.fontStyle || 'bold';
+                    var txt = centerConfig.text;
+                    var color = centerConfig.color || '#333';
+                    var maxFontSize = centerConfig.maxFontSize || 40;
+                    var sidePadding = centerConfig.sidePadding || 20;
+                    var sidePaddingCalculated = (sidePadding / 100) * (chart.innerRadius * 2);
+                    
+                    ctx.font = "30px Raleway";
+                    var stringWidth = ctx.measureText(txt).width;
+                    var elementWidth = (chart.innerRadius * 2) - sidePaddingCalculated;
+                    var widthRatio = elementWidth / stringWidth;
+                    var newFontSize = Math.floor(30 * widthRatio);
+                    var elementHeight = (chart.innerRadius * 2);
+                    var fontSizeToUse = Math.min(newFontSize, elementHeight, maxFontSize);
+                    
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    var centerX = ((chart.chartArea.left + chart.chartArea.right) / 2);
+                    var centerY = ((chart.chartArea.top + chart.chartArea.bottom) / 2);
+                    ctx.font = fontStyle + " " + fontSizeToUse + "px Raleway";
+                    ctx.fillStyle = color;
+                    ctx.fillText(txt, centerX, centerY);
+                }
+            }
+        });
+
+        function initChart(chartId) {
+            if(globalChartInstances[chartId]) {
+                globalChartInstances[chartId].destroy();
+            }
+            
+            const canvas = document.getElementById(chartId);
+            if(!canvas) return;
+
+            const comp = parseInt(canvas.getAttribute('data-comp')) || 0;
+            const late = parseInt(canvas.getAttribute('data-late')) || 0;
+            
+            let chartData = [comp, late];
+            let bgColors = ['#5cb85c', '#d9534f'];
+            let centerText = comp + '%';
+            
+            if (comp === 0 && late === 0) {
+                chartData = [1];
+                bgColors = ['#e0e0e0'];
+                centerText = 'N/A';
+            }
+
+            const ctx = canvas.getContext('2d');
+            globalChartInstances[chartId] = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: (comp === 0 && late === 0) ? ['No Data'] : ['On-Time', 'Late'],
+                    datasets: [{
+                        data: chartData,
+                        backgroundColor: bgColors,
+                        borderWidth: 0,
+                        hoverOffset: 4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    cutout: '75%',
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    if(comp === 0 && late === 0) return ' No Completed Data';
+                                    return ' ' + context.label + ': ' + context.raw + '%';
+                                }
+                            }
+                        }
+                    },
+                    elements: {
+                        center: {
+                            text: centerText,
+                            color: '#333', 
+                            fontStyle: 'bold', 
+                            sidePadding: 20, 
+                            maxFontSize: 30 
+                        }
+                    }
+                }
+            });
         }
 
         function renderHomeDashboard() {
@@ -747,16 +838,20 @@
             let vendedData = aggData.filter(ro => vendedOwners.includes(ro.owner));
 
             const pmTile = document.createElement('div');
-            pmTile.className = 'kpi-tile';
+            pmTile.className = 'kpi-tile home-master-tile';
             pmTile.style.borderTopColor = '#333';
-            pmTile.innerHTML = generateTileHTML('Total PM Dashboard', pmData, true);
+            pmTile.innerHTML = generateTileHTML('Total PM Dashboard', pmData, 'chart-pm');
             container.appendChild(pmTile);
 
             const vendedTile = document.createElement('div');
-            vendedTile.className = 'kpi-tile';
+            vendedTile.className = 'kpi-tile home-master-tile';
             vendedTile.style.borderTopColor = '#333';
-            vendedTile.innerHTML = generateTileHTML('Total Vended Repair Dashboard', vendedData, false);
+            vendedTile.innerHTML = generateTileHTML('Total Vended Repair Dashboard', vendedData, 'chart-vended');
             container.appendChild(vendedTile);
+
+            // Initialize Interactive Charts
+            initChart('chart-pm');
+            initChart('chart-vended');
         }
 
         function renderKPITiles(ownersList, containerId, parentViewId) {
@@ -770,8 +865,7 @@
                 tile.className = 'kpi-tile';
                 tile.onclick = () => loadPersonDrilldown(owner, parentViewId);
                 
-                let isPM = pmOwners.includes(owner);
-                tile.innerHTML = generateTileHTML(owner, ownerDataAll, isPM);
+                tile.innerHTML = generateTileHTML(owner, ownerDataAll);
                 container.appendChild(tile);
             });
         }
@@ -832,7 +926,6 @@
                             const pA = priorityOrder[a.priority] || 4;
                             const pB = priorityOrder[b.priority] || 4;
                             if (pA !== pB) return pA - pB;
-                            
                             if (a.isOOS && !b.isOOS) return -1;
                             if (!a.isOOS && b.isOOS) return 1;
                             return 0;
