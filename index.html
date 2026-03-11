@@ -170,9 +170,6 @@
         .ecd-red { color: #d9534f; font-weight: 800; }
         .ecd-green { color: #5cb85c; font-weight: 800; }
         .badge-ecd-missing { background-color: #fff3cd; color: #d9534f; padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: 800; border: 1px solid #d9534f; white-space: nowrap; display: inline-block; }
-
-        /* Reassign Styles */
-        input[type="checkbox"] { width: 16px; height: 16px; cursor: pointer; accent-color: var(--gold); }
     </style>
 </head>
 <body>
@@ -197,7 +194,6 @@
         <div class="menu-item" id="menu-pm" onclick="navigate('pm-view', this)">PM Queue</div>
         <div class="menu-item" id="menu-vended" onclick="navigate('vended-view', this)">Vended Repair Queue</div>
         <div class="menu-item" id="menu-ers" onclick="navigate('ers-view', this)">ERS Queue</div>
-        <div class="menu-item" id="menu-reassign" onclick="promptPasswordAndNavigate('reassign-view', this)">Assign Orders 🔒</div>
         
         <div class="sidebar-truck">
             <svg width="140" height="70" viewBox="0 0 120 60" xmlns="http://www.w3.org/2000/svg" class="moving-truck-svg">
@@ -372,43 +368,6 @@
             <div class="drilldown-container" id="drilldown-body"></div>
         </div>
 
-        <div id="reassign-view" class="view-section">
-            <h2 class="view-title">Assign / Transfer Orders 🔒</h2>
-            <div style="background:#fff; padding: 20px; border-radius: 6px; box-shadow: 0 2px 6px rgba(0,0,0,0.08); margin-bottom: 20px; display:flex; gap:20px; align-items: flex-end; flex-wrap: wrap;">
-                <div>
-                    <label style="display:block; font-size:12px; font-weight:bold; margin-bottom:5px; color:#555;">Filter by Current Owner:</label>
-                    <select id="reassign-filter-owner" class="filter-select" onchange="renderReassignTable()">
-                        <option value="ALL">All Open Orders</option>
-                    </select>
-                </div>
-                <div style="flex-grow:1;"></div>
-                <div style="background: #f9fafc; padding: 15px; border-radius: 4px; border: 1px solid var(--border); display:flex; gap:15px; align-items:center; flex-wrap:wrap;">
-                    <div>
-                        <label style="display:block; font-size:12px; font-weight:bold; margin-bottom:5px; color:#555;">Assign Selected To:</label>
-                        <select id="reassign-target-owner" class="filter-select"></select>
-                    </div>
-                    <button class="btn-green" style="margin-top: 18px;" onclick="executeReassignment()">Confirm Assignment</button>
-                </div>
-            </div>
-            
-            <div class="drilldown-container table-wrapper">
-                <table>
-                    <thead>
-                        <tr>
-                            <th style="width: 40px; text-align: center;"><input type="checkbox" id="reassign-select-all" onclick="toggleAllReassign(this)"></th>
-                            <th>AFS RO #</th>
-                            <th>Unit No</th>
-                            <th>Priority</th>
-                            <th>Current Owner</th>
-                            <th>Status</th>
-                            <th>Task / VMRS</th>
-                        </tr>
-                    </thead>
-                    <tbody id="reassign-table-body"></tbody>
-                </table>
-            </div>
-        </div>
-
         <div id="search-view" class="view-section">
             <h2 class="view-title">Search Results: <span id="search-term-display"></span></h2>
             <div class="drilldown-container table-wrapper">
@@ -446,9 +405,6 @@
         let pmOwners = [];
         let vendedOwners = [];
         let ersOwners = [];
-        let allActiveOwners = []; 
-
-        let isReassignUnlocked = false; 
 
         const excludedStatuses = ['COMPLETED', 'FINAL CHARGES SUBMITTED', 'CREDIT VROS'];
         let lastActiveView = 'home-view';
@@ -476,7 +432,7 @@
                 const data = await response.arrayBuffer();
                 const workbook = XLSX.read(data, {type: 'array'});
                 
-                let vroRaw = [], resourceRaw = [], oosRaw = [], assignRaw = [];
+                let vroRaw = [], resourceRaw = [], oosRaw = [];
                 
                 workbook.SheetNames.forEach(sheetName => {
                     const sheetData = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], {defval: ''});
@@ -484,26 +440,17 @@
                     
                     const keys = Object.keys(sheetData[0]).map(k => String(k).toLowerCase().trim());
                     
-                    // Tab 4: Order Assignments
-                    if (keys.includes('vro') && keys.includes('assignee')) {
-                        assignRaw = assignRaw.concat(sheetData);
-                    } 
-                    // Tab 2: Resource Table
-                    else if (keys.includes('createdby') || keys.includes('pm comp:') || keys.includes('team')) {
+                    if (keys.includes('createdby') || keys.includes('pm comp:') || keys.includes('team')) {
                         resourceRaw = resourceRaw.concat(sheetData);
-                    } 
-                    // Tab 3: OOS GARDA
-                    else if (keys.includes('garda region') || keys.includes('oos flag')) {
+                    } else if (keys.includes('garda region') || keys.includes('oos flag')) {
                         oosRaw = oosRaw.concat(sheetData);
-                    } 
-                    // Tab 1: VRO Export
-                    else if (keys.includes('order') || keys.includes('ro number') || keys.includes('afs ro #')) {
+                    } else if (keys.includes('order') || keys.includes('ro number') || keys.includes('afs ro #')) {
                         vroRaw = vroRaw.concat(sheetData);
                     }
                 });
                 
                 statusEl.innerText = "Building dashboards...";
-                processExcelData(vroRaw, resourceRaw, oosRaw, assignRaw);
+                processExcelData(vroRaw, resourceRaw, oosRaw);
 
             } catch (error) {
                 console.error("Fetch failed:", error);
@@ -622,71 +569,8 @@
             else if(activeView === 'person-view') { if(currentOwnerView) loadPersonDrilldown(currentOwnerView, currentParentView); }
         }
 
-        // --- SECURITY / REASSIGNMENT LOGIC ---
-        function promptPasswordAndNavigate(viewId, element) {
-            if(!isReassignUnlocked) {
-                let pass = prompt("Enter Password to access Orders Assignment:");
-                if(pass === '1234578') {
-                    isReassignUnlocked = true;
-                } else {
-                    if (pass !== null) alert("Incorrect Password.");
-                    return;
-                }
-            }
-            navigate(viewId, element);
-            if(viewId === 'reassign-view') renderReassignTable();
-        }
-
-        function renderReassignTable() {
-            let filterOwner = document.getElementById('reassign-filter-owner').value;
-            let targetData = processedData.filter(ro => ro.isOpen);
-            if (filterOwner !== 'ALL') {
-                targetData = targetData.filter(ro => ro.owner === filterOwner);
-            }
-            
-            const tbody = document.getElementById('reassign-table-body');
-            tbody.innerHTML = '';
-            targetData.forEach(ro => {
-                let tr = document.createElement('tr');
-                tr.innerHTML = `
-                    <td style="text-align:center;"><input type="checkbox" class="ro-reassign-cb" value="${ro.roNum}"></td>
-                    <td>${ro.roNum}</td>
-                    <td><strong>${ro.unitNo}</strong></td>
-                    <td><span class="badge ${ro.priorityClass}">${ro.priority}</span></td>
-                    <td>${ro.owner}</td>
-                    <td>${ro.status}</td>
-                    <td>${ro.vmrs}</td>
-                `;
-                tbody.appendChild(tr);
-            });
-            document.getElementById('reassign-select-all').checked = false;
-        }
-
-        function toggleAllReassign(source) {
-            document.querySelectorAll('.ro-reassign-cb').forEach(cb => { cb.checked = source.checked; });
-        }
-
-        function executeReassignment() {
-            let newOwner = document.getElementById('reassign-target-owner').value;
-            if(!newOwner) { alert("Please select a target owner."); return; }
-            
-            let selectedRoNums = Array.from(document.querySelectorAll('.ro-reassign-cb:checked')).map(cb => cb.value);
-            if(selectedRoNums.length === 0) { alert("Please select at least one Repair Order to assign."); return; }
-            
-            let count = 0;
-            processedData.forEach(ro => {
-                if(selectedRoNums.includes(ro.roNum)) {
-                    ro.owner = newOwner;
-                    count++;
-                }
-            });
-            
-            alert(`Successfully assigned ${count} order(s) to ${newOwner}.`);
-            renderReassignTable();
-        }
-
         // --- PROCESS DATA ---
-        function processExcelData(vroRaw, resourceRaw, oosRaw, assignRaw) {
+        function processExcelData(vroRaw, resourceRaw, oosRaw) {
             const today = new Date(); today.setHours(0, 0, 0, 0);
             
             let oosSet = new Set();
@@ -724,9 +608,9 @@
                 
                 if (createdBy) {
                     let key = String(createdBy).toLowerCase().trim();
-                    let finalName = String(name || createdBy).trim();
+                    let finalName = name ? String(name).trim() : String(createdBy).trim();
                     ownerMap[key] = { name: finalName, status: status, team: team };
-                    if (name) ownerMap[String(name).toLowerCase().trim()] = { name: finalName, status: status, team: team };
+                    if (finalName) ownerMap[finalName.toLowerCase()] = { name: finalName, status: status, team: team };
                     
                     if (status === 'ACTIVE') {
                         if (team === 'PM') activePM.add(finalName);
@@ -743,38 +627,12 @@
             pmOwners = Array.from(activePM);
             vendedOwners = Array.from(activeVended);
             ersOwners = Array.from(activeERS);
-            
-            // Build Assignments Array for dropdowns
-            allActiveOwners = Array.from(new Set([...pmOwners, ...vendedOwners, ...ersOwners])).sort();
-            
-            let filterSel = document.getElementById('reassign-filter-owner');
-            let targetSel = document.getElementById('reassign-target-owner');
-            filterSel.innerHTML = '<option value="ALL">All Open Orders</option>';
-            targetSel.innerHTML = '';
-            
-            allActiveOwners.forEach(o => {
-                let opt1 = document.createElement('option'); opt1.value = o; opt1.innerText = o;
-                let opt2 = document.createElement('option'); opt2.value = o; opt2.innerText = o;
-                filterSel.appendChild(opt1);
-                targetSel.appendChild(opt2);
-            });
-
             pmKeywords = [...new Set(pmKeywords)]; 
 
             let unitROCounts = {};
             vroRaw.forEach(row => {
                 let unit = getCol(row, ['Unit No', 'UNITNUMBER', 'Vehicle']).toUpperCase();
                 if(unit) unitROCounts[unit] = (unitROCounts[unit] || 0) + 1;
-            });
-
-            // TAB 4 ORDER ASSIGNMENTS INJECTION
-            let reassignments = {};
-            assignRaw.forEach(row => {
-                let vro = getCol(row, ['VRO', 'Order', 'RO Number', 'AFS RO #']);
-                let assignee = getCol(row, ['Assignee', 'Name', 'Owner']);
-                if (vro && assignee) {
-                    reassignments[vro.toUpperCase().trim()] = assignee.trim();
-                }
             });
 
             let allCustSet = new Set();
@@ -790,14 +648,8 @@
                 let dueRaw = getCol(row, ['Unit Due Date', 'Estimate Due Date', 'Due Date', 'L']);
                 let compRaw = getCol(row, ['Completed Date', 'Completed', 'P']);
                 
-                let finalOwner = String(rawOwner || '').trim();
-                
-                // --- APPLY REASSIGNMENTS OVERRIDE ---
-                if (reassignments[roNum]) {
-                    finalOwner = reassignments[roNum];
-                }
-
-                // Clean the final owner string against Resource Table
+                // Pure mapping logic from Tab 1 Owner string directly to Resource Table Name.
+                let finalOwner = rawOwner ? String(rawOwner).trim() : 'UNASSIGNED';
                 let ownerLookup = ownerMap[finalOwner.toLowerCase()];
                 if (ownerLookup) finalOwner = ownerLookup.name;
 
@@ -923,7 +775,6 @@
             document.getElementById('upload-box').style.display = 'none';
             document.getElementById('home-dashboard').style.display = 'block';
             
-            // Force rendering to ensure current screen is updated immediately
             triggerViewUpdate();
         }
 
@@ -1035,7 +886,7 @@
 
             let pmData = aggData.filter(ro => pmOwners.includes(ro.owner));
             let vendedData = aggData.filter(ro => vendedOwners.includes(ro.owner));
-            let ersRoData = aggData.filter(ro => ersOwners.includes(ro.owner));
+            let ersData = aggData.filter(ro => ersOwners.includes(ro.owner));
 
             const pmTile = document.createElement('div'); pmTile.className = 'kpi-tile home-master-tile'; pmTile.innerHTML = generateTileHTML('PM Dashboard', pmData, 'chart-pm');
             pmTile.onclick = () => loadPersonDrilldown('ALL_PM', 'home-view');
@@ -1046,7 +897,7 @@
             container.appendChild(vendedTile);
             
             const ersTile = document.createElement('div'); ersTile.className = 'kpi-tile home-master-tile'; 
-            ersTile.innerHTML = generateTileHTML('ERS Dashboard', ersRoData, 'chart-ers');
+            ersTile.innerHTML = generateTileHTML('ERS Dashboard', ersData, 'chart-ers');
             ersTile.onclick = () => loadPersonDrilldown('ALL_ERS', 'home-view');
             container.appendChild(ersTile);
 
@@ -1224,7 +1075,7 @@
             }
             document.querySelectorAll('.view-section').forEach(v => v.classList.remove('active'));
             document.getElementById(viewId).classList.add('active');
-            if(viewId !== 'search-view' && viewId !== 'person-view' && viewId !== 'reassign-view') lastActiveView = viewId;
+            if(viewId !== 'search-view' && viewId !== 'person-view') lastActiveView = viewId;
             if(menuElement) {
                 document.querySelectorAll('.menu-item').forEach(item => item.classList.remove('active'));
                 menuElement.classList.add('active');
