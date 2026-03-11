@@ -170,6 +170,9 @@
         .ecd-red { color: #d9534f; font-weight: 800; }
         .ecd-green { color: #5cb85c; font-weight: 800; }
         .badge-ecd-missing { background-color: #fff3cd; color: #d9534f; padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: 800; border: 1px solid #d9534f; white-space: nowrap; display: inline-block; }
+
+        /* Reassign Styles */
+        input[type="checkbox"] { width: 16px; height: 16px; cursor: pointer; accent-color: var(--gold); }
     </style>
 </head>
 <body>
@@ -194,6 +197,7 @@
         <div class="menu-item" id="menu-pm" onclick="navigate('pm-view', this)">PM Queue</div>
         <div class="menu-item" id="menu-vended" onclick="navigate('vended-view', this)">Vended Repair Queue</div>
         <div class="menu-item" id="menu-ers" onclick="navigate('ers-view', this)">ERS Queue</div>
+        <div class="menu-item" id="menu-reassign" onclick="promptPasswordAndNavigate('reassign-view', this)">Assign Orders 🔒</div>
         
         <div class="sidebar-truck">
             <svg width="140" height="70" viewBox="0 0 120 60" xmlns="http://www.w3.org/2000/svg" class="moving-truck-svg">
@@ -267,10 +271,14 @@
                 <div class="home-dashboard-header">
                     <h2 style="margin:0;">Aggregate Performance Overview</h2>
                     <div class="date-controls">
-                        <select class="filter-select customer-filter-select" onchange="setCustomerFilter(this.value)">
+                        <label>Date Range:</label>
+                        <input type="date" class="filter-select date-filter-start" onchange="setDateFilter('start', this.value)">
+                        <span style="font-weight:bold; color:#666;">-</span>
+                        <input type="date" class="filter-select date-filter-end" onchange="setDateFilter('end', this.value)">
+                        
+                        <select class="filter-select customer-filter-select" onchange="setCustomerFilter(this.value)" style="margin-left: 10px;">
                             <option value="ALL">All Customers</option>
                         </select>
-                        <button class="btn-green" onclick="fetchData()" style="margin-left: 10px;">↻ Refresh</button>
                     </div>
                 </div>
                 <div class="home-kpi-container" id="home-kpi-container"></div>
@@ -284,7 +292,6 @@
                     <select class="filter-select customer-filter-select" onchange="setCustomerFilter(this.value)">
                         <option value="ALL">All Customers</option>
                     </select>
-                    <button class="btn-green" onclick="fetchData()" style="margin-left: 10px;">↻ Refresh</button>
                 </div>
             </div>
             <div class="filter-bar">
@@ -304,7 +311,6 @@
                     <select class="filter-select customer-filter-select" onchange="setCustomerFilter(this.value)">
                         <option value="ALL">All Customers</option>
                     </select>
-                    <button class="btn-green" onclick="fetchData()" style="margin-left: 10px;">↻ Refresh</button>
                 </div>
             </div>
             <div class="filter-bar">
@@ -324,7 +330,6 @@
                     <select class="filter-select customer-filter-select" onchange="setCustomerFilter(this.value)">
                         <option value="ALL">All Customers</option>
                     </select>
-                    <button class="btn-green" onclick="fetchData()" style="margin-left: 10px;">↻ Refresh</button>
                 </div>
             </div>
             <div class="filter-bar">
@@ -351,7 +356,6 @@
                         <span style="font-weight:bold; color:#666;">-</span>
                         <input type="date" class="filter-select date-filter-end" onchange="setDateFilter('end', this.value)">
                     </div>
-                    <button class="btn-green" onclick="fetchData()">↻ Refresh</button>
                     <button class="btn-green" onclick="exportDrilldownToExcel()">Export to XLSX</button>
                     <button onclick="toggleAllDetails(true)">Expand All</button>
                     <button onclick="toggleAllDetails(false)">Collapse All</button>
@@ -366,6 +370,43 @@
                 <button class="filter-btn" data-filter="OOS" onclick="setFilter('OOS')">OOS Only</button>
             </div>
             <div class="drilldown-container" id="drilldown-body"></div>
+        </div>
+
+        <div id="reassign-view" class="view-section">
+            <h2 class="view-title">Assign / Transfer Orders 🔒</h2>
+            <div style="background:#fff; padding: 20px; border-radius: 6px; box-shadow: 0 2px 6px rgba(0,0,0,0.08); margin-bottom: 20px; display:flex; gap:20px; align-items: flex-end; flex-wrap: wrap;">
+                <div>
+                    <label style="display:block; font-size:12px; font-weight:bold; margin-bottom:5px; color:#555;">Filter by Current Owner:</label>
+                    <select id="reassign-filter-owner" class="filter-select" onchange="renderReassignTable()">
+                        <option value="ALL">All Open Orders</option>
+                    </select>
+                </div>
+                <div style="flex-grow:1;"></div>
+                <div style="background: #f9fafc; padding: 15px; border-radius: 4px; border: 1px solid var(--border); display:flex; gap:15px; align-items:center; flex-wrap:wrap;">
+                    <div>
+                        <label style="display:block; font-size:12px; font-weight:bold; margin-bottom:5px; color:#555;">Assign Selected To:</label>
+                        <select id="reassign-target-owner" class="filter-select"></select>
+                    </div>
+                    <button class="btn-green" style="margin-top: 18px;" onclick="executeReassignment()">Confirm Assignment</button>
+                </div>
+            </div>
+            
+            <div class="drilldown-container table-wrapper">
+                <table>
+                    <thead>
+                        <tr>
+                            <th style="width: 40px; text-align: center;"><input type="checkbox" id="reassign-select-all" onclick="toggleAllReassign(this)"></th>
+                            <th>AFS RO #</th>
+                            <th>Unit No</th>
+                            <th>Priority</th>
+                            <th>Current Owner</th>
+                            <th>Status</th>
+                            <th>Task / VMRS</th>
+                        </tr>
+                    </thead>
+                    <tbody id="reassign-table-body"></tbody>
+                </table>
+            </div>
         </div>
 
         <div id="search-view" class="view-section">
@@ -405,6 +446,9 @@
         let pmOwners = [];
         let vendedOwners = [];
         let ersOwners = [];
+        let allActiveOwners = []; 
+
+        let isReassignUnlocked = false; 
 
         const excludedStatuses = ['COMPLETED', 'FINAL CHARGES SUBMITTED', 'CREDIT VROS'];
         let lastActiveView = 'home-view';
@@ -578,6 +622,69 @@
             else if(activeView === 'person-view') { if(currentOwnerView) loadPersonDrilldown(currentOwnerView, currentParentView); }
         }
 
+        // --- SECURITY / REASSIGNMENT LOGIC ---
+        function promptPasswordAndNavigate(viewId, element) {
+            if(!isReassignUnlocked) {
+                let pass = prompt("Enter Password to access Orders Assignment:");
+                if(pass === '1234578') {
+                    isReassignUnlocked = true;
+                } else {
+                    if (pass !== null) alert("Incorrect Password.");
+                    return;
+                }
+            }
+            navigate(viewId, element);
+            if(viewId === 'reassign-view') renderReassignTable();
+        }
+
+        function renderReassignTable() {
+            let filterOwner = document.getElementById('reassign-filter-owner').value;
+            let targetData = processedData.filter(ro => ro.isOpen);
+            if (filterOwner !== 'ALL') {
+                targetData = targetData.filter(ro => ro.owner === filterOwner);
+            }
+            
+            const tbody = document.getElementById('reassign-table-body');
+            tbody.innerHTML = '';
+            targetData.forEach(ro => {
+                let tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td style="text-align:center;"><input type="checkbox" class="ro-reassign-cb" value="${ro.roNum}"></td>
+                    <td>${ro.roNum}</td>
+                    <td><strong>${ro.unitNo}</strong></td>
+                    <td><span class="badge ${ro.priorityClass}">${ro.priority}</span></td>
+                    <td>${ro.owner}</td>
+                    <td>${ro.status}</td>
+                    <td>${ro.vmrs}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+            document.getElementById('reassign-select-all').checked = false;
+        }
+
+        function toggleAllReassign(source) {
+            document.querySelectorAll('.ro-reassign-cb').forEach(cb => { cb.checked = source.checked; });
+        }
+
+        function executeReassignment() {
+            let newOwner = document.getElementById('reassign-target-owner').value;
+            if(!newOwner) { alert("Please select a target owner."); return; }
+            
+            let selectedRoNums = Array.from(document.querySelectorAll('.ro-reassign-cb:checked')).map(cb => cb.value);
+            if(selectedRoNums.length === 0) { alert("Please select at least one Repair Order to assign."); return; }
+            
+            let count = 0;
+            processedData.forEach(ro => {
+                if(selectedRoNums.includes(ro.roNum)) {
+                    ro.owner = newOwner;
+                    count++;
+                }
+            });
+            
+            alert(`Successfully assigned ${count} order(s) to ${newOwner}.`);
+            renderReassignTable();
+        }
+
         // --- PROCESS DATA ---
         function processExcelData(vroRaw, resourceRaw, oosRaw, assignRaw) {
             const today = new Date(); today.setHours(0, 0, 0, 0);
@@ -636,6 +743,22 @@
             pmOwners = Array.from(activePM);
             vendedOwners = Array.from(activeVended);
             ersOwners = Array.from(activeERS);
+            
+            // Build Assignments Array for dropdowns
+            allActiveOwners = Array.from(new Set([...pmOwners, ...vendedOwners, ...ersOwners])).sort();
+            
+            let filterSel = document.getElementById('reassign-filter-owner');
+            let targetSel = document.getElementById('reassign-target-owner');
+            filterSel.innerHTML = '<option value="ALL">All Open Orders</option>';
+            targetSel.innerHTML = '';
+            
+            allActiveOwners.forEach(o => {
+                let opt1 = document.createElement('option'); opt1.value = o; opt1.innerText = o;
+                let opt2 = document.createElement('option'); opt2.value = o; opt2.innerText = o;
+                filterSel.appendChild(opt1);
+                targetSel.appendChild(opt2);
+            });
+
             pmKeywords = [...new Set(pmKeywords)]; 
 
             let unitROCounts = {};
