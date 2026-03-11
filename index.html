@@ -60,7 +60,7 @@
         .btn-action { background-color: var(--gold); color: #fff; padding: 10px 20px; border-radius: 4px; font-weight: bold; transition: 0.2s; border: none; cursor: pointer; font-size: 13px;}
         .btn-action:hover { background-color: var(--gold-hover); }
         
-        .btn-green { background-color: #5cb85c; color: #fff; padding: 8px 15px; border-radius: 4px; font-weight: bold; transition: 0.2s; border: none; cursor: pointer; font-size: 13px; }
+        .btn-green { background-color: #5cb85c; color: #fff; padding: 8px 15px; border-radius: 4px; font-weight: bold; transition: 0.2s; border: none; cursor: pointer; font-size: 13px; display: inline-flex; align-items: center; gap: 5px;}
         .btn-green:hover { background-color: #4cae4c; }
 
         /* Vendor Maps Dropdown Styling */
@@ -267,14 +267,10 @@
                 <div class="home-dashboard-header">
                     <h2 style="margin:0;">Aggregate Performance Overview</h2>
                     <div class="date-controls">
-                        <label>Date Range:</label>
-                        <input type="date" class="filter-select date-filter-start" onchange="setDateFilter('start', this.value)">
-                        <span style="font-weight:bold; color:#666;">-</span>
-                        <input type="date" class="filter-select date-filter-end" onchange="setDateFilter('end', this.value)">
-                        
-                        <select class="filter-select customer-filter-select" onchange="setCustomerFilter(this.value)" style="margin-left: 10px;">
+                        <select class="filter-select customer-filter-select" onchange="setCustomerFilter(this.value)">
                             <option value="ALL">All Customers</option>
                         </select>
+                        <button class="btn-green" onclick="fetchData()" style="margin-left: 10px;">↻ Refresh</button>
                     </div>
                 </div>
                 <div class="home-kpi-container" id="home-kpi-container"></div>
@@ -284,9 +280,12 @@
         <div id="pm-view" class="view-section">
             <div class="view-title">
                 <span style="font-weight: 700;">PM Queue</span>
-                <select class="filter-select customer-filter-select" onchange="setCustomerFilter(this.value)">
-                    <option value="ALL">All Customers</option>
-                </select>
+                <div class="date-controls">
+                    <select class="filter-select customer-filter-select" onchange="setCustomerFilter(this.value)">
+                        <option value="ALL">All Customers</option>
+                    </select>
+                    <button class="btn-green" onclick="fetchData()" style="margin-left: 10px;">↻ Refresh</button>
+                </div>
             </div>
             <div class="filter-bar">
                 <button class="filter-btn active" data-filter="ALL" onclick="setFilter('ALL')">All Active</button>
@@ -301,9 +300,12 @@
         <div id="vended-view" class="view-section">
             <div class="view-title">
                 <span style="font-weight: 700;">Vended Repair Queue</span>
-                <select class="filter-select customer-filter-select" onchange="setCustomerFilter(this.value)">
-                    <option value="ALL">All Customers</option>
-                </select>
+                <div class="date-controls">
+                    <select class="filter-select customer-filter-select" onchange="setCustomerFilter(this.value)">
+                        <option value="ALL">All Customers</option>
+                    </select>
+                    <button class="btn-green" onclick="fetchData()" style="margin-left: 10px;">↻ Refresh</button>
+                </div>
             </div>
             <div class="filter-bar">
                 <button class="filter-btn active" data-filter="ALL" onclick="setFilter('ALL')">All Active</button>
@@ -319,10 +321,10 @@
             <div class="view-title">
                 <span style="font-weight: 700;">ERS Queue</span>
                 <div class="date-controls">
-                    <label>Date Range:</label>
-                    <input type="date" class="filter-select date-filter-start" onchange="setDateFilter('start', this.value)">
-                    <span style="font-weight:bold; color:#666;">-</span>
-                    <input type="date" class="filter-select date-filter-end" onchange="setDateFilter('end', this.value)">
+                    <select class="filter-select customer-filter-select" onchange="setCustomerFilter(this.value)">
+                        <option value="ALL">All Customers</option>
+                    </select>
+                    <button class="btn-green" onclick="fetchData()" style="margin-left: 10px;">↻ Refresh</button>
                 </div>
             </div>
             <div class="filter-bar">
@@ -343,7 +345,13 @@
                         <option value="ALL">All Customers</option>
                     </select>
                 </div>
-                <div class="controls-group">
+                <div class="controls-group" style="display: flex; align-items: center;">
+                    <div class="date-controls" style="margin-right: 15px;">
+                        <input type="date" class="filter-select date-filter-start" onchange="setDateFilter('start', this.value)">
+                        <span style="font-weight:bold; color:#666;">-</span>
+                        <input type="date" class="filter-select date-filter-end" onchange="setDateFilter('end', this.value)">
+                    </div>
+                    <button class="btn-green" onclick="fetchData()">↻ Refresh</button>
                     <button class="btn-green" onclick="exportDrilldownToExcel()">Export to XLSX</button>
                     <button onclick="toggleAllDetails(true)">Expand All</button>
                     <button onclick="toggleAllDetails(false)">Collapse All</button>
@@ -400,6 +408,68 @@
 
         const excludedStatuses = ['COMPLETED', 'FINAL CHARGES SUBMITTED', 'CREDIT VROS'];
         let lastActiveView = 'home-view';
+
+        // --- FETCH LOCAL DATA ---
+        async function fetchData() {
+            const statusEl = document.getElementById('upload-status');
+            const uploadBox = document.getElementById('upload-box');
+            const dashboard = document.getElementById('home-dashboard');
+
+            uploadBox.style.display = 'block';
+            dashboard.style.display = 'none';
+            statusEl.innerText = "Fetching local database file...";
+            statusEl.style.color = '#888';
+            document.getElementById('manual-upload-section').style.display = 'none';
+
+            try {
+                // Add timestamp to bypass local caching issues
+                const timestamp = new Date().getTime();
+                const response = await fetch(`master_workFLOW.xlsx?_=${timestamp}`);
+                
+                if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                
+                statusEl.innerText = "File found! Processing data...";
+                const data = await response.arrayBuffer();
+                const workbook = XLSX.read(data, {type: 'array'});
+                
+                let vroRaw = [], resourceRaw = [], oosRaw = [], assignRaw = [];
+                
+                workbook.SheetNames.forEach(sheetName => {
+                    const sheetData = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], {defval: ''});
+                    if(sheetData.length === 0) return;
+                    
+                    const keys = Object.keys(sheetData[0]).map(k => String(k).toLowerCase().trim());
+                    
+                    // Tab 4: Order Assignments
+                    if (keys.includes('vro') && keys.includes('assignee')) {
+                        assignRaw = assignRaw.concat(sheetData);
+                    } 
+                    // Tab 2: Resource Table
+                    else if (keys.includes('createdby') || keys.includes('pm comp:') || keys.includes('team')) {
+                        resourceRaw = resourceRaw.concat(sheetData);
+                    } 
+                    // Tab 3: OOS GARDA
+                    else if (keys.includes('garda region') || keys.includes('oos flag')) {
+                        oosRaw = oosRaw.concat(sheetData);
+                    } 
+                    // Tab 1: VRO Export
+                    else if (keys.includes('order') || keys.includes('ro number') || keys.includes('afs ro #')) {
+                        vroRaw = vroRaw.concat(sheetData);
+                    }
+                });
+                
+                statusEl.innerText = "Building dashboards...";
+                processExcelData(vroRaw, resourceRaw, oosRaw, assignRaw);
+
+            } catch (error) {
+                console.error("Fetch failed:", error);
+                statusEl.innerText = "Failed to load live data. Please manually upload the master file below.";
+                statusEl.style.color = "red";
+                document.getElementById('manual-upload-section').style.display = 'block';
+            }
+        }
+
+        window.onload = fetchData;
 
         // --- PRECISE DATA PARSER ---
         function getCol(row, possibleNames) {
@@ -508,82 +578,8 @@
             else if(activeView === 'person-view') { if(currentOwnerView) loadPersonDrilldown(currentOwnerView, currentParentView); }
         }
 
-        // --- AUTO-FETCH LOGIC ---
-        window.onload = async () => {
-            const statusEl = document.getElementById('upload-status');
-            try {
-                const response = await fetch('master_workFLOW.xlsx');
-                if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-                statusEl.innerText = "File found! Processing data...";
-                const data = await response.arrayBuffer();
-                const workbook = XLSX.read(data, {type: 'array'});
-                
-                let vroRaw = [], resourceRaw = [], oosRaw = [];
-                
-                workbook.SheetNames.forEach(sheetName => {
-                    const sheetData = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], {defval: ''});
-                    if(sheetData.length === 0) return;
-                    
-                    const firstRow = sheetData[0];
-                    const keys = Object.keys(firstRow).map(k => String(k).toLowerCase().trim());
-                    
-                    if (keys.includes('createdby') || keys.includes('pm comp:') || keys.includes('team')) {
-                        resourceRaw = resourceRaw.concat(sheetData);
-                    } else if (keys.includes('garda region') || keys.includes('oos flag')) {
-                        oosRaw = oosRaw.concat(sheetData);
-                    } else if (!keys.includes('assignee name') && !keys.includes('ticket id')) {
-                        // Ensure we do not parse Tab 4 ERS Data as standard VRO data!
-                        vroRaw = vroRaw.concat(sheetData);
-                    }
-                });
-                processExcelData(vroRaw, resourceRaw, oosRaw);
-            } catch (error) {
-                console.error("Auto-fetch failed:", error);
-                statusEl.innerText = "Auto-load failed. Use manual upload.";
-                statusEl.style.color = "red";
-                document.getElementById('manual-upload-section').style.display = 'block';
-            }
-        };
-
-        // --- MANUAL UPLOAD FALLBACK ---
-        document.getElementById('excelFileInput').addEventListener('change', async function(e) {
-            const files = Array.from(e.target.files);
-            if (files.length === 0) return;
-            const statusEl = document.getElementById('upload-status');
-            statusEl.innerText = "Reading manual upload...";
-            
-            let vroRaw = [], resourceRaw = [], oosRaw = [];
-            
-            try {
-                for(let file of files) {
-                    const data = await file.arrayBuffer();
-                    const workbook = XLSX.read(data, {type: 'array'});
-                    
-                    workbook.SheetNames.forEach(sheetName => {
-                        const sheetData = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], {defval: ''});
-                        if(sheetData.length === 0) return;
-                        
-                        const firstRow = sheetData[0];
-                        const keys = Object.keys(firstRow).map(k => String(k).toLowerCase().trim());
-                        
-                        if (keys.includes('createdby') || keys.includes('pm comp:') || keys.includes('team')) {
-                            resourceRaw = resourceRaw.concat(sheetData);
-                        } else if (keys.includes('garda region') || keys.includes('oos flag')) {
-                            oosRaw = oosRaw.concat(sheetData);
-                        } else if (!keys.includes('assignee name') && !keys.includes('ticket id')) {
-                            vroRaw = vroRaw.concat(sheetData);
-                        }
-                    });
-                }
-                processExcelData(vroRaw, resourceRaw, oosRaw);
-            } catch (error) { 
-                console.error(error); 
-                statusEl.innerText = "Error parsing files."; 
-            }
-        });
-
         // --- PROCESS DATA ---
-        function processExcelData(vroRaw, resourceRaw, oosRaw) {
+        function processExcelData(vroRaw, resourceRaw, oosRaw, assignRaw) {
             const today = new Date(); today.setHours(0, 0, 0, 0);
             
             let oosSet = new Set();
@@ -648,10 +644,20 @@
                 if(unit) unitROCounts[unit] = (unitROCounts[unit] || 0) + 1;
             });
 
+            // TAB 4 ORDER ASSIGNMENTS INJECTION
+            let reassignments = {};
+            assignRaw.forEach(row => {
+                let vro = getCol(row, ['VRO', 'Order', 'RO Number', 'AFS RO #']);
+                let assignee = getCol(row, ['Assignee', 'Name', 'Owner']);
+                if (vro && assignee) {
+                    reassignments[vro.toUpperCase().trim()] = assignee.trim();
+                }
+            });
+
             let allCustSet = new Set();
 
             processedData = vroRaw.map(row => {
-                let roNum = getCol(row, ['Order', 'RO Number', 'RONum', 'AFS RO #']);
+                let roNum = getCol(row, ['Order', 'RO Number', 'RONum', 'AFS RO #']).toUpperCase().trim();
                 let customer = getCol(row, ['Customer', 'CUSTOMERNAME', 'Customer Name']); 
                 let rawOwner = getCol(row, ['Owner', 'Created By']); 
                 let unit = getCol(row, ['Unit No', 'UNITNUMBER', 'Vehicle']).toUpperCase();
@@ -662,6 +668,13 @@
                 let compRaw = getCol(row, ['Completed Date', 'Completed', 'P']);
                 
                 let finalOwner = String(rawOwner || '').trim();
+                
+                // --- APPLY REASSIGNMENTS OVERRIDE ---
+                if (reassignments[roNum]) {
+                    finalOwner = reassignments[roNum];
+                }
+
+                // Clean the final owner string against Resource Table
                 let ownerLookup = ownerMap[finalOwner.toLowerCase()];
                 if (ownerLookup) finalOwner = ownerLookup.name;
 
@@ -787,10 +800,8 @@
             document.getElementById('upload-box').style.display = 'none';
             document.getElementById('home-dashboard').style.display = 'block';
             
-            renderHomeDashboard();
-            renderKPITiles(pmOwners, 'pm-kpi-container', 'pm-view');
-            renderKPITiles(vendedOwners, 'vended-kpi-container', 'vended-view');
-            renderKPITiles(ersOwners, 'ers-kpi-container', 'ers-view');
+            // Force rendering to ensure current screen is updated immediately
+            triggerViewUpdate();
         }
 
         // --- HIERARCHY / KPI GENERATORS ---
@@ -1090,7 +1101,7 @@
             }
             document.querySelectorAll('.view-section').forEach(v => v.classList.remove('active'));
             document.getElementById(viewId).classList.add('active');
-            if(viewId !== 'search-view' && viewId !== 'person-view') lastActiveView = viewId;
+            if(viewId !== 'search-view' && viewId !== 'person-view' && viewId !== 'reassign-view') lastActiveView = viewId;
             if(menuElement) {
                 document.querySelectorAll('.menu-item').forEach(item => item.classList.remove('active'));
                 menuElement.classList.add('active');
