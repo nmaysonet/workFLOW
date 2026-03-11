@@ -41,14 +41,8 @@
 
         /* Animations CSS */
         @keyframes spin { 100% { transform: rotate(360deg); } }
-        @keyframes bump { 
-            0%, 100% { transform: translateY(0); } 
-            50% { transform: translateY(-1.5px); } 
-        }
-        @keyframes moveRoad {
-            from { stroke-dashoffset: 0; }
-            to { stroke-dashoffset: 15; }
-        }
+        @keyframes bump { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-1.5px); } }
+        @keyframes moveRoad { from { stroke-dashoffset: 0; } to { stroke-dashoffset: 15; } }
         .logo-spin { animation: spin 4s linear infinite; transform-origin: center; display: inline-block; }
         .moving-truck-svg { overflow: visible; }
         .truck-body { animation: bump 0.4s ease-in-out infinite; }
@@ -58,12 +52,27 @@
         /* Main Content Area */
         .main-content { flex-grow: 1; display: flex; flex-direction: column; overflow-y: auto; overflow-x: hidden; }
         
-        /* Top Navigation Bar */
+        /* Top Navigation Bar & Dropdowns */
         .top-bar { background: #fff; padding: 15px 30px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 5px rgba(0,0,0,0.05); z-index: 10; flex-shrink: 0; }
         .search-container input { padding: 10px 15px; width: 300px; border: 1px solid var(--border); border-radius: 4px; font-size: 14px; }
-        .top-actions { display: flex; gap: 15px; }
-        .btn-action { background-color: var(--gold); color: #fff; padding: 10px 20px; border-radius: 4px; font-weight: bold; transition: 0.2s; border: none; }
+        .top-actions { display: flex; gap: 15px; align-items: center; }
+        
+        .btn-action { background-color: var(--gold); color: #fff; padding: 10px 20px; border-radius: 4px; font-weight: bold; transition: 0.2s; border: none; cursor: pointer; font-size: 13px;}
         .btn-action:hover { background-color: var(--gold-hover); }
+        
+        .btn-green { background-color: #5cb85c; color: #fff; padding: 8px 15px; border-radius: 4px; font-weight: bold; transition: 0.2s; border: none; cursor: pointer; font-size: 13px; }
+        .btn-green:hover { background-color: #4cae4c; }
+
+        /* Vendor Maps Dropdown Styling */
+        .dropdown { position: relative; display: inline-block; }
+        .dropdown-content { 
+            display: none; position: absolute; right: 0; top: 100%; background-color: #fff; 
+            min-width: 200px; box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.15); 
+            z-index: 20; border-radius: 4px; overflow: hidden; border: 1px solid var(--border);
+        }
+        .dropdown-content a { color: #333; padding: 12px 16px; text-decoration: none; display: block; font-size: 13px; font-weight: 600; border-bottom: 1px solid #f4f6f9; }
+        .dropdown-content a:hover { background-color: #f9f9f9; color: var(--gold); }
+        .dropdown:hover .dropdown-content { display: block; }
 
         /* Views */
         .view-section { padding: 30px; display: none; }
@@ -83,92 +92,58 @@
 
         /* Filter Tabs */
         .filter-bar { display: flex; gap: 10px; margin-bottom: 20px; padding-bottom: 15px; border-bottom: 1px solid var(--border); flex-wrap: wrap; }
-        .filter-btn { 
-            padding: 10px 20px; 
-            border: none; 
-            background-color: #e0e0e0; 
-            color: #333; 
-            border-radius: 4px; 
-            cursor: pointer; 
-            font-weight: bold; 
-            font-size: 13px; 
-            transition: 0.2s; 
-        }
+        .filter-btn { padding: 10px 20px; border: none; background-color: #e0e0e0; color: #333; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 13px; transition: 0.2s; }
         .filter-btn:hover { background-color: #d0d0d0; }
         .filter-btn.active { background-color: var(--gold); color: #fff; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
         .filter-btn.active:hover { background-color: var(--gold-hover); }
 
         /* General KPI Tiles Grid */
         .kpi-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 20px; }
-        .kpi-tile { background: #fff; padding: 25px 20px; border-radius: 8px; box-shadow: 0 2px 6px rgba(0,0,0,0.08); cursor: pointer; border-top: 4px solid var(--gold); transition: transform 0.2s; display: flex; flex-direction: column;}
+        .kpi-tile { background: #fff; padding: 25px 20px; border-radius: 8px; box-shadow: 0 2px 6px rgba(0,0,0,0.08); cursor: pointer; border-top: 4px solid var(--gold); transition: transform 0.2s, box-shadow 0.2s; display: flex; flex-direction: column;}
         .kpi-tile:hover { transform: translateY(-3px); box-shadow: 0 4px 12px rgba(0,0,0,0.12); }
         .kpi-name { font-size: 20px; font-weight: 800; margin-bottom: 15px; color: #333; }
         
-        /* Master Dashboard Container & Tiles */
-        .home-dashboard-header { display: flex; justify-content: space-between; align-items: center; margin-top: 40px; margin-bottom: 20px; padding-bottom: 10px; border-bottom: 2px solid var(--border); }
-        .filter-select { padding: 8px 15px; border-radius: 4px; border: 1px solid #ccc; font-weight: 700; font-size: 14px; }
+        /* Master Dashboard Container & Layout */
+        .home-dashboard-header { display: flex; justify-content: space-between; align-items: center; margin-top: 40px; margin-bottom: 20px; padding-bottom: 10px; border-bottom: 2px solid var(--border); flex-wrap: wrap; gap: 15px;}
+        .filter-select { padding: 8px 15px; border-radius: 4px; border: 1px solid #ccc; font-weight: 700; font-size: 14px; background: #fff;}
+        .date-controls { display: flex; gap: 10px; align-items: center; }
+        .date-controls label { font-size: 12px; font-weight: bold; color: #555; text-transform: uppercase;}
         
-        .home-kpi-container { 
-            display: flex; 
-            gap: 30px; 
-            flex-wrap: nowrap; 
-            width: 100%; 
-            overflow-x: auto; 
-            padding-bottom: 15px;
-        }
+        .home-kpi-container { display: flex; gap: 15px; flex-wrap: nowrap; width: 100%; overflow-x: auto; padding-bottom: 15px; }
         
-        .home-master-tile { 
-            flex: 1; 
-            min-width: 650px; 
-            padding: 30px; 
-            cursor: default; 
-            border-top: 4px solid #333 !important; 
-        }
-        .home-master-tile:hover { transform: none; box-shadow: 0 2px 6px rgba(0,0,0,0.08); }
-        .home-master-tile .kpi-name { font-size: 26px; margin-bottom: 20px; }
-        
-        .flex-tile { display: flex; align-items: center; justify-content: space-between; gap: 30px; }
-        .flex-tile-left { flex: 1; min-width: 0; }
-        .flex-tile-right { width: 220px; height: 220px; flex-shrink: 0; position: relative; display: flex; align-items: center; justify-content: center; }
+        .home-master-tile { flex: 1; min-width: 360px; padding: 20px; cursor: pointer; border-top: 4px solid #333 !important; transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s;}
+        .home-master-tile:hover { transform: translateY(-3px); box-shadow: 0 4px 12px rgba(0,0,0,0.12); border-top-color: var(--gold) !important; }
+        .home-master-tile .kpi-name { font-size: 18px; margin-bottom: 15px; }
 
-        /* Highlight Boxes */
-        .kpi-top-metrics { display: flex; gap: 15px; margin-bottom: 15px; }
-        .highlight-box { flex: 1; background: #fffaf0; border: 1px solid var(--gold); border-radius: 6px; padding: 15px 20px; display: flex; flex-direction: column; justify-content: center;}
+        /* KPI Layout - PM/Vended Master Highlight Boxes (SHRUNK) */
+        .kpi-top-metrics { display: flex; gap: 10px; margin-bottom: 15px; align-items: stretch; }
+        .highlight-box { flex: 1; background: #fffaf0; border: 1px solid var(--gold); border-radius: 6px; padding: 10px; display: flex; flex-direction: column; justify-content: center;}
         .highlight-box.urgent-box { background: #fff0f0; border-color: var(--urgent-red); }
-        .highlight-box .title { font-size: 18px; font-weight: 800; color: #555; text-transform: uppercase; margin-bottom: 10px; text-align: left; }
-        .highlight-box .num { font-size: 46px; font-weight: 800; color: var(--gold); line-height: 1; text-align: right; }
+        .highlight-box .title { font-size: 12px; font-weight: 800; color: #555; text-transform: uppercase; margin-bottom: 5px; text-align: left; }
+        .highlight-box .num { font-size: 26px; font-weight: 800; color: var(--gold); line-height: 1; text-align: right; }
         .highlight-box.urgent-box .num { color: var(--urgent-red); }
 
-        .home-master-tile .highlight-box .title { font-size: 20px; }
-        .home-master-tile .highlight-box .num { font-size: 56px; }
+        .chart-box { width: 50px; height: 50px; flex-shrink: 0; position: relative; display: flex; align-items: center; justify-content: center; margin: auto 5px; }
 
-        /* Advanced KPI Layout */
-        .kpi-stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; border-top: 1px solid #eee; padding-top: 15px; flex-grow: 1;}
-        .stat-box { background: #f9f9f9; padding: 10px; border-radius: 4px; text-align: center; }
-        .stat-box .title { font-size: 12px; color: #666; text-transform: uppercase; font-weight: 700; margin-bottom: 5px; }
-        .stat-box .num { font-size: 20px; font-weight: 700; color: #444; }
+        /* KPI Layout - Bottom Row */
+        .kpi-stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; border-top: 1px solid #eee; padding-top: 15px; width: 100%;}
+        .stat-box { background: #f9f9f9; padding: 10px 5px; border-radius: 4px; text-align: center; }
+        .stat-box .title { font-size: 10px; color: #666; text-transform: uppercase; font-weight: 700; margin-bottom: 5px; }
+        .stat-box .num { font-size: 16px; font-weight: 700; color: #444; }
         .stat-box .num.urgent { color: var(--urgent-red); }
         .stat-box .num.good { color: var(--low-green); }
 
-        .home-master-tile .kpi-stats-grid { 
-            grid-template-columns: repeat(4, 1fr); 
-            gap: 15px; 
-            padding-top: 20px;
-        }
-        .home-master-tile .stat-box { padding: 15px 10px; }
-        .home-master-tile .stat-box .title { font-size: 13px; }
-        .home-master-tile .stat-box .num { font-size: 26px; }
+        /* Master Dashboard Inline Stats */
+        .home-master-tile .stat-box { padding: 10px 5px; }
+        .home-master-tile .stat-box .title { font-size: 11px; }
+        .home-master-tile .stat-box .num { font-size: 18px; }
 
-        /* Data Table & Drilldown */
-        .view-title { font-size: 24px; margin-bottom: 15px; color: #333; display: flex; justify-content: space-between; align-items: center;}
-        
+        /* Data Table & Drilldown Elements */
+        .view-title { font-size: 24px; margin-bottom: 15px; color: #333; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px;}
         .controls-group button { padding: 8px 15px; margin-left: 10px; cursor: pointer; background: #666; color: #fff; border: none; border-radius: 4px; font-weight: bold; transition: 0.2s; }
         .controls-group button:hover { background: #444; }
-        .btn-export { background: #5cb85c !important; } /* Green for Export */
-        .btn-export:hover { background: #449d44 !important; }
         
         .drilldown-container { background: #fff; border-radius: 6px; box-shadow: 0 2px 6px rgba(0,0,0,0.08); padding: 20px; margin-top: 10px; }
-        
         details { margin-bottom: 10px; }
         summary { font-weight: 700; padding: 10px; background-color: #f9fafc; border: 1px solid var(--border); border-radius: 4px; cursor: pointer; user-select: none; }
         summary:hover { background-color: #f1f3f6; }
@@ -179,10 +154,15 @@
 
         .table-wrapper { overflow-x: auto; margin-top: 10px; margin-bottom: 10px; }
         table { width: 100%; border-collapse: collapse; min-width: 1000px; font-size: 13px; table-layout: fixed; }
-        th { background: #f4f6f9; padding: 12px; text-align: left; color: #555; text-transform: uppercase; font-size: 11px; border-bottom: 2px solid var(--border); font-weight: 700;}
+        th { background: #f4f6f9; padding: 12px; text-align: left; color: #555; text-transform: uppercase; font-size: 11px; border-bottom: 2px solid var(--border); font-weight: 700; cursor: pointer;}
+        th:hover { background-color: #e2e8f0; }
         td { padding: 12px; border-bottom: 1px solid var(--border); vertical-align: middle; font-weight: 500; word-wrap: break-word;}
         tr:hover td { background-color: #fcfcfc; }
         
+        .sort-icon { font-size: 0.8em; margin-left: 5px; opacity: 0.4; }
+        th.asc .sort-icon { content: "▲"; opacity: 1; color: var(--gold); }
+        th.desc .sort-icon { content: "▼"; opacity: 1; color: var(--gold); }
+
         .ro-link { color: #0066cc; font-weight: 700; }
         .ro-link:hover { text-decoration: underline; }
         .badge { padding: 4px 8px; border-radius: 12px; font-size: 11px; font-weight: 700; display: inline-block;}
@@ -191,6 +171,21 @@
         .badge-urgent { background-color: var(--urgent-red); color: white; }
         .badge-medium { background-color: var(--medium-yellow); color: white; text-shadow: 0px 1px 1px rgba(0,0,0,0.2); }
         .badge-low { background-color: var(--low-green); color: white; }
+        
+        .ecd-red { color: #d9534f; font-weight: 800; }
+        .ecd-green { color: #5cb85c; font-weight: 800; }
+        .badge-ecd-missing { background-color: #fff3cd; color: #d9534f; padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: 800; border: 1px solid #d9534f; white-space: nowrap; display: inline-block; }
+
+        /* ERS Specific Styles */
+        .side-by-side-container { display: flex; gap: 15px; align-items: stretch; margin-bottom: 30px; flex-wrap: wrap; }
+        .side-table { display: flex; flex-direction: column; flex: 1; margin-bottom: 0; padding: 15px; min-width: 400px; background: #fff; border-radius: 6px; box-shadow: 0 2px 6px rgba(0,0,0,0.08); }
+        .side-table .table-wrapper { flex: 1; overflow-x: auto; margin-top: 0; }
+        .side-table table { min-width: 100%; table-layout: auto; } /* Overrides the 1000px rule so tables don't scroll inside side-by-side */
+        .side-table th, .side-table td { padding: 10px 8px; } 
+        
+        .outlier-red { color: var(--urgent-red); font-weight: 700; background-color: #fee2e2; padding: 2px 6px; border-radius: 4px; }
+        .error-marker { color: var(--urgent-red); font-weight: bold; }
+        .good-marker { color: var(--low-green); font-weight: bold; }
     </style>
 </head>
 <body>
@@ -214,6 +209,7 @@
         <div class="menu-item active" id="menu-home" onclick="navigate('home-view', this)">Home Dashboard</div>
         <div class="menu-item" id="menu-pm" onclick="navigate('pm-view', this)">PM Queue</div>
         <div class="menu-item" id="menu-vended" onclick="navigate('vended-view', this)">Vended Repair Queue</div>
+        <div class="menu-item" id="menu-ers" onclick="navigate('ers-view', this)">ERS Queue</div>
         
         <div class="sidebar-truck">
             <svg width="140" height="70" viewBox="0 0 120 60" xmlns="http://www.w3.org/2000/svg" class="moving-truck-svg">
@@ -254,7 +250,19 @@
                 <input type="text" id="global-search" placeholder="Search by Unit No..." onkeyup="handleSearch()">
             </div>
             <div class="top-actions">
-                <a href="https://app.mapline.com/map/map_282c81fe/TWZ2TzJHRGcrd3BjaG1QMDNPekVGYUhxNThJd080SUZTK2MwZG" target="_blank" class="btn-action">GARDA MAP</a>
+                <div class="dropdown">
+                    <button class="btn-action dropbtn">VENDOR MAPS ▼</button>
+                    <div class="dropdown-content">
+                        <a href="https://app.mapline.com/map/map_282c81fe/TWZ2TzJHRGcrd3BjaG1QMDNPekVGYUhxNThJd080SUZTK2MwZG" target="_blank">Garda</a>
+                        <a href="#" target="_blank">Amerit Fleet Solutions</a>
+                        <a href="#" target="_blank">Brinks</a>
+                        <a href="#" target="_blank">Colony Hardware</a>
+                        <a href="#" target="_blank">Ferguson</a>
+                        <a href="#" target="_blank">Frontier</a>
+                        <a href="#" target="_blank">Sukut Construction</a>
+                        <a href="#" target="_blank">US Foods</a>
+                    </div>
+                </div>
                 <a href="https://afshub.azurewebsites.net/Vendors/VendedRepairOrder/CreateVRO" target="_blank" class="btn-action">CREATE A VRO</a>
             </div>
         </div>
@@ -273,19 +281,29 @@
             </div>
             <div id="home-dashboard" style="display:none;">
                 <div class="home-dashboard-header">
-                    <h2>Aggregate Performance Overview</h2>
-                    <select class="filter-select" id="home-customer-filter" onchange="renderHomeDashboard()">
-                        <option value="ALL">All Customers</option>
-                        <option value="GARDA">Garda Only</option>
-                        <option value="FERGUSON">Ferguson Only</option>
-                    </select>
+                    <h2 style="margin:0;">Aggregate Performance Overview</h2>
+                    <div class="date-controls">
+                        <label>Date Range:</label>
+                        <input type="date" class="filter-select date-filter-start" onchange="setDateFilter('start', this.value)">
+                        <span style="font-weight:bold; color:#666;">-</span>
+                        <input type="date" class="filter-select date-filter-end" onchange="setDateFilter('end', this.value)">
+                        
+                        <select class="filter-select customer-filter-select" onchange="setCustomerFilter(this.value)" style="margin-left: 10px;">
+                            <option value="ALL">All Customers</option>
+                        </select>
+                    </div>
                 </div>
                 <div class="home-kpi-container" id="home-kpi-container"></div>
             </div>
         </div>
 
         <div id="pm-view" class="view-section">
-            <h2 class="view-title">PM Queue</h2>
+            <div class="view-title">
+                <span style="font-weight: 700;">PM Queue</span>
+                <select class="filter-select customer-filter-select" onchange="setCustomerFilter(this.value)">
+                    <option value="ALL">All Customers</option>
+                </select>
+            </div>
             <div class="filter-bar">
                 <button class="filter-btn active" data-filter="ALL" onclick="setFilter('ALL')">All Active</button>
                 <button class="filter-btn" data-filter="URGENT" onclick="setFilter('URGENT')">Urgent</button>
@@ -297,7 +315,12 @@
         </div>
 
         <div id="vended-view" class="view-section">
-            <h2 class="view-title">Vended Repair Queue</h2>
+            <div class="view-title">
+                <span style="font-weight: 700;">Vended Repair Queue</span>
+                <select class="filter-select customer-filter-select" onchange="setCustomerFilter(this.value)">
+                    <option value="ALL">All Customers</option>
+                </select>
+            </div>
             <div class="filter-bar">
                 <button class="filter-btn active" data-filter="ALL" onclick="setFilter('ALL')">All Active</button>
                 <button class="filter-btn" data-filter="URGENT" onclick="setFilter('URGENT')">Urgent</button>
@@ -308,17 +331,38 @@
             <div class="kpi-grid" id="vended-kpi-container"></div>
         </div>
 
+        <div id="ers-view" class="view-section">
+            <div class="view-title">
+                <span style="font-weight: 700;">ERS Queue</span>
+                <div class="date-controls">
+                    <label>Date Range:</label>
+                    <input type="date" class="filter-select date-filter-start" onchange="setDateFilter('start', this.value)">
+                    <span style="font-weight:bold; color:#666;">-</span>
+                    <input type="date" class="filter-select date-filter-end" onchange="setDateFilter('end', this.value)">
+                    <select class="filter-select ers-customer-filter-select" onchange="setErsCustomerFilter(this.value)" style="margin-left: 10px;">
+                        <option value="ALL">All Customers</option>
+                    </select>
+                </div>
+            </div>
+            <div class="kpi-grid" id="ers-kpi-container"></div>
+        </div>
+
         <div id="person-view" class="view-section">
             <div class="view-title">
-                <span id="person-name-title">Owner Details</span>
+                <div style="display:flex; align-items:center; gap: 20px;">
+                    <span id="person-name-title" style="font-weight: 700;">Owner Details</span>
+                    <select class="filter-select customer-filter-select" onchange="setCustomerFilter(this.value)">
+                        <option value="ALL">All Customers</option>
+                    </select>
+                </div>
                 <div class="controls-group">
-                    <button class="btn-export" onclick="exportDrilldownToExcel()">Export to XLSX</button>
+                    <button class="btn-green" onclick="exportDrilldownToExcel()">Export to XLSX</button>
                     <button onclick="toggleAllDetails(true)">Expand All</button>
                     <button onclick="toggleAllDetails(false)">Collapse All</button>
                     <button id="dynamic-back-btn">&larr; Back</button>
                 </div>
             </div>
-            <div class="filter-bar">
+            <div class="filter-bar" id="standard-drilldown-filters">
                 <button class="filter-btn active" data-filter="ALL" onclick="setFilter('ALL')">All Active</button>
                 <button class="filter-btn" data-filter="URGENT" onclick="setFilter('URGENT')">Urgent</button>
                 <button class="filter-btn" data-filter="MEDIUM" onclick="setFilter('MEDIUM')">Medium</button>
@@ -328,20 +372,116 @@
             <div class="drilldown-container" id="drilldown-body"></div>
         </div>
 
+        <div id="ers-detail-view" class="view-section">
+            <div class="view-title">
+                <span id="ers-name-title" style="font-weight: 700;">Overall ERS Details</span>
+                <div class="date-controls">
+                    <label>Date Range:</label>
+                    <input type="date" class="filter-select date-filter-start" onchange="setDateFilter('start', this.value)">
+                    <span style="font-weight:bold; color:#666;">-</span>
+                    <input type="date" class="filter-select date-filter-end" onchange="setDateFilter('end', this.value)">
+                    
+                    <select class="filter-select ers-customer-filter-select" onchange="setErsCustomerFilter(this.value)" style="margin-left: 10px;">
+                        <option value="ALL">All Customers</option>
+                    </select>
+
+                    <button class="btn-green" style="margin-left: 15px;" onclick="exportErsDrilldownToExcel()">Export to XLSX</button>
+                    <button id="ers-dynamic-back-btn" class="btn-action" style="margin-left: 10px; background:#666;">&larr; Back</button>
+                </div>
+            </div>
+
+            <div id="ers-master-kpis" style="margin-bottom: 30px;"></div>
+
+            <div class="side-by-side-container">
+                <div class="side-table">
+                    <h3 style="margin-top: 0; margin-bottom: 15px; font-size: 14px; color: var(--gold);">Performance Summary</h3>
+                    <div class="table-wrapper">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th data-sort-summary="name" onclick="handleSortSummary('name', this)">Coordinator <span class="sort-icon">↕</span></th>
+                                    <th data-sort-summary="volume" onclick="handleSortSummary('volume', this)">Calls <span class="sort-icon">▼</span></th>
+                                    <th data-sort-summary="avgSOS" onclick="handleSortSummary('avgSOS', this)">Avg SOS <span class="sort-icon">↕</span></th>
+                                    <th data-sort-summary="avgDT" onclick="handleSortSummary('avgDT', this)">Avg DT <span class="sort-icon">↕</span></th>
+                                    <th data-sort-summary="sosOver90" onclick="handleSortSummary('sosOver90', this)">SOS > 90m <span class="sort-icon">↕</span></th>
+                                    <th data-sort-summary="dtOver3" onclick="handleSortSummary('dtOver3', this)">DT > 3h <span class="sort-icon">↕</span></th>
+                                </tr>
+                            </thead>
+                            <tbody id="ers-summary-body"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="side-table">
+                    <h3 style="margin-top: 0; margin-bottom: 15px; font-size: 14px; color: var(--gold);">Data Entry Scorecard</h3>
+                    <div class="table-wrapper">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th data-sort-sc="name" onclick="handleSortScorecard('name', this)">Coordinator <span class="sort-icon">↕</span></th>
+                                    <th data-sort-sc="good" onclick="handleSortScorecard('good', this)">Clean <span class="sort-icon">↕</span></th>
+                                    <th data-sort-sc="intake" onclick="handleSortScorecard('intake', this)">Intake Err <span class="sort-icon">↕</span></th>
+                                    <th data-sort-sc="eta" onclick="handleSortScorecard('eta', this)">ETA Err <span class="sort-icon">↕</span></th>
+                                    <th data-sort-sc="arrival" onclick="handleSortScorecard('arrival', this)">Arrive Err <span class="sort-icon">↕</span></th>
+                                    <th data-sort-sc="resolution" onclick="handleSortScorecard('resolution', this)">Res Err <span class="sort-icon">↕</span></th>
+                                    <th data-sort-sc="pctClean" onclick="handleSortScorecard('pctClean', this)">% Clean <span class="sort-icon">▼</span></th>
+                                </tr>
+                            </thead>
+                            <tbody id="ers-scorecard-body"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <div class="drilldown-container" style="margin-bottom: 24px;">
+                <details id="ers-ticket-drilldown-toggle">
+                    <summary style="font-size: 16px; color: var(--gold); margin-bottom: 0;">Ticket Details</summary>
+                    <div class="table-wrapper" style="margin-top: 15px;">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th data-sort-ers="customer" onclick="handleSortErs('customer', this)">Customer <span class="sort-icon">↕</span></th>
+                                    <th data-sort-ers="coordinator" onclick="handleSortErs('coordinator', this)">Coordinator <span class="sort-icon">↕</span></th>
+                                    <th data-sort-ers="intakeDT" onclick="handleSortErs('intakeDT', this)">Date / Time <span class="sort-icon">↕</span></th>
+                                    <th data-sort-ers="priority" onclick="handleSortErs('priority', this)">Call Type <span class="sort-icon">↕</span></th>
+                                    <th data-sort-ers="eventStatus" onclick="handleSortErs('eventStatus', this)">Status <span class="sort-icon">↕</span></th>
+                                    <th data-sort-ers="sosMins" onclick="handleSortErs('sosMins', this)">SOS Time <span class="sort-icon">↕</span></th>
+                                    <th data-sort-ers="downtimeHours" onclick="handleSortErs('downtimeHours', this)">Downtime <span class="sort-icon">↕</span></th>
+                                    <th data-sort-ers="ticketId" onclick="handleSortErs('ticketId', this)">Ticket ID <span class="sort-icon">↕</span></th>
+                                </tr>
+                            </thead>
+                            <tbody id="ers-drilldown-table-body"></tbody>
+                        </table>
+                    </div>
+                </details>
+            </div>
+
+            <div class="drilldown-container" style="margin-top: 0;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 15px;">
+                    <h3 style="margin:0; font-size: 16px; color: var(--gold);">Repair Orders</h3>
+                    <div class="controls-group">
+                        <button onclick="toggleErsRODetails(true)">Expand All</button>
+                        <button onclick="toggleErsRODetails(false)">Collapse All</button>
+                    </div>
+                </div>
+                <div id="ers-ro-drilldown-body"></div>
+            </div>
+        </div>
+
         <div id="search-view" class="view-section">
             <h2 class="view-title">Search Results: <span id="search-term-display"></span></h2>
             <div class="drilldown-container table-wrapper">
                 <table>
                     <colgroup>
-                        <col style="width: 13%;"><col style="width: 11%;"><col style="width: 9%;">
-                        <col style="width: 8%;"><col style="width: 9%;"><col style="width: 12%;">
-                        <col style="width: 13%;"><col style="width: 25%;">
+                        <col style="width: 10%;"> <col style="width: 10%;"> <col style="width: 8%;">
+                        <col style="width: 7%;">  <col style="width: 6%;">  <col style="width: 12%;">
+                        <col style="width: 10%;"> <col style="width: 10%;"> <col style="width: 27%;">
                     </colgroup>
                     <thead>
                         <tr>
                             <th>AFS RO #</th><th>Unit No</th><th>Priority</th>
                             <th>OOS Status</th><th>Total Unit ROs</th><th>Owner</th>
-                            <th>Status</th><th>Task / VMRS</th>
+                            <th>Status</th><th>ECD</th><th>Task / VMRS</th>
                         </tr>
                     </thead>
                     <tbody id="search-table-body"></tbody>
@@ -354,14 +494,32 @@
         // --- GLOBAL DATA ---
         let processedData = []; 
         let currentFilter = 'ALL';
+        let currentCustomerFilter = 'ALL';
+        let currentErsCustomerFilter = 'ALL';
+        let currentStartDate = '';
+        let currentEndDate = '';
         let currentOwnerView = '';
         let currentParentView = '';
         let globalChartInstances = {}; 
         let searchTimeout = null;
 
+        let pmOwners = [];
+        let vendedOwners = [];
+        let ersOwners = [];
+
+        // ERS Specific Globals
+        let rawErsData = [];
+        let masterErsMetrics = [];
+        let currentErsViewData = [];
+        let currentErsSummaryData = [];
+        let currentErsScorecardData = [];
+        
+        // ERS Sort States
+        let sortColErs = null; let sortAscErs = true;
+        let sortColSum = 'volume'; let sortAscSum = false;
+        let sortColSc = 'pctClean'; let sortAscSc = false;
+
         const excludedStatuses = ['COMPLETED', 'FINAL CHARGES SUBMITTED', 'CREDIT VROS'];
-        const pmOwners = ["Chad Caylor", "Kevin Anguzza"];
-        const vendedOwners = ["Michelle McCoy", "Ryan Barnett", "Daniel Florida", "Brittany Williams", "Hollie Francis", "Ralph Mann", "James Hopkins", "Joe Stephens"];
         let lastActiveView = 'home-view';
 
         // --- PRECISE DATA PARSER ---
@@ -375,63 +533,115 @@
             return '';
         }
 
+        // --- NORMALIZING CUSTOMER NAMES ---
+        function getCustKey(rawStr) {
+            let c = (rawStr || '').toUpperCase();
+            if (c.includes('FERGUSON')) return 'Ferguson';
+            if (c.includes('AMERIT FLEET SOLUTIONS')) return 'Amerit Fleet Solutions';
+            if (c.includes('BRINKS')) return 'Brinks';
+            if (c.includes('US FOODS')) return 'US Foods';
+            if (c.includes('FRONTIER') || c.includes('CUSTOM TRUCK')) return 'Frontier';
+            if (c.includes('COLONY HARDWARE')) return 'Colony Hardware';
+            if (c.includes('SUKUT CONSTRUCTION')) return 'Sukut Construction';
+            if (c.includes('GARDA')) return 'Garda';
+            return rawStr.split('-')[0].trim() || 'Unknown Customer';
+        }
+
         // --- EXPORT LOGIC ---
         function exportDrilldownToExcel() {
             if (!currentOwnerView || processedData.length === 0) return;
+            
+            let ownerDataAll = processedData;
+            if (currentOwnerView === 'ALL_PM') ownerDataAll = processedData.filter(ro => pmOwners.includes(ro.owner));
+            else if (currentOwnerView === 'ALL_VENDED') ownerDataAll = processedData.filter(ro => vendedOwners.includes(ro.owner));
+            else ownerDataAll = processedData.filter(ro => ro.owner === currentOwnerView);
+            
+            if (currentCustomerFilter !== 'ALL') {
+                ownerDataAll = ownerDataAll.filter(ro => ro.custKey === currentCustomerFilter);
+            }
 
-            // 1. Filter data based on current context (Owner + Active Filter)
-            let ownerDataAll = processedData.filter(ro => ro.owner === currentOwnerView);
             let targetData = ownerDataAll.filter(ro => ro.isOpen);
-
             if(currentFilter === 'URGENT') targetData = targetData.filter(ro => ro.priority === 'URGENT');
             else if(currentFilter === 'MEDIUM') targetData = targetData.filter(ro => ro.priority === 'MEDIUM');
             else if(currentFilter === 'LOW') targetData = targetData.filter(ro => ro.priority === 'LOW');
             else if(currentFilter === 'OOS') targetData = targetData.filter(ro => ro.isOOS);
 
-            if (targetData.length === 0) {
-                alert("No data available to export for the current filter.");
-                return;
-            }
+            if (targetData.length === 0) { alert("No data available to export."); return; }
 
-            // 2. Format data for Excel
             const excelRows = targetData.map(ro => ({
-                "AFS RO #": ro.roNum,
-                "Unit No": ro.unitNo,
-                "Priority": ro.priority,
-                "OOS Status": ro.isOOS ? "OOS" : "Active",
-                "Total Unit ROs": ro.roCount,
-                "Status": ro.status,
-                "Task / VMRS": ro.vmrs,
-                "Customer Group": ro.drillTopLevel,
-                "Subregion": ro.subregion,
-                "Branch": ro.branch
+                "AFS RO #": ro.roNum, "Unit No": ro.unitNo, "Priority": ro.priority,
+                "OOS Status": (ro.custKey === 'Garda' && ro.isOOS) ? "OOS" : "",
+                "Total Unit ROs": ro.roCount, "Status": ro.status, "ECD": ro.ecdFormatted,
+                "Task / VMRS": ro.vmrs, "Customer Group": ro.drillTopLevel, "Subregion": ro.subregion, "Branch": ro.branch
             }));
 
-            // 3. Create Workbook
             const worksheet = XLSX.utils.json_to_sheet(excelRows);
             const workbook = XLSX.utils.book_new();
             XLSX.utils.book_append_sheet(workbook, worksheet, "Filtered ROs");
-
-            // 4. Download
-            const fileName = `workflow_export_${currentOwnerView.replace(/\s+/g, '_')}_${currentFilter.toLowerCase()}.xlsx`;
-            XLSX.writeFile(workbook, fileName);
+            XLSX.writeFile(workbook, `workflow_export_${currentOwnerView.replace(/\s+/g, '_')}_${currentFilter.toLowerCase()}.xlsx`);
         }
 
-        // --- FILTER TAB LOGIC ---
+        function exportErsDrilldownToExcel() {
+            if (currentErsViewData.length === 0) { alert("No ERS data to export."); return; }
+            
+            const excelRows = currentErsViewData.map(ro => ({
+                "Ticket ID": ro.ticketId,
+                "Customer": ro.customer,
+                "Coordinator": ro.coordinator,
+                "Date / Time": formatDateTimeShort(ro.intakeDT),
+                "Call Type": ro.priority,
+                "Event Status": ro.eventStatus,
+                "SOS Time (Mins)": ro.sosMins >= 0 ? Math.round(ro.sosMins) : 'N/A',
+                "Downtime (Hrs)": ro.downtimeHours >= 0 ? ro.downtimeHours.toFixed(2) : 'N/A'
+            }));
+
+            const worksheet = XLSX.utils.json_to_sheet(excelRows);
+            const workbook = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(workbook, worksheet, "ERS Tickets");
+            XLSX.writeFile(workbook, `ers_export_${currentOwnerView.replace(/\s+/g, '_')}.xlsx`);
+        }
+
+        // --- FILTER & CUSTOMER & DATE DROPDOWN LOGIC ---
         function setFilter(val) {
             currentFilter = val;
             document.querySelectorAll('.filter-btn').forEach(btn => {
-                if(btn.dataset.filter === val) {
-                    btn.classList.add('active');
-                    btn.style.background = 'var(--gold)';
-                } else {
-                    btn.classList.remove('active');
-                    btn.style.background = '#e0e0e0';
-                }
+                if(btn.dataset.filter === val) { btn.classList.add('active'); btn.style.background = 'var(--gold)'; } 
+                else { btn.classList.remove('active'); btn.style.background = '#e0e0e0'; }
             });
-            if(lastActiveView === 'pm-view') renderKPITiles(pmOwners, 'pm-kpi-container', 'pm-view');
-            else if(lastActiveView === 'vended-view') renderKPITiles(vendedOwners, 'vended-kpi-container', 'vended-view');
-            else if(lastActiveView === 'person-view') { if(currentOwnerView) loadPersonDrilldown(currentOwnerView, currentParentView); }
+            triggerViewUpdate();
+        }
+
+        function setCustomerFilter(val) {
+            currentCustomerFilter = val;
+            document.querySelectorAll('.customer-filter-select').forEach(sel => { sel.value = val; });
+            triggerViewUpdate();
+        }
+
+        function setErsCustomerFilter(val) {
+            currentErsCustomerFilter = val;
+            document.querySelectorAll('.ers-customer-filter-select').forEach(sel => { sel.value = val; });
+            triggerViewUpdate();
+        }
+
+        function setDateFilter(type, val) {
+            if (type === 'start') {
+                currentStartDate = val;
+                document.querySelectorAll('.date-filter-start').forEach(el => el.value = val);
+            } else {
+                currentEndDate = val;
+                document.querySelectorAll('.date-filter-end').forEach(el => el.value = val);
+            }
+            triggerViewUpdate();
+        }
+
+        function triggerViewUpdate() {
+            let activeView = document.querySelector('.view-section.active').id;
+            if(activeView === 'home-view') renderHomeDashboard();
+            else if(activeView === 'pm-view') renderKPITiles(pmOwners, 'pm-kpi-container', 'pm-view');
+            else if(activeView === 'vended-view') renderKPITiles(vendedOwners, 'vended-kpi-container', 'vended-view');
+            else if(activeView === 'ers-view') renderErsTiles();
+            else if(activeView === 'person-view') { if(currentOwnerView) loadPersonDrilldown(currentOwnerView, currentParentView); }
+            else if(activeView === 'ers-detail-view') { if(currentOwnerView) loadErsDrilldown(currentOwnerView, currentParentView); }
         }
 
         // --- AUTO-FETCH LOGIC ---
@@ -443,18 +653,27 @@
                 statusEl.innerText = "File found! Processing data...";
                 const data = await response.arrayBuffer();
                 const workbook = XLSX.read(data, {type: 'array'});
-                let vroRaw = [], assignmentsRaw = [], oosRaw = [];
+                
+                let vroRaw = [], resourceRaw = [], oosRaw = [], ersTabRaw = [];
+                
                 workbook.SheetNames.forEach(sheetName => {
                     const sheetData = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], {defval: ''});
                     if(sheetData.length === 0) return;
+                    
                     const firstRow = sheetData[0];
-                    const keys = Object.keys(firstRow).map(k => k.toLowerCase());
-                    if (keys.includes('order') || keys.includes('task') || keys.includes('opened')) vroRaw = vroRaw.concat(sheetData);
-                    else if (keys.includes('region') && keys.includes('subregion') && keys.includes('branch')) assignmentsRaw = assignmentsRaw.concat(sheetData);
-                    else if (keys.includes('oos flag') || keys.includes('garda region') || keys.includes('roopeneddate')) oosRaw = oosRaw.concat(sheetData);
-                    else vroRaw = vroRaw.concat(sheetData);
+                    const keys = Object.keys(firstRow).map(k => k.toLowerCase().trim());
+                    
+                    if (sheetName.toUpperCase() === 'ERS') {
+                        ersTabRaw = sheetData;
+                    } else if (keys.includes('createdby') || keys.includes('pm comp:') || keys.includes('team')) {
+                        resourceRaw = resourceRaw.concat(sheetData);
+                    } else if (keys.includes('garda region') || keys.includes('oos flag')) {
+                        oosRaw = oosRaw.concat(sheetData);
+                    } else {
+                        vroRaw = vroRaw.concat(sheetData);
+                    }
                 });
-                processExcelData(vroRaw, assignmentsRaw, oosRaw);
+                processExcelData(vroRaw, resourceRaw, oosRaw, ersTabRaw);
             } catch (error) {
                 console.error("Auto-fetch failed:", error);
                 statusEl.innerText = "Auto-load failed. Use manual upload.";
@@ -467,93 +686,371 @@
         document.getElementById('excelFileInput').addEventListener('change', async function(e) {
             const files = Array.from(e.target.files);
             if (files.length === 0) return;
-            document.getElementById('upload-status').innerText = "Reading manual upload...";
-            let vroRaw = [], assignmentsRaw = [], oosRaw = [];
+            const statusEl = document.getElementById('upload-status');
+            statusEl.innerText = "Reading manual upload...";
+            
+            let vroRaw = [], resourceRaw = [], oosRaw = [], ersTabRaw = [];
+            
             try {
                 for(let file of files) {
                     const data = await file.arrayBuffer();
                     const workbook = XLSX.read(data, {type: 'array'});
+                    
                     workbook.SheetNames.forEach(sheetName => {
                         const sheetData = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], {defval: ''});
                         if(sheetData.length === 0) return;
+                        
                         const firstRow = sheetData[0];
-                        const keys = Object.keys(firstRow).map(k => k.toLowerCase());
-                        if (keys.includes('order') || keys.includes('task') || keys.includes('opened')) vroRaw = vroRaw.concat(sheetData);
-                        else if (keys.includes('region') && keys.includes('subregion') && keys.includes('branch')) assignmentsRaw = assignmentsRaw.concat(sheetData);
-                        else if (keys.includes('oos flag') || keys.includes('garda region') || keys.includes('roopeneddate')) oosRaw = oosRaw.concat(sheetData);
-                        else vroRaw = vroRaw.concat(sheetData);
+                        const keys = Object.keys(firstRow).map(k => k.toLowerCase().trim());
+                        
+                        if (sheetName.toUpperCase() === 'ERS') {
+                            ersTabRaw = sheetData;
+                        } else if (keys.includes('createdby') || keys.includes('pm comp:') || keys.includes('team')) {
+                            resourceRaw = resourceRaw.concat(sheetData);
+                        } else if (keys.includes('garda region') || keys.includes('oos flag')) {
+                            oosRaw = oosRaw.concat(sheetData);
+                        } else {
+                            vroRaw = vroRaw.concat(sheetData);
+                        }
                     });
                 }
-                processExcelData(vroRaw, assignmentsRaw, oosRaw);
-            } catch (error) { console.error(error); statusEl.innerText = "Error parsing files."; }
+                processExcelData(vroRaw, resourceRaw, oosRaw, ersTabRaw);
+            } catch (error) { 
+                console.error(error); 
+                statusEl.innerText = "Error parsing files."; 
+            }
         });
 
-        function processExcelData(vroRaw, assignmentsRaw, oosRaw) {
+        // --- ERS CLEANER FUNCTIONS ---
+        function extractTimeParts(str) {
+            if (!str || String(str).trim() === "") return { isMissing: true };
+            let orig = String(str).trim().toLowerCase();
+            let hasValidAMPM = orig.includes('am') || orig.includes('pm') || orig.includes('a') || orig.includes('p');
+            let hasColon = orig.includes(':');
+            let isShorthand = !hasColon || !hasValidAMPM; 
+            let digitsOnly = orig.replace(/[^\d:]/g, ''); 
+            if (!digitsOnly) return { isMissing: true };
+            let h, m;
+            if (digitsOnly.includes(':')) {
+                let parts = digitsOnly.split(':');
+                h = parseInt(parts[0], 10); m = parseInt(parts[1] || '0', 10);
+            } else {
+                if (digitsOnly.length <= 2) { h = parseInt(digitsOnly, 10); m = 0; }
+                else if (digitsOnly.length === 3) { h = parseInt(digitsOnly.substring(0, 1), 10); m = parseInt(digitsOnly.substring(1), 10); }
+                else { h = parseInt(digitsOnly.substring(0, 2), 10); m = parseInt(digitsOnly.substring(2, 4), 10); }
+            }
+            let ampm = orig.includes('p') ? 'pm' : (orig.includes('a') ? 'am' : null);
+            return { h, m, ampm, isMissing: false, requiredInference: isShorthand };
+        }
+
+        function parseDateStringLocal(dateStr) {
+            if (!dateStr) return null;
+            let str = String(dateStr).trim();
+            if (str.match(/^\d{4}-\d{2}-\d{2}$/)) {
+                let [y, m, d] = str.split('-'); return new Date(parseInt(y), parseInt(m) - 1, parseInt(d));
+            }
+            let dt = new Date(str);
+            if (isNaN(dt.getTime())) return null;
+            return dt;
+        }
+
+        function formatDateTimeShort(dt) {
+            if(!dt) return 'N/A';
+            let m = dt.getMonth() + 1; let d = dt.getDate();
+            let h = dt.getHours(); let min = String(dt.getMinutes()).padStart(2, '0');
+            let ampm = h >= 12 ? 'PM' : 'AM';
+            h = h % 12; h = h ? h : 12;
+            return `${m}/${d} ${h}:${min} ${ampm}`;
+        }
+
+        function cleanErsRow(row, ownerMap) {
+            let rawOwner = getCol(row, ['Assignee name', 'Coordinator', 'Created By']);
+            let finalOwner = rawOwner;
+            let normOwner = (rawOwner || '').toLowerCase().trim();
+            
+            if (normOwner.includes('sydney') || normOwner.includes('wooten')) finalOwner = 'Sydney Wooten';
+            else if (normOwner.includes('damian') || normOwner.includes('damien') || normOwner.includes('nicholson')) finalOwner = 'Damian Nicholson';
+            else if (ownerMap[normOwner]) finalOwner = ownerMap[normOwner].name;
+            
+            let rawCustomer = getCol(row, ['Customer', 'Customer Name']);
+            let custKey = getCustKey(rawCustomer);
+            let priorityStr = getCol(row, ['OSC - Priority', 'Priority', 'Call Type']).toUpperCase();
+            
+            if (priorityStr !== 'ERS') return null;
+
+            let inDate = getCol(row, ['Intake Date - Date', 'Intake Date', 'Date']);
+            let inTime = getCol(row, ['Intake Time ', 'Intake Time', 'Time']);
+            let vETA = getCol(row, ['Vendor Estimated Arrival Time', 'Vendor ETA', 'ETA']);
+            let aDate = getCol(row, ['Actual Arrival Date - Date', 'Arrive Date', 'Arrival Date']);
+            let aTime = getCol(row, ['Actual Arrival Time', 'Arrive Time', 'Arrival Time']);
+            let cDate = getCol(row, ['Actual Completion Date - Date', 'Completion Date', 'Complete Date']);
+            let cTime = getCol(row, ['Actual Completion Time', 'Completion Time', 'Complete Time']);
+            let ticketId = getCol(row, ['Ticket ID', 'Ticket']);
+
+            let metric = {
+                coordinator: finalOwner,
+                customer: rawCustomer,
+                custKey: custKey,
+                priority: priorityStr,
+                intakeDateRaw: inDate,
+                errIntake: false, errETA: false, errArrival: false, errResolution: false, isGood: false
+            };
+
+            let p = extractTimeParts(inTime);
+            if (p.isMissing || p.requiredInference) metric.errIntake = true;
+            let dt = parseDateStringLocal(inDate);
+            if (!dt || p.isMissing) metric.errIntake = true;
+
+            let isMissingRequired = (!inDate || !inTime || !vETA || !aDate || !aTime || !cDate || !cTime);
+
+            if (isMissingRequired || !dt || p.isMissing) {
+                metric.isGood = false;
+                if (!vETA) metric.errETA = true;
+                if (!aDate && !aTime) metric.errArrival = true;
+                if (!cDate && !cTime) metric.errResolution = true;
+                return { cleaned: null, metric: metric };
+            }
+
+            let intakeDT = null;
+            let h = p.h, m = p.m;
+            if (p.ampm === 'pm' && h < 12) h += 12;
+            if (p.ampm === 'am' && h === 12) h = 0;
+            if (!p.ampm && h === 24) h = 0;
+            dt.setHours(h, m, 0, 0);
+            intakeDT = dt;
+
+            metric.intakeDT = intakeDT;
+
+            function processEvent(dateStr, timeStr, minDT, maxDT) {
+                if(!minDT) return { dt: null, hasError: true };
+                let ep = extractTimeParts(timeStr);
+                let hasError = ep.isMissing || ep.requiredInference;
+                if (ep.isMissing) return { dt: null, hasError: true };
+
+                let baseDT = parseDateStringLocal(dateStr) || new Date(minDT.getTime());
+                baseDT.setHours(0,0,0,0);
+
+                let candidates = [];
+                let makeDT = (hour24) => { let d = new Date(baseDT.getTime()); d.setHours(hour24, ep.m, 0, 0); return d; };
+
+                if (ep.ampm === 'pm') candidates.push(makeDT(ep.h === 12 ? 12 : (ep.h % 12) + 12));
+                else if (ep.ampm === 'am') candidates.push(makeDT(ep.h === 12 ? 0 : (ep.h % 12)));
+                else { candidates.push(makeDT(ep.h === 12 ? 0 : (ep.h % 12))); candidates.push(makeDT(ep.h === 12 ? 12 : (ep.h % 12) + 12)); }
+
+                let expanded = [];
+                for (let c of candidates) {
+                    expanded.push(new Date(c.getTime())); 
+                    let c1 = new Date(c.getTime()); c1.setDate(c1.getDate() + 1); expanded.push(c1); 
+                }
+
+                let valid = expanded.filter(c => c.getTime() >= minDT.getTime() && c.getTime() <= maxDT.getTime());
+                if (valid.length === 0) return { dt: new Date(minDT.getTime()), hasError: true }; 
+
+                valid.sort((a,b) => a.getTime() - b.getTime());
+                let bestDT = valid[0];
+                
+                let ogDate = new Date(baseDT.getTime());
+                let finalDate = new Date(bestDT.getTime());
+                finalDate.setHours(0,0,0,0);
+                if (finalDate.getTime() !== ogDate.getTime()) hasError = true;
+
+                return { dt: bestDT, hasError: hasError };
+            }
+
+            let maxAllowedDT = new Date(intakeDT.getTime());
+            if (intakeDT.getHours() >= 16) maxAllowedDT.setDate(maxAllowedDT.getDate() + 1);
+            maxAllowedDT.setHours(23, 59, 59, 999);
+
+            let resETA = processEvent(inDate, vETA, intakeDT, maxAllowedDT);
+            let resArr = processEvent(aDate, aTime, intakeDT, maxAllowedDT);
+            let resComp = processEvent(cDate, cTime, intakeDT, maxAllowedDT);
+            
+            if (resETA.hasError) metric.errETA = true;
+            if (resArr.hasError) metric.errArrival = true;
+            if (resComp.hasError) metric.errResolution = true;
+
+            metric.isGood = !(metric.errIntake || metric.errETA || metric.errArrival || metric.errResolution);
+
+            row.intakeDT = intakeDT;
+            row.etaDT = resETA.dt;
+            row.arriveDT = resArr.dt;
+            row.completeDT = resComp.dt;
+            row.finalOwner = finalOwner;
+            row.priorityStr = priorityStr;
+            row.customerStr = rawCustomer;
+            row.custKey = custKey;
+            row.ticketId = ticketId;
+
+            let downtimeHours = -1;
+            if (intakeDT && resComp.dt) downtimeHours = (resComp.dt - intakeDT) / (1000 * 60 * 60);
+
+            let sosMins = -1;
+            if (intakeDT && resArr.dt) sosMins = (resArr.dt - intakeDT) / (1000 * 60);
+
+            let vendorOnTime = null;
+            if (resArr.dt && resETA.dt) {
+                vendorOnTime = resArr.dt <= resETA.dt;
+            }
+            
+            row.downtimeHours = downtimeHours;
+            row.sosMins = sosMins;
+            row.vendorOnTime = vendorOnTime;
+
+            return { cleaned: row, metric: metric };
+        }
+
+        // --- PROCESS DATA ---
+        function processExcelData(vroRaw, resourceRaw, oosRaw, ersTabRaw) {
             const today = new Date(); today.setHours(0, 0, 0, 0);
+            
             let oosSet = new Set();
+            let unitToLocation = {};
             oosRaw.forEach(row => {
                 let unit = getCol(row, ['UNITNUMBER', 'Unit No', 'Vehicle']);
                 let oosFlag = getCol(row, ['OOS Flag', 'Open RO Category']);
-                if(unit && (oosFlag.toUpperCase() === 'OOS' || oosFlag === '')) oosSet.add(unit.toUpperCase());
-            });
-            let unitToGardaOwner = {}; let unitToLocation = {};
-            assignmentsRaw.forEach(row => {
-                let unit = getCol(row, ['UNITNUMBER', 'Unit No', 'Vehicle']);
-                let owner = getCol(row, ['Owner', 'Assigned To']);
-                let region = getCol(row, ['Region', 'GARDA REGION']);
-                let subregion = getCol(row, ['Subregion', 'GARDA SUBREGION']);
+                let region = getCol(row, ['GARDA REGION']);
+                let subregion = getCol(row, ['GARDA SUBREGION']);
                 let branch = getCol(row, ['Branch']);
+                
                 if(unit) {
-                    unitToGardaOwner[unit.toUpperCase()] = owner;
-                    unitToLocation[unit.toUpperCase()] = { region: region || 'Unspecified Region', subregion: subregion || 'Unspecified Subregion', branch: branch || 'Unspecified Branch' };
+                    let u = unit.toUpperCase();
+                    if (oosFlag.toUpperCase() === 'OOS' || oosFlag === '') oosSet.add(u);
+                    unitToLocation[u] = { 
+                        region: region || 'Unspecified Region', 
+                        subregion: subregion || 'Unspecified Subregion', 
+                        branch: branch || 'Unspecified Branch' 
+                    };
                 }
             });
+
+            let ownerMap = {};
+            let pmKeywords = [];
+            let activePM = new Set();
+            let activeVended = new Set();
+            let activeERS = new Set();
+
+            resourceRaw.forEach(row => {
+                let createdBy = getCol(row, ['CREATEDBY']);
+                let name = getCol(row, ['Name']);
+                let status = getCol(row, ['Status']).toUpperCase();
+                let team = getCol(row, ['Team']).toUpperCase();
+                let pmComp = getCol(row, ['PM Comp:']);
+                
+                if (createdBy) {
+                    let key = createdBy.toLowerCase().trim();
+                    let finalName = name || createdBy;
+                    ownerMap[key] = { name: finalName, status: status, team: team };
+                    if (name) ownerMap[name.toLowerCase().trim()] = { name: finalName, status: status, team: team };
+                    
+                    if (status === 'ACTIVE') {
+                        if (team === 'PM') activePM.add(finalName);
+                        else if (team === 'VENDED REPAIR') activeVended.add(finalName);
+                        else if (team === 'ERS') activeERS.add(finalName);
+                    }
+                }
+                
+                if (pmComp && pmComp.toUpperCase() !== 'PM COMP:' && pmComp.trim() !== '') {
+                    pmKeywords.push(pmComp.toLowerCase().trim());
+                }
+            });
+
+            pmOwners = Array.from(activePM);
+            vendedOwners = Array.from(activeVended);
+            ersOwners = Array.from(activeERS);
+            pmKeywords = [...new Set(pmKeywords)]; 
+
             let unitROCounts = {};
             vroRaw.forEach(row => {
                 let unit = getCol(row, ['Unit No', 'UNITNUMBER', 'Vehicle']).toUpperCase();
                 if(unit) unitROCounts[unit] = (unitROCounts[unit] || 0) + 1;
             });
+
+            let allCustSet = new Set();
+
             processedData = vroRaw.map(row => {
                 let roNum = getCol(row, ['Order', 'RO Number', 'RONum', 'AFS RO #']);
                 let customer = getCol(row, ['Customer', 'CUSTOMERNAME', 'Customer Name']); 
-                let ownerCol = getCol(row, ['Owner', 'Created By']); 
+                let rawOwner = getCol(row, ['Owner', 'Created By']); 
                 let unit = getCol(row, ['Unit No', 'UNITNUMBER', 'Vehicle']).toUpperCase();
                 let status = getCol(row, ['Status']);
                 let vmrs = getCol(row, ['Task', 'DESCRIP', 'VMRS Description']);
                 let openedRaw = getCol(row, ['Opened', 'ROOpenedDate']);
                 let dueRaw = getCol(row, ['Unit Due Date', 'Estimate Due Date', 'Due Date', 'L']);
                 let compRaw = getCol(row, ['Completed Date', 'Completed', 'P']);
-                let finalOwner = ownerCol;
-                let loc = unitToLocation[unit] || { region: 'Unknown Region', subregion: 'Unknown Subregion', branch: 'Unknown Branch' };
-                let fallbackLoc = { region: 'Unknown Region', subregion: 'Unknown Subregion', branch: customer.trim() };
-                if(customer.includes('-')) {
-                    let locPart = customer.substring(customer.lastIndexOf('-') + 1).trim(); 
-                    let stateName = 'Unknown State'; let cityName = 'Unknown City';
-                    if(locPart.includes(',')) {
-                        let splitComma = locPart.split(','); cityName = splitComma[0].trim();
-                        let stateZip = splitComma[1].trim().split(' ').filter(s => s.trim() !== ''); 
-                        if(stateZip.length > 0) stateName = stateZip[0].trim();
-                    } else {
-                        let parts = locPart.split(' ').filter(s => s.trim() !== '');
-                        if (parts.length >= 2) { let stateIdx = parts.length - 2; stateName = parts[stateIdx].trim(); cityName = parts.slice(0, stateIdx).join(' ').trim(); }
-                        else cityName = locPart;
-                    }
-                    fallbackLoc = { region: stateName, subregion: cityName, branch: customer.trim() };
-                }
-                if(customer.toLowerCase().includes('ferguson')) {
-                    if (finalOwner !== 'Kevin Anguzza') finalOwner = 'Chad Caylor';
-                    loc = fallbackLoc;
-                } else if(customer.toLowerCase().includes('garda')) {
-                    if (finalOwner !== 'Kevin Anguzza' && unitToGardaOwner[unit]) finalOwner = unitToGardaOwner[unit];
-                    if(loc.region === 'Unknown Region' || loc.region === 'Unspecified Region') loc = fallbackLoc;
-                } else if(loc.region === 'Unknown Region' || loc.region === 'Unspecified Region') loc = fallbackLoc;
-                if(ownerCol.toLowerCase().includes('kanguzza@ameritfleet.com') || ownerCol.toLowerCase() === 'kanguzza') finalOwner = 'Kevin Anguzza';
+                
+                let finalOwner = rawOwner;
+                let ownerLookup = ownerMap[rawOwner.toLowerCase().trim()];
+                if (ownerLookup) finalOwner = ownerLookup.name;
 
-                let isOOS = oosSet.has(unit); let isOpen = !excludedStatuses.includes(status.toUpperCase());
-                let priorityStr = 'LOW'; let priorityClass = 'badge-low'; let isPM = pmOwners.includes(finalOwner);
+                let openedDate = new Date(openedRaw);
+                let openedDT = isNaN(openedDate.getTime()) ? null : openedDate;
+
+                let taskStr = vmrs.toLowerCase();
+                let isPMOrder = false;
+                for (let kw of pmKeywords) {
+                    if (kw && taskStr.includes(kw)) {
+                        isPMOrder = true;
+                        break;
+                    }
+                }
+
+                let loc = unitToLocation[unit] || { region: 'Unknown Region', subregion: 'Unknown Subregion', branch: 'Unknown Branch' };
+                let custKey = getCustKey(customer);
+                
+                let locPart = customer;
+                if(customer.includes('-')) {
+                    locPart = customer.substring(customer.indexOf('-') + 1).trim(); 
+                }
+                
+                let stateName = 'Unknown State';
+                let cityName = 'Unknown City';
+
+                if (locPart.includes(',')) {
+                    let splitComma = locPart.split(','); 
+                    cityName = splitComma[0].trim();
+                    let afterComma = splitComma[1].trim().split(' ').filter(s => s.trim() !== ''); 
+                    if(afterComma.length > 0) stateName = afterComma[0].trim();
+                } else {
+                    let spaceSplit = locPart.split(' ').filter(s => s.trim() !== '');
+                    if (spaceSplit.length === 1 && spaceSplit[0].length === 2) {
+                        stateName = spaceSplit[0].toUpperCase();
+                        cityName = 'Unknown City';
+                    } else if (spaceSplit.length >= 2) {
+                        let last = spaceSplit[spaceSplit.length - 1].trim();
+                        let secLast = spaceSplit[spaceSplit.length - 2].trim();
+                        if (last.length === 2 && !/\d/.test(last)) {
+                            stateName = last.toUpperCase();
+                            cityName = spaceSplit.slice(0, spaceSplit.length - 1).join(' ');
+                        } else if (secLast.length === 2 && !/\d/.test(secLast)) {
+                            stateName = secLast.toUpperCase();
+                            cityName = spaceSplit.slice(0, spaceSplit.length - 2).join(' ');
+                        } else {
+                            cityName = locPart;
+                        }
+                    } else {
+                        cityName = locPart;
+                    }
+                }
+
+                let fallbackLoc = { region: stateName, subregion: cityName, branch: customer.trim() };
+                
+                if(custKey === 'Ferguson' || custKey === 'Amerit Fleet Solutions' || custKey === 'Brinks' || custKey === 'US Foods' || custKey === 'Frontier' || custKey === 'Colony Hardware' || custKey === 'Sukut Construction') { 
+                    loc = fallbackLoc; 
+                } else if(custKey === 'Garda') {
+                    if(loc.region === 'Unknown Region' || loc.region === 'Unspecified Region') loc = fallbackLoc;
+                } else {
+                    if(loc.region === 'Unknown Region' || loc.region === 'Unspecified Region') loc = fallbackLoc;
+                }
+                
+                let drillTopLevel = custKey + (loc.region !== 'Unknown State' && loc.region !== 'Unknown Region' ? ' ' + loc.region : '');
+                allCustSet.add(custKey);
+
+                let isOOS = oosSet.has(unit); 
+                let isOpen = !excludedStatuses.includes(status.toUpperCase());
+                let priorityStr = 'LOW'; let priorityClass = 'badge-low'; 
 
                 if (isOpen) {
-                    if (isPM) {
+                    if (isPMOrder) {
                         let dueDate = new Date(dueRaw);
                         if (!isNaN(dueDate.getTime())) {
                             let diffDays = Math.ceil((dueDate - today) / (1000 * 60 * 60 * 24));
@@ -561,7 +1058,6 @@
                             else if (diffDays <= 10) { priorityStr = 'MEDIUM'; priorityClass = 'badge-medium'; }
                         }
                     } else {
-                        let openedDate = new Date(openedRaw);
                         if (!isNaN(openedDate.getTime())) {
                             let diffDays = Math.floor((today - openedDate) / (1000 * 60 * 60 * 24));
                             if (diffDays > 7 || isOOS) { priorityStr = 'URGENT'; priorityClass = 'badge-urgent'; }
@@ -569,6 +1065,16 @@
                         } else if (isOOS) { priorityStr = 'URGENT'; priorityClass = 'badge-urgent'; }
                     }
                 } else { priorityStr = 'COMPLETED'; priorityClass = 'badge-active'; }
+
+                let ecdState = 'missing'; let ecdFormatted = 'NO ECD, UPDATE';
+                let ecdDate = new Date(dueRaw);
+                if (dueRaw && !isNaN(ecdDate.getTime())) {
+                    let ecdDay = new Date(ecdDate.getFullYear(), ecdDate.getMonth(), ecdDate.getDate());
+                    let todayDay = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+                    ecdFormatted = `${ecdDate.getMonth()+1}/${ecdDate.getDate()}/${ecdDate.getFullYear()}`;
+                    if (ecdDay < todayDay) ecdState = 'red';
+                    else ecdState = 'green';
+                }
 
                 let isCompletedKPI = false; let isOnTimeKPI = false; let isLateKPI = false;
                 if (['COMPLETED', 'FINAL CHARGES SUBMITTED'].includes(status.toUpperCase()) && compRaw !== '') {
@@ -580,14 +1086,55 @@
                         else isOnTimeKPI = true;
                     } else isCompletedKPI = false;
                 }
-                return { roNum, customer, drillTopLevel: customer.toLowerCase().includes('ferguson') ? 'Ferguson ' + loc.region : (customer.toLowerCase().includes('garda') ? 'Garda ' + loc.region : customer), owner: finalOwner, unitNo: unit, status, vmrs, isOOS, isOpen, isCompletedKPI, isOnTimeKPI, isLateKPI, roCount: unitROCounts[unit] || 1, subregion: loc.subregion, branch: loc.branch, priority: priorityStr, priorityClass };
+                
+                return { roNum, customer, custKey, drillTopLevel, owner: finalOwner, unitNo: unit, status, vmrs, isOOS, isOpen, isCompletedKPI, isOnTimeKPI, isLateKPI, roCount: unitROCounts[unit] || 1, subregion: loc.subregion, branch: loc.branch, priority: priorityStr, priorityClass, ecdState, ecdFormatted, openedDT };
             }).filter(ro => ro.roNum !== '');
+
+            rawErsData = [];
+            masterErsMetrics = [];
+            let ersCustSet = new Set();
+
+            if (ersTabRaw && ersTabRaw.length > 0) {
+                for (let i = 0; i < ersTabRaw.length; i++) {
+                    let result = cleanErsRow(ersTabRaw[i], ownerMap);
+                    if (result) {
+                        masterErsMetrics.push(result.metric);
+                        if (result.metric.custKey) ersCustSet.add(result.metric.custKey);
+                        if (result.cleaned) {
+                            rawErsData.push(result.cleaned); 
+                        }
+                    }
+                }
+            }
+
+            let sortedAllCust = Array.from(allCustSet).sort();
+            document.querySelectorAll('.customer-filter-select').forEach(dd => {
+                dd.innerHTML = '<option value="ALL">All Customers</option>';
+                sortedAllCust.forEach(c => {
+                    let opt = document.createElement('option');
+                    opt.value = c;
+                    opt.innerText = c.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
+                    dd.appendChild(opt);
+                });
+            });
+
+            let sortedErsCust = Array.from(ersCustSet).sort();
+            document.querySelectorAll('.ers-customer-filter-select').forEach(dd => {
+                dd.innerHTML = '<option value="ALL">All Customers</option>';
+                sortedErsCust.forEach(c => {
+                    let opt = document.createElement('option');
+                    opt.value = c;
+                    opt.innerText = c.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
+                    dd.appendChild(opt);
+                });
+            });
 
             document.getElementById('upload-box').style.display = 'none';
             document.getElementById('home-dashboard').style.display = 'block';
             renderHomeDashboard();
             renderKPITiles(pmOwners, 'pm-kpi-container', 'pm-view');
             renderKPITiles(vendedOwners, 'vended-kpi-container', 'vended-view');
+            renderErsTiles();
         }
 
         // --- HIERARCHY / KPI GENERATORS ---
@@ -607,9 +1154,99 @@
             let latePct = compCount > 0 ? Math.round((lateCount / compCount) * 100) : 0;
             let filterLabel = currentFilter === 'ALL' ? 'Open ROs' : `${currentFilter} ROs`;
 
-            let innerHtml = `<div class="kpi-name">${name}</div><div class="kpi-top-metrics"><div class="highlight-box"><div class="title">${filterLabel}</div><div class="num">${filteredOpen.length}</div></div><div class="highlight-box urgent-box"><div class="title">Urgent</div><div class="num">${urgentCount}</div></div></div><div class="kpi-stats-grid"><div class="stat-box"><div class="title">Completed</div><div class="num">${compCount}</div></div><div class="stat-box"><div class="title">On-Time</div><div class="num">${onTimeCount}</div></div><div class="stat-box"><div class="title">% Compliance</div><div class="num good">${compPct}%</div></div><div class="stat-box"><div class="title">% Late</div><div class="num urgent">${latePct}%</div></div></div>`;
-            if (chartId) return `<div class="flex-tile"><div class="flex-tile-left">${innerHtml}</div><div class="flex-tile-right"><canvas id="${chartId}" data-comp="${compPct}" data-late="${latePct}"></canvas></div></div>`;
+            let chartHTML = '';
+            if (chartId) {
+                chartHTML = `<div class="chart-box"><canvas id="${chartId}" data-comp="${compPct}" data-late="${latePct}"></canvas></div>`;
+            }
+
+            let innerHtml = `
+                <div class="kpi-name">${name}</div>
+                <div class="kpi-top-metrics">
+                    <div class="highlight-box">
+                        <div class="title">${filterLabel}</div>
+                        <div class="num">${filteredOpen.length}</div>
+                    </div>
+                    <div class="highlight-box urgent-box">
+                        <div class="title">Urgent</div>
+                        <div class="num">${urgentCount}</div>
+                    </div>
+                    ${chartHTML}
+                </div>
+                <div class="kpi-stats-grid">
+                    <div class="stat-box">
+                        <div class="title">Completed</div>
+                        <div class="num">${compCount}</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="title">On-Time</div>
+                        <div class="num">${onTimeCount}</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="title">% Compliance</div>
+                        <div class="num good">${compPct}%</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="title">% Late</div>
+                        <div class="num urgent">${latePct}%</div>
+                    </div>
+                </div>
+            `;
             return innerHtml;
+        }
+
+        // --- NEW ERS HYBRID TILE (Shows Orders & Tickets) ---
+        function generateErsTileHTML(name, roDataArray, ersDataArray) {
+            let filteredOpen = roDataArray.filter(ro => ro.isOpen).length;
+
+            let totalDowntimeHours = 0, validDowntimeCount = 0;
+            let totalSOSMins = 0, validSOSCount = 0;
+            let onTimeCountErs = 0, validVendorCount = 0;
+
+            ersDataArray.forEach(row => {
+                let dtH = row.downtimeHours; let sosM = row.sosMins; let onTime = row.vendorOnTime;
+                if (dtH >= 0) { totalDowntimeHours += dtH; validDowntimeCount++; }
+                if (sosM >= 0) { totalSOSMins += sosM; validSOSCount++; }
+                if (onTime !== null && sosM >= 0) { validVendorCount++; if(onTime) onTimeCountErs++; }
+            });
+
+            let avgDowntime = validDowntimeCount > 0 ? (totalDowntimeHours / validDowntimeCount) : 0;
+            let dtColor = 'var(--gold)'; 
+            if (validDowntimeCount > 0) {
+                if (avgDowntime < 2.5) { dtColor = '#10b981'; } 
+                else if (avgDowntime < 3.0) { dtColor = '#f59e0b'; } 
+                else { dtColor = '#ef4444'; } 
+            }
+            let dtStr = validDowntimeCount > 0 ? avgDowntime.toFixed(2) : "0.00";
+
+            let avgSOS = validSOSCount > 0 ? (totalSOSMins / validSOSCount) : 0;
+            let sosColor = 'var(--gold)'; 
+            if (validSOSCount > 0) {
+                if (avgSOS < 85) { sosColor = '#10b981'; } 
+                else if (avgSOS <= 90) { sosColor = '#f59e0b'; } 
+                else { sosColor = '#ef4444'; } 
+            }
+            let sosStr = validSOSCount > 0 ? Math.round(avgSOS) : "0";
+            let onTimePctErs = validVendorCount > 0 ? Math.round((onTimeCountErs / validVendorCount) * 100) : 0;
+            let vol = ersDataArray.length;
+
+            return `
+                <div class="kpi-name">${name}</div>
+                <div class="kpi-top-metrics">
+                    <div class="highlight-box">
+                        <div class="title" style="font-size:11px;">AVG Downtime (Hours)</div>
+                        <div class="num" style="color:${dtColor};">${dtStr}</div>
+                    </div>
+                    <div class="highlight-box">
+                        <div class="title" style="font-size:11px;">AVG SOS Time (Minutes)</div>
+                        <div class="num" style="color:${sosColor};">${sosStr}</div>
+                    </div>
+                </div>
+                <div class="kpi-stats-grid" style="grid-template-columns: repeat(3, 1fr);">
+                    <div class="stat-box"><div class="title">Open ROs</div><div class="num">${filteredOpen}</div></div>
+                    <div class="stat-box"><div class="title">Call Volume</div><div class="num">${vol}</div></div>
+                    <div class="stat-box"><div class="title">Vendor On-Time</div><div class="num good">${onTimePctErs}%</div></div>
+                </div>
+            `;
         }
 
         Chart.register({
@@ -621,7 +1258,7 @@
                     ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
                     var centerX = ((chart.chartArea.left + chart.chartArea.right) / 2);
                     var centerY = ((chart.chartArea.top + chart.chartArea.bottom) / 2);
-                    ctx.font = "bold 34px Raleway"; ctx.fillStyle = centerConfig.color || '#333';
+                    ctx.font = "bold 16px Raleway"; ctx.fillStyle = centerConfig.color || '#333';
                     ctx.fillText(txt, centerX, centerY);
                 }
             }
@@ -637,28 +1274,77 @@
             globalChartInstances[chartId] = new Chart(canvas.getContext('2d'), {
                 type: 'doughnut',
                 data: { labels: ['On-Time', 'Late'], datasets: [{ data: chartData, backgroundColor: bgColors, borderWidth: 0 }] },
-                options: { cutout: '75%', plugins: { legend: { display: false } }, elements: { center: { text: comp + '%' } } }
+                options: { maintainAspectRatio: false, cutout: '70%', plugins: { legend: { display: false } }, elements: { center: { text: comp + '%' } } }
             });
         }
 
         function renderHomeDashboard() {
             const container = document.getElementById('home-kpi-container'); container.innerHTML = '';
-            const custFilt = document.getElementById('home-customer-filter').value;
+            
             let aggData = processedData;
-            if (custFilt !== 'ALL') aggData = aggData.filter(ro => ro.customer.toUpperCase().includes(custFilt));
+            let aggErsData = rawErsData;
+
+            if (currentCustomerFilter !== 'ALL') {
+                aggData = aggData.filter(ro => ro.custKey === currentCustomerFilter);
+                aggErsData = aggErsData.filter(ro => ro.custKey === currentCustomerFilter);
+            }
+            
+            let sDate = currentStartDate ? new Date(currentStartDate + 'T00:00:00') : null;
+            let eDate = currentEndDate ? new Date(currentEndDate + 'T23:59:59') : null;
+            if (sDate || eDate) {
+                aggData = aggData.filter(ro => {
+                    if (!ro.openedDT) return false;
+                    if (sDate && ro.openedDT < sDate) return false;
+                    if (eDate && ro.openedDT > eDate) return false;
+                    return true;
+                });
+                aggErsData = aggErsData.filter(ro => {
+                    if (!ro.intakeDT) return false;
+                    if (sDate && ro.intakeDT < sDate) return false;
+                    if (eDate && ro.intakeDT > eDate) return false;
+                    return true;
+                });
+            }
+
             let pmData = aggData.filter(ro => pmOwners.includes(ro.owner));
             let vendedData = aggData.filter(ro => vendedOwners.includes(ro.owner));
-            const pmTile = document.createElement('div'); pmTile.className = 'kpi-tile home-master-tile'; pmTile.innerHTML = generateTileHTML('Total PM Dashboard', pmData, 'chart-pm');
+            let ersRoData = aggData.filter(ro => ersOwners.includes(ro.owner));
+
+            const pmTile = document.createElement('div'); pmTile.className = 'kpi-tile home-master-tile'; pmTile.innerHTML = generateTileHTML('PM Dashboard', pmData, 'chart-pm');
+            pmTile.onclick = () => loadPersonDrilldown('ALL_PM', 'home-view');
             container.appendChild(pmTile);
-            const vendedTile = document.createElement('div'); vendedTile.className = 'kpi-tile home-master-tile'; vendedTile.innerHTML = generateTileHTML('Total Vended Repair Dashboard', vendedData, 'chart-vended');
+            
+            const vendedTile = document.createElement('div'); vendedTile.className = 'kpi-tile home-master-tile'; vendedTile.innerHTML = generateTileHTML('Vended Repair Dashboard', vendedData, 'chart-vended');
+            vendedTile.onclick = () => loadPersonDrilldown('ALL_VENDED', 'home-view');
             container.appendChild(vendedTile);
+            
+            const ersTile = document.createElement('div'); ersTile.className = 'kpi-tile home-master-tile'; 
+            ersTile.innerHTML = generateErsTileHTML('ERS Dashboard', ersRoData, aggErsData);
+            ersTile.onclick = () => loadErsDrilldown('ALL', 'home-view');
+            container.appendChild(ersTile);
+
             initChart('chart-pm'); initChart('chart-vended');
         }
 
         function renderKPITiles(ownersList, containerId, parentViewId) {
             const container = document.getElementById(containerId); container.innerHTML = ''; 
+            if(processedData.length === 0) return;
+
             ownersList.forEach(owner => {
                 let ownerDataAll = processedData.filter(ro => ro.owner === owner);
+                
+                if (currentCustomerFilter !== 'ALL') {
+                    ownerDataAll = ownerDataAll.filter(ro => ro.custKey === currentCustomerFilter);
+                }
+
+                let targetData = ownerDataAll.filter(ro => ro.isOpen);
+                if(currentFilter === 'URGENT') targetData = targetData.filter(ro => ro.priority === 'URGENT');
+                else if(currentFilter === 'MEDIUM') targetData = targetData.filter(ro => ro.priority === 'MEDIUM');
+                else if(currentFilter === 'LOW') targetData = targetData.filter(ro => ro.priority === 'LOW');
+                else if(currentFilter === 'OOS') targetData = targetData.filter(ro => ro.isOOS);
+                
+                if (targetData.length === 0) return; 
+
                 const tile = document.createElement('div'); tile.className = 'kpi-tile';
                 tile.onclick = () => loadPersonDrilldown(owner, parentViewId);
                 tile.innerHTML = generateTileHTML(owner, ownerDataAll);
@@ -666,18 +1352,72 @@
             });
         }
 
-        function loadPersonDrilldown(owner, parentViewId) {
-            navigate('person-view'); currentOwnerView = owner; currentParentView = parentViewId;
-            document.getElementById('person-name-title').innerText = `RO Hierarchy: ${owner}`;
-            document.getElementById('dynamic-back-btn').onclick = () => navigate(parentViewId);
-            const container = document.getElementById('drilldown-body'); container.innerHTML = '';
-            let ownerDataAll = processedData.filter(ro => ro.owner === owner);
+        function renderErsTiles() {
+            const container = document.getElementById('ers-kpi-container'); container.innerHTML = ''; 
+            
+            ersOwners.forEach(owner => {
+                let ownerDataAll = processedData.filter(ro => ro.owner === owner);
+                let data = rawErsData.filter(d => d.finalOwner.toLowerCase().trim() === owner.toLowerCase().trim());
+
+                if (currentErsCustomerFilter !== 'ALL') {
+                    ownerDataAll = ownerDataAll.filter(ro => ro.custKey === currentErsCustomerFilter);
+                    data = data.filter(d => d.custKey === currentErsCustomerFilter);
+                }
+
+                let sDate = currentStartDate ? new Date(currentStartDate + 'T00:00:00') : null;
+                let eDate = currentEndDate ? new Date(currentEndDate + 'T23:59:59') : null;
+                if (sDate || eDate) {
+                    ownerDataAll = ownerDataAll.filter(ro => {
+                        if (!ro.openedDT) return false;
+                        if (sDate && ro.openedDT < sDate) return false;
+                        if (eDate && ro.openedDT > eDate) return false;
+                        return true;
+                    });
+                    data = data.filter(ro => {
+                        if (!ro.intakeDT) return false;
+                        if (sDate && ro.intakeDT < sDate) return false;
+                        if (eDate && ro.intakeDT > eDate) return false;
+                        return true;
+                    });
+                }
+
+                let targetData = ownerDataAll.filter(ro => ro.isOpen);
+                if (targetData.length === 0 && data.length === 0) return;
+
+                const tile = document.createElement('div'); tile.className = 'kpi-tile';
+                tile.onclick = () => loadErsDrilldown(owner, 'ers-view');
+                tile.innerHTML = generateErsTileHTML(owner, ownerDataAll, data);
+                container.appendChild(tile);
+            });
+        }
+
+        // Generate the RO Drilldown HTML
+        function generateErsRoDrilldownHtml(owner) {
+            let ownerDataAll = processedData;
+            if (owner === 'ALL') {
+                ownerDataAll = processedData.filter(ro => ersOwners.includes(ro.owner));
+            } else {
+                ownerDataAll = processedData.filter(ro => ro.owner === owner);
+            }
+
+            if (currentErsCustomerFilter !== 'ALL') {
+                ownerDataAll = ownerDataAll.filter(ro => ro.custKey === currentErsCustomerFilter);
+            }
+
+            let sDate = currentStartDate ? new Date(currentStartDate + 'T00:00:00') : null;
+            let eDate = currentEndDate ? new Date(currentEndDate + 'T23:59:59') : null;
+            if (sDate || eDate) {
+                ownerDataAll = ownerDataAll.filter(ro => {
+                    if (!ro.openedDT) return false;
+                    if (sDate && ro.openedDT < sDate) return false;
+                    if (eDate && ro.openedDT > eDate) return false;
+                    return true;
+                });
+            }
+
             let targetData = ownerDataAll.filter(ro => ro.isOpen);
-            if(currentFilter === 'URGENT') targetData = targetData.filter(ro => ro.priority === 'URGENT');
-            else if(currentFilter === 'MEDIUM') targetData = targetData.filter(ro => ro.priority === 'MEDIUM');
-            else if(currentFilter === 'LOW') targetData = targetData.filter(ro => ro.priority === 'LOW');
-            else if(currentFilter === 'OOS') targetData = targetData.filter(ro => ro.isOOS);
-            if(targetData.length === 0) { container.innerHTML = `<p>No records for ${owner} under the current filter.</p>`; return; }
+            if(targetData.length === 0) return `<p style="margin-top:15px; color:#666;">No active Repair Orders to display.</p>`;
+            
             let hierarchy = {};
             targetData.forEach(ro => {
                 if(!hierarchy[ro.drillTopLevel]) hierarchy[ro.drillTopLevel] = {};
@@ -685,30 +1425,315 @@
                 if(!hierarchy[ro.drillTopLevel][ro.subregion][ro.branch]) hierarchy[ro.drillTopLevel][ro.subregion][ro.branch] = [];
                 hierarchy[ro.drillTopLevel][ro.subregion][ro.branch].push(ro);
             });
+            
+            let htmlStr = '';
             for(let topLvl in hierarchy) {
-                const regDetails = document.createElement('details'); regDetails.innerHTML = `<summary>${topLvl}</summary>`; 
+                htmlStr += `<details class="ers-ro-node"><summary>${topLvl}</summary>`; 
                 for(let sub in hierarchy[topLvl]) {
-                    const subDetails = document.createElement('details'); subDetails.innerHTML = `<summary>${sub}</summary>`;
+                    htmlStr += `<details class="ers-ro-node"><summary>${sub}</summary>`;
                     for(let branch in hierarchy[topLvl][sub]) {
-                        const branchDetails = document.createElement('details');
                         let branchROs = hierarchy[topLvl][sub][branch];
                         branchROs.sort((a,b) => { 
                             const ord = {'URGENT':1,'MEDIUM':2,'LOW':3};
                             if(ord[a.priority] !== ord[b.priority]) return ord[a.priority] - ord[b.priority];
                             return (b.isOOS - a.isOOS);
                         });
-                        branchDetails.innerHTML = `<summary>${branch} (${branchROs.length} ROs)</summary>`;
-                        let tableHTML = `<div class="table-wrapper"><table><colgroup><col style="width:13%"><col style="width:11%"><col style="width:9%"><col style="width:8%"><col style="width:9%"><col style="width:15%"><col style="width:35%"></colgroup><thead><tr><th>AFS RO #</th><th>Unit No</th><th>Priority</th><th>OOS Status</th><th>Total Unit ROs</th><th>Status</th><th>Task / VMRS</th></tr></thead><tbody>`;
+                        htmlStr += `<details class="ers-ro-node"><summary>${branch} (${branchROs.length} ROs)</summary>`;
+                        let tableHTML = `<div class="table-wrapper"><table><colgroup><col style="width:12%;"><col style="width:10%;"><col style="width:8%;"><col style="width:8%;"><col style="width:6%;"><col style="width:14%;"><col style="width:10%;"><col style="width:32%;"></colgroup><thead><tr><th>AFS RO #</th><th>Unit No</th><th>Priority</th><th>OOS Status</th><th>Total Unit ROs</th><th>Status</th><th>ECD</th><th>Task / VMRS</th></tr></thead><tbody>`;
                         branchROs.forEach(ro => {
-                            tableHTML += `<tr><td><a href="https://afshub.azurewebsites.net/Vendors/VendedRepairOrder/Estimate/${ro.roNum}" target="_blank" class="ro-link">${ro.roNum}</a></td><td><strong>${ro.unitNo}</strong></td><td><span class="badge ${ro.priorityClass}">${ro.priority}</span></td><td><span class="badge ${ro.isOOS ? 'badge-oos':'badge-active'}">${ro.isOOS ? 'OOS':'ACTIVE'}</span></td><td>${ro.roCount}</td><td>${ro.status}</td><td>${ro.vmrs}</td></tr>`;
+                            let ecdCell = '';
+                            if (ro.ecdState === 'missing') ecdCell = `<span class="badge-ecd-missing">${ro.ecdFormatted}</span>`;
+                            else if (ro.ecdState === 'red') ecdCell = `<span class="ecd-red">${ro.ecdFormatted}</span>`;
+                            else ecdCell = `<span class="ecd-green">${ro.ecdFormatted}</span>`;
+                            
+                            let isGarda = ro.custKey === 'Garda';
+                            let oosBadge = isGarda ? (ro.isOOS ? `<span class="badge badge-oos">OOS</span>` : `<span class="badge badge-active">ACTIVE</span>`) : '';
+
+                            tableHTML += `<tr><td><a href="https://afshub.azurewebsites.net/Vendors/VendedRepairOrder/Estimate/${ro.roNum}" target="_blank" class="ro-link">${ro.roNum}</a></td><td><strong>${ro.unitNo}</strong></td><td><span class="badge ${ro.priorityClass}">${ro.priority}</span></td><td>${oosBadge}</td><td>${ro.roCount}</td><td>${ro.status}</td><td>${ecdCell}</td><td>${ro.vmrs}</td></tr>`;
                         });
-                        tableHTML += `</tbody></table></div>`; branchDetails.innerHTML += tableHTML; subDetails.appendChild(branchDetails);
-                    RegExp
+                        tableHTML += `</tbody></table></div>`; 
+                        htmlStr += tableHTML + `</details>`;
                     }
-                    regDetails.appendChild(subDetails);
+                    htmlStr += `</details>`;
                 }
-                container.appendChild(regDetails);
+                htmlStr += `</details>`;
             }
+            return htmlStr;
+        }
+
+        function toggleErsRODetails(expand) {
+            document.querySelectorAll('#ers-ro-drilldown-body details').forEach(d => { if(expand) d.setAttribute('open',''); else d.removeAttribute('open'); });
+        }
+
+        function toggleErsTicketDetails(expand) {
+            document.querySelectorAll('#ers-ticket-drilldown-toggle').forEach(d => { if(expand) d.setAttribute('open',''); else d.removeAttribute('open'); });
+        }
+
+        function loadErsDrilldown(owner, parentViewId) {
+            navigate('ers-detail-view', null, true); 
+            currentOwnerView = owner; currentParentView = parentViewId;
+            let titleText = owner === 'ALL' ? 'Overall ERS Details' : `ERS Coordinator: ${owner}`;
+            document.getElementById('ers-name-title').innerText = titleText;
+            document.getElementById('ers-dynamic-back-btn').onclick = () => navigate(parentViewId, null, true);
+            
+            let fMetrics = masterErsMetrics;
+            let fData = rawErsData;
+            let fRoData = processedData;
+
+            if (owner !== 'ALL') {
+                fMetrics = fMetrics.filter(m => m.coordinator.toLowerCase().trim() === owner.toLowerCase().trim());
+                fData = fData.filter(d => d.finalOwner.toLowerCase().trim() === owner.toLowerCase().trim());
+                fRoData = fRoData.filter(r => r.owner.toLowerCase().trim() === owner.toLowerCase().trim());
+            } else {
+                fRoData = fRoData.filter(r => ersOwners.includes(r.owner));
+            }
+
+            if (currentErsCustomerFilter !== 'ALL') {
+                fMetrics = fMetrics.filter(m => m.custKey === currentErsCustomerFilter);
+                fData = fData.filter(d => d.custKey === currentErsCustomerFilter);
+                fRoData = fRoData.filter(r => r.custKey === currentErsCustomerFilter);
+            }
+
+            let sDate = currentStartDate ? new Date(currentStartDate + 'T00:00:00') : null;
+            let eDate = currentEndDate ? new Date(currentEndDate + 'T23:59:59') : null;
+            if (sDate || eDate) {
+                fData = fData.filter(ro => {
+                    if (!ro.intakeDT) return false;
+                    if (sDate && ro.intakeDT < sDate) return false;
+                    if (eDate && ro.intakeDT > eDate) return false;
+                    return true;
+                });
+                fMetrics = fMetrics.filter(m => {
+                    if (!m.intakeDT) return false;
+                    if (sDate && m.intakeDT < sDate) return false;
+                    if (eDate && m.intakeDT > eDate) return false;
+                    return true;
+                });
+                fRoData = fRoData.filter(ro => {
+                    if (!ro.openedDT) return false;
+                    if (sDate && ro.openedDT < sDate) return false;
+                    if (eDate && ro.openedDT > eDate) return false;
+                    return true;
+                });
+            }
+
+            // Top Banner KPIs (5 Separate White Tiles)
+            let filteredOpenROs = fRoData.filter(ro => ro.isOpen).length;
+            let totalDowntimeHours = 0, validDowntimeCount = 0;
+            let totalSOSMins = 0, validSOSCount = 0;
+            let onTimeCountErs = 0, validVendorCount = 0;
+
+            fData.forEach(row => {
+                let dtH = row.downtimeHours; let sosM = row.sosMins; let onTime = row.vendorOnTime;
+                if (dtH >= 0) { totalDowntimeHours += dtH; validDowntimeCount++; }
+                if (sosM >= 0) { totalSOSMins += sosM; validSOSCount++; }
+                if (onTime !== null && sosM >= 0) { validVendorCount++; if(onTime) onTimeCountErs++; }
+            });
+
+            let avgDowntime = validDowntimeCount > 0 ? (totalDowntimeHours / validDowntimeCount) : 0;
+            let dtColor = 'var(--gold)'; 
+            if (validDowntimeCount > 0) {
+                if (avgDowntime < 2.5) dtColor = '#10b981'; else if (avgDowntime < 3.0) dtColor = '#f59e0b'; else dtColor = '#ef4444';
+            }
+            let dtStr = validDowntimeCount > 0 ? avgDowntime.toFixed(2) : "0.00";
+
+            let avgSOS = validSOSCount > 0 ? (totalSOSMins / validSOSCount) : 0;
+            let sosColor = 'var(--gold)'; 
+            if (validSOSCount > 0) {
+                if (avgSOS < 85) sosColor = '#10b981'; else if (avgSOS <= 90) sosColor = '#f59e0b'; else sosColor = '#ef4444';
+            }
+            let sosStr = validSOSCount > 0 ? Math.round(avgSOS) : "0";
+            let onTimePctErs = validVendorCount > 0 ? Math.round((onTimeCountErs / validVendorCount) * 100) : 0;
+            let vol = fData.length;
+
+            document.getElementById('ers-master-kpis').innerHTML = `
+                <div style="display: flex; gap: 15px; flex-wrap: wrap;">
+                    <div class="kpi-tile" style="flex: 1; min-width: 160px; padding: 20px; border-top: 4px solid var(--gold);">
+                        <div style="font-size: 11px; color: #555; font-weight: 800; text-transform: uppercase;">AVG Downtime (Hours)</div>
+                        <div style="font-size: 32px; font-weight: 800; color: ${dtColor}; margin-top: 10px;">${dtStr}</div>
+                    </div>
+                    <div class="kpi-tile" style="flex: 1; min-width: 160px; padding: 20px; border-top: 4px solid var(--gold);">
+                        <div style="font-size: 11px; color: #555; font-weight: 800; text-transform: uppercase;">AVG SOS Time (Minutes)</div>
+                        <div style="font-size: 32px; font-weight: 800; color: ${sosColor}; margin-top: 10px;">${sosStr}</div>
+                    </div>
+                    <div class="kpi-tile" style="flex: 1; min-width: 160px; padding: 20px; border-top: 4px solid var(--gold);">
+                        <div style="font-size: 11px; color: #555; font-weight: 800; text-transform: uppercase;">Open ROs</div>
+                        <div style="font-size: 32px; font-weight: 800; color: var(--gold); margin-top: 10px;">${filteredOpenROs}</div>
+                    </div>
+                    <div class="kpi-tile" style="flex: 1; min-width: 160px; padding: 20px; border-top: 4px solid var(--gold);">
+                        <div style="font-size: 11px; color: #555; font-weight: 800; text-transform: uppercase;">Call Volume</div>
+                        <div style="font-size: 32px; font-weight: 800; color: var(--gold); margin-top: 10px;">${vol}</div>
+                    </div>
+                    <div class="kpi-tile" style="flex: 1; min-width: 160px; padding: 20px; border-top: 4px solid var(--gold);">
+                        <div style="font-size: 11px; color: #555; font-weight: 800; text-transform: uppercase;">Vendor On-Time</div>
+                        <div style="font-size: 32px; font-weight: 800; color: var(--gold); margin-top: 10px;">${onTimePctErs}%</div>
+                    </div>
+                </div>
+            `;
+
+            let scStats = {}; let coordStats = {};
+            fMetrics.forEach(m => {
+                let cName = String(m.coordinator || '').trim();
+                if (cName === '' || cName.toLowerCase() === 'unknown') return; 
+                if (!scStats[cName]) scStats[cName] = { name: cName, total: 0, good: 0, intake: 0, eta: 0, arrival: 0, resolution: 0, pctClean: 0 };
+                let st = scStats[cName]; st.total++;
+                if (m.isGood) st.good++; if (m.errIntake) st.intake++; if (m.errETA) st.eta++; if (m.errArrival) st.arrival++; if (m.errResolution) st.resolution++;
+            });
+
+            currentErsViewData = [];
+            fData.forEach(row => {
+                let cName = String(row.finalOwner || '').trim();
+                if (cName !== '' && cName.toLowerCase() !== 'unknown') {
+                    if (!coordStats[cName]) coordStats[cName] = { validDT: 0, totalDT: 0, validSOS: 0, totalSOS: 0, sosOver90: 0, dtOver3: 0 };
+                }
+                
+                let dtH = row.downtimeHours; let sosM = row.sosMins;
+                if (dtH >= 0) {
+                    if (cName !== '' && cName.toLowerCase() !== 'unknown') {
+                        coordStats[cName].totalDT += dtH; coordStats[cName].validDT++;
+                        if (dtH > 3.0) coordStats[cName].dtOver3++;
+                    }
+                }
+                if (sosM >= 0) {
+                    if (cName !== '' && cName.toLowerCase() !== 'unknown') {
+                        coordStats[cName].totalSOS += sosM; coordStats[cName].validSOS++;
+                        if (sosM > 90) coordStats[cName].sosOver90++;
+                    }
+                }
+                
+                let eStatus = "Open";
+                if (row.completeDT) eStatus = "Completed"; else if (row.arriveDT) eStatus = "On Site"; else if (row.etaDT) eStatus = "Dispatched";
+
+                if (dtH >= 0 || sosM >= 0 || row.ticketId) {
+                    currentErsViewData.push({
+                        ticketId: row.ticketId, coordinator: cName, customer: row.customerStr,
+                        priority: row.priorityStr, eventStatus: eStatus, intakeDT: row.intakeDT, sosMins: sosM, downtimeHours: dtH
+                    });
+                }
+            });
+
+            currentErsSummaryData = []; currentErsScorecardData = [];
+            Object.keys(scStats).forEach(cName => {
+                let sc = scStats[cName]; let cs = coordStats[cName] || { validDT: 0, totalDT: 0, validSOS: 0, totalSOS: 0, sosOver90: 0, dtOver3: 0 };
+                sc.pctClean = sc.total > 0 ? (sc.good / sc.total) * 100 : 0;
+                currentErsSummaryData.push({ name: cName, volume: sc.total, avgSOS: cs.validSOS > 0 ? (cs.totalSOS / cs.validSOS) : -1, avgDT: cs.validDT > 0 ? (cs.totalDT / cs.validDT) : -1, sosOver90: cs.sosOver90, dtOver3: cs.dtOver3 });
+                currentErsScorecardData.push(sc);
+            });
+
+            sortSummaryData(sortColSum, sortAscSum); renderSummaryTable();
+            sortScorecardData(sortColSc, sortAscSc); renderScorecardTable();
+            if (sortColErs) sortErsViewData(sortColErs, sortAscErs); renderErsTable();
+
+            document.getElementById('ers-ro-drilldown-body').innerHTML = generateErsRoDrilldownHtml(owner);
+        }
+
+        // --- ERS SPECIFIC TABLE RENDERING & SORTING ---
+        function handleSortSummary(colName, thElement) {
+            if (sortColSum === colName) sortAscSum = !sortAscSum; else { sortColSum = colName; sortAscSum = true; }
+            document.querySelectorAll('th[data-sort-summary]').forEach(th => { th.classList.remove('asc', 'desc'); th.querySelector('.sort-icon').innerText = '↕'; });
+            thElement.classList.add(sortAscSum ? 'asc' : 'desc'); thElement.querySelector('.sort-icon').innerText = sortAscSum ? '▲' : '▼';
+            sortSummaryData(sortColSum, sortAscSum); renderSummaryTable();
+        }
+        function sortSummaryData(colName, isAsc) {
+            currentErsSummaryData.sort((a, b) => {
+                let valA = a[colName]; let valB = b[colName];
+                if (typeof valA === 'string') valA = valA.toLowerCase(); if (typeof valB === 'string') valB = valB.toLowerCase();
+                if (valA < valB) return isAsc ? -1 : 1; if (valA > valB) return isAsc ? 1 : -1; return 0;
+            });
+        }
+        function renderSummaryTable() {
+            const tbody = document.getElementById('ers-summary-body'); tbody.innerHTML = '';
+            currentErsSummaryData.forEach(item => {
+                let sosClass = ''; let dtClass = '';
+                if (item.avgSOS >= 0) { if (item.avgSOS > 90) sosClass = 'status-red'; else if (item.avgSOS >= 85) sosClass = 'status-yellow'; else sosClass = 'status-green'; }
+                if (item.avgDT >= 0) { if (item.avgDT >= 3.0) dtClass = 'status-red'; else if (item.avgDT >= 2.5) dtClass = 'status-yellow'; else dtClass = 'status-green'; }
+                
+                let fmtSos = item.avgSOS < 0 ? 'N/A' : Math.round(item.avgSOS);
+                let fmtDt = item.avgDT < 0 ? 'N/A' : item.avgDT.toFixed(2);
+
+                let tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td style="font-weight: 500;">${item.name}</td>
+                    <td style="font-weight: 600;">${item.volume}</td>
+                    <td><span class="badge ${sosClass}">${fmtSos}</span></td>
+                    <td><span class="badge ${dtClass}">${fmtDt}</span></td>
+                    <td>${item.sosOver90 > 0 ? `<span class="outlier-red">${item.sosOver90}</span>` : item.sosOver90}</td>
+                    <td>${item.dtOver3 > 0 ? `<span class="outlier-red">${item.dtOver3}</span>` : item.dtOver3}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function handleSortScorecard(colName, thElement) {
+            if (sortColSc === colName) sortAscSc = !sortAscSc; else { sortColSc = colName; sortAscSc = true; }
+            document.querySelectorAll('th[data-sort-sc]').forEach(th => { th.classList.remove('asc', 'desc'); th.querySelector('.sort-icon').innerText = '↕'; });
+            thElement.classList.add(sortAscSc ? 'asc' : 'desc'); thElement.querySelector('.sort-icon').innerText = sortAscSc ? '▲' : '▼';
+            sortScorecardData(sortColSc, sortAscSc); renderScorecardTable();
+        }
+        function sortScorecardData(colName, isAsc) {
+            currentErsScorecardData.sort((a, b) => {
+                let valA = a[colName]; let valB = b[colName];
+                if (typeof valA === 'string') valA = valA.toLowerCase(); if (typeof valB === 'string') valB = valB.toLowerCase();
+                if (valA < valB) return isAsc ? -1 : 1; if (valA > valB) return isAsc ? 1 : -1; return 0;
+            });
+        }
+        function renderScorecardTable() {
+            const tbody = document.getElementById('ers-scorecard-body'); tbody.innerHTML = '';
+            currentErsScorecardData.forEach(item => {
+                let pctVal = Math.round(item.pctClean);
+                let pctClass = 'status-red'; if (pctVal >= 90) pctClass = 'status-green'; else if (pctVal >= 85) pctClass = 'status-yellow';
+                let tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td style="font-weight: 500;">${item.name}</td>
+                    <td class="${item.good > 0 ? 'good-marker' : ''}">${item.good}</td>
+                    <td class="${item.intake > 0 ? 'error-marker' : ''}">${item.intake}</td>
+                    <td class="${item.eta > 0 ? 'error-marker' : ''}">${item.eta}</td>
+                    <td class="${item.arrival > 0 ? 'error-marker' : ''}">${item.arrival}</td>
+                    <td class="${item.resolution > 0 ? 'error-marker' : ''}">${item.resolution}</td>
+                    <td><span class="badge ${pctClass}">${pctVal}%</span></td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function handleSortErs(colName, thElement) {
+            if (sortColErs === colName) sortAscErs = !sortAscErs; else { sortColErs = colName; sortAscErs = true; }
+            document.querySelectorAll('th[data-sort-ers]').forEach(th => { th.classList.remove('asc', 'desc'); th.querySelector('.sort-icon').innerText = '↕'; });
+            thElement.classList.add(sortAscErs ? 'asc' : 'desc'); thElement.querySelector('.sort-icon').innerText = sortAscErs ? '▲' : '▼';
+            sortErsViewData(sortColErs, sortAscErs); renderErsTable();
+        }
+        function sortErsViewData(colName, isAsc) {
+            currentErsViewData.sort((a, b) => {
+                let valA = a[colName]; let valB = b[colName];
+                if (valA === null || valA === undefined || valA === -1 || valA === '') return 1;
+                if (valB === null || valB === undefined || valB === -1 || valB === '') return -1;
+                if (typeof valA === 'string') valA = valA.toLowerCase(); if (typeof valB === 'string') valB = valB.toLowerCase();
+                if (valA < valB) return isAsc ? -1 : 1; if (valA > valB) return isAsc ? 1 : -1; return 0;
+            });
+        }
+        function renderErsTable() {
+            const tbody = document.getElementById('ers-drilldown-table-body'); tbody.innerHTML = '';
+            currentErsViewData.forEach(item => {
+                let tr = document.createElement('tr');
+                let sosDisplay = 'N/A';
+                if (item.sosMins >= 0) {
+                    let fmt = Math.round(item.sosMins);
+                    sosDisplay = item.sosMins > 90 ? `<span class="outlier-red">${fmt}</span>` : `<span class="badge status-green">${fmt}</span>`;
+                }
+                let downDisplay = 'N/A';
+                if (item.downtimeHours >= 0) {
+                    let fmt = item.downtimeHours.toFixed(2);
+                    downDisplay = item.downtimeHours >= 3.0 ? `<span class="outlier-red">${fmt}</span>` : `<span class="badge status-green">${fmt}</span>`;
+                }
+                let statusBadge = item.eventStatus === 'Completed' ? 'status-green' : 'status-yellow';
+                tr.innerHTML = `
+                    <td>${item.customer}</td><td style="font-weight: 500;">${item.coordinator}</td>
+                    <td>${formatDateTimeShort(item.intakeDT)}</td><td>${item.priority}</td>
+                    <td><span class="badge ${statusBadge}">${item.eventStatus}</span></td>
+                    <td>${sosDisplay}</td><td>${downDisplay}</td><td>${item.ticketId}</td>
+                `;
+                tbody.appendChild(tr);
+            });
         }
 
         function toggleAllDetails(expand) { document.querySelectorAll('#drilldown-body details').forEach(d => { if(expand) d.setAttribute('open',''); else d.removeAttribute('open'); }); }
@@ -717,31 +1742,51 @@
             clearTimeout(searchTimeout);
             searchTimeout = setTimeout(() => {
                 const searchTerm = document.getElementById('global-search').value.toLowerCase();
-                if(searchTerm.length === 0) { navigate(lastActiveView); return; }
-                navigate('search-view');
+                if(searchTerm.length === 0) { navigate(lastActiveView, null, true); return; }
+                navigate('search-view', null, true);
                 document.getElementById('search-term-display').innerText = searchTerm;
                 const results = processedData.filter(ro => ro.unitNo.toLowerCase().includes(searchTerm));
                 let searchHtml = '';
-                if(results.length === 0) searchHtml = '<tr><td colspan="8" style="text-align:center;">No matching units.</td></tr>';
+                if(results.length === 0) searchHtml = '<tr><td colspan="9" style="text-align:center;">No matching units.</td></tr>';
                 else {
                     results.forEach(ro => {
-                        searchHtml += `<tr><td><a href="https://afshub.azurewebsites.net/Vendors/VendedRepairOrder/Estimate/${ro.roNum}" target="_blank" class="ro-link">${ro.roNum}</a></td><td><strong>${ro.unitNo}</strong></td><td><span class="badge ${ro.priorityClass}">${ro.priority}</span></td><td><span class="badge ${ro.isOOS ? 'badge-oos':'badge-active'}">${ro.isOOS ? 'OOS':'ACTIVE'}</span></td><td>${ro.roCount}</td><td>${ro.owner}</td><td>${ro.status}</td><td>${ro.vmrs}</td></tr>`;
+                        let ecdCell = '';
+                        if (ro.ecdState === 'missing') ecdCell = `<span class="badge-ecd-missing">${ro.ecdFormatted}</span>`;
+                        else if (ro.ecdState === 'red') ecdCell = `<span class="ecd-red">${ro.ecdFormatted}</span>`;
+                        else ecdCell = `<span class="ecd-green">${ro.ecdFormatted}</span>`;
+
+                        let isGarda = ro.custKey === 'Garda';
+                        let oosBadge = isGarda ? (ro.isOOS ? `<span class="badge badge-oos">OOS</span>` : `<span class="badge badge-active">ACTIVE</span>`) : '';
+
+                        searchHtml += `<tr><td><a href="https://afshub.azurewebsites.net/Vendors/VendedRepairOrder/Estimate/${ro.roNum}" target="_blank" class="ro-link">${ro.roNum}</a></td><td><strong>${ro.unitNo}</strong></td><td><span class="badge ${ro.priorityClass}">${ro.priority}</span></td><td>${oosBadge}</td><td>${ro.roCount}</td><td>${ro.owner}</td><td>${ro.status}</td><td>${ecdCell}</td><td>${ro.vmrs}</td></tr>`;
                     });
                 }
                 document.getElementById('search-table-body').innerHTML = searchHtml;
             }, 300);
         }
 
-        function navigate(viewId, menuElement = null) {
+        function navigate(viewId, menuElement = null, preserveCustomerFilter = false) {
+            if (!preserveCustomerFilter) {
+                currentCustomerFilter = 'ALL';
+                currentErsCustomerFilter = 'ALL';
+                currentStartDate = '';
+                currentEndDate = '';
+                document.querySelectorAll('.customer-filter-select').forEach(sel => { sel.value = 'ALL'; });
+                document.querySelectorAll('.ers-customer-filter-select').forEach(sel => { sel.value = 'ALL'; });
+                document.querySelectorAll('.date-filter-start').forEach(el => { el.value = ''; });
+                document.querySelectorAll('.date-filter-end').forEach(el => { el.value = ''; });
+            }
             document.querySelectorAll('.view-section').forEach(v => v.classList.remove('active'));
             document.getElementById(viewId).classList.add('active');
-            if(viewId !== 'search-view') lastActiveView = viewId;
+            if(viewId !== 'search-view' && viewId !== 'person-view' && viewId !== 'ers-detail-view') lastActiveView = viewId;
             if(menuElement) {
                 document.querySelectorAll('.menu-item').forEach(item => item.classList.remove('active'));
                 menuElement.classList.add('active');
             }
             if(viewId === 'pm-view') renderKPITiles(pmOwners, 'pm-kpi-container', 'pm-view');
             else if (viewId === 'vended-view') renderKPITiles(vendedOwners, 'vended-kpi-container', 'vended-view');
+            else if (viewId === 'ers-view') renderErsTiles();
+            else if (viewId === 'home-view') renderHomeDashboard();
         }
     </script>
 </body>
