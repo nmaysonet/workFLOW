@@ -106,7 +106,6 @@
         /* Master Dashboard Container & Layout */
         .home-dashboard-header { display: flex; justify-content: space-between; align-items: center; margin-top: 40px; margin-bottom: 20px; padding-bottom: 10px; border-bottom: 2px solid var(--border); flex-wrap: wrap; gap: 15px;}
         .filter-select { padding: 8px 15px; border-radius: 4px; border: 1px solid #ccc; font-weight: 700; font-size: 14px; background: #fff;}
-        .date-controls { display: flex; gap: 10px; align-items: center; }
         
         .home-kpi-container { display: flex; gap: 15px; flex-wrap: nowrap; width: 100%; overflow-x: auto; padding-bottom: 15px; }
         
@@ -265,13 +264,8 @@
             <div id="home-dashboard" style="display:none;">
                 <div class="home-dashboard-header">
                     <h2 style="margin:0;">Aggregate Performance Overview</h2>
-                    <div class="date-controls">
-                        <label>Date Range:</label>
-                        <input type="date" class="filter-select date-filter-start" onchange="setDateFilter('start', this.value)">
-                        <span style="font-weight:bold; color:#666;">-</span>
-                        <input type="date" class="filter-select date-filter-end" onchange="setDateFilter('end', this.value)">
-                        
-                        <select class="filter-select customer-filter-select" onchange="setCustomerFilter(this.value)" style="margin-left: 10px;">
+                    <div>
+                        <select class="filter-select customer-filter-select" onchange="setCustomerFilter(this.value)">
                             <option value="ALL">All Customers</option>
                         </select>
                     </div>
@@ -283,7 +277,7 @@
         <div id="pm-view" class="view-section">
             <div class="view-title">
                 <span style="font-weight: 700;">PM Queue</span>
-                <div class="date-controls">
+                <div>
                     <select class="filter-select customer-filter-select" onchange="setCustomerFilter(this.value)">
                         <option value="ALL">All Customers</option>
                     </select>
@@ -302,7 +296,7 @@
         <div id="vended-view" class="view-section">
             <div class="view-title">
                 <span style="font-weight: 700;">Vended Repair Queue</span>
-                <div class="date-controls">
+                <div>
                     <select class="filter-select customer-filter-select" onchange="setCustomerFilter(this.value)">
                         <option value="ALL">All Customers</option>
                     </select>
@@ -321,7 +315,7 @@
         <div id="ers-view" class="view-section">
             <div class="view-title">
                 <span style="font-weight: 700;">ERS Queue</span>
-                <div class="date-controls">
+                <div>
                     <select class="filter-select customer-filter-select" onchange="setCustomerFilter(this.value)">
                         <option value="ALL">All Customers</option>
                     </select>
@@ -346,11 +340,6 @@
                     </select>
                 </div>
                 <div class="controls-group" style="display: flex; align-items: center;">
-                    <div class="date-controls" style="margin-right: 15px;">
-                        <input type="date" class="filter-select date-filter-start" onchange="setDateFilter('start', this.value)">
-                        <span style="font-weight:bold; color:#666;">-</span>
-                        <input type="date" class="filter-select date-filter-end" onchange="setDateFilter('end', this.value)">
-                    </div>
                     <button class="btn-green" onclick="exportDrilldownToExcel()">Export to XLSX</button>
                     <button onclick="toggleAllDetails(true)">Expand All</button>
                     <button onclick="toggleAllDetails(false)">Collapse All</button>
@@ -394,8 +383,6 @@
         let processedData = []; 
         let currentFilter = 'ALL';
         let currentCustomerFilter = 'ALL';
-        let currentStartDate = '';
-        let currentEndDate = '';
         let currentOwnerView = '';
         let currentParentView = '';
         let globalChartInstances = {}; 
@@ -437,10 +424,11 @@
                     const sheetData = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], {defval: ''});
                     if(sheetData.length === 0) return;
                     
+                    // Normalize keys for exact, robust matching
                     const keys = Object.keys(sheetData[0]).map(k => String(k).toLowerCase().replace(/[^a-z0-9]/g, ''));
                     
-                    // Tab 4: Order Assignments override tab
-                    if (keys.includes('vro') || keys.includes('assignee')) {
+                    // Tab 4: Order Assignments
+                    if (keys.includes('vro') && keys.includes('assignee')) {
                         assignRaw = assignRaw.concat(sheetData);
                     } 
                     // Tab 2: Resource Table
@@ -509,17 +497,6 @@
                 ownerDataAll = ownerDataAll.filter(ro => ro.custKey === currentCustomerFilter);
             }
 
-            let sDate = currentStartDate ? new Date(currentStartDate + 'T00:00:00') : null;
-            let eDate = currentEndDate ? new Date(currentEndDate + 'T23:59:59') : null;
-            if (sDate || eDate) {
-                ownerDataAll = ownerDataAll.filter(ro => {
-                    if (!ro.openedDT) return false;
-                    if (sDate && ro.openedDT < sDate) return false;
-                    if (eDate && ro.openedDT > eDate) return false;
-                    return true;
-                });
-            }
-
             let targetData = ownerDataAll.filter(ro => ro.isOpen);
             if(currentFilter === 'URGENT') targetData = targetData.filter(ro => ro.priority === 'URGENT');
             else if(currentFilter === 'MEDIUM') targetData = targetData.filter(ro => ro.priority === 'MEDIUM');
@@ -541,7 +518,7 @@
             XLSX.writeFile(workbook, `workflow_export_${String(currentOwnerView).replace(/\s+/g, '_')}_${currentFilter.toLowerCase()}.xlsx`);
         }
 
-        // --- FILTER & CUSTOMER & DATE DROPDOWN LOGIC ---
+        // --- FILTER & CUSTOMER LOGIC ---
         function setFilter(val) {
             currentFilter = val;
             document.querySelectorAll('.filter-btn').forEach(btn => {
@@ -554,17 +531,6 @@
         function setCustomerFilter(val) {
             currentCustomerFilter = val;
             document.querySelectorAll('.customer-filter-select').forEach(sel => { sel.value = val; });
-            triggerViewUpdate();
-        }
-
-        function setDateFilter(type, val) {
-            if (type === 'start') {
-                currentStartDate = val;
-                document.querySelectorAll('.date-filter-start').forEach(el => el.value = val);
-            } else {
-                currentEndDate = val;
-                document.querySelectorAll('.date-filter-end').forEach(el => el.value = val);
-            }
             triggerViewUpdate();
         }
 
@@ -597,7 +563,7 @@
                         
                         const keys = Object.keys(sheetData[0]).map(k => String(k).toLowerCase().replace(/[^a-z0-9]/g, ''));
                         
-                        if (keys.includes('vro') || keys.includes('assignee')) {
+                        if (keys.includes('vro') && keys.includes('assignee')) {
                             assignRaw = assignRaw.concat(sheetData);
                         } else if (keys.includes('createdby') || keys.includes('team') || keys.includes('pmcomp')) {
                             resourceRaw = resourceRaw.concat(sheetData);
@@ -646,22 +612,27 @@
             let activeERS = new Set();
 
             resourceRaw.forEach(row => {
-                let createdBy = getCol(row, ['CREATEDBY', 'Email']);
-                let name = getCol(row, ['Name']);
-                let status = getCol(row, ['Status']).toUpperCase();
-                let team = getCol(row, ['Team']).toUpperCase();
+                let createdBy = getCol(row, ['CREATEDBY', 'Email', 'Created By']);
+                let name = getCol(row, ['Name', 'Assignee']);
+                let status = getCol(row, ['Status']);
+                let team = getCol(row, ['Team']);
                 let pmComp = getCol(row, ['PM Comp:']);
                 
                 if (createdBy) {
-                    let key = String(createdBy).toLowerCase().trim();
+                    let keyEmail = String(createdBy).toLowerCase().trim();
                     let finalName = name ? String(name).trim() : String(createdBy).trim();
-                    ownerMap[key] = { name: finalName, status: status, team: team };
-                    if (name) ownerMap[String(name).toLowerCase().trim()] = { name: finalName, status: status, team: team };
+                    let keyName = finalName.toLowerCase().trim();
                     
-                    if (status === 'ACTIVE') {
-                        if (team === 'PM') activePM.add(finalName);
-                        else if (team === 'VENDED REPAIR') activeVended.add(finalName);
-                        else if (team === 'ERS') activeERS.add(finalName);
+                    let statUpper = status.toUpperCase();
+                    let teamUpper = team.toUpperCase();
+
+                    ownerMap[keyEmail] = { name: finalName, status: statUpper, team: teamUpper };
+                    ownerMap[keyName] = { name: finalName, status: statUpper, team: teamUpper };
+                    
+                    if (statUpper === 'ACTIVE') {
+                        if (teamUpper === 'PM') activePM.add(finalName);
+                        else if (teamUpper === 'VENDED REPAIR') activeVended.add(finalName);
+                        else if (teamUpper === 'ERS') activeERS.add(finalName);
                     }
                 }
                 
@@ -696,7 +667,7 @@
             processedData = vroRaw.map(row => {
                 let roNum = getCol(row, ['Order', 'RO Number', 'RONum', 'AFS RO #']).toUpperCase().trim();
                 let customer = getCol(row, ['Customer', 'CUSTOMERNAME', 'Customer Name']); 
-                let rawOwner = getCol(row, ['Owner', 'Email', 'Created By']); 
+                let rawOwner = getCol(row, ['Owner', 'Created By']); 
                 let unit = getCol(row, ['Unit No', 'UNITNUMBER', 'Vehicle']).toUpperCase();
                 let status = getCol(row, ['Status']);
                 let vmrs = getCol(row, ['Task', 'DESCRIP', 'VMRS Description']);
@@ -721,7 +692,7 @@
                     }
                 }
 
-                // Discard inactive / unassigned entirely.
+                // If they are not active or not mapped, silently drop them to prevent overlap.
                 if (finalOwner === 'INACTIVE_OR_UNASSIGNED') return { roNum: '' };
 
                 let openedDate = new Date(openedRaw);
@@ -943,21 +914,10 @@
             if (currentCustomerFilter !== 'ALL') {
                 aggData = aggData.filter(ro => ro.custKey === currentCustomerFilter);
             }
-            
-            let sDate = currentStartDate ? new Date(currentStartDate + 'T00:00:00') : null;
-            let eDate = currentEndDate ? new Date(currentEndDate + 'T23:59:59') : null;
-            if (sDate || eDate) {
-                aggData = aggData.filter(ro => {
-                    if (!ro.openedDT) return false;
-                    if (sDate && ro.openedDT < sDate) return false;
-                    if (eDate && ro.openedDT > eDate) return false;
-                    return true;
-                });
-            }
 
             let pmData = aggData.filter(ro => pmOwners.includes(ro.owner));
             let vendedData = aggData.filter(ro => vendedOwners.includes(ro.owner));
-            let ersData = aggData.filter(ro => ersOwners.includes(ro.owner));
+            let ersRoData = aggData.filter(ro => ersOwners.includes(ro.owner));
 
             const pmTile = document.createElement('div'); pmTile.className = 'kpi-tile home-master-tile'; pmTile.innerHTML = generateTileHTML('PM Dashboard', pmData, 'chart-pm');
             pmTile.onclick = () => loadPersonDrilldown('ALL_PM', 'home-view');
@@ -968,7 +928,7 @@
             container.appendChild(vendedTile);
             
             const ersTile = document.createElement('div'); ersTile.className = 'kpi-tile home-master-tile'; 
-            ersTile.innerHTML = generateTileHTML('ERS Dashboard', ersData, 'chart-ers');
+            ersTile.innerHTML = generateTileHTML('ERS Dashboard', ersRoData, 'chart-ers');
             ersTile.onclick = () => loadPersonDrilldown('ALL_ERS', 'home-view');
             container.appendChild(ersTile);
 
@@ -984,17 +944,6 @@
                 
                 if (currentCustomerFilter !== 'ALL') {
                     ownerDataAll = ownerDataAll.filter(ro => ro.custKey === currentCustomerFilter);
-                }
-
-                let sDate = currentStartDate ? new Date(currentStartDate + 'T00:00:00') : null;
-                let eDate = currentEndDate ? new Date(currentEndDate + 'T23:59:59') : null;
-                if (sDate || eDate) {
-                    ownerDataAll = ownerDataAll.filter(ro => {
-                        if (!ro.openedDT) return false;
-                        if (sDate && ro.openedDT < sDate) return false;
-                        if (eDate && ro.openedDT > eDate) return false;
-                        return true;
-                    });
                 }
 
                 let targetData = ownerDataAll.filter(ro => ro.isOpen);
@@ -1089,17 +1038,6 @@
             if (currentCustomerFilter !== 'ALL') {
                 ownerDataAll = ownerDataAll.filter(ro => ro.custKey === currentCustomerFilter);
             }
-            
-            let sDate = currentStartDate ? new Date(currentStartDate + 'T00:00:00') : null;
-            let eDate = currentEndDate ? new Date(currentEndDate + 'T23:59:59') : null;
-            if (sDate || eDate) {
-                ownerDataAll = ownerDataAll.filter(ro => {
-                    if (!ro.openedDT) return false;
-                    if (sDate && ro.openedDT < sDate) return false;
-                    if (eDate && ro.openedDT > eDate) return false;
-                    return true;
-                });
-            }
 
             container.innerHTML = generateRoDrilldownHtml(ownerDataAll);
         }
@@ -1138,11 +1076,7 @@
         function navigate(viewId, menuElement = null, preserveCustomerFilter = false) {
             if (!preserveCustomerFilter) {
                 currentCustomerFilter = 'ALL';
-                currentStartDate = '';
-                currentEndDate = '';
                 document.querySelectorAll('.customer-filter-select').forEach(sel => { sel.value = 'ALL'; });
-                document.querySelectorAll('.date-filter-start').forEach(el => { el.value = ''; });
-                document.querySelectorAll('.date-filter-end').forEach(el => { el.value = ''; });
             }
             document.querySelectorAll('.view-section').forEach(v => v.classList.remove('active'));
             document.getElementById(viewId).classList.add('active');
