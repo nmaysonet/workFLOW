@@ -106,6 +106,7 @@
         /* Master Dashboard Container & Layout */
         .home-dashboard-header { display: flex; justify-content: space-between; align-items: center; margin-top: 40px; margin-bottom: 20px; padding-bottom: 10px; border-bottom: 2px solid var(--border); flex-wrap: wrap; gap: 15px;}
         .filter-select { padding: 8px 15px; border-radius: 4px; border: 1px solid #ccc; font-weight: 700; font-size: 14px; background: #fff;}
+        .header-controls { display: flex; gap: 10px; align-items: center; }
         
         .home-kpi-container { display: flex; gap: 15px; flex-wrap: nowrap; width: 100%; overflow-x: auto; padding-bottom: 15px; }
         
@@ -264,7 +265,7 @@
             <div id="home-dashboard" style="display:none;">
                 <div class="home-dashboard-header">
                     <h2 style="margin:0;">Aggregate Performance Overview</h2>
-                    <div>
+                    <div class="header-controls">
                         <select class="filter-select customer-filter-select" onchange="setCustomerFilter(this.value)">
                             <option value="ALL">All Customers</option>
                         </select>
@@ -277,7 +278,7 @@
         <div id="pm-view" class="view-section">
             <div class="view-title">
                 <span style="font-weight: 700;">PM Queue</span>
-                <div>
+                <div class="header-controls">
                     <select class="filter-select customer-filter-select" onchange="setCustomerFilter(this.value)">
                         <option value="ALL">All Customers</option>
                     </select>
@@ -296,7 +297,7 @@
         <div id="vended-view" class="view-section">
             <div class="view-title">
                 <span style="font-weight: 700;">Vended Repair Queue</span>
-                <div>
+                <div class="header-controls">
                     <select class="filter-select customer-filter-select" onchange="setCustomerFilter(this.value)">
                         <option value="ALL">All Customers</option>
                     </select>
@@ -315,7 +316,7 @@
         <div id="ers-view" class="view-section">
             <div class="view-title">
                 <span style="font-weight: 700;">ERS Queue</span>
-                <div>
+                <div class="header-controls">
                     <select class="filter-select customer-filter-select" onchange="setCustomerFilter(this.value)">
                         <option value="ALL">All Customers</option>
                     </select>
@@ -392,7 +393,20 @@
         let vendedOwners = [];
         let ersOwners = [];
 
-        const excludedStatuses = ['COMPLETED', 'FINAL CHARGES SUBMITTED', 'CREDIT VROS'];
+        // Expanded exact-match exclusions to permanently filter out closed tickets from open drilldowns
+        const excludedStatuses = [
+            'COMPLETED', 
+            'FINAL CHARGES SUBMITTED', 
+            'CREDIT VROS', 
+            'CANCELED', 
+            'CANCELLED', 
+            'CLOSED', 
+            'REJECTED', 
+            'DECLINED', 
+            'VOID', 
+            'VOIDED'
+        ];
+        
         let lastActiveView = 'home-view';
 
         // --- FETCH LOCAL DATA ---
@@ -408,7 +422,6 @@
             document.getElementById('manual-upload-section').style.display = 'none';
 
             try {
-                // Add timestamp to bypass local caching issues
                 const timestamp = new Date().getTime();
                 const response = await fetch(`master_workFLOW.xlsx?_=${timestamp}`);
                 
@@ -424,7 +437,6 @@
                     const sheetData = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], {defval: ''});
                     if(sheetData.length === 0) return;
                     
-                    // Normalize keys for exact, robust matching
                     const keys = Object.keys(sheetData[0]).map(k => String(k).toLowerCase().replace(/[^a-z0-9]/g, ''));
                     
                     // Tab 4: Order Assignments
@@ -518,7 +530,7 @@
             XLSX.writeFile(workbook, `workflow_export_${String(currentOwnerView).replace(/\s+/g, '_')}_${currentFilter.toLowerCase()}.xlsx`);
         }
 
-        // --- FILTER & CUSTOMER LOGIC ---
+        // --- FILTER LOGIC ---
         function setFilter(val) {
             currentFilter = val;
             document.querySelectorAll('.filter-btn').forEach(btn => {
@@ -542,44 +554,6 @@
             else if(activeView === 'ers-view') renderKPITiles(ersOwners, 'ers-kpi-container', 'ers-view');
             else if(activeView === 'person-view') { if(currentOwnerView) loadPersonDrilldown(currentOwnerView, currentParentView); }
         }
-
-        // --- MANUAL UPLOAD FALLBACK ---
-        document.getElementById('excelFileInput').addEventListener('change', async function(e) {
-            const files = Array.from(e.target.files);
-            if (files.length === 0) return;
-            const statusEl = document.getElementById('upload-status');
-            statusEl.innerText = "Reading manual upload...";
-            
-            let vroRaw = [], resourceRaw = [], oosRaw = [], assignRaw = [];
-            
-            try {
-                for(let file of files) {
-                    const data = await file.arrayBuffer();
-                    const workbook = XLSX.read(data, {type: 'array'});
-                    
-                    workbook.SheetNames.forEach(sheetName => {
-                        const sheetData = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], {defval: ''});
-                        if(sheetData.length === 0) return;
-                        
-                        const keys = Object.keys(sheetData[0]).map(k => String(k).toLowerCase().replace(/[^a-z0-9]/g, ''));
-                        
-                        if (keys.includes('vro') && keys.includes('assignee')) {
-                            assignRaw = assignRaw.concat(sheetData);
-                        } else if (keys.includes('createdby') || keys.includes('team') || keys.includes('pmcomp')) {
-                            resourceRaw = resourceRaw.concat(sheetData);
-                        } else if (keys.includes('gardaregion') || keys.includes('oosflag')) {
-                            oosRaw = oosRaw.concat(sheetData);
-                        } else if (keys.includes('order') || keys.includes('ronumber') || keys.includes('owner')) {
-                            vroRaw = vroRaw.concat(sheetData);
-                        }
-                    });
-                }
-                processExcelData(vroRaw, resourceRaw, oosRaw, assignRaw);
-            } catch (error) { 
-                console.error(error); 
-                statusEl.innerText = "Error parsing files."; 
-            }
-        });
 
         // --- PROCESS DATA ---
         function processExcelData(vroRaw, resourceRaw, oosRaw, assignRaw) {
@@ -614,8 +588,8 @@
             resourceRaw.forEach(row => {
                 let createdBy = getCol(row, ['CREATEDBY', 'Email', 'Created By']);
                 let name = getCol(row, ['Name', 'Assignee']);
-                let status = getCol(row, ['Status']);
-                let team = getCol(row, ['Team']);
+                let status = getCol(row, ['Status']).toUpperCase();
+                let team = getCol(row, ['Team']).toUpperCase();
                 let pmComp = getCol(row, ['PM Comp:']);
                 
                 if (createdBy) {
@@ -758,8 +732,9 @@
                 let drillTopLevel = custKey + (loc.region !== 'Unknown State' && loc.region !== 'Unknown Region' ? ' ' + loc.region : '');
                 allCustSet.add(custKey);
 
+                let statusStr = String(status || '').toUpperCase().trim();
                 let isOOS = oosSet.has(unit); 
-                let isOpen = !excludedStatuses.includes(status.toUpperCase());
+                let isOpen = !excludedStatuses.includes(statusStr);
                 let priorityStr = 'LOW'; let priorityClass = 'badge-low'; 
 
                 if (isOpen) {
@@ -790,7 +765,7 @@
                 }
 
                 let isCompletedKPI = false; let isOnTimeKPI = false; let isLateKPI = false;
-                if (['COMPLETED', 'FINAL CHARGES SUBMITTED'].includes(status.toUpperCase()) && compRaw !== '') {
+                if (excludedStatuses.includes(statusStr) && compRaw !== '') {
                     isCompletedKPI = true; let cDate = new Date(compRaw);
                     if (!isNaN(cDate.getTime())) {
                         let dDate = new Date(dueRaw);
@@ -1053,6 +1028,7 @@
                 if(searchTerm.length === 0) { navigate(lastActiveView, null, true); return; }
                 navigate('search-view', null, true);
                 document.getElementById('search-term-display').innerText = searchTerm;
+                // Exclude closed from search
                 const results = processedData.filter(ro => ro.unitNo.toLowerCase().includes(searchTerm));
                 let searchHtml = '';
                 if(results.length === 0) searchHtml = '<tr><td colspan="9" style="text-align:center;">No matching units.</td></tr>';
