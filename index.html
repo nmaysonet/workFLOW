@@ -107,7 +107,6 @@
         .home-dashboard-header { display: flex; justify-content: space-between; align-items: center; margin-top: 40px; margin-bottom: 20px; padding-bottom: 10px; border-bottom: 2px solid var(--border); flex-wrap: wrap; gap: 15px;}
         .filter-select { padding: 8px 15px; border-radius: 4px; border: 1px solid #ccc; font-weight: 700; font-size: 14px; background: #fff;}
         .date-controls { display: flex; gap: 10px; align-items: center; }
-        .date-controls label { font-size: 12px; font-weight: bold; color: #555; text-transform: uppercase;}
         
         .home-kpi-container { display: flex; gap: 15px; flex-wrap: nowrap; width: 100%; overflow-x: auto; padding-bottom: 15px; }
         
@@ -115,7 +114,7 @@
         .home-master-tile:hover { transform: translateY(-3px); box-shadow: 0 4px 12px rgba(0,0,0,0.12); border-top-color: var(--gold) !important; }
         .home-master-tile .kpi-name { font-size: 18px; margin-bottom: 15px; }
 
-        /* KPI Layout - Master Highlight Boxes */
+        /* KPI Layout - Highlight Boxes */
         .kpi-top-metrics { display: flex; gap: 10px; margin-bottom: 15px; align-items: stretch; }
         .highlight-box { flex: 1; background: #fffaf0; border: 1px solid var(--gold); border-radius: 6px; padding: 10px; display: flex; flex-direction: column; justify-content: center;}
         .highlight-box.urgent-box { background: #fff0f0; border-color: var(--urgent-red); }
@@ -255,7 +254,7 @@
             <h1 class="home-title">Welcome to workFLOW +</h1>
             <div class="upload-container" id="upload-box">
                 <h3>Loading Dashboard Data</h3>
-                <p style="color: #666; margin-bottom: 15px; font-size: 14px;">Attempting to automatically fetch <b>master_workFLOW.xlsx</b> from the repository...</p>
+                <p style="color: #666; margin-bottom: 15px; font-size: 14px;">Attempting to fetch <b>master_workFLOW.xlsx</b> from your local directory...</p>
                 <div id="upload-status" style="font-size: 15px; font-weight: bold; color: #888;">Initializing...</div>
                 <div id="manual-upload-section" style="display: none; margin-top: 25px; padding-top: 20px; border-top: 1px dashed #ccc;">
                     <p style="font-size: 13px; color: #888; margin-bottom: 10px;">Fallback: File not found. Upload manually below.</p>
@@ -267,12 +266,7 @@
                 <div class="home-dashboard-header">
                     <h2 style="margin:0;">Aggregate Performance Overview</h2>
                     <div class="date-controls">
-                        <label>Date Range:</label>
-                        <input type="date" class="filter-select date-filter-start" onchange="setDateFilter('start', this.value)">
-                        <span style="font-weight:bold; color:#666;">-</span>
-                        <input type="date" class="filter-select date-filter-end" onchange="setDateFilter('end', this.value)">
-                        
-                        <select class="filter-select customer-filter-select" onchange="setCustomerFilter(this.value)" style="margin-left: 10px;">
+                        <select class="filter-select customer-filter-select" onchange="setCustomerFilter(this.value)">
                             <option value="ALL">All Customers</option>
                         </select>
                     </div>
@@ -347,11 +341,6 @@
                     </select>
                 </div>
                 <div class="controls-group" style="display: flex; align-items: center;">
-                    <div class="date-controls" style="margin-right: 15px;">
-                        <input type="date" class="filter-select date-filter-start" onchange="setDateFilter('start', this.value)">
-                        <span style="font-weight:bold; color:#666;">-</span>
-                        <input type="date" class="filter-select date-filter-end" onchange="setDateFilter('end', this.value)">
-                    </div>
                     <button class="btn-green" onclick="exportDrilldownToExcel()">Export to XLSX</button>
                     <button onclick="toggleAllDetails(true)">Expand All</button>
                     <button onclick="toggleAllDetails(false)">Collapse All</button>
@@ -395,8 +384,6 @@
         let processedData = []; 
         let currentFilter = 'ALL';
         let currentCustomerFilter = 'ALL';
-        let currentStartDate = '';
-        let currentEndDate = '';
         let currentOwnerView = '';
         let currentParentView = '';
         let globalChartInstances = {}; 
@@ -432,25 +419,35 @@
                 const data = await response.arrayBuffer();
                 const workbook = XLSX.read(data, {type: 'array'});
                 
-                let vroRaw = [], resourceRaw = [], oosRaw = [];
+                let vroRaw = [], resourceRaw = [], oosRaw = [], assignRaw = [];
                 
                 workbook.SheetNames.forEach(sheetName => {
                     const sheetData = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], {defval: ''});
                     if(sheetData.length === 0) return;
                     
-                    const keys = Object.keys(sheetData[0]).map(k => String(k).toLowerCase().trim());
+                    // Normalize keys for exact, robust matching
+                    const keys = Object.keys(sheetData[0]).map(k => String(k).toLowerCase().replace(/[^a-z0-9]/g, ''));
                     
-                    if (keys.includes('createdby') || keys.includes('pm comp:') || keys.includes('team')) {
+                    // Tab 4: Order Assignments
+                    if (keys.includes('vro') && keys.includes('assignee')) {
+                        assignRaw = assignRaw.concat(sheetData);
+                    } 
+                    // Tab 2: Resource Table
+                    else if (keys.includes('createdby') || keys.includes('team') || keys.includes('pmcomp')) {
                         resourceRaw = resourceRaw.concat(sheetData);
-                    } else if (keys.includes('garda region') || keys.includes('oos flag')) {
+                    } 
+                    // Tab 3: OOS GARDA
+                    else if (keys.includes('gardaregion') || keys.includes('oosflag')) {
                         oosRaw = oosRaw.concat(sheetData);
-                    } else if (keys.includes('order') || keys.includes('ro number') || keys.includes('afs ro #')) {
+                    } 
+                    // Tab 1: VRO Export
+                    else if (keys.includes('order') || keys.includes('ronumber') || keys.includes('owner')) {
                         vroRaw = vroRaw.concat(sheetData);
                     }
                 });
                 
                 statusEl.innerText = "Building dashboards...";
-                processExcelData(vroRaw, resourceRaw, oosRaw);
+                processExcelData(vroRaw, resourceRaw, oosRaw, assignRaw);
 
             } catch (error) {
                 console.error("Fetch failed:", error);
@@ -501,17 +498,6 @@
                 ownerDataAll = ownerDataAll.filter(ro => ro.custKey === currentCustomerFilter);
             }
 
-            let sDate = currentStartDate ? new Date(currentStartDate + 'T00:00:00') : null;
-            let eDate = currentEndDate ? new Date(currentEndDate + 'T23:59:59') : null;
-            if (sDate || eDate) {
-                ownerDataAll = ownerDataAll.filter(ro => {
-                    if (!ro.openedDT) return false;
-                    if (sDate && ro.openedDT < sDate) return false;
-                    if (eDate && ro.openedDT > eDate) return false;
-                    return true;
-                });
-            }
-
             let targetData = ownerDataAll.filter(ro => ro.isOpen);
             if(currentFilter === 'URGENT') targetData = targetData.filter(ro => ro.priority === 'URGENT');
             else if(currentFilter === 'MEDIUM') targetData = targetData.filter(ro => ro.priority === 'MEDIUM');
@@ -533,7 +519,7 @@
             XLSX.writeFile(workbook, `workflow_export_${String(currentOwnerView).replace(/\s+/g, '_')}_${currentFilter.toLowerCase()}.xlsx`);
         }
 
-        // --- FILTER & CUSTOMER & DATE DROPDOWN LOGIC ---
+        // --- FILTER & CUSTOMER LOGIC ---
         function setFilter(val) {
             currentFilter = val;
             document.querySelectorAll('.filter-btn').forEach(btn => {
@@ -549,17 +535,6 @@
             triggerViewUpdate();
         }
 
-        function setDateFilter(type, val) {
-            if (type === 'start') {
-                currentStartDate = val;
-                document.querySelectorAll('.date-filter-start').forEach(el => el.value = val);
-            } else {
-                currentEndDate = val;
-                document.querySelectorAll('.date-filter-end').forEach(el => el.value = val);
-            }
-            triggerViewUpdate();
-        }
-
         function triggerViewUpdate() {
             let activeView = document.querySelector('.view-section.active').id;
             if(activeView === 'home-view') renderHomeDashboard();
@@ -569,8 +544,46 @@
             else if(activeView === 'person-view') { if(currentOwnerView) loadPersonDrilldown(currentOwnerView, currentParentView); }
         }
 
+        // --- MANUAL UPLOAD FALLBACK ---
+        document.getElementById('excelFileInput').addEventListener('change', async function(e) {
+            const files = Array.from(e.target.files);
+            if (files.length === 0) return;
+            const statusEl = document.getElementById('upload-status');
+            statusEl.innerText = "Reading manual upload...";
+            
+            let vroRaw = [], resourceRaw = [], oosRaw = [], assignRaw = [];
+            
+            try {
+                for(let file of files) {
+                    const data = await file.arrayBuffer();
+                    const workbook = XLSX.read(data, {type: 'array'});
+                    
+                    workbook.SheetNames.forEach(sheetName => {
+                        const sheetData = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], {defval: ''});
+                        if(sheetData.length === 0) return;
+                        
+                        const keys = Object.keys(sheetData[0]).map(k => String(k).toLowerCase().replace(/[^a-z0-9]/g, ''));
+                        
+                        if (keys.includes('vro') && keys.includes('assignee')) {
+                            assignRaw = assignRaw.concat(sheetData);
+                        } else if (keys.includes('createdby') || keys.includes('team') || keys.includes('pmcomp')) {
+                            resourceRaw = resourceRaw.concat(sheetData);
+                        } else if (keys.includes('gardaregion') || keys.includes('oosflag')) {
+                            oosRaw = oosRaw.concat(sheetData);
+                        } else if (keys.includes('order') || keys.includes('ronumber') || keys.includes('owner')) {
+                            vroRaw = vroRaw.concat(sheetData);
+                        }
+                    });
+                }
+                processExcelData(vroRaw, resourceRaw, oosRaw, assignRaw);
+            } catch (error) { 
+                console.error(error); 
+                statusEl.innerText = "Error parsing files."; 
+            }
+        });
+
         // --- PROCESS DATA ---
-        function processExcelData(vroRaw, resourceRaw, oosRaw) {
+        function processExcelData(vroRaw, resourceRaw, oosRaw, assignRaw) {
             const today = new Date(); today.setHours(0, 0, 0, 0);
             
             let oosSet = new Set();
@@ -600,22 +613,27 @@
             let activeERS = new Set();
 
             resourceRaw.forEach(row => {
-                let createdBy = getCol(row, ['CREATEDBY']);
-                let name = getCol(row, ['Name']);
-                let status = getCol(row, ['Status']).toUpperCase();
-                let team = getCol(row, ['Team']).toUpperCase();
+                let createdBy = getCol(row, ['CREATEDBY', 'Email', 'Created By']);
+                let name = getCol(row, ['Name', 'Assignee']);
+                let status = getCol(row, ['Status']);
+                let team = getCol(row, ['Team']);
                 let pmComp = getCol(row, ['PM Comp:']);
                 
                 if (createdBy) {
-                    let key = String(createdBy).toLowerCase().trim();
+                    let keyEmail = String(createdBy).toLowerCase().trim();
                     let finalName = name ? String(name).trim() : String(createdBy).trim();
-                    ownerMap[key] = { name: finalName, status: status, team: team };
-                    if (finalName) ownerMap[finalName.toLowerCase()] = { name: finalName, status: status, team: team };
+                    let keyName = finalName.toLowerCase().trim();
                     
-                    if (status === 'ACTIVE') {
-                        if (team === 'PM') activePM.add(finalName);
-                        else if (team === 'VENDED REPAIR') activeVended.add(finalName);
-                        else if (team === 'ERS') activeERS.add(finalName);
+                    let statUpper = status.toUpperCase();
+                    let teamUpper = team.toUpperCase();
+
+                    ownerMap[keyEmail] = { name: finalName, status: statUpper, team: teamUpper };
+                    ownerMap[keyName] = { name: finalName, status: statUpper, team: teamUpper };
+                    
+                    if (statUpper === 'ACTIVE') {
+                        if (teamUpper === 'PM') activePM.add(finalName);
+                        else if (teamUpper === 'VENDED REPAIR') activeVended.add(finalName);
+                        else if (teamUpper === 'ERS') activeERS.add(finalName);
                     }
                 }
                 
@@ -635,6 +653,16 @@
                 if(unit) unitROCounts[unit] = (unitROCounts[unit] || 0) + 1;
             });
 
+            // TAB 4 ORDER ASSIGNMENTS INJECTION
+            let reassignments = {};
+            assignRaw.forEach(row => {
+                let vro = getCol(row, ['VRO', 'Order', 'RO Number', 'AFS RO #']);
+                let assignee = getCol(row, ['Assignee', 'Name', 'Owner']);
+                if (vro && assignee) {
+                    reassignments[String(vro).toUpperCase().trim()] = String(assignee).trim();
+                }
+            });
+
             let allCustSet = new Set();
 
             processedData = vroRaw.map(row => {
@@ -648,10 +676,25 @@
                 let dueRaw = getCol(row, ['Unit Due Date', 'Estimate Due Date', 'Due Date', 'L']);
                 let compRaw = getCol(row, ['Completed Date', 'Completed', 'P']);
                 
-                // Pure mapping logic from Tab 1 Owner string directly to Resource Table Name.
-                let finalOwner = rawOwner ? String(rawOwner).trim() : 'UNASSIGNED';
-                let ownerLookup = ownerMap[finalOwner.toLowerCase()];
-                if (ownerLookup) finalOwner = ownerLookup.name;
+                let targetOwnerRaw = String(rawOwner || '').trim();
+                
+                // --- APPLY REASSIGNMENTS OVERRIDE (TAB 4) ---
+                if (reassignments[roNum]) {
+                    targetOwnerRaw = reassignments[roNum];
+                }
+
+                // Strictly map to active Display Name
+                let finalOwner = 'INACTIVE_OR_UNASSIGNED';
+                if (targetOwnerRaw) {
+                    let lookupKey = targetOwnerRaw.toLowerCase().trim();
+                    let ownerData = ownerMap[lookupKey];
+                    if (ownerData && ownerData.status === 'ACTIVE') {
+                        finalOwner = ownerData.name;
+                    }
+                }
+
+                // If they are not active or not mapped, silently drop them to prevent overlap.
+                if (finalOwner === 'INACTIVE_OR_UNASSIGNED') return { roNum: '' };
 
                 let openedDate = new Date(openedRaw);
                 let openedDT = isNaN(openedDate.getTime()) ? null : openedDate;
@@ -872,21 +915,10 @@
             if (currentCustomerFilter !== 'ALL') {
                 aggData = aggData.filter(ro => ro.custKey === currentCustomerFilter);
             }
-            
-            let sDate = currentStartDate ? new Date(currentStartDate + 'T00:00:00') : null;
-            let eDate = currentEndDate ? new Date(currentEndDate + 'T23:59:59') : null;
-            if (sDate || eDate) {
-                aggData = aggData.filter(ro => {
-                    if (!ro.openedDT) return false;
-                    if (sDate && ro.openedDT < sDate) return false;
-                    if (eDate && ro.openedDT > eDate) return false;
-                    return true;
-                });
-            }
 
             let pmData = aggData.filter(ro => pmOwners.includes(ro.owner));
             let vendedData = aggData.filter(ro => vendedOwners.includes(ro.owner));
-            let ersData = aggData.filter(ro => ersOwners.includes(ro.owner));
+            let ersRoData = aggData.filter(ro => ersOwners.includes(ro.owner));
 
             const pmTile = document.createElement('div'); pmTile.className = 'kpi-tile home-master-tile'; pmTile.innerHTML = generateTileHTML('PM Dashboard', pmData, 'chart-pm');
             pmTile.onclick = () => loadPersonDrilldown('ALL_PM', 'home-view');
@@ -897,7 +929,7 @@
             container.appendChild(vendedTile);
             
             const ersTile = document.createElement('div'); ersTile.className = 'kpi-tile home-master-tile'; 
-            ersTile.innerHTML = generateTileHTML('ERS Dashboard', ersData, 'chart-ers');
+            ersTile.innerHTML = generateTileHTML('ERS Dashboard', ersRoData, 'chart-ers');
             ersTile.onclick = () => loadPersonDrilldown('ALL_ERS', 'home-view');
             container.appendChild(ersTile);
 
@@ -913,17 +945,6 @@
                 
                 if (currentCustomerFilter !== 'ALL') {
                     ownerDataAll = ownerDataAll.filter(ro => ro.custKey === currentCustomerFilter);
-                }
-
-                let sDate = currentStartDate ? new Date(currentStartDate + 'T00:00:00') : null;
-                let eDate = currentEndDate ? new Date(currentEndDate + 'T23:59:59') : null;
-                if (sDate || eDate) {
-                    ownerDataAll = ownerDataAll.filter(ro => {
-                        if (!ro.openedDT) return false;
-                        if (sDate && ro.openedDT < sDate) return false;
-                        if (eDate && ro.openedDT > eDate) return false;
-                        return true;
-                    });
                 }
 
                 let targetData = ownerDataAll.filter(ro => ro.isOpen);
@@ -1018,17 +1039,6 @@
             if (currentCustomerFilter !== 'ALL') {
                 ownerDataAll = ownerDataAll.filter(ro => ro.custKey === currentCustomerFilter);
             }
-            
-            let sDate = currentStartDate ? new Date(currentStartDate + 'T00:00:00') : null;
-            let eDate = currentEndDate ? new Date(currentEndDate + 'T23:59:59') : null;
-            if (sDate || eDate) {
-                ownerDataAll = ownerDataAll.filter(ro => {
-                    if (!ro.openedDT) return false;
-                    if (sDate && ro.openedDT < sDate) return false;
-                    if (eDate && ro.openedDT > eDate) return false;
-                    return true;
-                });
-            }
 
             container.innerHTML = generateRoDrilldownHtml(ownerDataAll);
         }
@@ -1067,11 +1077,7 @@
         function navigate(viewId, menuElement = null, preserveCustomerFilter = false) {
             if (!preserveCustomerFilter) {
                 currentCustomerFilter = 'ALL';
-                currentStartDate = '';
-                currentEndDate = '';
                 document.querySelectorAll('.customer-filter-select').forEach(sel => { sel.value = 'ALL'; });
-                document.querySelectorAll('.date-filter-start').forEach(el => { el.value = ''; });
-                document.querySelectorAll('.date-filter-end').forEach(el => { el.value = ''; });
             }
             document.querySelectorAll('.view-section').forEach(v => v.classList.remove('active'));
             document.getElementById(viewId).classList.add('active');
