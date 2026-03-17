@@ -162,6 +162,7 @@
         .badge-oos { background-color: var(--urgent-red); color: white; }
         .badge-active { background-color: var(--low-green); color: white; }
         .badge-urgent { background-color: var(--urgent-red); color: white; }
+        .badge-medium { background-color: var(--medium-yellow); color: white; text-shadow: 0px 1px 1px rgba(0,0,0,0.2); }
         .badge-low { background-color: var(--low-green); color: white; }
         
         .ecd-red { color: #d9534f; font-weight: 800; }
@@ -245,7 +246,7 @@
             <h1 class="home-title">Welcome to workFLOW +</h1>
             <div class="upload-container" id="upload-box">
                 <h3>Loading Dashboard Data</h3>
-                <p style="color: #666; margin-bottom: 15px; font-size: 14px;">Attempting to automatically fetch <b>master_workFLOW.xlsx</b> from the repository...</p>
+                <p style="color: #666; margin-bottom: 15px; font-size: 14px;">Attempting to fetch <b>master_workFLOW.xlsx</b> from local directory...</p>
                 <div id="upload-status" style="font-size: 15px; font-weight: bold; color: #888;">Initializing...</div>
                 <div id="manual-upload-section" style="display: none; margin-top: 25px; padding-top: 20px; border-top: 1px dashed #ccc;">
                     <p style="font-size: 13px; color: #888; margin-bottom: 10px;">Fallback: File not found. Upload manually below.</p>
@@ -373,7 +374,7 @@
         let ersOwners = [];
 
         let branchUsefulMap = {}; 
-        let globalBranchToRegionMap = {}; // Maps all OOS Garda branches directly to regions to fix missing unit issues
+        let globalBranchToRegionMap = {}; 
 
         // Strict Open Order definitions
         const excludedStatuses = [
@@ -390,6 +391,16 @@
         ];
         
         let lastActiveView = 'home-view';
+
+        // --- NAME NORMALIZER (Prevents Double Tiles) ---
+        function normalizeName(str) {
+            if (!str) return '';
+            let n = String(str).trim().replace(/\s+/g, ' '); // Collapse double spaces
+            let lower = n.toLowerCase();
+            if (lower === 'kevin a' || lower.includes('kanguzza') || lower === 'kevin anguzza') return 'Kevin Anguzza';
+            if (lower === 'jobs' || lower === 'job') return 'Unassigned';
+            return n;
+        }
 
         // --- FETCH LOCAL DATA ---
         async function fetchData() {
@@ -430,11 +441,11 @@
                     else if (keys.includes('createdby') || keys.includes('team') || keys.includes('pmcomp')) {
                         resourceRaw = resourceRaw.concat(sheetData);
                     } 
-                    // Tab 3: OOS GARDA 
+                    // Tab 3: OOS GARDA (Make sure not to confuse with Useful %)
                     else if (keys.includes('gardaregion') && !keys.includes('useful')) {
                         oosRaw = oosRaw.concat(sheetData);
                     } 
-                    // Tab 5: Useful % (Using raw array to bypass bad top rows)
+                    // Tab 5: Useful %
                     else if (keys.includes('useful') || String(sheetName).toLowerCase().includes('useful')) {
                         const aoa = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], {header: 1, defval: ''});
                         let headerIdx = -1;
@@ -521,6 +532,7 @@
 
             let targetData = ownerDataAll.filter(ro => ro.isOpen);
             if(currentFilter === 'PRIORITY') {
+                // strict AND logic
                 targetData = targetData.filter(ro => ro.isOOS && (ro.usefulPct !== null && Math.round(ro.usefulPct * 100) < 100));
             }
 
@@ -652,6 +664,7 @@
             let unitToLocation = {};
             globalBranchToRegionMap = {}; 
             
+            // Build full global mapping for branches to regions using both Tab 3 and Tab 5
             oosRaw.forEach(row => {
                 let unit = getCol(row, ['UNITNUMBER', 'Unit No', 'Vehicle']);
                 let oosFlag = getCol(row, ['OOS Flag', 'Open RO Category']);
@@ -668,12 +681,19 @@
                         branch: String(branch || 'Unspecified Branch').trim() 
                     };
                 }
-                
                 if (region && branch) {
-                    let bNorm = String(branch).replace(/[^A-Z0-9]/ig, '').toUpperCase();
-                    if (bNorm) globalBranchToRegionMap[bNorm] = String(region).toUpperCase().trim();
+                    let bNorm = normalizeName(branch).toUpperCase().replace(/[^A-Z0-9]/ig, '');
+                    if (bNorm) globalBranchToRegionMap[bNorm] = normalizeName(region).toUpperCase();
                 }
             });
+
+            if (usefulRaw && usefulRaw.length > 0) {
+                usefulRaw.forEach(row => {
+                    let r = getCol(row, ['GARDA REGION']);
+                    let b = getCol(row, ['Branch']);
+                    if (r && b) globalBranchToRegionMap[normalizeName(b).toUpperCase().replace(/[^A-Z0-9]/ig, '')] = normalizeName(r).toUpperCase();
+                });
+            }
 
             let ownerMap = {};
             let gardaRegionMap = {}; 
@@ -684,9 +704,12 @@
             let activeVended = new Set();
             let activeERS = new Set();
 
+            let masterNameMap = {}; // Deduplication dictionary
+
             // Establish "Unassigned" base target for 'jobs'
             activeVended.add('Unassigned');
             ownerMap['unassigned'] = { name: 'Unassigned', status: 'ACTIVE', team: 'VENDED REPAIR' };
+            masterNameMap['unassigned'] = 'Unassigned';
 
             resourceRaw.forEach(row => {
                 let createdBy = getCol(row, ['CREATEDBY', 'Email', 'Created By']);
@@ -697,10 +720,10 @@
                 
                 // Map regions to region owners
                 let gRegion = getCol(row, ['gardaregion', 'garda region']);
-                let gOwner = getCol(row, ['owner']);
+                let gOwner = getCol(row, ['owner', 'garda owner']);
                 if (gRegion && gOwner && String(gRegion).trim() !== '') {
-                    let rStr = String(gRegion).toUpperCase().trim();
-                    let oStr = String(gOwner).trim();
+                    let rStr = normalizeName(gRegion).toUpperCase();
+                    let oStr = normalizeName(gOwner);
                     if (['EAST', 'WEST', 'SOUTH', 'CENTRAL', 'CAROLINAS'].includes(rStr)) {
                         gardaRegionMap[rStr] = oStr;
                     } else {
@@ -710,20 +733,22 @@
                 }
 
                 if (createdBy) {
-                    let keyEmail = String(createdBy).toLowerCase().trim();
-                    let finalName = name ? String(name).trim() : String(createdBy).trim();
-                    let keyName = finalName.toLowerCase().trim();
+                    let rawName = name ? name : createdBy;
+                    let finalName = normalizeName(rawName);
                     
-                    let statUpper = status.toUpperCase();
-                    let teamUpper = team.toUpperCase();
+                    let keyEmail = normalizeName(createdBy).toLowerCase();
+                    let keyName = finalName.toLowerCase();
+                    
+                    if (!masterNameMap[keyName]) masterNameMap[keyName] = finalName;
+                    let masterName = masterNameMap[keyName];
 
-                    ownerMap[keyEmail] = { name: finalName, status: statUpper, team: teamUpper };
-                    ownerMap[keyName] = { name: finalName, status: statUpper, team: teamUpper };
+                    ownerMap[keyEmail] = { name: masterName, status: status, team: team };
+                    ownerMap[keyName] = { name: masterName, status: status, team: team };
                     
-                    if (statUpper === 'ACTIVE') {
-                        if (teamUpper === 'PM') activePM.add(finalName);
-                        else if (teamUpper === 'VENDED REPAIR') activeVended.add(finalName);
-                        else if (teamUpper === 'ERS') activeERS.add(finalName);
+                    if (status === 'ACTIVE') {
+                        if (team === 'PM') activePM.add(masterName);
+                        else if (team === 'VENDED REPAIR') activeVended.add(masterName);
+                        else if (team === 'ERS') activeERS.add(masterName);
                     }
                 }
                 
@@ -732,9 +757,9 @@
                 }
             });
 
-            pmOwners = Array.from(activePM);
-            vendedOwners = Array.from(activeVended);
-            ersOwners = Array.from(activeERS);
+            pmOwners = Array.from(activePM).sort();
+            vendedOwners = Array.from(activeVended).sort();
+            ersOwners = Array.from(activeERS).sort();
             pmKeywords = [...new Set(pmKeywords)]; 
 
             let unitROCounts = {};
@@ -749,7 +774,7 @@
                 let vro = getCol(row, ['VRO', 'Order', 'RO Number', 'AFS RO #']);
                 let assignee = getCol(row, ['Assignee', 'Name', 'Owner']);
                 if (vro && assignee) {
-                    reassignments[String(vro).toUpperCase().trim()] = String(assignee).trim();
+                    reassignments[String(vro).toUpperCase().trim()] = normalizeName(assignee);
                 }
             });
 
@@ -759,7 +784,7 @@
                 let roNum = getCol(row, ['Order', 'RO Number', 'RONum', 'AFS RO #']).toUpperCase().trim();
                 let customer = getCol(row, ['Customer', 'CUSTOMERNAME', 'Customer Name']); 
                 let rawOwner = getCol(row, ['Owner']); 
-                let createdByRaw = getCol(row, ['Owner', 'Opened By']); // In VRO Export, "Owner" is the proxy for creator.
+                let createdByRaw = getCol(row, ['Owner', 'Opened By', 'Created By']); 
                 let unit = getCol(row, ['Unit No', 'UNITNUMBER', 'Vehicle']).toUpperCase();
                 let status = getCol(row, ['Status']);
                 let vmrs = getCol(row, ['Task', 'DESCRIP', 'VMRS Description']);
@@ -770,6 +795,9 @@
                 // Determine Location / Region first to help with Garda Overrides
                 let loc = unitToLocation[unit] || { region: 'Unknown Region', subregion: 'Unknown Subregion', branch: 'Unknown Branch' };
                 let custKey = getCustKey(customer);
+                
+                let cStr = String(customer || '').toUpperCase();
+                let cStrNorm = cStr.replace(/[^A-Z0-9]/ig, '');
                 
                 let locPart = customer;
                 if(String(customer).includes('-')) {
@@ -819,61 +847,73 @@
                 // --- THE ASSIGNMENT FUNNEL ---
                 let targetOwnerRaw = String(rawOwner || '').trim();
                 
-                let bStr = (loc.branch || '').toUpperCase();
-                let sStr = (loc.subregion || '').toUpperCase();
-                let cStr = String(customer).toUpperCase();
-                let cStrNorm = cStr.replace(/[^A-Z0-9]/ig, '');
-                let rStr = (loc.region || '').toUpperCase().trim();
+                let bStrNorm = normalizeName(loc.branch).toUpperCase().replace(/[^A-Z0-9]/ig, '');
+                let rStrNorm = normalizeName(loc.region).toUpperCase().replace(/[^A-Z0-9]/ig, '');
 
                 // Step 1. Base Garda Logic
                 if (custKey === 'Garda') {
-                    let foundSpecific = false;
+                    let matchedOwner = null;
+                    let matchedRegion = null;
+                    let matchedBranchNorm = null;
                     
-                    // A. Check specific branch/city first (e.g. "MOBILE, AL" overrides "SOUTH")
-                    for (let sKey in gardaSpecificMap) {
-                        let sKeyNorm = sKey.replace(/[^A-Z0-9]/ig, '');
-                        if (bStr.includes(sKey) || sStr.includes(sKey) || cStrNorm.includes(sKeyNorm)) {
-                            targetOwnerRaw = gardaSpecificMap[sKey];
-                            foundSpecific = true;
+                    // Attempt to locate Region dynamically from full Branch map
+                    for (let bKey in globalBranchToRegionMap) {
+                        if (cStrNorm.includes(bKey)) {
+                            matchedRegion = globalBranchToRegionMap[bKey];
+                            matchedBranchNorm = bKey;
                             break;
                         }
                     }
 
-                    // B. Fallback to broad region
-                    if (!foundSpecific) {
-                        if (gardaRegionMap[rStr]) {
-                            targetOwnerRaw = gardaRegionMap[rStr];
-                        } else {
-                            // C. Try to map region purely from the customer string if unit missing from Tab 3
-                            for (let bNorm in globalBranchToRegionMap) {
-                                if (cStrNorm.includes(bNorm)) {
-                                    let fallbackRegion = globalBranchToRegionMap[bNorm];
-                                    if (gardaRegionMap[fallbackRegion]) {
-                                        targetOwnerRaw = gardaRegionMap[fallbackRegion];
-                                        break;
-                                    }
-                                }
+                    // A. Check Specific Branch (e.g. MOBILEAL) Overrides EVERYTHING in Garda
+                    for (let sKey in gardaSpecificMap) {
+                        let sKeyNorm = normalizeName(sKey).toUpperCase().replace(/[^A-Z0-9]/ig, '');
+                        if (cStrNorm.includes(sKeyNorm) || (matchedBranchNorm && matchedBranchNorm.includes(sKeyNorm)) || bStrNorm.includes(sKeyNorm)) {
+                            matchedOwner = gardaSpecificMap[sKey];
+                            break;
+                        }
+                    }
+
+                    // B. Fallback to broad region owner
+                    if (!matchedOwner && matchedRegion && gardaRegionMap[matchedRegion]) {
+                        matchedOwner = gardaRegionMap[matchedRegion];
+                    }
+
+                    // C. Ultimate Fallback: Try matching Region directly from Customer string
+                    if (!matchedOwner) {
+                        for (let rKey in gardaRegionMap) {
+                            let rKeyNorm = rKey.replace(/[^A-Z0-9]/ig, '');
+                            if (cStrNorm.includes(rKeyNorm) || rStrNorm === rKeyNorm) {
+                                matchedOwner = gardaRegionMap[rKey];
+                                break;
                             }
                         }
                     }
+
+                    // If it is Garda, force it to the matched owner, otherwise isolate it so it doesn't pollute Nomar's queue
+                    if (matchedOwner) {
+                        targetOwnerRaw = matchedOwner;
+                    } else {
+                        targetOwnerRaw = 'Unassigned';
+                    }
                 }
 
-                // Step 2. Exceptions (Overrides Garda Region Mapping)
-                let creatorLower = String(createdByRaw || '').toLowerCase().trim();
-                if (creatorLower.includes('anguzza') || creatorLower === 'kevin a' || creatorLower.includes('kanguzza')) {
+                // Step 2. Exceptions (Overrides Garda Region Mapping entirely)
+                let creatorLower = normalizeName(createdByRaw || targetOwnerRaw).toLowerCase();
+                if (creatorLower === 'kevin a' || creatorLower === 'kevin anguzza' || creatorLower.includes('kanguzza')) {
                     targetOwnerRaw = 'Kevin Anguzza';
-                } else if (creatorLower === 'jobs' || creatorLower === 'job') {
+                } else if (creatorLower === 'jobs' || creatorLower === 'job' || creatorLower === 'unassigned') {
                     targetOwnerRaw = 'Unassigned';
                 }
 
-                // Step 3. Apply Reassignments Override (Tab 4) - Ultimate priority
+                // Step 3. Apply Reassignments Override (Tab 4) - Absolute Ultimate priority
                 if (reassignments[roNum]) {
                     targetOwnerRaw = reassignments[roNum];
                 }
 
-                // Strictly map to active Display Name from Resource Table
+                // Step 4. Strictly map to active Display Name from Resource Table using our standardized Master Name Map
                 let finalOwner = 'INACTIVE_OR_UNASSIGNED';
-                let lookupKey = targetOwnerRaw.toLowerCase().trim();
+                let lookupKey = normalizeName(targetOwnerRaw).toLowerCase();
                 
                 let ownerData = ownerMap[lookupKey];
                 if (ownerData && ownerData.status === 'ACTIVE') {
@@ -962,6 +1002,7 @@
         function generateTileHTML(name, dataSet, chartId = null) {
             let filteredOpen = dataSet.filter(ro => ro.isOpen);
             if(currentFilter === 'PRIORITY') {
+                // Strict AND: OOS units AND useful % below 100
                 filteredOpen = filteredOpen.filter(ro => ro.isOOS && (ro.usefulPct !== null && Math.round(ro.usefulPct * 100) < 100));
             }
             
@@ -973,7 +1014,7 @@
             let lateCount = completedOrders.filter(ro => ro.isLateKPI).length;
             let compPct = compCount > 0 ? Math.round((onTimeCount / compCount) * 100) : 0;
             let latePct = compCount > 0 ? Math.round((lateCount / compCount) * 100) : 0;
-            let filterLabel = currentFilter === 'ALL' ? 'Open ROs' : `Priority ROs`;
+            let filterLabel = currentFilter === 'ALL' ? 'All ROs' : `Priority ROs`;
 
             let chartHTML = '';
             if (chartId) {
