@@ -380,7 +380,7 @@
         let vendedOwners = [];
         let ersOwners = [];
 
-        let branchUsefulMap = {}; // Holds Useful % data mapped by Branch string
+        let branchUsefulMap = {}; 
 
         // Strict Open Order definitions
         const excludedStatuses = [
@@ -457,7 +457,6 @@
                                 headers.forEach((h, j) => {
                                     let key = String(h).trim();
                                     if (key) {
-                                        // Handle duplicate keys like multiple "Useful %" columns
                                         if (obj[key] !== undefined) {
                                             let c = 1;
                                             while(obj[key + '_' + c] !== undefined) c++;
@@ -500,7 +499,6 @@
             return '';
         }
 
-        // --- NORMALIZING CUSTOMER NAMES ---
         function getCustKey(rawStr) {
             let c = (rawStr || '').toUpperCase();
             if (c.includes('FERGUSON')) return 'Ferguson';
@@ -549,7 +547,7 @@
             XLSX.writeFile(workbook, `workflow_export_${String(currentOwnerView).replace(/\s+/g, '_')}_${currentFilter.toLowerCase()}.xlsx`);
         }
 
-        // --- FILTER & CUSTOMER LOGIC ---
+        // --- FILTER LOGIC ---
         function setFilter(val) {
             currentFilter = val;
             document.querySelectorAll('.filter-btn').forEach(btn => {
@@ -678,10 +676,18 @@
             });
 
             let ownerMap = {};
+            let gardaRegionMap = {}; 
+            let gardaSpecificMap = {}; // Specific Branches/Cities for Garda override
             let pmKeywords = [];
+            
             let activePM = new Set();
             let activeVended = new Set();
             let activeERS = new Set();
+
+            // Establish "Unassigned" base target for 'jobs'
+            activePM.add('Unassigned');
+            activeVended.add('Unassigned');
+            activeERS.add('Unassigned');
 
             resourceRaw.forEach(row => {
                 let createdBy = getCol(row, ['CREATEDBY', 'Email', 'Created By']);
@@ -690,6 +696,20 @@
                 let team = getCol(row, ['Team']).toUpperCase();
                 let pmComp = getCol(row, ['PM Comp:']);
                 
+                // Map regions to region owners
+                let gRegion = getCol(row, ['gardaregion', 'garda region']);
+                let gOwner = getCol(row, ['owner']);
+                if (gRegion && gOwner && String(gRegion).trim() !== '') {
+                    let rStr = String(gRegion).toUpperCase().trim();
+                    let oStr = String(gOwner).trim();
+                    if (['EAST', 'WEST', 'SOUTH', 'CENTRAL', 'CAROLINAS'].includes(rStr)) {
+                        gardaRegionMap[rStr] = oStr;
+                    } else {
+                        // Things like "Mobile, AL" go here
+                        gardaSpecificMap[rStr] = oStr;
+                    }
+                }
+
                 if (createdBy) {
                     let keyEmail = String(createdBy).toLowerCase().trim();
                     let finalName = name ? String(name).trim() : String(createdBy).trim();
@@ -739,46 +759,16 @@
             processedData = vroRaw.map(row => {
                 let roNum = getCol(row, ['Order', 'RO Number', 'RONum', 'AFS RO #']).toUpperCase().trim();
                 let customer = getCol(row, ['Customer', 'CUSTOMERNAME', 'Customer Name']); 
-                let rawOwner = getCol(row, ['Owner', 'Created By']); 
+                let rawOwner = getCol(row, ['Owner']); 
+                let createdByRaw = getCol(row, ['Created By', 'Opened By']);
                 let unit = getCol(row, ['Unit No', 'UNITNUMBER', 'Vehicle']).toUpperCase();
                 let status = getCol(row, ['Status']);
                 let vmrs = getCol(row, ['Task', 'DESCRIP', 'VMRS Description']);
                 let openedRaw = getCol(row, ['Opened', 'ROOpenedDate']);
                 let dueRaw = getCol(row, ['Unit Due Date', 'Estimate Due Date', 'Due Date', 'L']);
                 let compRaw = getCol(row, ['Completed Date', 'Completed', 'P']);
-                
-                let targetOwnerRaw = String(rawOwner || '').trim();
-                
-                // --- APPLY REASSIGNMENTS OVERRIDE (TAB 4) ---
-                if (reassignments[roNum]) {
-                    targetOwnerRaw = reassignments[roNum];
-                }
 
-                // Strictly map to active Display Name
-                let finalOwner = 'INACTIVE_OR_UNASSIGNED';
-                if (targetOwnerRaw) {
-                    let lookupKey = targetOwnerRaw.toLowerCase().trim();
-                    let ownerData = ownerMap[lookupKey];
-                    if (ownerData && ownerData.status === 'ACTIVE') {
-                        finalOwner = ownerData.name;
-                    }
-                }
-
-                // Discard inactive / unassigned entirely.
-                if (finalOwner === 'INACTIVE_OR_UNASSIGNED') return { roNum: '' };
-
-                let openedDate = new Date(openedRaw);
-                let openedDT = isNaN(openedDate.getTime()) ? null : openedDate;
-
-                let taskStr = vmrs.toLowerCase();
-                let isPMOrder = false;
-                for (let kw of pmKeywords) {
-                    if (kw && taskStr.includes(kw)) {
-                        isPMOrder = true;
-                        break;
-                    }
-                }
-
+                // Determine Location / Region first to help with Garda Overrides
                 let loc = unitToLocation[unit] || { region: 'Unknown Region', subregion: 'Unknown Subregion', branch: 'Unknown Branch' };
                 let custKey = getCustKey(customer);
                 
@@ -826,7 +816,75 @@
                 } else {
                     if(loc.region === 'Unknown Region' || loc.region === 'Unspecified Region') loc = fallbackLoc;
                 }
+
+                // --- THE ASSIGNMENT FUNNEL ---
+                let targetOwnerRaw = String(rawOwner || '').trim();
+
+                // Step 1. Base Garda Logic
+                if (custKey === 'Garda') {
+                    let foundSpecific = false;
+                    let bStr = (loc.branch || '').toUpperCase();
+                    let sStr = (loc.subregion || '').toUpperCase();
+                    
+                    // Match specific branch/city first (e.g. "MOBILE, AL")
+                    for (let sKey in gardaSpecificMap) {
+                        if (bStr.includes(sKey) || sStr === sKey) {
+                            targetOwnerRaw = gardaSpecificMap[sKey];
+                            foundSpecific = true;
+                            break;
+                        }
+                    }
+
+                    // Fallback to broad region
+                    if (!foundSpecific && loc.region && loc.region !== 'Unknown State' && loc.region !== 'Unknown Region') {
+                        let rKey = loc.region.toUpperCase().trim();
+                        if (gardaRegionMap[rKey]) {
+                            targetOwnerRaw = gardaRegionMap[rKey];
+                        }
+                    }
+                }
+
+                // Step 2. Exceptions (Overrides Garda)
+                let creatorLower = String(createdByRaw || targetOwnerRaw).toLowerCase().trim();
+                if (creatorLower.includes('anguzza') || creatorLower === 'kevin a') {
+                    targetOwnerRaw = 'Kevin Anguzza';
+                } else if (creatorLower === 'jobs' || creatorLower === 'job') {
+                    targetOwnerRaw = 'Unassigned';
+                }
+
+                // Step 3. Apply Reassignments Override (Tab 4) - Ultimate priority
+                if (reassignments[roNum]) {
+                    targetOwnerRaw = reassignments[roNum];
+                }
+
+                // Strictly map to active Display Name
+                let finalOwner = 'INACTIVE_OR_UNASSIGNED';
+                let lookupKey = targetOwnerRaw.toLowerCase().trim();
                 
+                if (lookupKey === 'unassigned') {
+                    finalOwner = 'Unassigned';
+                } else {
+                    let ownerData = ownerMap[lookupKey];
+                    if (ownerData && ownerData.status === 'ACTIVE') {
+                        finalOwner = ownerData.name;
+                    }
+                }
+
+                // Discard inactive / unassigned entirely.
+                if (finalOwner === 'INACTIVE_OR_UNASSIGNED') return { roNum: '' };
+
+                let openedDate = new Date(openedRaw);
+                let openedDT = isNaN(openedDate.getTime()) ? null : openedDate;
+
+                let taskStr = vmrs.toLowerCase();
+                let isPMOrder = false;
+                for (let kw of pmKeywords) {
+                    if (kw && taskStr.includes(kw)) {
+                        isPMOrder = true;
+                        break;
+                    }
+                }
+
                 let drillTopLevel = custKey + (loc.region !== 'Unknown State' && loc.region !== 'Unknown Region' ? ' ' + loc.region : '');
                 allCustSet.add(custKey);
 
