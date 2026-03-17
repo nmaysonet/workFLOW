@@ -391,13 +391,22 @@
         
         let lastActiveView = 'home-view';
 
-        // --- NAME NORMALIZER (Prevents Double Tiles) ---
+        // --- NAME NORMALIZERS ---
         function normalizeName(str) {
             if (!str) return '';
-            let n = String(str).trim().replace(/\s+/g, ' '); // Collapse double spaces
+            let n = String(str).trim().replace(/\s+/g, ' '); 
             let lower = n.toLowerCase();
             if (lower === 'kevin a' || lower.includes('kanguzza') || lower === 'kevin anguzza') return 'Kevin Anguzza';
+            if (lower === 'jobs' || lower === 'job') return 'Unassigned';
             return n;
+        }
+
+        // Extracts the unique 5-digit Garda code (e.g. 180-55 -> 18055)
+        function extractGardaCode(str) {
+            if (!str) return null;
+            let match = String(str).match(/(\d{3})[- ]?(\d{2})/);
+            if (match) return match[1] + match[2];
+            return null;
         }
 
         // --- FETCH LOCAL DATA ---
@@ -413,7 +422,6 @@
             document.getElementById('manual-upload-section').style.display = 'none';
 
             try {
-                // Add timestamp to bypass local caching issues
                 const timestamp = new Date().getTime();
                 const response = await fetch(`master_workFLOW.xlsx?_=${timestamp}`);
                 
@@ -431,20 +439,13 @@
                     
                     const keys = Object.keys(sheetData[0]).map(k => String(k).toLowerCase().replace(/[^a-z0-9]/g, ''));
                     
-                    // Tab 4: Order Assignments
                     if (keys.includes('vro') && keys.includes('assignee')) {
                         assignRaw = assignRaw.concat(sheetData);
-                    } 
-                    // Tab 2: Resource Table
-                    else if (keys.includes('createdby') || keys.includes('team') || keys.includes('pmcomp')) {
+                    } else if (keys.includes('createdby') || keys.includes('team') || keys.includes('pmcomp')) {
                         resourceRaw = resourceRaw.concat(sheetData);
-                    } 
-                    // Tab 3: OOS GARDA (Make sure not to confuse with Useful %)
-                    else if (keys.includes('gardaregion') && !keys.includes('useful')) {
+                    } else if (keys.includes('gardaregion') && !keys.includes('useful')) {
                         oosRaw = oosRaw.concat(sheetData);
-                    } 
-                    // Tab 5: Useful % (Using raw array to bypass bad top rows)
-                    else if (keys.includes('useful') || keys.some(k => k.includes('useful')) || String(sheetName).toLowerCase().includes('useful')) {
+                    } else if (keys.includes('useful') || keys.some(k => k.includes('useful')) || String(sheetName).toLowerCase().includes('useful')) {
                         const aoa = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], {header: 1, defval: ''});
                         let headerIdx = -1;
                         for(let i=0; i<Math.min(15, aoa.length); i++) {
@@ -470,9 +471,7 @@
                                 usefulRaw.push(obj);
                             }
                         }
-                    }
-                    // Tab 1: VRO Export
-                    else if (keys.includes('order') || keys.includes('ronumber') || keys.includes('owner')) {
+                    } else if (keys.includes('order') || keys.includes('ronumber') || keys.includes('owner')) {
                         vroRaw = vroRaw.concat(sheetData);
                     }
                 });
@@ -490,7 +489,6 @@
 
         window.onload = fetchData;
 
-        // --- PRECISE DATA PARSER ---
         function getCol(row, possibleNames) {
             const rowKeys = Object.keys(row);
             for (let name of possibleNames) {
@@ -514,7 +512,6 @@
             return rawStr.split('-')[0].trim() || 'Unknown Customer';
         }
 
-        // --- EXPORT LOGIC ---
         function exportDrilldownToExcel() {
             if (!currentOwnerView || processedData.length === 0) return;
             
@@ -530,7 +527,6 @@
 
             let targetData = ownerDataAll.filter(ro => ro.isOpen);
             if(currentFilter === 'PRIORITY') {
-                // Strict AND logic
                 targetData = targetData.filter(ro => ro.isOOS && (ro.usefulPct !== null && Math.round(ro.usefulPct * 100) < 100));
             }
 
@@ -550,7 +546,6 @@
             XLSX.writeFile(workbook, `workflow_export_${String(currentOwnerView).replace(/\s+/g, '_')}_${currentFilter.toLowerCase()}.xlsx`);
         }
 
-        // --- FILTER LOGIC ---
         function setFilter(val) {
             currentFilter = val;
             document.querySelectorAll('.filter-btn').forEach(btn => {
@@ -575,7 +570,6 @@
             else if(activeView === 'person-view') { if(currentOwnerView) loadPersonDrilldown(currentOwnerView, currentParentView); }
         }
 
-        // --- MANUAL UPLOAD FALLBACK ---
         document.getElementById('excelFileInput').addEventListener('change', async function(e) {
             const files = Array.from(e.target.files);
             if (files.length === 0) return;
@@ -601,10 +595,10 @@
                             resourceRaw = resourceRaw.concat(sheetData);
                         } else if (keys.includes('gardaregion') && !keys.includes('useful')) {
                             oosRaw = oosRaw.concat(sheetData);
-                        } else if (keys.includes('useful') || String(sheetName).toLowerCase().includes('useful')) {
+                        } else if (keys.includes('useful') || keys.some(k => k.includes('useful')) || String(sheetName).toLowerCase().includes('useful')) {
                             const aoa = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], {header: 1, defval: ''});
                             let headerIdx = -1;
-                            for(let i=0; i<Math.min(10, aoa.length); i++) {
+                            for(let i=0; i<Math.min(15, aoa.length); i++) {
                                 if (aoa[i].some(cell => String(cell).toLowerCase().includes('useful') || String(cell).toLowerCase().includes('branch'))) {
                                     headerIdx = i; break;
                                 }
@@ -643,7 +637,6 @@
         function processExcelData(vroRaw, resourceRaw, oosRaw, assignRaw, usefulRaw) {
             const today = new Date(); today.setHours(0, 0, 0, 0);
             
-            // Build Useful % Map
             branchUsefulMap = {};
             if (usefulRaw && usefulRaw.length > 0) {
                 usefulRaw.forEach(row => {
@@ -661,6 +654,9 @@
                         }
                         
                         if (!isNaN(pct)) {
+                            let bCode = extractGardaCode(branch);
+                            if (bCode) branchUsefulMap[bCode] = pct;
+                            
                             let normKey = normalizeName(branch).toUpperCase().replace(/[^A-Z0-9]/ig, '');
                             branchUsefulMap[normKey] = pct;
                         }
@@ -672,7 +668,6 @@
             let unitToLocation = {};
             globalBranchToRegionMap = {}; 
             
-            // Build full global mapping for branches to regions using both Tab 3 and Tab 5
             oosRaw.forEach(row => {
                 let unit = getCol(row, ['UNITNUMBER', 'Unit No', 'Vehicle']);
                 let oosFlag = getCol(row, ['OOS Flag', 'Open RO Category']);
@@ -690,8 +685,12 @@
                     };
                 }
                 if (region && branch) {
+                    let regNorm = normalizeName(region).toUpperCase();
+                    let bCode = extractGardaCode(branch);
+                    if (bCode) globalBranchToRegionMap[bCode] = regNorm;
+                    
                     let bNorm = normalizeName(branch).toUpperCase().replace(/[^A-Z0-9]/ig, '');
-                    if (bNorm) globalBranchToRegionMap[bNorm] = normalizeName(region).toUpperCase();
+                    if (bNorm) globalBranchToRegionMap[bNorm] = regNorm;
                 }
             });
 
@@ -702,23 +701,26 @@
                     let r = rKey ? row[rKey] : null;
                     let b = bKey ? row[bKey] : null;
                     if (r && b) {
-                        globalBranchToRegionMap[normalizeName(b).toUpperCase().replace(/[^A-Z0-9]/ig, '')] = normalizeName(r).toUpperCase();
+                        let regNorm = normalizeName(r).toUpperCase();
+                        let bCode = extractGardaCode(b);
+                        if (bCode) globalBranchToRegionMap[bCode] = regNorm;
+                        globalBranchToRegionMap[normalizeName(b).toUpperCase().replace(/[^A-Z0-9]/ig, '')] = regNorm;
                     }
                 });
             }
 
             let ownerMap = {};
             let gardaRegionMap = {}; 
-            let gardaSpecificMap = {}; // Specific Branches/Cities for Garda override
+            let gardaSpecificMap = {}; 
             let pmKeywords = [];
             
             let activePM = new Set();
             let activeVended = new Set();
             let activeERS = new Set();
 
-            let masterNameMap = {}; // Deduplication dictionary
+            let masterNameMap = {}; 
 
-            // Establish "Unassigned" base target 
+            // Base Unassigned
             activeVended.add('Unassigned');
             ownerMap['unassigned'] = { name: 'Unassigned', status: 'ACTIVE', team: 'VENDED REPAIR' };
             masterNameMap['unassigned'] = 'Unassigned';
@@ -730,7 +732,7 @@
                 let team = getCol(row, ['Team']).toUpperCase();
                 let pmComp = getCol(row, ['PM Comp:']);
                 
-                // Map regions to region owners (This forces Region Owners into ACTIVE status regardless of row status)
+                // Map regions to region owners
                 let gRegion = getCol(row, ['gardaregion', 'garda region']);
                 let gOwner = getCol(row, ['owner', 'garda owner']);
                 if (gRegion && gOwner && String(gRegion).trim() !== '') {
@@ -739,11 +741,10 @@
                     if (['EAST', 'WEST', 'SOUTH', 'CENTRAL', 'CAROLINAS'].includes(rStr)) {
                         gardaRegionMap[rStr] = oStr;
                     } else {
-                        // Things like "Mobile, AL" go here
                         gardaSpecificMap[rStr] = oStr;
                     }
                     
-                    // Force Garda Owners to be active Vended Repair members
+                    // Rescue Garda owners from INACTIVE status
                     activeVended.add(oStr);
                     let oKey = oStr.toLowerCase();
                     if (!masterNameMap[oKey]) masterNameMap[oKey] = oStr;
@@ -760,13 +761,8 @@
                     if (!masterNameMap[keyName]) masterNameMap[keyName] = finalName;
                     let masterName = masterNameMap[keyName];
 
-                    // Only overwrite if it hasn't been set by the Garda Rescue logic above, OR if this row is actually ACTIVE
-                    if (!ownerMap[keyEmail] || status === 'ACTIVE') {
-                        ownerMap[keyEmail] = { name: masterName, status: status, team: team };
-                    }
-                    if (!ownerMap[keyName] || status === 'ACTIVE') {
-                        ownerMap[keyName] = { name: masterName, status: status, team: team };
-                    }
+                    if (!ownerMap[keyEmail] || status === 'ACTIVE') ownerMap[keyEmail] = { name: masterName, status: status, team: team };
+                    if (!ownerMap[keyName] || status === 'ACTIVE') ownerMap[keyName] = { name: masterName, status: status, team: team };
                     
                     if (status === 'ACTIVE') {
                         if (team === 'PM') activePM.add(masterName);
@@ -791,7 +787,6 @@
                 if(unit) unitROCounts[unit] = (unitROCounts[unit] || 0) + 1;
             });
 
-            // TAB 4 ORDER ASSIGNMENTS INJECTION
             let reassignments = {};
             assignRaw.forEach(row => {
                 let vro = getCol(row, ['VRO', 'Order', 'RO Number', 'AFS RO #']);
@@ -815,12 +810,13 @@
                 let dueRaw = getCol(row, ['Unit Due Date', 'Estimate Due Date', 'Due Date', 'L']);
                 let compRaw = getCol(row, ['Completed Date', 'Completed', 'P']);
 
-                // Determine Location / Region first to help with Garda Overrides
                 let loc = unitToLocation[unit] || { region: 'Unknown Region', subregion: 'Unknown Subregion', branch: 'Unknown Branch' };
                 let custKey = getCustKey(customer);
                 
                 let cStr = String(customer || '').toUpperCase();
                 let cStrNorm = cStr.replace(/[^A-Z0-9]/ig, '');
+                let branchCode = extractGardaCode(customer); 
+                if (!branchCode && loc.branch) branchCode = extractGardaCode(loc.branch);
                 
                 let locPart = customer;
                 if(String(customer).includes('-')) {
@@ -867,42 +863,42 @@
                     if(loc.region === 'Unknown Region' || loc.region === 'Unspecified Region') loc = fallbackLoc;
                 }
                 
-                // --- THE ASSIGNMENT FUNNEL ---
+                // --- ASSIGNMENT FUNNEL ---
                 let targetOwnerRaw = String(rawOwner || '').trim();
                 
                 let bStrNorm = normalizeName(loc.branch).toUpperCase().replace(/[^A-Z0-9]/ig, '');
                 let rStrNorm = normalizeName(loc.region).toUpperCase().replace(/[^A-Z0-9]/ig, '');
 
-                // Step 1. Base Garda Logic
                 if (custKey === 'Garda') {
                     let matchedOwner = null;
                     let matchedRegion = null;
-                    let matchedBranchNorm = null;
                     
-                    // Attempt to locate Region dynamically from full Branch map
-                    for (let bKey in globalBranchToRegionMap) {
-                        if (cStrNorm.includes(bKey)) {
-                            matchedRegion = globalBranchToRegionMap[bKey];
-                            matchedBranchNorm = bKey;
-                            break;
+                    // Code matching is 100% accurate
+                    if (branchCode && globalBranchToRegionMap[branchCode]) {
+                        matchedRegion = globalBranchToRegionMap[branchCode];
+                    } else {
+                        for (let bKey in globalBranchToRegionMap) {
+                            if (cStrNorm.includes(bKey)) {
+                                matchedRegion = globalBranchToRegionMap[bKey];
+                                break;
+                            }
                         }
                     }
 
-                    // A. Check Specific Branch (e.g. MOBILEAL) Overrides EVERYTHING in Garda
+                    // Specific Exceptions
                     for (let sKey in gardaSpecificMap) {
                         let sKeyNorm = normalizeName(sKey).toUpperCase().replace(/[^A-Z0-9]/ig, '');
-                        if (cStrNorm.includes(sKeyNorm) || (matchedBranchNorm && matchedBranchNorm.includes(sKeyNorm)) || bStrNorm.includes(sKeyNorm)) {
+                        if (cStrNorm.includes(sKeyNorm) || bStrNorm.includes(sKeyNorm)) {
                             matchedOwner = gardaSpecificMap[sKey];
                             break;
                         }
                     }
 
-                    // B. Fallback to broad region owner
+                    // Region Fallback
                     if (!matchedOwner && matchedRegion && gardaRegionMap[matchedRegion]) {
                         matchedOwner = gardaRegionMap[matchedRegion];
                     }
 
-                    // C. Ultimate Fallback: Try matching Region directly from Customer string
                     if (!matchedOwner) {
                         for (let rKey in gardaRegionMap) {
                             let rKeyNorm = rKey.replace(/[^A-Z0-9]/ig, '');
@@ -913,7 +909,6 @@
                         }
                     }
 
-                    // If it is Garda, force it to the matched owner, otherwise isolate it so it doesn't pollute Nomar's queue
                     if (matchedOwner) {
                         targetOwnerRaw = matchedOwner;
                     } else {
@@ -921,19 +916,17 @@
                     }
                 }
 
-                // Step 2. Exceptions (Overrides Garda Region Mapping entirely)
+                // Exceptions
                 let creatorLower = normalizeName(createdByRaw || targetOwnerRaw).toLowerCase();
                 if (creatorLower === 'kevin a' || creatorLower === 'kevin anguzza' || creatorLower.includes('kanguzza')) {
                     targetOwnerRaw = 'Kevin Anguzza';
                 }
-                // (Jobs logic has been completely removed to allow Garda mapping to prevail)
-
-                // Step 3. Apply Reassignments Override (Tab 4) - Absolute Ultimate priority
+                
+                // Tab 4
                 if (reassignments[roNum]) {
                     targetOwnerRaw = reassignments[roNum];
                 }
 
-                // Step 4. Strictly map to active Display Name from Resource Table using our standardized Master Name Map
                 let finalOwner = 'INACTIVE_OR_UNASSIGNED';
                 let lookupKey = normalizeName(targetOwnerRaw).toLowerCase();
                 
@@ -942,7 +935,6 @@
                     finalOwner = ownerData.name;
                 }
 
-                // Discard inactive / unassigned entirely.
                 if (finalOwner === 'INACTIVE_OR_UNASSIGNED') return { roNum: '' };
 
                 let openedDate = new Date(openedRaw);
@@ -962,12 +954,13 @@
 
                 let statusStr = String(status || '').toUpperCase().trim();
                 let isOOS = oosSet.has(unit); 
-                // Strict Open validation: Ignore anything matching excluded strings exactly
                 let isOpen = !excludedStatuses.includes(statusStr);
                 
-                // --- MAP USEFUL % TO UNIT ---
+                // --- MAP USEFUL % TO UNIT VIA CODE ---
                 let usefulPct = null;
-                if (branchUsefulMap[bStrNorm] !== undefined) {
+                if (branchCode && branchUsefulMap[branchCode] !== undefined) {
+                    usefulPct = branchUsefulMap[branchCode];
+                } else if (branchUsefulMap[bStrNorm] !== undefined) {
                     usefulPct = branchUsefulMap[bStrNorm];
                 } else {
                     for (let bKey in branchUsefulMap) {
@@ -1030,15 +1023,12 @@
             return `<span class="badge" style="background-color: ${bg}; color: white; margin-left: 10px; font-size: 11px;">Useful: ${val}%</span>`;
         }
 
-        // --- HIERARCHY / KPI GENERATORS ---
         function generateTileHTML(name, dataSet, chartId = null) {
             let filteredOpen = dataSet.filter(ro => ro.isOpen);
             if(currentFilter === 'PRIORITY') {
-                // Strict AND: OOS units AND useful % below 100
                 filteredOpen = filteredOpen.filter(ro => ro.isOOS && (ro.usefulPct !== null && Math.round(ro.usefulPct * 100) < 100));
             }
             
-            // Re-calculate the "Priority" logic independently for the KPI count bubble
             let priorityCount = dataSet.filter(ro => ro.isOpen && (ro.isOOS && (ro.usefulPct !== null && Math.round(ro.usefulPct * 100) < 100))).length;
             let completedOrders = dataSet.filter(ro => ro.isCompletedKPI);
             let compCount = completedOrders.length;
@@ -1171,7 +1161,6 @@
             });
         }
 
-        // --- MASTER DOM DRILLDOWN HTML GENERATOR ---
         function generateRoDrilldownHtml(ownerDataAll) {
             let targetData = ownerDataAll.filter(ro => ro.isOpen);
             if(currentFilter === 'PRIORITY') {
@@ -1198,7 +1187,6 @@
                     for(let branch in hierarchy[topLvl][sub]) {
                         let branchROs = hierarchy[topLvl][sub][branch];
                         
-                        // Grab useful % dynamically from mapped ROs for accurate badge rendering
                         let branchUsefulPcts = branchROs.map(ro => ro.usefulPct).filter(p => p !== null && p !== undefined);
                         let bPct = branchUsefulPcts.length > 0 ? branchUsefulPcts[0] : null;
                         
@@ -1277,7 +1265,6 @@
                 if(searchTerm.length === 0) { navigate(lastActiveView, null, true); return; }
                 navigate('search-view', null, true);
                 document.getElementById('search-term-display').innerText = searchTerm;
-                // Exclude closed from search
                 const results = processedData.filter(ro => ro.unitNo.toLowerCase().includes(searchTerm));
                 let searchHtml = '';
                 if(results.length === 0) searchHtml = '<tr><td colspan="9" style="text-align:center;">No matching units.</td></tr>';
