@@ -162,7 +162,6 @@
         .badge-oos { background-color: var(--urgent-red); color: white; }
         .badge-active { background-color: var(--low-green); color: white; }
         .badge-urgent { background-color: var(--urgent-red); color: white; }
-        .badge-medium { background-color: var(--medium-yellow); color: white; text-shadow: 0px 1px 1px rgba(0,0,0,0.2); }
         .badge-low { background-color: var(--low-green); color: white; }
         
         .ecd-red { color: #d9534f; font-weight: 800; }
@@ -445,11 +444,11 @@
                     else if (keys.includes('gardaregion') && !keys.includes('useful')) {
                         oosRaw = oosRaw.concat(sheetData);
                     } 
-                    // Tab 5: Useful %
-                    else if (keys.includes('useful') || String(sheetName).toLowerCase().includes('useful')) {
+                    // Tab 5: Useful % (Robust check for the word Useful anywhere)
+                    else if (keys.includes('useful') || keys.some(k => k.includes('useful')) || String(sheetName).toLowerCase().includes('useful')) {
                         const aoa = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], {header: 1, defval: ''});
                         let headerIdx = -1;
-                        for(let i=0; i<Math.min(10, aoa.length); i++) {
+                        for(let i=0; i<Math.min(15, aoa.length); i++) {
                             if (aoa[i].some(cell => String(cell).toLowerCase().includes('useful') || String(cell).toLowerCase().includes('branch'))) {
                                 headerIdx = i; break;
                             }
@@ -532,7 +531,7 @@
 
             let targetData = ownerDataAll.filter(ro => ro.isOpen);
             if(currentFilter === 'PRIORITY') {
-                // strict AND logic
+                // Strict AND logic
                 targetData = targetData.filter(ro => ro.isOOS && (ro.usefulPct !== null && Math.round(ro.usefulPct * 100) < 100));
             }
 
@@ -603,10 +602,10 @@
                             resourceRaw = resourceRaw.concat(sheetData);
                         } else if (keys.includes('gardaregion') && !keys.includes('useful')) {
                             oosRaw = oosRaw.concat(sheetData);
-                        } else if (keys.includes('useful') || String(sheetName).toLowerCase().includes('useful')) {
+                        } else if (keys.includes('useful') || keys.some(k => k.includes('useful')) || String(sheetName).toLowerCase().includes('useful')) {
                             const aoa = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], {header: 1, defval: ''});
                             let headerIdx = -1;
-                            for(let i=0; i<Math.min(10, aoa.length); i++) {
+                            for(let i=0; i<Math.min(15, aoa.length); i++) {
                                 if (aoa[i].some(cell => String(cell).toLowerCase().includes('useful') || String(cell).toLowerCase().includes('branch'))) {
                                     headerIdx = i; break;
                                 }
@@ -649,12 +648,22 @@
             branchUsefulMap = {};
             if (usefulRaw && usefulRaw.length > 0) {
                 usefulRaw.forEach(row => {
-                    let branch = getCol(row, ['Branch']);
-                    let usefulStr = getCol(row, ['Useful %', 'Useful']);
-                    if (branch && usefulStr !== '') {
-                        let pct = parseFloat(usefulStr);
+                    let branchKey = Object.keys(row).find(k => k.toLowerCase() === 'branch');
+                    let branch = branchKey ? row[branchKey] : null;
+                    
+                    if (branch && String(branch).trim() !== '') {
+                        let pct = NaN;
+                        let usefulKey = Object.keys(row).find(k => k.trim().toLowerCase() === 'useful %' || k.trim().toLowerCase() === 'useful');
+                        if (!usefulKey) usefulKey = Object.keys(row).find(k => k.toLowerCase().includes('useful'));
+                        
+                        if (usefulKey && row[usefulKey] !== undefined && row[usefulKey] !== '') {
+                            let val = parseFloat(row[usefulKey]);
+                            if (!isNaN(val)) pct = val;
+                        }
+                        
                         if (!isNaN(pct)) {
-                            branchUsefulMap[branch.toUpperCase().trim()] = pct;
+                            let normKey = normalizeName(branch).toUpperCase().replace(/[^A-Z0-9]/ig, '');
+                            branchUsefulMap[normKey] = pct;
                         }
                     }
                 });
@@ -689,9 +698,13 @@
 
             if (usefulRaw && usefulRaw.length > 0) {
                 usefulRaw.forEach(row => {
-                    let r = getCol(row, ['GARDA REGION']);
-                    let b = getCol(row, ['Branch']);
-                    if (r && b) globalBranchToRegionMap[normalizeName(b).toUpperCase().replace(/[^A-Z0-9]/ig, '')] = normalizeName(r).toUpperCase();
+                    let rKey = Object.keys(row).find(k => k.toLowerCase().includes('region'));
+                    let bKey = Object.keys(row).find(k => k.toLowerCase() === 'branch');
+                    let r = rKey ? row[rKey] : null;
+                    let b = bKey ? row[bKey] : null;
+                    if (r && b) {
+                        globalBranchToRegionMap[normalizeName(b).toUpperCase().replace(/[^A-Z0-9]/ig, '')] = normalizeName(r).toUpperCase();
+                    }
                 });
             }
 
@@ -718,7 +731,7 @@
                 let team = getCol(row, ['Team']).toUpperCase();
                 let pmComp = getCol(row, ['PM Comp:']);
                 
-                // Map regions to region owners
+                // Map regions to region owners (This forces Region Owners into ACTIVE status regardless of row status)
                 let gRegion = getCol(row, ['gardaregion', 'garda region']);
                 let gOwner = getCol(row, ['owner', 'garda owner']);
                 if (gRegion && gOwner && String(gRegion).trim() !== '') {
@@ -730,6 +743,12 @@
                         // Things like "Mobile, AL" go here
                         gardaSpecificMap[rStr] = oStr;
                     }
+                    
+                    // Force Garda Owners to be active Vended Repair members
+                    activeVended.add(oStr);
+                    let oKey = oStr.toLowerCase();
+                    if (!masterNameMap[oKey]) masterNameMap[oKey] = oStr;
+                    ownerMap[oKey] = { name: masterNameMap[oKey], status: 'ACTIVE', team: 'VENDED REPAIR' };
                 }
 
                 if (createdBy) {
@@ -742,8 +761,13 @@
                     if (!masterNameMap[keyName]) masterNameMap[keyName] = finalName;
                     let masterName = masterNameMap[keyName];
 
-                    ownerMap[keyEmail] = { name: masterName, status: status, team: team };
-                    ownerMap[keyName] = { name: masterName, status: status, team: team };
+                    // Only overwrite if it hasn't been set by the Garda Rescue logic above, OR if this row is actually ACTIVE
+                    if (!ownerMap[keyEmail] || status === 'ACTIVE') {
+                        ownerMap[keyEmail] = { name: masterName, status: status, team: team };
+                    }
+                    if (!ownerMap[keyName] || status === 'ACTIVE') {
+                        ownerMap[keyName] = { name: masterName, status: status, team: team };
+                    }
                     
                     if (status === 'ACTIVE') {
                         if (team === 'PM') activePM.add(masterName);
@@ -943,8 +967,18 @@
                 // Strict Open validation: Ignore anything matching excluded strings exactly
                 let isOpen = !excludedStatuses.includes(statusStr);
                 
-                // Map Useful %
-                let usefulPct = branchUsefulMap[loc.branch.toUpperCase()] !== undefined ? branchUsefulMap[loc.branch.toUpperCase()] : null;
+                // --- MAP USEFUL % TO UNIT ---
+                let usefulPct = null;
+                if (branchUsefulMap[bStrNorm] !== undefined) {
+                    usefulPct = branchUsefulMap[bStrNorm];
+                } else {
+                    for (let bKey in branchUsefulMap) {
+                        if (cStrNorm.includes(bKey)) {
+                            usefulPct = branchUsefulMap[bKey];
+                            break;
+                        }
+                    }
+                }
 
                 let ecdState = 'missing'; let ecdFormatted = 'NO ECD, UPDATE';
                 let ecdDate = new Date(dueRaw);
@@ -1014,7 +1048,7 @@
             let lateCount = completedOrders.filter(ro => ro.isLateKPI).length;
             let compPct = compCount > 0 ? Math.round((onTimeCount / compCount) * 100) : 0;
             let latePct = compCount > 0 ? Math.round((lateCount / compCount) * 100) : 0;
-            let filterLabel = currentFilter === 'ALL' ? 'All ROs' : `Priority ROs`;
+            let filterLabel = currentFilter === 'ALL' ? 'Open ROs' : `Priority ROs`;
 
             let chartHTML = '';
             if (chartId) {
@@ -1165,7 +1199,11 @@
                     let branchHtml = '';
                     for(let branch in hierarchy[topLvl][sub]) {
                         let branchROs = hierarchy[topLvl][sub][branch];
-                        let bPct = branchROs[0].usefulPct;
+                        
+                        // Grab useful % dynamically from mapped ROs for accurate badge rendering
+                        let branchUsefulPcts = branchROs.map(ro => ro.usefulPct).filter(p => p !== null && p !== undefined);
+                        let bPct = branchUsefulPcts.length > 0 ? branchUsefulPcts[0] : null;
+                        
                         if (bPct !== null && bPct !== undefined) {
                             subLvlUseful.push(bPct);
                             topLvlUseful.push(bPct);
