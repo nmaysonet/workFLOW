@@ -106,7 +106,6 @@
         /* Master Dashboard Container & Layout */
         .home-dashboard-header { display: flex; justify-content: space-between; align-items: center; margin-top: 40px; margin-bottom: 20px; padding-bottom: 10px; border-bottom: 2px solid var(--border); flex-wrap: wrap; gap: 15px;}
         .filter-select { padding: 8px 15px; border-radius: 4px; border: 1px solid #ccc; font-weight: 700; font-size: 14px; background: #fff;}
-        .header-controls { display: flex; gap: 10px; align-items: center; }
         
         .home-kpi-container { display: flex; gap: 15px; flex-wrap: nowrap; width: 100%; overflow-x: auto; padding-bottom: 15px; }
         
@@ -143,7 +142,7 @@
         
         .drilldown-container { background: #fff; border-radius: 6px; box-shadow: 0 2px 6px rgba(0,0,0,0.08); padding: 20px; margin-top: 10px; }
         details { margin-bottom: 10px; }
-        summary { font-weight: 700; padding: 10px; background-color: #f9fafc; border: 1px solid var(--border); border-radius: 4px; cursor: pointer; user-select: none; }
+        summary { font-weight: 700; padding: 10px; background-color: #f9fafc; border: 1px solid var(--border); border-radius: 4px; cursor: pointer; user-select: none; display: flex; align-items: center;}
         summary:hover { background-color: #f1f3f6; }
         details details { margin-left: 20px; margin-top: 5px; }
         details details summary { background-color: #fff; color: #555; border-left: 3px solid var(--gold); }
@@ -152,7 +151,7 @@
 
         .table-wrapper { overflow-x: auto; margin-top: 10px; margin-bottom: 10px; }
         table { width: 100%; border-collapse: collapse; min-width: 1000px; font-size: 13px; table-layout: fixed; }
-        th { background: #f4f6f9; padding: 12px; text-align: left; color: #555; text-transform: uppercase; font-size: 11px; border-bottom: 2px solid var(--border); font-weight: 700; cursor: pointer;}
+        th { background: #f4f6f9; padding: 12px; text-align: left; color: #555; text-transform: uppercase; font-size: 11px; border-bottom: 2px solid var(--border); font-weight: 700; }
         th:hover { background-color: #e2e8f0; }
         td { padding: 12px; border-bottom: 1px solid var(--border); vertical-align: middle; font-weight: 500; word-wrap: break-word;}
         tr:hover td { background-color: #fcfcfc; }
@@ -162,9 +161,6 @@
         .badge { padding: 4px 8px; border-radius: 12px; font-size: 11px; font-weight: 700; display: inline-block;}
         .badge-oos { background-color: var(--urgent-red); color: white; }
         .badge-active { background-color: var(--low-green); color: white; }
-        .badge-urgent { background-color: var(--urgent-red); color: white; }
-        .badge-medium { background-color: var(--medium-yellow); color: white; text-shadow: 0px 1px 1px rgba(0,0,0,0.2); }
-        .badge-low { background-color: var(--low-green); color: white; }
         
         .ecd-red { color: #d9534f; font-weight: 800; }
         .ecd-green { color: #5cb85c; font-weight: 800; }
@@ -265,7 +261,7 @@
             <div id="home-dashboard" style="display:none;">
                 <div class="home-dashboard-header">
                     <h2 style="margin:0;">Aggregate Performance Overview</h2>
-                    <div class="header-controls">
+                    <div class="date-controls">
                         <select class="filter-select customer-filter-select" onchange="setCustomerFilter(this.value)">
                             <option value="ALL">All Customers</option>
                         </select>
@@ -278,18 +274,15 @@
         <div id="pm-view" class="view-section">
             <div class="view-title">
                 <span style="font-weight: 700;">PM Queue</span>
-                <div class="header-controls">
+                <div class="date-controls">
                     <select class="filter-select customer-filter-select" onchange="setCustomerFilter(this.value)">
                         <option value="ALL">All Customers</option>
                     </select>
                 </div>
             </div>
             <div class="filter-bar">
-                <button class="filter-btn active" data-filter="ALL" onclick="setFilter('ALL')">All Active</button>
-                <button class="filter-btn" data-filter="URGENT" onclick="setFilter('URGENT')">Urgent</button>
-                <button class="filter-btn" data-filter="MEDIUM" onclick="setFilter('MEDIUM')">Medium</button>
-                <button class="filter-btn" data-filter="LOW" onclick="setFilter('LOW')">Low</button>
-                <button class="filter-btn" data-filter="OOS" onclick="setFilter('OOS')">OOS Only</button>
+                <button class="filter-btn active" data-filter="ALL" onclick="setFilter('ALL')">All Units</button>
+                <button class="filter-btn" data-filter="PRIORITY" onclick="setFilter('PRIORITY')">Priority</button>
             </div>
             <div class="kpi-grid" id="pm-kpi-container"></div>
         </div>
@@ -297,18 +290,15 @@
         <div id="vended-view" class="view-section">
             <div class="view-title">
                 <span style="font-weight: 700;">Vended Repair Queue</span>
-                <div class="header-controls">
+                <div class="date-controls">
                     <select class="filter-select customer-filter-select" onchange="setCustomerFilter(this.value)">
                         <option value="ALL">All Customers</option>
                     </select>
                 </div>
             </div>
             <div class="filter-bar">
-                <button class="filter-btn active" data-filter="ALL" onclick="setFilter('ALL')">All Active</button>
-                <button class="filter-btn" data-filter="URGENT" onclick="setFilter('URGENT')">Urgent</button>
-                <button class="filter-btn" data-filter="MEDIUM" onclick="setFilter('MEDIUM')">Medium</button>
-                <button class="filter-btn" data-filter="LOW" onclick="setFilter('LOW')">Low</button>
-                <button class="filter-btn" data-filter="OOS" onclick="setFilter('OOS')">OOS Only</button>
+                <button class="filter-btn active" data-filter="ALL" onclick="setFilter('ALL')">All Units</button>
+                <button class="filter-btn" data-filter="PRIORITY" onclick="setFilter('PRIORITY')">Priority</button>
             </div>
             <div class="kpi-grid" id="vended-kpi-container"></div>
         </div>
@@ -316,18 +306,15 @@
         <div id="ers-view" class="view-section">
             <div class="view-title">
                 <span style="font-weight: 700;">ERS Queue</span>
-                <div class="header-controls">
+                <div class="date-controls">
                     <select class="filter-select customer-filter-select" onchange="setCustomerFilter(this.value)">
                         <option value="ALL">All Customers</option>
                     </select>
                 </div>
             </div>
             <div class="filter-bar">
-                <button class="filter-btn active" data-filter="ALL" onclick="setFilter('ALL')">All Active</button>
-                <button class="filter-btn" data-filter="URGENT" onclick="setFilter('URGENT')">Urgent</button>
-                <button class="filter-btn" data-filter="MEDIUM" onclick="setFilter('MEDIUM')">Medium</button>
-                <button class="filter-btn" data-filter="LOW" onclick="setFilter('LOW')">Low</button>
-                <button class="filter-btn" data-filter="OOS" onclick="setFilter('OOS')">OOS Only</button>
+                <button class="filter-btn active" data-filter="ALL" onclick="setFilter('ALL')">All Units</button>
+                <button class="filter-btn" data-filter="PRIORITY" onclick="setFilter('PRIORITY')">Priority</button>
             </div>
             <div class="kpi-grid" id="ers-kpi-container"></div>
         </div>
@@ -348,11 +335,8 @@
                 </div>
             </div>
             <div class="filter-bar" id="standard-drilldown-filters">
-                <button class="filter-btn active" data-filter="ALL" onclick="setFilter('ALL')">All Active</button>
-                <button class="filter-btn" data-filter="URGENT" onclick="setFilter('URGENT')">Urgent</button>
-                <button class="filter-btn" data-filter="MEDIUM" onclick="setFilter('MEDIUM')">Medium</button>
-                <button class="filter-btn" data-filter="LOW" onclick="setFilter('LOW')">Low</button>
-                <button class="filter-btn" data-filter="OOS" onclick="setFilter('OOS')">OOS Only</button>
+                <button class="filter-btn active" data-filter="ALL" onclick="setFilter('ALL')">All Units</button>
+                <button class="filter-btn" data-filter="PRIORITY" onclick="setFilter('PRIORITY')">Priority</button>
             </div>
             <div class="drilldown-container" id="drilldown-body"></div>
         </div>
@@ -368,7 +352,7 @@
                     </colgroup>
                     <thead>
                         <tr>
-                            <th>AFS RO #</th><th>Unit No</th><th>Priority</th>
+                            <th>AFS RO #</th><th>Unit No</th><th>Priority Status</th>
                             <th>OOS Status</th><th>Total Unit ROs</th><th>Owner</th>
                             <th>Status</th><th>ECD</th><th>Task / VMRS</th>
                         </tr>
@@ -393,7 +377,9 @@
         let vendedOwners = [];
         let ersOwners = [];
 
-        // Expanded exact-match exclusions to permanently filter out closed tickets from open drilldowns
+        let branchUsefulMap = {}; // Holds Useful % data mapped by Branch string
+
+        // Strict Open Order definitions
         const excludedStatuses = [
             'COMPLETED', 
             'FINAL CHARGES SUBMITTED', 
@@ -422,6 +408,7 @@
             document.getElementById('manual-upload-section').style.display = 'none';
 
             try {
+                // Add timestamp to bypass local caching issues
                 const timestamp = new Date().getTime();
                 const response = await fetch(`master_workFLOW.xlsx?_=${timestamp}`);
                 
@@ -431,7 +418,7 @@
                 const data = await response.arrayBuffer();
                 const workbook = XLSX.read(data, {type: 'array'});
                 
-                let vroRaw = [], resourceRaw = [], oosRaw = [], assignRaw = [];
+                let vroRaw = [], resourceRaw = [], oosRaw = [], assignRaw = [], usefulRaw = [];
                 
                 workbook.SheetNames.forEach(sheetName => {
                     const sheetData = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], {defval: ''});
@@ -447,10 +434,39 @@
                     else if (keys.includes('createdby') || keys.includes('team') || keys.includes('pmcomp')) {
                         resourceRaw = resourceRaw.concat(sheetData);
                     } 
-                    // Tab 3: OOS GARDA
-                    else if (keys.includes('gardaregion') || keys.includes('oosflag')) {
+                    // Tab 3: OOS GARDA (Make sure not to confuse with Useful %)
+                    else if (keys.includes('gardaregion') && !keys.includes('useful')) {
                         oosRaw = oosRaw.concat(sheetData);
                     } 
+                    // Tab 5: Useful % (Using raw array to bypass bad top rows)
+                    else if (keys.includes('useful') || String(sheetName).toLowerCase().includes('useful')) {
+                        const aoa = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], {header: 1, defval: ''});
+                        let headerIdx = -1;
+                        for(let i=0; i<Math.min(10, aoa.length); i++) {
+                            if (aoa[i].some(cell => String(cell).toLowerCase().includes('useful') || String(cell).toLowerCase().includes('branch'))) {
+                                headerIdx = i; break;
+                            }
+                        }
+                        if (headerIdx !== -1) {
+                            let headers = aoa[headerIdx];
+                            for(let i=headerIdx+1; i<aoa.length; i++) {
+                                let obj = {};
+                                headers.forEach((h, j) => {
+                                    let key = String(h).trim();
+                                    if (key) {
+                                        // Handle duplicate keys like multiple "Useful %" columns
+                                        if (obj[key] !== undefined) {
+                                            let c = 1;
+                                            while(obj[key + '_' + c] !== undefined) c++;
+                                            key = key + '_' + c;
+                                        }
+                                        obj[key] = aoa[i][j];
+                                    }
+                                });
+                                usefulRaw.push(obj);
+                            }
+                        }
+                    }
                     // Tab 1: VRO Export
                     else if (keys.includes('order') || keys.includes('ronumber') || keys.includes('owner')) {
                         vroRaw = vroRaw.concat(sheetData);
@@ -458,7 +474,7 @@
                 });
                 
                 statusEl.innerText = "Building dashboards...";
-                processExcelData(vroRaw, resourceRaw, oosRaw, assignRaw);
+                processExcelData(vroRaw, resourceRaw, oosRaw, assignRaw, usefulRaw);
 
             } catch (error) {
                 console.error("Fetch failed:", error);
@@ -510,16 +526,16 @@
             }
 
             let targetData = ownerDataAll.filter(ro => ro.isOpen);
-            if(currentFilter === 'URGENT') targetData = targetData.filter(ro => ro.priority === 'URGENT');
-            else if(currentFilter === 'MEDIUM') targetData = targetData.filter(ro => ro.priority === 'MEDIUM');
-            else if(currentFilter === 'LOW') targetData = targetData.filter(ro => ro.priority === 'LOW');
-            else if(currentFilter === 'OOS') targetData = targetData.filter(ro => ro.isOOS);
+            if(currentFilter === 'PRIORITY') {
+                targetData = targetData.filter(ro => ro.isOOS || (ro.usefulPct !== null && Math.round(ro.usefulPct * 100) < 100));
+            }
 
             if (targetData.length === 0) { alert("No data available to export."); return; }
 
             const excelRows = targetData.map(ro => ({
-                "AFS RO #": ro.roNum, "Unit No": ro.unitNo, "Priority": ro.priority,
+                "AFS RO #": ro.roNum, "Unit No": ro.unitNo, 
                 "OOS Status": (ro.custKey === 'Garda' && ro.isOOS) ? "OOS" : "",
+                "Useful %": ro.usefulPct !== null ? Math.round(ro.usefulPct * 100) + '%' : "N/A",
                 "Total Unit ROs": ro.roCount, "Status": ro.status, "ECD": ro.ecdFormatted,
                 "Task / VMRS": ro.vmrs, "Customer Group": ro.drillTopLevel, "Subregion": ro.subregion, "Branch": ro.branch
             }));
@@ -530,7 +546,7 @@
             XLSX.writeFile(workbook, `workflow_export_${String(currentOwnerView).replace(/\s+/g, '_')}_${currentFilter.toLowerCase()}.xlsx`);
         }
 
-        // --- FILTER LOGIC ---
+        // --- FILTER & CUSTOMER LOGIC ---
         function setFilter(val) {
             currentFilter = val;
             document.querySelectorAll('.filter-btn').forEach(btn => {
@@ -555,10 +571,89 @@
             else if(activeView === 'person-view') { if(currentOwnerView) loadPersonDrilldown(currentOwnerView, currentParentView); }
         }
 
+        // --- MANUAL UPLOAD FALLBACK ---
+        document.getElementById('excelFileInput').addEventListener('change', async function(e) {
+            const files = Array.from(e.target.files);
+            if (files.length === 0) return;
+            const statusEl = document.getElementById('upload-status');
+            statusEl.innerText = "Reading manual upload...";
+            
+            let vroRaw = [], resourceRaw = [], oosRaw = [], assignRaw = [], usefulRaw = [];
+            
+            try {
+                for(let file of files) {
+                    const data = await file.arrayBuffer();
+                    const workbook = XLSX.read(data, {type: 'array'});
+                    
+                    workbook.SheetNames.forEach(sheetName => {
+                        const sheetData = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], {defval: ''});
+                        if(sheetData.length === 0) return;
+                        
+                        const keys = Object.keys(sheetData[0]).map(k => String(k).toLowerCase().replace(/[^a-z0-9]/g, ''));
+                        
+                        if (keys.includes('vro') && keys.includes('assignee')) {
+                            assignRaw = assignRaw.concat(sheetData);
+                        } else if (keys.includes('createdby') || keys.includes('team') || keys.includes('pmcomp')) {
+                            resourceRaw = resourceRaw.concat(sheetData);
+                        } else if (keys.includes('gardaregion') && !keys.includes('useful')) {
+                            oosRaw = oosRaw.concat(sheetData);
+                        } else if (keys.includes('useful') || String(sheetName).toLowerCase().includes('useful')) {
+                            const aoa = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], {header: 1, defval: ''});
+                            let headerIdx = -1;
+                            for(let i=0; i<Math.min(10, aoa.length); i++) {
+                                if (aoa[i].some(cell => String(cell).toLowerCase().includes('useful') || String(cell).toLowerCase().includes('branch'))) {
+                                    headerIdx = i; break;
+                                }
+                            }
+                            if (headerIdx !== -1) {
+                                let headers = aoa[headerIdx];
+                                for(let i=headerIdx+1; i<aoa.length; i++) {
+                                    let obj = {};
+                                    headers.forEach((h, j) => {
+                                        let key = String(h).trim();
+                                        if (key) {
+                                            if (obj[key] !== undefined) {
+                                                let c = 1;
+                                                while(obj[key + '_' + c] !== undefined) c++;
+                                                key = key + '_' + c;
+                                            }
+                                            obj[key] = aoa[i][j];
+                                        }
+                                    });
+                                    usefulRaw.push(obj);
+                                }
+                            }
+                        } else if (keys.includes('order') || keys.includes('ronumber') || keys.includes('owner')) {
+                            vroRaw = vroRaw.concat(sheetData);
+                        }
+                    });
+                }
+                processExcelData(vroRaw, resourceRaw, oosRaw, assignRaw, usefulRaw);
+            } catch (error) { 
+                console.error(error); 
+                statusEl.innerText = "Error parsing files."; 
+            }
+        });
+
         // --- PROCESS DATA ---
-        function processExcelData(vroRaw, resourceRaw, oosRaw, assignRaw) {
+        function processExcelData(vroRaw, resourceRaw, oosRaw, assignRaw, usefulRaw) {
             const today = new Date(); today.setHours(0, 0, 0, 0);
             
+            // Build Useful % Map
+            branchUsefulMap = {};
+            if (usefulRaw && usefulRaw.length > 0) {
+                usefulRaw.forEach(row => {
+                    let branch = getCol(row, ['Branch']);
+                    let usefulStr = getCol(row, ['Useful %', 'Useful']);
+                    if (branch && usefulStr !== '') {
+                        let pct = parseFloat(usefulStr);
+                        if (!isNaN(pct)) {
+                            branchUsefulMap[branch.toUpperCase().trim()] = pct;
+                        }
+                    }
+                });
+            }
+
             let oosSet = new Set();
             let unitToLocation = {};
             oosRaw.forEach(row => {
@@ -666,7 +761,7 @@
                     }
                 }
 
-                // If they are not active or not mapped, silently drop them to prevent overlap.
+                // Discard inactive / unassigned entirely.
                 if (finalOwner === 'INACTIVE_OR_UNASSIGNED') return { roNum: '' };
 
                 let openedDate = new Date(openedRaw);
@@ -734,25 +829,11 @@
 
                 let statusStr = String(status || '').toUpperCase().trim();
                 let isOOS = oosSet.has(unit); 
+                // Strict Open validation: Ignore anything matching excluded strings exactly
                 let isOpen = !excludedStatuses.includes(statusStr);
-                let priorityStr = 'LOW'; let priorityClass = 'badge-low'; 
-
-                if (isOpen) {
-                    if (isPMOrder) {
-                        let dueDate = new Date(dueRaw);
-                        if (!isNaN(dueDate.getTime())) {
-                            let diffDays = Math.ceil((dueDate - today) / (1000 * 60 * 60 * 24));
-                            if (diffDays <= 0) { priorityStr = 'URGENT'; priorityClass = 'badge-urgent'; }
-                            else if (diffDays <= 10) { priorityStr = 'MEDIUM'; priorityClass = 'badge-medium'; }
-                        }
-                    } else {
-                        if (!isNaN(openedDate.getTime())) {
-                            let diffDays = Math.floor((today - openedDate) / (1000 * 60 * 60 * 24));
-                            if (diffDays > 7 || isOOS) { priorityStr = 'URGENT'; priorityClass = 'badge-urgent'; }
-                            else if (diffDays > 3) { priorityStr = 'MEDIUM'; priorityClass = 'badge-medium'; }
-                        } else if (isOOS) { priorityStr = 'URGENT'; priorityClass = 'badge-urgent'; }
-                    }
-                } else { priorityStr = 'COMPLETED'; priorityClass = 'badge-active'; }
+                
+                // Map Useful %
+                let usefulPct = branchUsefulMap[loc.branch.toUpperCase()] !== undefined ? branchUsefulMap[loc.branch.toUpperCase()] : null;
 
                 let ecdState = 'missing'; let ecdFormatted = 'NO ECD, UPDATE';
                 let ecdDate = new Date(dueRaw);
@@ -775,7 +856,7 @@
                     } else isCompletedKPI = false;
                 }
                 
-                return { roNum, customer, custKey, drillTopLevel, owner: finalOwner, unitNo: unit, status, vmrs, isOOS, isOpen, isCompletedKPI, isOnTimeKPI, isLateKPI, roCount: unitROCounts[unit] || 1, subregion: loc.subregion, branch: loc.branch, priority: priorityStr, priorityClass, ecdState, ecdFormatted, openedDT };
+                return { roNum, customer, custKey, drillTopLevel, owner: finalOwner, unitNo: unit, status, vmrs, isOOS, isOpen, isCompletedKPI, isOnTimeKPI, isLateKPI, roCount: unitROCounts[unit] || 1, subregion: loc.subregion, branch: loc.branch, ecdState, ecdFormatted, openedDT, usefulPct };
             }).filter(ro => ro.roNum !== '');
 
             let sortedAllCust = Array.from(allCustSet).sort();
@@ -795,22 +876,33 @@
             triggerViewUpdate();
         }
 
+        function getUsefulBadge(usefulArray) {
+            let valid = usefulArray.filter(v => v !== null && v !== undefined && !isNaN(v));
+            if (valid.length === 0) return '';
+            let avg = valid.reduce((a,b) => a+b, 0) / valid.length;
+            let val = Math.round(avg * 100);
+            let bg = 'var(--low-green)';
+            if (val < 100) bg = 'var(--urgent-red)';
+            else if (val === 100) bg = 'var(--medium-yellow)';
+            return `<span class="badge" style="background-color: ${bg}; color: white; margin-left: 10px; font-size: 11px;">Useful: ${val}%</span>`;
+        }
+
         // --- HIERARCHY / KPI GENERATORS ---
         function generateTileHTML(name, dataSet, chartId = null) {
             let filteredOpen = dataSet.filter(ro => ro.isOpen);
-            if(currentFilter === 'URGENT') filteredOpen = filteredOpen.filter(ro => ro.priority === 'URGENT');
-            else if(currentFilter === 'MEDIUM') filteredOpen = filteredOpen.filter(ro => ro.priority === 'MEDIUM');
-            else if(currentFilter === 'LOW') filteredOpen = filteredOpen.filter(ro => ro.priority === 'LOW');
-            else if(currentFilter === 'OOS') filteredOpen = filteredOpen.filter(ro => ro.isOOS);
+            if(currentFilter === 'PRIORITY') {
+                filteredOpen = filteredOpen.filter(ro => ro.isOOS || (ro.usefulPct !== null && Math.round(ro.usefulPct * 100) < 100));
+            }
             
-            let urgentCount = filteredOpen.filter(ro => ro.priority === 'URGENT').length;
+            // Re-calculate the "Priority" logic independently for the KPI count bubble
+            let priorityCount = dataSet.filter(ro => ro.isOpen && (ro.isOOS || (ro.usefulPct !== null && Math.round(ro.usefulPct * 100) < 100))).length;
             let completedOrders = dataSet.filter(ro => ro.isCompletedKPI);
             let compCount = completedOrders.length;
             let onTimeCount = completedOrders.filter(ro => ro.isOnTimeKPI).length;
             let lateCount = completedOrders.filter(ro => ro.isLateKPI).length;
             let compPct = compCount > 0 ? Math.round((onTimeCount / compCount) * 100) : 0;
             let latePct = compCount > 0 ? Math.round((lateCount / compCount) * 100) : 0;
-            let filterLabel = currentFilter === 'ALL' ? 'Open ROs' : `${currentFilter} ROs`;
+            let filterLabel = currentFilter === 'ALL' ? 'Open ROs' : `Priority ROs`;
 
             let chartHTML = '';
             if (chartId) {
@@ -825,8 +917,8 @@
                         <div class="num">${filteredOpen.length}</div>
                     </div>
                     <div class="highlight-box urgent-box">
-                        <div class="title">Urgent</div>
-                        <div class="num">${urgentCount}</div>
+                        <div class="title">Priority</div>
+                        <div class="num">${priorityCount}</div>
                     </div>
                     ${chartHTML}
                 </div>
@@ -922,10 +1014,9 @@
                 }
 
                 let targetData = ownerDataAll.filter(ro => ro.isOpen);
-                if(currentFilter === 'URGENT') targetData = targetData.filter(ro => ro.priority === 'URGENT');
-                else if(currentFilter === 'MEDIUM') targetData = targetData.filter(ro => ro.priority === 'MEDIUM');
-                else if(currentFilter === 'LOW') targetData = targetData.filter(ro => ro.priority === 'LOW');
-                else if(currentFilter === 'OOS') targetData = targetData.filter(ro => ro.isOOS);
+                if(currentFilter === 'PRIORITY') {
+                    targetData = targetData.filter(ro => ro.isOOS || (ro.usefulPct !== null && Math.round(ro.usefulPct * 100) < 100));
+                }
                 
                 if (targetData.length === 0) return; 
 
@@ -939,10 +1030,9 @@
         // --- MASTER DOM DRILLDOWN HTML GENERATOR ---
         function generateRoDrilldownHtml(ownerDataAll) {
             let targetData = ownerDataAll.filter(ro => ro.isOpen);
-            if(currentFilter === 'URGENT') targetData = targetData.filter(ro => ro.priority === 'URGENT');
-            else if(currentFilter === 'MEDIUM') targetData = targetData.filter(ro => ro.priority === 'MEDIUM');
-            else if(currentFilter === 'LOW') targetData = targetData.filter(ro => ro.priority === 'LOW');
-            else if(currentFilter === 'OOS') targetData = targetData.filter(ro => ro.isOOS);
+            if(currentFilter === 'PRIORITY') {
+                targetData = targetData.filter(ro => ro.isOOS || (ro.usefulPct !== null && Math.round(ro.usefulPct * 100) < 100));
+            }
 
             if(targetData.length === 0) return `<p style="margin-top:15px; color:#666;">No active Repair Orders to display under the current filters.</p>`;
             
@@ -956,20 +1046,26 @@
             
             let htmlStr = '';
             for(let topLvl in hierarchy) {
-                htmlStr += `<details class="ro-detail-node"><summary>${topLvl}</summary>`; 
+                let topLvlUseful = [];
+                let subHtml = '';
                 for(let sub in hierarchy[topLvl]) {
-                    htmlStr += `<details class="ro-detail-node"><summary>${sub}</summary>`;
+                    let subLvlUseful = [];
+                    let branchHtml = '';
                     for(let branch in hierarchy[topLvl][sub]) {
                         let branchROs = hierarchy[topLvl][sub][branch];
+                        let bPct = branchROs[0].usefulPct;
+                        if (bPct !== null && bPct !== undefined) {
+                            subLvlUseful.push(bPct);
+                            topLvlUseful.push(bPct);
+                        }
+                        
                         branchROs.sort((a,b) => { 
-                            const ord = {'URGENT':1,'MEDIUM':2,'LOW':3};
-                            let valA = ord[a.priority] || 4;
-                            let valB = ord[b.priority] || 4;
-                            if (valA !== valB) return valA - valB;
                             return (b.isOOS === true ? 1 : 0) - (a.isOOS === true ? 1 : 0);
                         });
-                        htmlStr += `<details class="ro-detail-node"><summary>${branch} (${branchROs.length} ROs)</summary>`;
-                        let tableHTML = `<div class="table-wrapper"><table><colgroup><col style="width:12%;"><col style="width:10%;"><col style="width:8%;"><col style="width:8%;"><col style="width:6%;"><col style="width:14%;"><col style="width:10%;"><col style="width:32%;"></colgroup><thead><tr><th>AFS RO #</th><th>Unit No</th><th>Priority</th><th>OOS Status</th><th>Total Unit ROs</th><th>Status</th><th>ECD</th><th>Task / VMRS</th></tr></thead><tbody>`;
+                        
+                        let branchBadge = getUsefulBadge(bPct !== null && bPct !== undefined ? [bPct] : []);
+                        branchHtml += `<details class="ro-detail-node"><summary>${branch} (${branchROs.length} ROs)${branchBadge}</summary>`;
+                        let tableHTML = `<div class="table-wrapper"><table><colgroup><col style="width:12%;"><col style="width:10%;"><col style="width:10%;"><col style="width:8%;"><col style="width:6%;"><col style="width:14%;"><col style="width:10%;"><col style="width:30%;"></colgroup><thead><tr><th>AFS RO #</th><th>Unit No</th><th>Priority Status</th><th>OOS Status</th><th>Total Unit ROs</th><th>Status</th><th>ECD</th><th>Task / VMRS</th></tr></thead><tbody>`;
                         branchROs.forEach(ro => {
                             let ecdCell = '';
                             if (ro.ecdState === 'missing') ecdCell = `<span class="badge-ecd-missing">${ro.ecdFormatted}</span>`;
@@ -978,15 +1074,20 @@
                             
                             let isGarda = ro.custKey === 'Garda';
                             let oosBadge = isGarda ? (ro.isOOS ? `<span class="badge badge-oos">OOS</span>` : `<span class="badge badge-active">ACTIVE</span>`) : '';
+                            
+                            let isPriority = ro.isOOS || (ro.usefulPct !== null && Math.round(ro.usefulPct * 100) < 100);
+                            let priorityStatusBadge = isPriority ? `<span class="badge badge-urgent">Priority</span>` : `<span class="badge badge-low">Normal</span>`;
 
-                            tableHTML += `<tr><td><a href="https://afshub.azurewebsites.net/Vendors/VendedRepairOrder/Estimate/${ro.roNum}" target="_blank" class="ro-link">${ro.roNum}</a></td><td><strong>${ro.unitNo}</strong></td><td><span class="badge ${ro.priorityClass}">${ro.priority}</span></td><td>${oosBadge}</td><td>${ro.roCount}</td><td>${ro.status}</td><td>${ecdCell}</td><td>${ro.vmrs}</td></tr>`;
+                            tableHTML += `<tr><td><a href="https://afshub.azurewebsites.net/Vendors/VendedRepairOrder/Estimate/${ro.roNum}" target="_blank" class="ro-link">${ro.roNum}</a></td><td><strong>${ro.unitNo}</strong></td><td>${priorityStatusBadge}</td><td>${oosBadge}</td><td>${ro.roCount}</td><td>${ro.status}</td><td>${ecdCell}</td><td>${ro.vmrs}</td></tr>`;
                         });
                         tableHTML += `</tbody></table></div>`; 
-                        htmlStr += tableHTML + `</details>`;
+                        branchHtml += tableHTML + `</details>`;
                     }
-                    htmlStr += `</details>`;
+                    let subBadge = getUsefulBadge(subLvlUseful);
+                    subHtml += `<details class="ro-detail-node"><summary>${sub}${subBadge}</summary>${branchHtml}</details>`;
                 }
-                htmlStr += `</details>`;
+                let topBadge = getUsefulBadge(topLvlUseful);
+                htmlStr += `<details class="ro-detail-node"><summary>${topLvl}${topBadge}</summary>${subHtml}</details>`;
             }
             return htmlStr;
         }
@@ -1041,8 +1142,11 @@
 
                         let isGarda = ro.custKey === 'Garda';
                         let oosBadge = isGarda ? (ro.isOOS ? `<span class="badge badge-oos">OOS</span>` : `<span class="badge badge-active">ACTIVE</span>`) : '';
+                        
+                        let isPriority = ro.isOOS || (ro.usefulPct !== null && Math.round(ro.usefulPct * 100) < 100);
+                        let priorityStatusBadge = isPriority ? `<span class="badge badge-urgent">Priority</span>` : `<span class="badge badge-low">Normal</span>`;
 
-                        searchHtml += `<tr><td><a href="https://afshub.azurewebsites.net/Vendors/VendedRepairOrder/Estimate/${ro.roNum}" target="_blank" class="ro-link">${ro.roNum}</a></td><td><strong>${ro.unitNo}</strong></td><td><span class="badge ${ro.priorityClass}">${ro.priority}</span></td><td>${oosBadge}</td><td>${ro.roCount}</td><td>${ro.owner}</td><td>${ro.status}</td><td>${ecdCell}</td><td>${ro.vmrs}</td></tr>`;
+                        searchHtml += `<tr><td><a href="https://afshub.azurewebsites.net/Vendors/VendedRepairOrder/Estimate/${ro.roNum}" target="_blank" class="ro-link">${ro.roNum}</a></td><td><strong>${ro.unitNo}</strong></td><td>${priorityStatusBadge}</td><td>${oosBadge}</td><td>${ro.roCount}</td><td>${ro.owner}</td><td>${ro.status}</td><td>${ecdCell}</td><td>${ro.vmrs}</td></tr>`;
                     });
                 }
                 document.getElementById('search-table-body').innerHTML = searchHtml;
