@@ -397,7 +397,6 @@
             let n = String(str).trim().replace(/\s+/g, ' '); // Collapse double spaces
             let lower = n.toLowerCase();
             if (lower === 'kevin a' || lower.includes('kanguzza') || lower === 'kevin anguzza') return 'Kevin Anguzza';
-            if (lower === 'jobs' || lower === 'job') return 'Unassigned';
             return n;
         }
 
@@ -444,7 +443,7 @@
                     else if (keys.includes('gardaregion') && !keys.includes('useful')) {
                         oosRaw = oosRaw.concat(sheetData);
                     } 
-                    // Tab 5: Useful % (Robust check for the word Useful anywhere)
+                    // Tab 5: Useful % (Using raw array to bypass bad top rows)
                     else if (keys.includes('useful') || keys.some(k => k.includes('useful')) || String(sheetName).toLowerCase().includes('useful')) {
                         const aoa = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], {header: 1, defval: ''});
                         let headerIdx = -1;
@@ -602,10 +601,10 @@
                             resourceRaw = resourceRaw.concat(sheetData);
                         } else if (keys.includes('gardaregion') && !keys.includes('useful')) {
                             oosRaw = oosRaw.concat(sheetData);
-                        } else if (keys.includes('useful') || keys.some(k => k.includes('useful')) || String(sheetName).toLowerCase().includes('useful')) {
+                        } else if (keys.includes('useful') || String(sheetName).toLowerCase().includes('useful')) {
                             const aoa = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], {header: 1, defval: ''});
                             let headerIdx = -1;
-                            for(let i=0; i<Math.min(15, aoa.length); i++) {
+                            for(let i=0; i<Math.min(10, aoa.length); i++) {
                                 if (aoa[i].some(cell => String(cell).toLowerCase().includes('useful') || String(cell).toLowerCase().includes('branch'))) {
                                     headerIdx = i; break;
                                 }
@@ -719,7 +718,7 @@
 
             let masterNameMap = {}; // Deduplication dictionary
 
-            // Establish "Unassigned" base target for 'jobs'
+            // Establish "Unassigned" base target 
             activeVended.add('Unassigned');
             ownerMap['unassigned'] = { name: 'Unassigned', status: 'ACTIVE', team: 'VENDED REPAIR' };
             masterNameMap['unassigned'] = 'Unassigned';
@@ -926,9 +925,8 @@
                 let creatorLower = normalizeName(createdByRaw || targetOwnerRaw).toLowerCase();
                 if (creatorLower === 'kevin a' || creatorLower === 'kevin anguzza' || creatorLower.includes('kanguzza')) {
                     targetOwnerRaw = 'Kevin Anguzza';
-                } else if (creatorLower === 'jobs' || creatorLower === 'job' || creatorLower === 'unassigned') {
-                    targetOwnerRaw = 'Unassigned';
                 }
+                // (Jobs logic has been completely removed to allow Garda mapping to prevail)
 
                 // Step 3. Apply Reassignments Override (Tab 4) - Absolute Ultimate priority
                 if (reassignments[roNum]) {
