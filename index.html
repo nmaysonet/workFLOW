@@ -161,6 +161,9 @@
         .badge { padding: 4px 8px; border-radius: 12px; font-size: 11px; font-weight: 700; display: inline-block;}
         .badge-oos { background-color: var(--urgent-red); color: white; }
         .badge-active { background-color: var(--low-green); color: white; }
+        .badge-urgent { background-color: var(--urgent-red); color: white; }
+        .badge-medium { background-color: var(--medium-yellow); color: white; text-shadow: 0px 1px 1px rgba(0,0,0,0.2); }
+        .badge-low { background-color: var(--low-green); color: white; }
         
         .ecd-red { color: #d9534f; font-weight: 800; }
         .ecd-green { color: #5cb85c; font-weight: 800; }
@@ -243,7 +246,7 @@
             <h1 class="home-title">Welcome to workFLOW +</h1>
             <div class="upload-container" id="upload-box">
                 <h3>Loading Dashboard Data</h3>
-                <p style="color: #666; margin-bottom: 15px; font-size: 14px;">Attempting to automatically fetch <b>master_workFLOW.xlsx</b> from the repository...</p>
+                <p style="color: #666; margin-bottom: 15px; font-size: 14px;">Attempting to fetch <b>master_workFLOW.xlsx</b> from local directory...</p>
                 <div id="upload-status" style="font-size: 15px; font-weight: bold; color: #888;">Initializing...</div>
                 <div id="manual-upload-section" style="display: none; margin-top: 25px; padding-top: 20px; border-top: 1px dashed #ccc;">
                     <p style="font-size: 13px; color: #888; margin-bottom: 10px;">Fallback: File not found. Upload manually below.</p>
@@ -372,6 +375,7 @@
 
         let branchUsefulMap = {}; 
 
+        // Strict Open Order definitions
         const excludedStatuses = [
             'COMPLETED', 
             'FINAL CHARGES SUBMITTED', 
@@ -385,7 +389,7 @@
             'VOIDED'
         ];
 
-        // Specific Creators (Overrides Unit Priority)
+        // Specific Creators (Priority 1: Overrides Unit Priority)
         const specificCreators = [
             "aarmes@ameritfleet.com", "ccaylor@ameritfleet.com", "cchristianson@ameritfleet.com",
             "cdecker@ameritfleet.com", "dnicholson@ameritfleet.com", "fbeardslee@ameritfleet.com",
@@ -420,28 +424,32 @@
                 const data = await response.arrayBuffer();
                 const workbook = XLSX.read(data, {type: 'array'});
                 
-                let vroRaw = [], resourceRaw = [], oosRaw = [], assignRaw = [], usefulRaw = [];
+                let vroRaw = [], resourceRaw = [], oosRaw = [], usefulRaw = [];
                 
                 workbook.SheetNames.forEach(sheetName => {
                     const aoa = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], {header: 1, defval: ''});
                     if (aoa.length === 0) return;
                     
-                    // Dynamic Header Scanner (Bypasses blank formatting rows)
                     let headerIdx = -1;
                     let tabType = 'UNKNOWN';
                     
                     for(let i=0; i < Math.min(15, aoa.length); i++) {
                         let rowStr = aoa[i].map(c => String(c).toLowerCase().replace(/[^a-z0-9]/g, '')).join(' ');
                         
-                        if (rowStr.includes('vro') && rowStr.includes('assignee')) {
-                            headerIdx = i; tabType = 'ASSIGN'; break;
-                        } else if (rowStr.includes('createdby') || (rowStr.includes('unitnumber') && rowStr.includes('team'))) {
+                        // Tab 2
+                        if (rowStr.includes('createdby') || (rowStr.includes('unitnumber') && rowStr.includes('team'))) {
                             headerIdx = i; tabType = 'RESOURCE'; break;
-                        } else if (rowStr.includes('gardaregion') && !rowStr.includes('useful')) {
+                        } 
+                        // Tab 3
+                        else if (rowStr.includes('gardaregion') && !rowStr.includes('useful')) {
                             headerIdx = i; tabType = 'OOS'; break;
-                        } else if (rowStr.includes('useful') || String(sheetName).toLowerCase().includes('useful')) {
+                        } 
+                        // Tab 4/5
+                        else if (rowStr.includes('useful') || String(sheetName).toLowerCase().includes('useful')) {
                             headerIdx = i; tabType = 'USEFUL'; break;
-                        } else if (rowStr.includes('ronumber') || rowStr.includes('order') || rowStr.includes('estimaterequesteddate')) {
+                        } 
+                        // Tab 1
+                        else if (rowStr.includes('ronumber') || rowStr.includes('order') || rowStr.includes('estimaterequesteddate')) {
                             headerIdx = i; tabType = 'VRO'; break;
                         }
                     }
@@ -455,7 +463,6 @@
                             headers.forEach((h, j) => {
                                 let key = String(h).trim();
                                 if (key) {
-                                    // Handle duplicate keys in Excel
                                     if (obj[key] !== undefined) {
                                         let c = 1;
                                         while(obj[key + '_' + c] !== undefined) c++;
@@ -468,8 +475,7 @@
                             if (hasData) sheetData.push(obj);
                         }
                         
-                        if (tabType === 'ASSIGN') assignRaw = assignRaw.concat(sheetData);
-                        else if (tabType === 'RESOURCE') resourceRaw = resourceRaw.concat(sheetData);
+                        if (tabType === 'RESOURCE') resourceRaw = resourceRaw.concat(sheetData);
                         else if (tabType === 'OOS') oosRaw = oosRaw.concat(sheetData);
                         else if (tabType === 'USEFUL') usefulRaw = usefulRaw.concat(sheetData);
                         else if (tabType === 'VRO') vroRaw = vroRaw.concat(sheetData);
@@ -477,7 +483,7 @@
                 });
                 
                 statusEl.innerText = "Building dashboards...";
-                processExcelData(vroRaw, resourceRaw, oosRaw, assignRaw, usefulRaw);
+                processExcelData(vroRaw, resourceRaw, oosRaw, usefulRaw);
 
             } catch (error) {
                 console.error("Fetch failed:", error);
@@ -488,77 +494,6 @@
         }
 
         window.onload = fetchData;
-
-        // --- MANUAL UPLOAD FALLBACK ---
-        document.getElementById('excelFileInput').addEventListener('change', async function(e) {
-            const files = Array.from(e.target.files);
-            if (files.length === 0) return;
-            const statusEl = document.getElementById('upload-status');
-            statusEl.innerText = "Reading manual upload...";
-            
-            let vroRaw = [], resourceRaw = [], oosRaw = [], assignRaw = [], usefulRaw = [];
-            
-            try {
-                for(let file of files) {
-                    const data = await file.arrayBuffer();
-                    const workbook = XLSX.read(data, {type: 'array'});
-                    
-                    workbook.SheetNames.forEach(sheetName => {
-                        const aoa = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], {header: 1, defval: ''});
-                        if (aoa.length === 0) return;
-                        
-                        let headerIdx = -1;
-                        let tabType = 'UNKNOWN';
-                        
-                        for(let i=0; i < Math.min(15, aoa.length); i++) {
-                            let rowStr = aoa[i].map(c => String(c).toLowerCase().replace(/[^a-z0-9]/g, '')).join(' ');
-                            if (rowStr.includes('vro') && rowStr.includes('assignee')) {
-                                headerIdx = i; tabType = 'ASSIGN'; break;
-                            } else if (rowStr.includes('createdby') || (rowStr.includes('unitnumber') && rowStr.includes('team'))) {
-                                headerIdx = i; tabType = 'RESOURCE'; break;
-                            } else if (rowStr.includes('gardaregion') && !rowStr.includes('useful')) {
-                                headerIdx = i; tabType = 'OOS'; break;
-                            } else if (rowStr.includes('useful') || String(sheetName).toLowerCase().includes('useful')) {
-                                headerIdx = i; tabType = 'USEFUL'; break;
-                            } else if (rowStr.includes('ronumber') || rowStr.includes('order') || rowStr.includes('estimaterequesteddate')) {
-                                headerIdx = i; tabType = 'VRO'; break;
-                            }
-                        }
-                        
-                        if (headerIdx !== -1) {
-                            let headers = aoa[headerIdx];
-                            let sheetData = [];
-                            for(let i = headerIdx + 1; i < aoa.length; i++) {
-                                let obj = {};
-                                let hasData = false;
-                                headers.forEach((h, j) => {
-                                    let key = String(h).trim();
-                                    if (key) {
-                                        if (obj[key] !== undefined) {
-                                            let c = 1;
-                                            while(obj[key + '_' + c] !== undefined) c++;
-                                            key = key + '_' + c;
-                                        }
-                                        obj[key] = aoa[i][j];
-                                        if (aoa[i][j] !== '') hasData = true;
-                                    }
-                                });
-                                if (hasData) sheetData.push(obj);
-                            }
-                            if (tabType === 'ASSIGN') assignRaw = assignRaw.concat(sheetData);
-                            else if (tabType === 'RESOURCE') resourceRaw = resourceRaw.concat(sheetData);
-                            else if (tabType === 'OOS') oosRaw = oosRaw.concat(sheetData);
-                            else if (tabType === 'USEFUL') usefulRaw = usefulRaw.concat(sheetData);
-                            else if (tabType === 'VRO') vroRaw = vroRaw.concat(sheetData);
-                        }
-                    });
-                }
-                processExcelData(vroRaw, resourceRaw, oosRaw, assignRaw, usefulRaw);
-            } catch (error) { 
-                console.error(error); 
-                statusEl.innerText = "Error parsing files."; 
-            }
-        });
 
         // --- DATA PARSERS ---
         function getCol(row, possibleNames) {
@@ -591,8 +526,136 @@
             return rawStr.split('-')[0].trim() || 'Unknown Customer';
         }
 
+        // --- EXPORT LOGIC ---
+        function exportDrilldownToExcel() {
+            if (!currentOwnerView || processedData.length === 0) return;
+            
+            let ownerDataAll = processedData;
+            if (currentOwnerView === 'ALL_PM') ownerDataAll = processedData.filter(ro => pmOwners.includes(ro.owner));
+            else if (currentOwnerView === 'ALL_VENDED') ownerDataAll = processedData.filter(ro => vendedOwners.includes(ro.owner));
+            else if (currentOwnerView === 'ALL_ERS') ownerDataAll = processedData.filter(ro => ersOwners.includes(ro.owner));
+            else ownerDataAll = processedData.filter(ro => ro.owner === String(currentOwnerView));
+            
+            if (currentCustomerFilter !== 'ALL') {
+                ownerDataAll = ownerDataAll.filter(ro => ro.custKey === currentCustomerFilter);
+            }
+
+            let targetData = ownerDataAll.filter(ro => ro.isOpen);
+            if(currentFilter === 'PRIORITY') {
+                targetData = targetData.filter(ro => ro.isOOS && (ro.usefulPct !== null && Math.round(ro.usefulPct * 100) < 100));
+            }
+
+            if (targetData.length === 0) { alert("No data available to export."); return; }
+
+            const excelRows = targetData.map(ro => ({
+                "AFS RO #": ro.roNum, "Unit No": ro.unitNo, 
+                "OOS Status": (ro.custKey === 'Garda' && ro.isOOS) ? "OOS" : "",
+                "Useful %": ro.usefulPct !== null ? Math.round(ro.usefulPct * 100) + '%' : "N/A",
+                "Total Unit ROs": ro.roCount, "Status": ro.status, "ECD": ro.ecdFormatted,
+                "Task / VMRS": ro.vmrs, "Customer Group": ro.drillTopLevel, "Subregion": ro.subregion, "Branch": ro.branch
+            }));
+
+            const worksheet = XLSX.utils.json_to_sheet(excelRows);
+            const workbook = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(workbook, worksheet, "Filtered ROs");
+            XLSX.writeFile(workbook, `workflow_export_${String(currentOwnerView).replace(/\s+/g, '_')}_${currentFilter.toLowerCase()}.xlsx`);
+        }
+
+        // --- FILTER LOGIC ---
+        function setFilter(val) {
+            currentFilter = val;
+            document.querySelectorAll('.filter-btn').forEach(btn => {
+                if(btn.dataset.filter === val) { btn.classList.add('active'); btn.style.background = 'var(--gold)'; } 
+                else { btn.classList.remove('active'); btn.style.background = '#e0e0e0'; }
+            });
+            triggerViewUpdate();
+        }
+
+        function setCustomerFilter(val) {
+            currentCustomerFilter = val;
+            document.querySelectorAll('.customer-filter-select').forEach(sel => { sel.value = val; });
+            triggerViewUpdate();
+        }
+
+        function triggerViewUpdate() {
+            let activeView = document.querySelector('.view-section.active').id;
+            if(activeView === 'home-view') renderHomeDashboard();
+            else if(activeView === 'pm-view') renderKPITiles(pmOwners, 'pm-kpi-container', 'pm-view');
+            else if(activeView === 'vended-view') renderKPITiles(vendedOwners, 'vended-kpi-container', 'vended-view');
+            else if(activeView === 'ers-view') renderKPITiles(ersOwners, 'ers-kpi-container', 'ers-view');
+            else if(activeView === 'person-view') { if(currentOwnerView) loadPersonDrilldown(currentOwnerView, currentParentView); }
+        }
+
+        // --- MANUAL UPLOAD FALLBACK ---
+        document.getElementById('excelFileInput').addEventListener('change', async function(e) {
+            const files = Array.from(e.target.files);
+            if (files.length === 0) return;
+            const statusEl = document.getElementById('upload-status');
+            statusEl.innerText = "Reading manual upload...";
+            
+            let vroRaw = [], resourceRaw = [], oosRaw = [], usefulRaw = [];
+            
+            try {
+                for(let file of files) {
+                    const data = await file.arrayBuffer();
+                    const workbook = XLSX.read(data, {type: 'array'});
+                    
+                    workbook.SheetNames.forEach(sheetName => {
+                        const aoa = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], {header: 1, defval: ''});
+                        if (aoa.length === 0) return;
+                        
+                        let headerIdx = -1;
+                        let tabType = 'UNKNOWN';
+                        
+                        for(let i=0; i < Math.min(15, aoa.length); i++) {
+                            let rowStr = aoa[i].map(c => String(c).toLowerCase().replace(/[^a-z0-9]/g, '')).join(' ');
+                            if (rowStr.includes('createdby') || (rowStr.includes('unitnumber') && rowStr.includes('team'))) {
+                                headerIdx = i; tabType = 'RESOURCE'; break;
+                            } else if (rowStr.includes('gardaregion') && !rowStr.includes('useful')) {
+                                headerIdx = i; tabType = 'OOS'; break;
+                            } else if (rowStr.includes('useful') || String(sheetName).toLowerCase().includes('useful')) {
+                                headerIdx = i; tabType = 'USEFUL'; break;
+                            } else if (rowStr.includes('ronumber') || rowStr.includes('order') || rowStr.includes('estimaterequesteddate')) {
+                                headerIdx = i; tabType = 'VRO'; break;
+                            }
+                        }
+                        
+                        if (headerIdx !== -1) {
+                            let headers = aoa[headerIdx];
+                            let sheetData = [];
+                            for(let i = headerIdx + 1; i < aoa.length; i++) {
+                                let obj = {};
+                                let hasData = false;
+                                headers.forEach((h, j) => {
+                                    let key = String(h).trim();
+                                    if (key) {
+                                        if (obj[key] !== undefined) {
+                                            let c = 1;
+                                            while(obj[key + '_' + c] !== undefined) c++;
+                                            key = key + '_' + c;
+                                        }
+                                        obj[key] = aoa[i][j];
+                                        if (aoa[i][j] !== '') hasData = true;
+                                    }
+                                });
+                                if (hasData) sheetData.push(obj);
+                            }
+                            if (tabType === 'RESOURCE') resourceRaw = resourceRaw.concat(sheetData);
+                            else if (tabType === 'OOS') oosRaw = oosRaw.concat(sheetData);
+                            else if (tabType === 'USEFUL') usefulRaw = usefulRaw.concat(sheetData);
+                            else if (tabType === 'VRO') vroRaw = vroRaw.concat(sheetData);
+                        }
+                    });
+                }
+                processExcelData(vroRaw, resourceRaw, oosRaw, usefulRaw);
+            } catch (error) { 
+                console.error(error); 
+                statusEl.innerText = "Error parsing files."; 
+            }
+        });
+
         // --- PROCESS DATA ---
-        function processExcelData(vroRaw, resourceRaw, oosRaw, assignRaw, usefulRaw) {
+        function processExcelData(vroRaw, resourceRaw, oosRaw, usefulRaw) {
             const today = new Date(); today.setHours(0, 0, 0, 0);
             
             // Build Useful % Map
@@ -626,6 +689,7 @@
             let oosSet = new Set();
             let unitToLocation = {};
             
+            // Map Location from Tab 3
             oosRaw.forEach(row => {
                 let unit = getCol(row, ['UNITNUMBER', 'Unit No', 'Vehicle']);
                 let oosFlag = getCol(row, ['OOS Flag', 'Open RO Category']);
@@ -634,7 +698,7 @@
                 let branch = getCol(row, ['Branch']);
                 
                 if(unit) {
-                    let u = unit.toUpperCase().trim();
+                    let u = unit.toUpperCase();
                     if (oosFlag.toUpperCase() === 'OOS' || oosFlag === '') oosSet.add(u);
                     unitToLocation[u] = { 
                         region: String(region || 'Unspecified Region').trim(), 
@@ -644,9 +708,10 @@
                 }
             });
 
-            // Map Creators and Unit Owners from Tab 2
             let unitOwnerMap = {};
             let creatorMap = {};
+            let globalOwnerMap = {}; // Fallback mapping for dynamic creators
+            
             let activePM = new Set();
             let activeVended = new Set();
             let activeERS = new Set();
@@ -658,7 +723,7 @@
             resourceRaw.forEach(row => {
                 let keys = Object.keys(row);
                 
-                // Parse the Left Side: Unit Assignment
+                // Parse Unit Assignments (Cols A-F equivalent)
                 let unitKey = keys.find(k => k.toLowerCase().replace(/[^a-z0-9]/g, '') === 'unitnumber');
                 let unitOwnerKey = keys.find(k => k.toLowerCase().replace(/[^a-z0-9]/g, '') === 'owner');
                 let teamKeys = keys.filter(k => k.toLowerCase().replace(/[^a-z0-9]/g, '').includes('team'));
@@ -677,9 +742,10 @@
                     }
                 }
 
-                // Parse the Right Side: Creator Assignment
+                // Parse Creator & Universal Active Assignments (Cols H-J equivalent)
                 let creatorKey = keys.find(k => k.toLowerCase().replace(/[^a-z0-9]/g, '') === 'createdby');
                 let nameKey = keys.find(k => k.toLowerCase().replace(/[^a-z0-9]/g, '') === 'name');
+                let statusKey = keys.find(k => k.toLowerCase().replace(/[^a-z0-9]/g, '') === 'status');
                 let creatorTeamKey = teamKeys.length > 1 ? teamKeys[1] : teamKeys[0];
                 let pmComp = getCol(row, ['PM Comp:']);
 
@@ -687,12 +753,20 @@
                     let cEmail = String(row[creatorKey]).toLowerCase().trim();
                     let cName = row[nameKey] ? String(row[nameKey]).trim() : cEmail;
                     let cTeam = row[creatorTeamKey] ? String(row[creatorTeamKey]).toUpperCase().trim() : 'ERS';
+                    let cStatus = row[statusKey] ? String(row[statusKey]).toUpperCase().trim() : 'INACTIVE';
+                    
                     creatorMap[cEmail] = { name: cName, team: cTeam };
                     
-                    // Force the 21 specific people to be active and mapped correctly
+                    // Maintain global map for dynamic tile generation (Priority 3 Fallback)
+                    globalOwnerMap[cEmail] = { name: cName, status: cStatus, team: cTeam };
+
                     if (specificCreators.includes(cEmail)) {
                         if (cTeam === 'PM') activePM.add(cName);
                         else activeERS.add(cName);
+                    } else if (cStatus === 'ACTIVE') {
+                        if (cTeam === 'PM') activePM.add(cName);
+                        else if (cTeam === 'ERS') activeERS.add(cName);
+                        else activeVended.add(cName);
                     }
                 }
                 
@@ -701,24 +775,12 @@
                 }
             });
 
-            pmOwners = Array.from(activePM).sort();
-            vendedOwners = Array.from(activeVended).sort();
-            ersOwners = Array.from(activeERS).sort();
             pmKeywords = [...new Set(pmKeywords)]; 
 
             let unitROCounts = {};
             vroRaw.forEach(row => {
-                let unit = getCol(row, ['Unit No', 'UNITNUMBER', 'Vehicle']).toUpperCase().trim();
+                let unit = getCol(row, ['Unit No', 'UNITNUMBER', 'Vehicle']).toUpperCase();
                 if(unit) unitROCounts[unit] = (unitROCounts[unit] || 0) + 1;
-            });
-
-            let reassignments = {};
-            assignRaw.forEach(row => {
-                let vro = getCol(row, ['VRO', 'Order', 'RO Number', 'AFS RO #']);
-                let assignee = getCol(row, ['Assignee', 'Name', 'Owner']);
-                if (vro && assignee) {
-                    reassignments[String(vro).toUpperCase().trim()] = String(assignee).trim();
-                }
             });
 
             let allCustSet = new Set();
@@ -726,7 +788,7 @@
             processedData = vroRaw.map(row => {
                 let roNum = getCol(row, ['Order', 'RO Number', 'RONum', 'AFS RO #']).toUpperCase().trim();
                 let customer = getCol(row, ['Customer', 'CUSTOMERNAME', 'Customer Name']); 
-                let rawOwnerEmail = getCol(row, ['Owner', 'Created By', 'Email']); // Assuming Tab 1 Col N gives the email
+                let rawOwnerEmail = getCol(row, ['Owner', 'Created By', 'Email']); // Assuming Tab 1 Col N
                 let unit = getCol(row, ['Unit No', 'UNITNUMBER', 'Vehicle']).toUpperCase().trim();
                 let status = getCol(row, ['Status']);
                 let vmrs = getCol(row, ['Task', 'DESCRIP', 'VMRS Description']);
@@ -789,16 +851,14 @@
                 
                 // --- THE NEW ASSIGNMENT FUNNEL ---
                 let ownerEmailLower = String(rawOwnerEmail || '').toLowerCase().trim();
-                let finalOwner = 'UNASSIGNED';
+                let finalOwner = '';
+                let finalTeam = 'VENDED REPAIR';
                 let isDedicatedFlag = false;
 
-                // Tab 4 Absolute Override
-                if (reassignments[roNum]) {
-                    finalOwner = reassignments[roNum];
-                } 
-                // Priority 1: Check Specific Creator List
-                else if (specificCreators.includes(ownerEmailLower) && creatorMap[ownerEmailLower]) {
+                // Priority 1: Specific Creators (The 21 people list)
+                if (specificCreators.includes(ownerEmailLower) && creatorMap[ownerEmailLower]) {
                     finalOwner = creatorMap[ownerEmailLower].name;
+                    finalTeam = creatorMap[ownerEmailLower].team;
                     // Tag as dedicated if the unit is marked dedicated, but keep owner as creator
                     if (unitOwnerMap[unit] && unitOwnerMap[unit].owner.toUpperCase() === 'DEDICATED') {
                         isDedicatedFlag = true;
@@ -810,13 +870,38 @@
                     if (uData.owner.toUpperCase() === 'DEDICATED') {
                         isDedicatedFlag = true;
                         finalOwner = 'Dedicated';
-                    } else {
+                        finalTeam = 'VENDED REPAIR';
+                    } else if (uData.owner) {
                         finalOwner = uData.owner;
+                        finalTeam = uData.team;
                     }
                 }
 
-                // Drop unassigned entirely if not mapped.
-                if (finalOwner === 'UNASSIGNED' || !finalOwner) return { roNum: '' };
+                // Priority 3: Fallback to the Creator
+                if (!finalOwner || finalOwner === '') {
+                    if (globalOwnerMap[ownerEmailLower]) {
+                        finalOwner = globalOwnerMap[ownerEmailLower].name;
+                        finalTeam = globalOwnerMap[ownerEmailLower].team;
+                    } else if (rawOwnerEmail) {
+                        // Extract name from email as an absolute last resort
+                        finalOwner = rawOwnerEmail.split('@')[0];
+                        // Capitalize first letter
+                        finalOwner = finalOwner.charAt(0).toUpperCase() + finalOwner.slice(1);
+                        finalTeam = 'VENDED REPAIR'; 
+                    } else {
+                        // Dead end drop
+                        return { roNum: '' };
+                    }
+                }
+
+                // Dynamically ensure the owner exists in the correct array so their tile renders
+                if (finalTeam === 'PM') {
+                    activePM.add(finalOwner);
+                } else if (finalTeam === 'ERS') {
+                    activeERS.add(finalOwner);
+                } else {
+                    activeVended.add(finalOwner);
+                }
 
                 let openedDate = new Date(openedRaw);
                 let openedDT = isNaN(openedDate.getTime()) ? null : openedDate;
@@ -837,7 +922,7 @@
                 let isOOS = oosSet.has(unit); 
                 let isOpen = !excludedStatuses.includes(statusStr);
                 
-                // --- MAP USEFUL % TO UNIT VIA CODE ---
+                // --- MAP USEFUL % ---
                 let usefulPct = null;
                 let bStrNorm = loc.branch.toUpperCase().replace(/[^A-Z0-9]/ig, '');
                 if (branchCode && branchUsefulMap[branchCode] !== undefined) {
@@ -877,6 +962,10 @@
                 return { roNum, customer, custKey, drillTopLevel, owner: finalOwner, unitNo: unit, status, vmrs, isOOS, isOpen, isCompletedKPI, isOnTimeKPI, isLateKPI, roCount: unitROCounts[unit] || 1, subregion: loc.subregion, branch: loc.branch, ecdState, ecdFormatted, openedDT, usefulPct, isDedicated: isDedicatedFlag };
             }).filter(ro => ro.roNum !== '');
 
+            pmOwners = Array.from(activePM).sort();
+            vendedOwners = Array.from(activeVended).sort();
+            ersOwners = Array.from(activeERS).sort();
+
             let sortedAllCust = Array.from(allCustSet).sort();
             document.querySelectorAll('.customer-filter-select').forEach(dd => {
                 dd.innerHTML = '<option value="ALL">All Customers</option>';
@@ -892,66 +981,6 @@
             document.getElementById('home-dashboard').style.display = 'block';
             
             triggerViewUpdate();
-        }
-
-        // --- EXPORT LOGIC ---
-        function exportDrilldownToExcel() {
-            if (!currentOwnerView || processedData.length === 0) return;
-            
-            let ownerDataAll = processedData;
-            if (currentOwnerView === 'ALL_PM') ownerDataAll = processedData.filter(ro => pmOwners.includes(ro.owner));
-            else if (currentOwnerView === 'ALL_VENDED') ownerDataAll = processedData.filter(ro => vendedOwners.includes(ro.owner));
-            else if (currentOwnerView === 'ALL_ERS') ownerDataAll = processedData.filter(ro => ersOwners.includes(ro.owner));
-            else ownerDataAll = processedData.filter(ro => ro.owner === String(currentOwnerView));
-            
-            if (currentCustomerFilter !== 'ALL') {
-                ownerDataAll = ownerDataAll.filter(ro => ro.custKey === currentCustomerFilter);
-            }
-
-            let targetData = ownerDataAll.filter(ro => ro.isOpen);
-            if(currentFilter === 'PRIORITY') {
-                targetData = targetData.filter(ro => ro.isOOS && (ro.usefulPct !== null && Math.round(ro.usefulPct * 100) < 100));
-            }
-
-            if (targetData.length === 0) { alert("No data available to export."); return; }
-
-            const excelRows = targetData.map(ro => ({
-                "AFS RO #": ro.roNum, "Unit No": ro.unitNo, 
-                "OOS Status": (ro.custKey === 'Garda' && ro.isOOS) ? "OOS" : "",
-                "Useful %": ro.usefulPct !== null ? Math.round(ro.usefulPct * 100) + '%' : "N/A",
-                "Total Unit ROs": ro.roCount, "Status": ro.status, "ECD": ro.ecdFormatted,
-                "Task / VMRS": ro.vmrs, "Customer Group": ro.drillTopLevel, "Subregion": ro.subregion, "Branch": ro.branch
-            }));
-
-            const worksheet = XLSX.utils.json_to_sheet(excelRows);
-            const workbook = XLSX.utils.book_new();
-            XLSX.utils.book_append_sheet(workbook, worksheet, "Filtered ROs");
-            XLSX.writeFile(workbook, `workflow_export_${String(currentOwnerView).replace(/\s+/g, '_')}_${currentFilter.toLowerCase()}.xlsx`);
-        }
-
-        // --- FILTER LOGIC ---
-        function setFilter(val) {
-            currentFilter = val;
-            document.querySelectorAll('.filter-btn').forEach(btn => {
-                if(btn.dataset.filter === val) { btn.classList.add('active'); btn.style.background = 'var(--gold)'; } 
-                else { btn.classList.remove('active'); btn.style.background = '#e0e0e0'; }
-            });
-            triggerViewUpdate();
-        }
-
-        function setCustomerFilter(val) {
-            currentCustomerFilter = val;
-            document.querySelectorAll('.customer-filter-select').forEach(sel => { sel.value = val; });
-            triggerViewUpdate();
-        }
-
-        function triggerViewUpdate() {
-            let activeView = document.querySelector('.view-section.active').id;
-            if(activeView === 'home-view') renderHomeDashboard();
-            else if(activeView === 'pm-view') renderKPITiles(pmOwners, 'pm-kpi-container', 'pm-view');
-            else if(activeView === 'vended-view') renderKPITiles(vendedOwners, 'vended-kpi-container', 'vended-view');
-            else if(activeView === 'ers-view') renderKPITiles(ersOwners, 'ers-kpi-container', 'ers-view');
-            else if(activeView === 'person-view') { if(currentOwnerView) loadPersonDrilldown(currentOwnerView, currentParentView); }
         }
 
         function getUsefulBadge(usefulArray) {
@@ -1104,7 +1133,6 @@
             });
         }
 
-        // --- MASTER DOM DRILLDOWN HTML GENERATOR ---
         function generateRoDrilldownHtml(ownerDataAll) {
             let targetData = ownerDataAll.filter(ro => ro.isOpen);
             if(currentFilter === 'PRIORITY') {
@@ -1145,7 +1173,6 @@
                         
                         let branchBadge = getUsefulBadge(bPct !== null && bPct !== undefined ? [bPct] : []);
                         
-                        // Dedicated Badge specific to branch
                         let isBranchDedicated = branchROs.some(ro => ro.isDedicated);
                         let dedicatedBadge = isBranchDedicated ? `<span class="badge" style="background-color: #4a4b50; color: white; margin-left: 5px; font-size: 11px;">(DEDICATED)</span>` : '';
 
