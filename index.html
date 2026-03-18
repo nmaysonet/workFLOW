@@ -278,10 +278,6 @@
                     </select>
                 </div>
             </div>
-            <div class="filter-bar">
-                <button class="filter-btn active" data-filter="ALL" onclick="setFilter('ALL')">All Units</button>
-                <button class="filter-btn" data-filter="PRIORITY" onclick="setFilter('PRIORITY')">Priority</button>
-            </div>
             <div class="kpi-grid" id="pm-kpi-container"></div>
         </div>
 
@@ -294,10 +290,6 @@
                     </select>
                 </div>
             </div>
-            <div class="filter-bar">
-                <button class="filter-btn active" data-filter="ALL" onclick="setFilter('ALL')">All Units</button>
-                <button class="filter-btn" data-filter="PRIORITY" onclick="setFilter('PRIORITY')">Priority</button>
-            </div>
             <div class="kpi-grid" id="vended-kpi-container"></div>
         </div>
 
@@ -309,10 +301,6 @@
                         <option value="ALL">All Customers</option>
                     </select>
                 </div>
-            </div>
-            <div class="filter-bar">
-                <button class="filter-btn active" data-filter="ALL" onclick="setFilter('ALL')">All Units</button>
-                <button class="filter-btn" data-filter="PRIORITY" onclick="setFilter('PRIORITY')">Priority</button>
             </div>
             <div class="kpi-grid" id="ers-kpi-container"></div>
         </div>
@@ -384,6 +372,7 @@
         let ersOwners = [];
 
         let branchUsefulMap = {}; 
+        let branchMasterInfo = {}; 
         let oosMap = {};
         let dedicatedBranches = new Set();
 
@@ -703,14 +692,49 @@
         function processExcelData(vroRaw, resourceRaw, oosRaw, usefulRaw) {
             const today = new Date(); today.setHours(0, 0, 0, 0);
             
-            // Build Useful % Map
+            // Build Universal Branch Dictionary
+            branchMasterInfo = {}; 
             branchUsefulMap = {};
+            
+            oosRaw.forEach(row => {
+                let region = getCol(row, ['GARDA REGION']);
+                let subregion = getCol(row, ['GARDA SUBREGION']);
+                let branch = getCol(row, ['Branch']);
+                if (branch) {
+                    let bCode = extractGardaCode(branch);
+                    let info = {
+                        region: String(region || 'Unspecified Region').trim(),
+                        subregion: String(subregion || 'Unspecified Subregion').trim(),
+                        branch: String(branch).trim()
+                    };
+                    if (bCode) branchMasterInfo[bCode] = info;
+                    let bNorm = normalizeBranchStr(branch);
+                    if (bNorm) branchMasterInfo[bNorm] = info;
+                }
+            });
+
             if (usefulRaw && usefulRaw.length > 0) {
                 usefulRaw.forEach(row => {
-                    let branchKey = Object.keys(row).find(k => k.toLowerCase() === 'branch');
-                    let branch = branchKey ? row[branchKey] : null;
+                    let rKey = Object.keys(row).find(k => k.toLowerCase().includes('region'));
+                    let subKey = Object.keys(row).find(k => k.toLowerCase().includes('subregion'));
+                    let bKey = Object.keys(row).find(k => k.toLowerCase() === 'branch');
                     
-                    if (branch && String(branch).trim() !== '') {
+                    let r = rKey ? row[rKey] : null;
+                    let s = subKey ? row[subKey] : null;
+                    let b = bKey ? row[bKey] : null;
+                    
+                    if (b) {
+                        let bCode = extractGardaCode(b);
+                        let info = {
+                            region: String(r || 'Unspecified Region').trim(),
+                            subregion: String(s || 'Unspecified Subregion').trim(),
+                            branch: String(b).trim()
+                        };
+                        
+                        if (bCode && !branchMasterInfo[bCode]) branchMasterInfo[bCode] = info;
+                        let bNorm = normalizeBranchStr(b);
+                        if (bNorm && !branchMasterInfo[bNorm]) branchMasterInfo[bNorm] = info;
+
                         let pct = NaN;
                         let usefulKeys = Object.keys(row).filter(k => k.toLowerCase().includes('useful'));
                         let totalKey = usefulKeys.find(k => k.toLowerCase().includes('total'));
@@ -720,7 +744,6 @@
                             if (!isNaN(val)) pct = val;
                         }
                         
-                        // Fallback if Total is empty
                         if (isNaN(pct)) {
                             for(let i = usefulKeys.length - 1; i >= 0; i--) {
                                 let k = usefulKeys[i];
@@ -735,10 +758,8 @@
                         }
                         
                         if (!isNaN(pct)) {
-                            let bCode = extractGardaCode(branch);
                             if (bCode) branchUsefulMap[bCode] = pct;
-                            let normKey = normalizeBranchStr(branch);
-                            if (normKey) branchUsefulMap[normKey] = pct;
+                            if (bNorm) branchUsefulMap[bNorm] = pct;
                         }
                     }
                 });
@@ -746,7 +767,6 @@
 
             let unitToLocation = {};
             oosMap = {};
-            globalBranchToRegionMap = {}; 
             
             oosRaw.forEach(row => {
                 let unit = getCol(row, ['UNITNUMBER', 'Unit No', 'Vehicle']);
@@ -765,15 +785,6 @@
                         subregion: String(subregion || 'Unspecified Subregion').trim(), 
                         branch: String(branch || 'Unspecified Branch').trim() 
                     };
-                }
-                
-                if (region && branch) {
-                    let regNorm = normalizeName(region).toUpperCase();
-                    let bCode = extractGardaCode(branch);
-                    if (bCode) globalBranchToRegionMap[bCode] = regNorm;
-                    
-                    let bNorm = normalizeBranchStr(branch);
-                    if (bNorm) globalBranchToRegionMap[bNorm] = regNorm;
                 }
             });
 
@@ -848,7 +859,7 @@
             processedData = vroRaw.map(row => {
                 let roNum = getCol(row, ['Order', 'RO Number', 'RONum', 'AFS RO #']).toUpperCase().trim();
                 let customer = getCol(row, ['Customer', 'CUSTOMERNAME', 'Customer Name']); 
-                let rawOwnerEmail = getCol(row, ['Owner', 'Created By', 'Email']); // Assuming Tab 1 Col N
+                let rawOwnerEmail = getCol(row, ['Owner', 'Created By', 'Email']); 
                 let unit = getCol(row, ['Unit No', 'UNITNUMBER', 'Vehicle']).toUpperCase().trim();
                 let status = getCol(row, ['Status']);
                 let vmrs = getCol(row, ['Task', 'DESCRIP', 'VMRS Description']);
@@ -864,45 +875,56 @@
                 let branchCode = extractGardaCode(customer); 
                 if (!branchCode && loc.branch) branchCode = extractGardaCode(loc.branch);
                 
-                let locPart = customer;
-                if(String(customer).includes('-')) {
-                    locPart = customer.substring(customer.indexOf('-') + 1).trim(); 
-                }
-                
-                let stateName = 'Unknown State';
-                let cityName = 'Unknown City';
-
-                if (locPart.includes(',')) {
-                    let splitComma = locPart.split(','); 
-                    cityName = splitComma[0].trim();
-                    let afterComma = splitComma[1].trim().split(' ').filter(s => s.trim() !== ''); 
-                    if(afterComma.length > 0) stateName = afterComma[0].trim();
-                } else {
-                    let spaceSplit = locPart.split(' ').filter(s => s.trim() !== '');
-                    if (spaceSplit.length === 1 && spaceSplit[0].length === 2) {
-                        stateName = spaceSplit[0].toUpperCase();
-                        cityName = 'Unknown City';
-                    } else if (spaceSplit.length >= 2) {
-                        let last = spaceSplit[spaceSplit.length - 1].trim();
-                        let secLast = spaceSplit[spaceSplit.length - 2].trim();
-                        if (last.length === 2 && !/\d/.test(last)) {
-                            stateName = last.toUpperCase();
-                            cityName = spaceSplit.slice(0, spaceSplit.length - 1).join(' ');
-                        } else if (secLast.length === 2 && !/\d/.test(secLast)) {
-                            stateName = secLast.toUpperCase();
-                            cityName = spaceSplit.slice(0, spaceSplit.length - 2).join(' ');
-                        } else {
-                            cityName = locPart;
-                        }
+                // Force location override via Code Match to sync variations like Hanover Township
+                if (custKey === 'Garda') {
+                    if (branchCode && branchMasterInfo[branchCode]) {
+                        loc = branchMasterInfo[branchCode];
+                    } else if (cStrNorm && branchMasterInfo[cStrNorm]) {
+                        loc = branchMasterInfo[cStrNorm];
                     } else {
-                        cityName = locPart;
+                        for (let bKey in branchMasterInfo) {
+                            if (cStrNorm.includes(bKey)) {
+                                loc = branchMasterInfo[bKey];
+                                break;
+                            }
+                        }
                     }
                 }
 
-                let fallbackLoc = { region: stateName, subregion: cityName, branch: String(customer).trim() };
-                
-                if(custKey === 'Ferguson' || custKey === 'Amerit Fleet Solutions' || custKey === 'Brinks' || custKey === 'US Foods' || custKey === 'Frontier' || custKey === 'Colony Hardware' || custKey === 'Sukut Construction' || custKey === 'Garda') { 
-                    if(loc.region === 'Unknown Region' || loc.region === 'Unspecified Region') loc = fallbackLoc;
+                if (!loc || loc.region === 'Unknown Region' || loc.region === 'Unspecified Region') {
+                    let locPart = customer;
+                    if(String(customer).includes('-')) locPart = customer.substring(customer.indexOf('-') + 1).trim(); 
+                    
+                    let stateName = 'Unknown State';
+                    let cityName = 'Unknown City';
+
+                    if (locPart.includes(',')) {
+                        let splitComma = locPart.split(','); 
+                        cityName = splitComma[0].trim();
+                        let afterComma = splitComma[1].trim().split(' ').filter(s => s.trim() !== ''); 
+                        if(afterComma.length > 0) stateName = afterComma[0].trim();
+                    } else {
+                        let spaceSplit = locPart.split(' ').filter(s => s.trim() !== '');
+                        if (spaceSplit.length === 1 && spaceSplit[0].length === 2) {
+                            stateName = spaceSplit[0].toUpperCase();
+                            cityName = 'Unknown City';
+                        } else if (spaceSplit.length >= 2) {
+                            let last = spaceSplit[spaceSplit.length - 1].trim();
+                            let secLast = spaceSplit[spaceSplit.length - 2].trim();
+                            if (last.length === 2 && !/\d/.test(last)) {
+                                stateName = last.toUpperCase();
+                                cityName = spaceSplit.slice(0, spaceSplit.length - 1).join(' ');
+                            } else if (secLast.length === 2 && !/\d/.test(secLast)) {
+                                stateName = secLast.toUpperCase();
+                                cityName = spaceSplit.slice(0, spaceSplit.length - 2).join(' ');
+                            } else {
+                                cityName = locPart;
+                            }
+                        } else {
+                            cityName = locPart;
+                        }
+                    }
+                    loc = { region: stateName, subregion: cityName, branch: String(customer).trim() };
                 }
                 
                 // --- THE ASSIGNMENT FUNNEL ---
@@ -925,9 +947,8 @@
                     finalOwner = unitOwnerMap[unit].owner;
                     finalTeam = unitOwnerMap[unit].team;
                 }
-
                 // Priority 3: Fallback to the Creator
-                if (!finalOwner || finalOwner === '') {
+                else {
                     if (globalOwnerMap[ownerEmailLower]) {
                         finalOwner = globalOwnerMap[ownerEmailLower].name;
                         finalTeam = globalOwnerMap[ownerEmailLower].team;
@@ -938,22 +959,6 @@
                     } else {
                         finalOwner = 'Unassigned';
                         finalTeam = 'VENDED REPAIR';
-                    }
-                }
-
-                // Determine if we should generate a tile for this owner
-                let creatorIsActive = (globalOwnerMap[ownerEmailLower] && globalOwnerMap[ownerEmailLower].status === 'ACTIVE');
-                let creatorIsSpecific = specificCreators.includes(ownerEmailLower);
-                let ownerFromUnit = (unitOwnerMap[unit] && !isDedicatedFlag && unitOwnerMap[unit].owner);
-                
-                // Only add to tile arrays if they are active, specific, unit owners, dedicated, or unassigned
-                if (creatorIsActive || creatorIsSpecific || ownerFromUnit || finalOwner === 'Dedicated' || finalOwner === 'Unassigned') {
-                    if (finalTeam === 'PM') {
-                        activePM.add(finalOwner);
-                    } else if (finalTeam === 'ERS') {
-                        activeERS.add(finalOwner);
-                    } else {
-                        activeVended.add(finalOwner);
                     }
                 }
 
@@ -975,6 +980,19 @@
                 let statusStr = String(status || '').toUpperCase().trim();
                 let isOOS = oosMap[unit] === true; 
                 let isOpen = !excludedStatuses.includes(statusStr);
+                
+                // Track generating the tile only if conditions are met
+                let addTile = false;
+                if (specificCreators.includes(ownerEmailLower)) addTile = true;
+                else if (unitOwnerMap[unit] && !isDedicatedFlag && unitOwnerMap[unit].owner) addTile = true;
+                else if (finalOwner === 'Dedicated' || finalOwner === 'Unassigned') addTile = true;
+                else if (globalOwnerMap[ownerEmailLower] && globalOwnerMap[ownerEmailLower].status === 'ACTIVE') addTile = true;
+
+                if (addTile && isOpen) {
+                    if (finalTeam === 'PM') activePM.add(finalOwner);
+                    else if (finalTeam === 'ERS') activeERS.add(finalOwner);
+                    else activeVended.add(finalOwner);
+                }
                 
                 // --- MAP USEFUL % ---
                 let usefulPct = null;
@@ -1057,8 +1075,8 @@
         // --- HIERARCHY / KPI GENERATORS ---
         function generateTileHTML(name, dataSet, chartId = null) {
             let filteredOpen = dataSet.filter(ro => ro.isOpen);
-            
             let priorityCount = dataSet.filter(ro => ro.isOpen && ro.isOOS && ro.usefulPct !== null && Math.round(ro.usefulPct * 100) < 100).length;
+            
             let completedOrders = dataSet.filter(ro => ro.isCompletedKPI);
             let compCount = completedOrders.length;
             let onTimeCount = completedOrders.filter(ro => ro.isOnTimeKPI).length;
@@ -1176,9 +1194,6 @@
                 }
 
                 let targetData = ownerDataAll.filter(ro => ro.isOpen);
-                if(currentFilter === 'PRIORITY') {
-                    targetData = targetData.filter(ro => ro.isOOS && ro.usefulPct !== null && Math.round(ro.usefulPct * 100) < 100);
-                }
                 
                 if (targetData.length === 0) return; 
 
