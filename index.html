@@ -7,6 +7,9 @@
     <link href="https://fonts.googleapis.com/css2?family=Raleway:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 
     <style>
         /* Global Styles & Reset */
@@ -278,10 +281,6 @@
                     </select>
                 </div>
             </div>
-            <div class="filter-bar">
-                <button class="filter-btn active" data-filter="ALL" onclick="setFilter('ALL')">All Units</button>
-                <button class="filter-btn" data-filter="PRIORITY" onclick="setFilter('PRIORITY')">Priority</button>
-            </div>
             <div class="kpi-grid" id="pm-kpi-container"></div>
         </div>
 
@@ -294,10 +293,6 @@
                     </select>
                 </div>
             </div>
-            <div class="filter-bar">
-                <button class="filter-btn active" data-filter="ALL" onclick="setFilter('ALL')">All Units</button>
-                <button class="filter-btn" data-filter="PRIORITY" onclick="setFilter('PRIORITY')">Priority</button>
-            </div>
             <div class="kpi-grid" id="vended-kpi-container"></div>
         </div>
 
@@ -309,10 +304,6 @@
                         <option value="ALL">All Customers</option>
                     </select>
                 </div>
-            </div>
-            <div class="filter-bar">
-                <button class="filter-btn active" data-filter="ALL" onclick="setFilter('ALL')">All Units</button>
-                <button class="filter-btn" data-filter="PRIORITY" onclick="setFilter('PRIORITY')">Priority</button>
             </div>
             <div class="kpi-grid" id="ers-kpi-container"></div>
         </div>
@@ -370,6 +361,36 @@
     </div>
 
     <script>
+        // --- FIREBASE SYNC ENGINE ---
+        const firebaseConfig = {
+            apiKey: "AIzaSyCr3VAldI-pPCb7APx3rJAEZvf_nl0iz1g",
+            authDomain: "workflow-dashboard-e6134.firebaseapp.com",
+            databaseURL: "https://workflow-dashboard-e6134-default-rtdb.firebaseio.com",
+            projectId: "workflow-dashboard-e6134",
+            storageBucket: "workflow-dashboard-e6134.firebasestorage.app",
+            messagingSenderId: "641710248116",
+            appId: "1:641710248116:web:1546701879d573041447e1"
+        };
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
+        let globalUnitCheckState = {};
+
+        // Listen for Realtime Checkbox Updates
+        db.ref('unitChecks').on('value', (snapshot) => {
+            globalUnitCheckState = snapshot.val() || {};
+            // Update all rendered checkboxes instantly
+            document.querySelectorAll('.unit-checkbox').forEach(cb => {
+                let unit = cb.getAttribute('data-unit');
+                cb.checked = !!globalUnitCheckState[unit];
+            });
+        });
+
+        // Triggered when a user clicks a checkbox
+        function toggleUnitCheck(unit, isChecked) {
+            let safeUnit = unit.replace(/[.#$\[\]]/g, '_'); // Firebase rejects weird chars in keys
+            db.ref('unitChecks/' + safeUnit).set(isChecked);
+        }
+
         // --- GLOBAL DATA ---
         let processedData = []; 
         let currentFilter = 'ALL';
@@ -777,7 +798,6 @@
                         if (!isNaN(pct)) {
                             if (bCode) {
                                 branchUsefulMap[bCode] = pct;
-                                // Wire aliases for Hanover -> Wilkes Barre
                                 if (bCode === '18055') branchUsefulMap['14095'] = pct;
                                 if (bCode === '14095') branchUsefulMap['18055'] = pct;
                             }
@@ -889,7 +909,6 @@
                 let dueRaw = getCol(row, ['Unit Due Date', 'Estimate Due Date', 'Due Date', 'L']);
                 let compRaw = getCol(row, ['Completed Date', 'Completed', 'P']);
 
-                // --- TEXT NORMALIZATION FIXES ---
                 let customerFixed = String(customerRaw || '').toUpperCase().replace('MRTLE', 'MYRTLE');
                 if (customerFixed.includes('HANVER') || customerFixed.includes('HANOVER') || customerFixed.includes('18055') || customerFixed.includes('180-55')) {
                     customerFixed = 'GARDA - WILKES BARRE, PA 140-95';
@@ -907,12 +926,10 @@
                 let branchCode = extractGardaCode(customer); 
                 if (!branchCode && loc.branch) branchCode = extractGardaCode(loc.branch);
                 
-                // Map via Code Match 
                 if (custKey === 'Garda') {
                     if (branchCode && branchMasterInfo[branchCode]) {
                         loc = Object.assign({}, loc, branchMasterInfo[branchCode]);
                     } else {
-                        // Match strictly by alphanumeric name (ignoring codes to fix missing code issues like Fontana)
                         for (let bKey in branchMasterInfo) {
                             if (bKey.length > 4 && cNameOnly.includes(bKey)) {
                                 loc = Object.assign({}, loc, branchMasterInfo[bKey]);
@@ -922,7 +939,6 @@
                     }
                 }
 
-                // Fallback for completely unknown regions
                 if (loc.region === 'Unknown Region' || loc.region === 'Unspecified Region') {
                     let locPart = customer;
                     if(String(customer).includes('-')) locPart = customer.substring(customer.indexOf('-') + 1).trim(); 
@@ -960,11 +976,10 @@
                     loc.region = stateName;
                     loc.subregion = cityName;
                     if (loc.branch === 'Unknown Branch' || loc.branch === 'Unspecified Branch') {
-                        loc.branch = String(customerRaw).trim(); // Keep raw spelling if completely unmatched
+                        loc.branch = String(customerRaw).trim(); 
                     }
                 }
                 
-                // --- PA REGION OVERRIDE ---
                 if (custKey === 'Garda') {
                     if (loc.region === 'PA' || customerFixed.includes(', PA') || customerFixed.includes(' PA ')) {
                         loc.region = 'East';
@@ -987,7 +1002,7 @@
                     finalOwner = creatorMap[ownerEmailLower].name;
                     finalTeam = creatorMap[ownerEmailLower].team;
                 } 
-                // Priority 2: Unit Assignment Match (Only applies if NOT dedicated)
+                // Priority 2: Unit Assignment Match 
                 else if (unitOwnerMap[unit] && !isDedicatedFlag && unitOwnerMap[unit].owner) {
                     finalOwner = unitOwnerMap[unit].owner;
                     finalTeam = unitOwnerMap[unit].team;
@@ -1026,7 +1041,7 @@
                 let isOOS = oosMap[unit] === true; 
                 let isOpen = !excludedStatuses.includes(statusStr);
                 
-                // Track generating the tile only if conditions are met
+                // Only generate tiles for valid/active owners
                 let addTile = false;
                 if (specificCreators.includes(ownerEmailLower)) addTile = true;
                 else if (unitOwnerMap[unit] && !isDedicatedFlag && unitOwnerMap[unit].owner) addTile = true;
@@ -1052,7 +1067,6 @@
                     }
                 }
 
-                // Dedicated branch flag fallback
                 if (!isDedicatedFlag) {
                     if (branchCode && dedicatedBranches.has(branchCode)) isDedicatedFlag = true;
                     else {
@@ -1126,6 +1140,7 @@
             let filteredOpen = dataSet.filter(ro => ro.isOpen);
             
             let priorityCount = dataSet.filter(ro => ro.isOpen && ro.isOOS && ro.usefulPct !== null && Math.round(ro.usefulPct * 100) < 100).length;
+            
             let completedOrders = dataSet.filter(ro => ro.isCompletedKPI);
             let compCount = completedOrders.length;
             let onTimeCount = completedOrders.filter(ro => ro.isOnTimeKPI).length;
@@ -1290,7 +1305,6 @@
                             topLvlUseful.push(bPct);
                         }
 
-                        // --- NEW: Group ROs by UnitNo ---
                         let unitsMap = {};
                         branchROs.forEach(ro => {
                             if(!unitsMap[ro.unitNo]) {
@@ -1336,7 +1350,11 @@
                             let isPriority = u.isOOS && u.usefulPct !== null && Math.round(u.usefulPct * 100) < 100;
                             let priorityStatusBadge = isPriority ? `<span class="badge badge-urgent">Priority</span>` : `<span class="badge badge-low">Normal</span>`;
 
-                            // Use rowspan for aligned output
+                            // --- FIREBASE SYNC CHECKBOX ---
+                            let safeUnit = u.unitNo.replace(/[.#$\[\]]/g, '_');
+                            let isChecked = globalUnitCheckState[safeUnit] ? 'checked' : '';
+                            let checkboxHtml = `<input type="checkbox" class="unit-checkbox" data-unit="${safeUnit}" onchange="toggleUnitCheck('${safeUnit}', this.checked)" ${isChecked} style="margin-right: 8px; cursor: pointer; transform: scale(1.2);">`;
+
                             let rowCount = u.roNums.length;
 
                             u.roNums.forEach((roHtml, idx) => {
@@ -1344,7 +1362,7 @@
                                 tableHTML += `<td style="vertical-align:top; padding-top:15px; border-bottom: ${idx === rowCount - 1 ? '1px solid var(--border)' : '1px dashed #eee'};">${roHtml}</td>`;
                                 
                                 if (idx === 0) {
-                                    tableHTML += `<td rowspan="${rowCount}" style="vertical-align:top; padding-top:15px; border-bottom: 1px solid var(--border); border-left: 1px dashed #eee;"><strong>${u.unitNo}</strong></td>`;
+                                    tableHTML += `<td rowspan="${rowCount}" style="vertical-align:top; padding-top:15px; border-bottom: 1px solid var(--border); border-left: 1px dashed #eee;"><div style="display:flex; align-items:center;">${checkboxHtml} <strong>${u.unitNo}</strong></div></td>`;
                                     tableHTML += `<td rowspan="${rowCount}" style="vertical-align:top; padding-top:15px; border-bottom: 1px solid var(--border);">${priorityStatusBadge}</td>`;
                                     tableHTML += `<td rowspan="${rowCount}" style="vertical-align:top; padding-top:15px; border-bottom: 1px solid var(--border);">${oosBadge}</td>`;
                                     tableHTML += `<td rowspan="${rowCount}" style="vertical-align:top; padding-top:15px; border-bottom: 1px solid var(--border); border-right: 1px dashed #eee;">${u.roCount}</td>`;
@@ -1447,6 +1465,11 @@
                         let isPriority = u.isOOS && u.usefulPct !== null && Math.round(u.usefulPct * 100) < 100;
                         let priorityStatusBadge = isPriority ? `<span class="badge badge-urgent">Priority</span>` : `<span class="badge badge-low">Normal</span>`;
 
+                        // --- FIREBASE SYNC CHECKBOX ---
+                        let safeUnit = u.unitNo.replace(/[.#$\[\]]/g, '_');
+                        let isChecked = globalUnitCheckState[safeUnit] ? 'checked' : '';
+                        let checkboxHtml = `<input type="checkbox" class="unit-checkbox" data-unit="${safeUnit}" onchange="toggleUnitCheck('${safeUnit}', this.checked)" ${isChecked} style="margin-right: 8px; cursor: pointer; transform: scale(1.2);">`;
+
                         let rowCount = u.roNums.length;
 
                         u.roNums.forEach((roHtml, idx) => {
@@ -1454,7 +1477,7 @@
                             searchHtml += `<td style="vertical-align:top; padding-top:15px; border-bottom: ${idx === rowCount - 1 ? '1px solid var(--border)' : '1px dashed #eee'};">${roHtml}</td>`;
                             
                             if (idx === 0) {
-                                searchHtml += `<td rowspan="${rowCount}" style="vertical-align:top; padding-top:15px; border-bottom: 1px solid var(--border); border-left: 1px dashed #eee;"><strong>${u.unitNo}</strong></td>`;
+                                searchHtml += `<td rowspan="${rowCount}" style="vertical-align:top; padding-top:15px; border-bottom: 1px solid var(--border); border-left: 1px dashed #eee;"><div style="display:flex; align-items:center;">${checkboxHtml} <strong>${u.unitNo}</strong></div></td>`;
                                 searchHtml += `<td rowspan="${rowCount}" style="vertical-align:top; padding-top:15px; border-bottom: 1px solid var(--border);">${priorityStatusBadge}</td>`;
                                 searchHtml += `<td rowspan="${rowCount}" style="vertical-align:top; padding-top:15px; border-bottom: 1px solid var(--border);">${oosBadge}</td>`;
                                 searchHtml += `<td rowspan="${rowCount}" style="vertical-align:top; padding-top:15px; border-bottom: 1px solid var(--border); border-right: 1px dashed #eee;">${u.roCount}</td>`;
