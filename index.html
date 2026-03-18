@@ -278,6 +278,10 @@
                     </select>
                 </div>
             </div>
+            <div class="filter-bar">
+                <button class="filter-btn active" data-filter="ALL" onclick="setFilter('ALL')">All Units</button>
+                <button class="filter-btn" data-filter="PRIORITY" onclick="setFilter('PRIORITY')">Priority</button>
+            </div>
             <div class="kpi-grid" id="pm-kpi-container"></div>
         </div>
 
@@ -290,6 +294,10 @@
                     </select>
                 </div>
             </div>
+            <div class="filter-bar">
+                <button class="filter-btn active" data-filter="ALL" onclick="setFilter('ALL')">All Units</button>
+                <button class="filter-btn" data-filter="PRIORITY" onclick="setFilter('PRIORITY')">Priority</button>
+            </div>
             <div class="kpi-grid" id="vended-kpi-container"></div>
         </div>
 
@@ -301,6 +309,10 @@
                         <option value="ALL">All Customers</option>
                     </select>
                 </div>
+            </div>
+            <div class="filter-bar">
+                <button class="filter-btn active" data-filter="ALL" onclick="setFilter('ALL')">All Units</button>
+                <button class="filter-btn" data-filter="PRIORITY" onclick="setFilter('PRIORITY')">Priority</button>
             </div>
             <div class="kpi-grid" id="ers-kpi-container"></div>
         </div>
@@ -763,7 +775,12 @@
                         }
                         
                         if (!isNaN(pct)) {
-                            if (bCode) branchUsefulMap[bCode] = pct;
+                            if (bCode) {
+                                branchUsefulMap[bCode] = pct;
+                                // Wire aliases for Hanover -> Wilkes Barre
+                                if (bCode === '18055') branchUsefulMap['14095'] = pct;
+                                if (bCode === '14095') branchUsefulMap['18055'] = pct;
+                            }
                             if (bNorm) branchUsefulMap[bNorm] = pct;
                         }
                     }
@@ -872,10 +889,16 @@
                 let dueRaw = getCol(row, ['Unit Due Date', 'Estimate Due Date', 'Due Date', 'L']);
                 let compRaw = getCol(row, ['Completed Date', 'Completed', 'P']);
 
-                // Force fix notorious typos in customer string (e.g. Hanver -> Hanover)
-                let customerFixed = String(customerRaw || '').toUpperCase().replace('HANVER', 'HANOVER').replace('MRTLE', 'MYRTLE').replace('TNSHP', 'TOWNSHIP');
-                let customer = customerFixed;
+                // --- TEXT NORMALIZATION FIXES ---
+                let customerFixed = String(customerRaw || '').toUpperCase().replace('MRTLE', 'MYRTLE');
+                if (customerFixed.includes('HANVER') || customerFixed.includes('HANOVER') || customerFixed.includes('18055') || customerFixed.includes('180-55')) {
+                    customerFixed = 'GARDA - WILKES BARRE, PA 140-95';
+                }
+                if (customerFixed.includes('FONTANA') && !customerFixed.includes('120')) {
+                    customerFixed = 'GARDA - FONTANA, CA 120-14';
+                }
 
+                let customer = customerFixed;
                 let loc = unitToLocation[unit] || { region: 'Unknown Region', subregion: 'Unknown Subregion', branch: 'Unknown Branch' };
                 let custKey = getCustKey(customer);
                 
@@ -884,7 +907,7 @@
                 let branchCode = extractGardaCode(customer); 
                 if (!branchCode && loc.branch) branchCode = extractGardaCode(loc.branch);
                 
-                // Force location override via Code Match to sync variations like Hanover Township
+                // Map via Code Match 
                 if (custKey === 'Garda') {
                     if (branchCode && branchMasterInfo[branchCode]) {
                         loc = Object.assign({}, loc, branchMasterInfo[branchCode]);
@@ -938,6 +961,14 @@
                     loc.subregion = cityName;
                     if (loc.branch === 'Unknown Branch' || loc.branch === 'Unspecified Branch') {
                         loc.branch = String(customerRaw).trim(); // Keep raw spelling if completely unmatched
+                    }
+                }
+                
+                // --- PA REGION OVERRIDE ---
+                if (custKey === 'Garda') {
+                    if (loc.region === 'PA' || customerFixed.includes(', PA') || customerFixed.includes(' PA ')) {
+                        loc.region = 'East';
+                        loc.subregion = 'Midatlantic';
                     }
                 }
                 
@@ -1093,9 +1124,6 @@
         // --- HIERARCHY / KPI GENERATORS ---
         function generateTileHTML(name, dataSet, chartId = null) {
             let filteredOpen = dataSet.filter(ro => ro.isOpen);
-            if(currentFilter === 'PRIORITY') {
-                filteredOpen = filteredOpen.filter(ro => ro.isOOS && ro.usefulPct !== null && Math.round(ro.usefulPct * 100) < 100);
-            }
             
             let priorityCount = dataSet.filter(ro => ro.isOpen && ro.isOOS && ro.usefulPct !== null && Math.round(ro.usefulPct * 100) < 100).length;
             let completedOrders = dataSet.filter(ro => ro.isCompletedKPI);
@@ -1262,7 +1290,7 @@
                             topLvlUseful.push(bPct);
                         }
 
-                        // --- Group ROs by UnitNo ---
+                        // --- NEW: Group ROs by UnitNo ---
                         let unitsMap = {};
                         branchROs.forEach(ro => {
                             if(!unitsMap[ro.unitNo]) {
