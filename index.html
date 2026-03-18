@@ -8,8 +8,8 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js" async></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js" async></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 
     <style>
         /* Global Styles & Reset */
@@ -260,7 +260,7 @@
                 <p style="color: #666; margin-bottom: 15px; font-size: 14px;">Attempting to fetch <b>master_workFLOW.xlsx</b> from local directory...</p>
                 <div id="upload-status" style="font-size: 15px; font-weight: bold; color: #888;">Initializing...</div>
                 <div id="manual-upload-section" style="display: none; margin-top: 25px; padding-top: 20px; border-top: 1px dashed #ccc;">
-                    <p style="font-size: 13px; color: #888; margin-bottom: 10px;">Fallback: File not found or network blocked. Upload manually below.</p>
+                    <p style="font-size: 13px; color: #888; margin-bottom: 10px;">Fallback: File not found. Upload manually below.</p>
                     <label for="excelFileInput" class="upload-btn">Browse Files</label>
                     <input type="file" id="excelFileInput" accept=".xlsx, .xls, .csv" multiple />
                 </div>
@@ -367,42 +367,23 @@
     </div>
 
     <script>
-        // --- BACKGROUND FIREBASE ENGINE (Non-Blocking) ---
-        let db = null;
+        // --- FIREBASE SYNC ENGINE ---
+        const firebaseConfig = {
+            apiKey: "AIzaSyCr3VAldI-pPCb7APx3rJAEZvf_nl0iz1g",
+            authDomain: "workflow-dashboard-e6134.firebaseapp.com",
+            databaseURL: "https://workflow-dashboard-e6134-default-rtdb.firebaseio.com",
+            projectId: "workflow-dashboard-e6134",
+            storageBucket: "workflow-dashboard-e6134.firebasestorage.app",
+            messagingSenderId: "641710248116",
+            appId: "1:641710248116:web:1546701879d573041447e1"
+        };
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
         let globalRoCheckState = {};
 
-        function initializeSyncEngine() {
-            try {
-                if (typeof firebase !== 'undefined') {
-                    const firebaseConfig = {
-                        apiKey: "AIzaSyCr3VAldI-pPCb7APx3rJAEZvf_nl0iz1g",
-                        authDomain: "workflow-dashboard-e6134.firebaseapp.com",
-                        databaseURL: "https://workflow-dashboard-e6134-default-rtdb.firebaseio.com",
-                        projectId: "workflow-dashboard-e6134",
-                        storageBucket: "workflow-dashboard-e6134.firebasestorage.app",
-                        messagingSenderId: "641710248116",
-                        appId: "1:641710248116:web:1546701879d573041447e1"
-                    };
-                    firebase.initializeApp(firebaseConfig);
-                    db = firebase.database();
-
-                    db.ref('roChecks').on('value', (snapshot) => {
-                        globalRoCheckState = snapshot.val() || {};
-                        updateAllStatusBadges();
-                    });
-                } else {
-                    // Try again in 1 second if script hasn't loaded yet
-                    setTimeout(initializeSyncEngine, 1000);
-                }
-            } catch (error) {
-                console.warn("Firebase blocked by network or browser. Falling back to local state.", error);
-            }
-        }
-        
-        // Start trying to connect in the background
-        setTimeout(initializeSyncEngine, 500);
-
-        function updateAllStatusBadges() {
+        // Listen for Realtime Button Updates tracked per individual RO
+        db.ref('roChecks').on('value', (snapshot) => {
+            globalRoCheckState = snapshot.val() || {};
             document.querySelectorAll('.status-toggle').forEach(btn => {
                 let ro = btn.getAttribute('data-ro');
                 let isDispatched = !!globalRoCheckState[ro];
@@ -416,16 +397,11 @@
                     btn.onclick = function() { toggleRoCheck(ro, true); };
                 }
             });
-        }
+        });
 
         function toggleRoCheck(ro, isChecked) {
             let safeRo = ro.replace(/[.#$\[\]]/g, '_'); 
-            if (db) {
-                db.ref('roChecks/' + safeRo).set(isChecked);
-            } else {
-                globalRoCheckState[safeRo] = isChecked;
-                updateAllStatusBadges();
-            }
+            db.ref('roChecks/' + safeRo).set(isChecked);
         }
 
         // --- GLOBAL DATA ---
@@ -451,6 +427,7 @@
             'FINAL CHARGES SUBMITTED'
         ];
 
+        // Specific Creators (Priority 1)
         const specificCreators = [
             "aarmes@ameritfleet.com", "ccaylor@ameritfleet.com", "cchristianson@ameritfleet.com",
             "cdecker@ameritfleet.com", "dnicholson@ameritfleet.com", "fbeardslee@ameritfleet.com",
@@ -574,8 +551,7 @@
             }
         }
 
-        // --- KICKOFF SCRIPT (Bypasses onload block) ---
-        setTimeout(fetchData, 50);
+        window.onload = fetchData;
 
         document.getElementById('excelFileInput').addEventListener('change', async function(e) {
             const files = Array.from(e.target.files);
@@ -676,6 +652,7 @@
             return rawStr.split('-')[0].trim() || 'Unknown Customer';
         }
 
+        // --- EXPORT LOGIC ---
         function exportDrilldownToExcel() {
             if (!currentOwnerView || processedData.length === 0) return;
             
@@ -755,9 +732,11 @@
             else if(activeView === 'person-view') { if(currentOwnerView) loadPersonDrilldown(currentOwnerView, currentParentView); }
         }
 
+        // --- PROCESS DATA ---
         function processExcelData(vroRaw, resourceRaw, oosRaw, usefulRaw) {
             const today = new Date(); today.setHours(0, 0, 0, 0);
             
+            // Build Universal Branch Dictionary
             branchMasterInfo = {}; 
             branchUsefulMap = {};
             
@@ -1294,40 +1273,7 @@
         }
 
         function generateRoDrilldownHtml(ownerDataAll) {
-            let baseOpenData = ownerDataAll.filter(ro => ro.isOpen);
-
-            let baseHierarchy = {};
-            baseOpenData.forEach(ro => {
-                if(!baseHierarchy[ro.drillTopLevel]) baseHierarchy[ro.drillTopLevel] = {};
-                if(!baseHierarchy[ro.drillTopLevel][ro.subregion]) baseHierarchy[ro.drillTopLevel][ro.subregion] = {};
-                if(!baseHierarchy[ro.drillTopLevel][ro.subregion][ro.branch]) baseHierarchy[ro.drillTopLevel][ro.subregion][ro.branch] = [];
-                baseHierarchy[ro.drillTopLevel][ro.subregion][ro.branch].push(ro);
-            });
-
-            let topUsefulMap = {}; 
-            let subUsefulMap = {}; 
-            let branchUsefulVals = {}; 
-
-            for(let topLvl in baseHierarchy) {
-                topUsefulMap[topLvl] = [];
-                for(let sub in baseHierarchy[topLvl]) {
-                    let subKey = topLvl + '|||' + sub;
-                    subUsefulMap[subKey] = [];
-                    for(let branch in baseHierarchy[topLvl][sub]) {
-                        let branchKey = subKey + '|||' + branch;
-                        let branchROs = baseHierarchy[topLvl][sub][branch];
-                        let validPcts = branchROs.map(ro => ro.usefulPct).filter(p => p !== null && p !== undefined);
-                        let bPct = validPcts.length > 0 ? validPcts[0] : null;
-                        if (bPct !== null && bPct !== undefined) {
-                            branchUsefulVals[branchKey] = bPct;
-                            subUsefulMap[subKey].push(bPct);
-                            topUsefulMap[topLvl].push(bPct);
-                        }
-                    }
-                }
-            }
-
-            let targetData = baseOpenData;
+            let targetData = ownerDataAll.filter(ro => ro.isOpen);
             if(currentFilter === 'PRIORITY') {
                 targetData = targetData.filter(ro => ro.isOOS && ro.usefulPct !== null && Math.round(ro.usefulPct * 100) < 100);
             }
@@ -1344,18 +1290,21 @@
             
             let htmlStr = '';
             for(let topLvl in hierarchy) {
-                let topBadge = getUsefulBadge(topUsefulMap[topLvl] || []);
+                let topLvlUseful = [];
                 let subHtml = '';
                 for(let sub in hierarchy[topLvl]) {
-                    let subKey = topLvl + '|||' + sub;
-                    let subBadge = getUsefulBadge(subUsefulMap[subKey] || []);
+                    let subLvlUseful = [];
                     let branchHtml = '';
                     for(let branch in hierarchy[topLvl][sub]) {
-                        let branchKey = subKey + '|||' + branch;
                         let branchROs = hierarchy[topLvl][sub][branch];
                         
-                        let bPct = branchUsefulVals[branchKey];
-                        let branchBadge = getUsefulBadge(bPct !== undefined && bPct !== null ? [bPct] : []);
+                        let branchUsefulPcts = branchROs.map(ro => ro.usefulPct).filter(p => p !== null && p !== undefined);
+                        let bPct = branchUsefulPcts.length > 0 ? branchUsefulPcts[0] : null;
+                        
+                        if (bPct !== null && bPct !== undefined) {
+                            subLvlUseful.push(bPct);
+                            topLvlUseful.push(bPct);
+                        }
 
                         let unitsMap = {};
                         branchROs.forEach(ro => {
@@ -1391,6 +1340,7 @@
                             return (b.isOOS === true ? 1 : 0) - (a.isOOS === true ? 1 : 0);
                         });
                         
+                        let branchBadge = getUsefulBadge(bPct !== null && bPct !== undefined ? [bPct] : []);
                         let isBranchDedicated = branchROs.some(ro => ro.isDedicated);
                         let dedicatedBadge = isBranchDedicated ? `<span style="background-color: white; color: black; border: 1px solid black; border-radius: 12px; padding: 2px 6px; margin-left: 5px; font-size: 10px; font-weight: bold;">(DEDICATED)</span>` : '';
 
