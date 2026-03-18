@@ -175,7 +175,7 @@
         .status-toggle { cursor: pointer; margin-right: 8px; user-select: none; transition: 0.2s; box-shadow: 0 1px 3px rgba(0,0,0,0.2); display: inline-block; text-align: center; min-width: 85px; font-size: 10px; letter-spacing: 0.5px;}
         .status-toggle:hover { opacity: 0.8; transform: translateY(-1px); }
         .status-pending { background-color: var(--urgent-red); color: white; border: 1px solid #c9302c; }
-        .status-scheduled { background-color: var(--low-green); color: white; border: 1px solid #4cae4c; }
+        .status-dispatched { background-color: var(--low-green); color: white; border: 1px solid #4cae4c; }
 
         .grouped-ro-item { margin-bottom: 8px; }
         .grouped-ro-item:last-child { margin-bottom: 0; }
@@ -349,14 +349,14 @@
             <div class="drilldown-container table-wrapper">
                 <table>
                     <colgroup>
-                        <col style="width: 15%;"> <col style="width: 18%;"> <col style="width: 12%;">
-                        <col style="width: 10%;">  <col style="width: 10%;">  <col style="width: 20%;">
-                        <col style="width: 15%;">
+                        <col style="width: 20%;"> <col style="width: 12%;"> <col style="width: 12%;">
+                        <col style="width: 10%;">  <col style="width: 12%;"> <col style="width: 12%;">
+                        <col style="width: 22%;">
                     </colgroup>
                     <thead>
                         <tr>
-                            <th>AFS RO #</th><th>Unit No</th><th>Priority Status</th>
-                            <th>OOS Status</th><th>Total Unit ROs</th><th>Owner</th>
+                            <th>AFS RO # & Dispatch</th><th>Unit No</th><th>Priority Status</th>
+                            <th>OOS Status</th><th>Opened Date</th><th>Owner</th>
                             <th>Status & ECD</th>
                         </tr>
                     </thead>
@@ -379,31 +379,29 @@
         };
         firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
-        let globalUnitCheckState = {};
+        let globalRoCheckState = {};
 
-        // Listen for Realtime Button Updates
-        db.ref('unitChecks').on('value', (snapshot) => {
-            globalUnitCheckState = snapshot.val() || {};
-            // Update all rendered buttons instantly
+        // Listen for Realtime Button Updates tracked per individual RO
+        db.ref('roChecks').on('value', (snapshot) => {
+            globalRoCheckState = snapshot.val() || {};
             document.querySelectorAll('.status-toggle').forEach(btn => {
-                let unit = btn.getAttribute('data-unit');
-                let isScheduled = !!globalUnitCheckState[unit];
-                if (isScheduled) {
-                    btn.className = 'badge status-toggle status-scheduled';
-                    btn.innerHTML = '✓ SCHEDULED';
-                    btn.onclick = function() { toggleUnitCheck(unit, false); };
+                let ro = btn.getAttribute('data-ro');
+                let isDispatched = !!globalRoCheckState[ro];
+                if (isDispatched) {
+                    btn.className = 'badge status-toggle status-dispatched';
+                    btn.innerHTML = '✓ DISPATCHED';
+                    btn.onclick = function() { toggleRoCheck(ro, false); };
                 } else {
                     btn.className = 'badge status-toggle status-pending';
                     btn.innerHTML = 'PENDING';
-                    btn.onclick = function() { toggleUnitCheck(unit, true); };
+                    btn.onclick = function() { toggleRoCheck(ro, true); };
                 }
             });
         });
 
-        // Triggered when a user clicks the status badge
-        function toggleUnitCheck(unit, isChecked) {
-            let safeUnit = unit.replace(/[.#$\[\]]/g, '_'); 
-            db.ref('unitChecks/' + safeUnit).set(isChecked);
+        function toggleRoCheck(ro, isChecked) {
+            let safeRo = ro.replace(/[.#$\[\]]/g, '_'); 
+            db.ref('roChecks/' + safeRo).set(isChecked);
         }
 
         // --- GLOBAL DATA ---
@@ -442,7 +440,6 @@
         
         let lastActiveView = 'home-view';
 
-        // --- NAME NORMALIZERS ---
         function normalizeName(str) {
             if (!str) return '';
             let n = String(str).trim().replace(/\s+/g, ' '); 
@@ -451,7 +448,6 @@
             return n;
         }
 
-        // Extremely aggressive normalizer to fix typos in Excel
         function normalizeBranchStr(str) {
             if (!str) return null;
             return String(str).toUpperCase().replace(/\d{3}[- ]?\d{2}/g, '').replace(/[^A-Z0-9]/ig, '');
@@ -464,7 +460,6 @@
             return null;
         }
 
-        // --- FETCH LOCAL DATA ---
         async function fetchData() {
             const statusEl = document.getElementById('upload-status');
             const uploadBox = document.getElementById('upload-box');
@@ -657,7 +652,7 @@
             return rawStr.split('-')[0].trim() || 'Unknown Customer';
         }
 
-        // --- EXPORT LOGIC (DRILLDOWN) ---
+        // --- EXPORT LOGIC ---
         function exportDrilldownToExcel() {
             if (!currentOwnerView || processedData.length === 0) return;
             
@@ -682,7 +677,8 @@
                 "AFS RO #": ro.roNum, "Unit No": ro.unitNo, 
                 "OOS Status": ro.isOOS ? "OOS" : "",
                 "Useful %": ro.usefulPct !== null ? Math.round(ro.usefulPct * 100) + '%' : "N/A",
-                "Total Unit ROs": ro.roCount, "Status": ro.status, "ECD": ro.ecdFormatted,
+                "Opened Date": ro.openedFormatted,
+                "Status": ro.status, "ECD": ro.ecdFormatted,
                 "Customer Group": ro.drillTopLevel, "Subregion": ro.subregion, "Branch": ro.branch
             }));
 
@@ -692,7 +688,6 @@
             XLSX.writeFile(workbook, `workflow_export_${String(currentOwnerView).replace(/\s+/g, '_')}_${currentFilter.toLowerCase()}.xlsx`);
         }
 
-        // --- EXPORT LOGIC (SEARCH) ---
         function exportSearchToExcel() {
             const searchTerm = document.getElementById('global-search').value.toLowerCase();
             if(!searchTerm) return;
@@ -704,7 +699,8 @@
                 "AFS RO #": ro.roNum, "Unit No": ro.unitNo, 
                 "Priority Status": (ro.isOOS && ro.usefulPct !== null && Math.round(ro.usefulPct * 100) < 100) ? "Priority" : "Normal",
                 "OOS Status": ro.isOOS ? "OOS" : "",
-                "Total Unit ROs": ro.roCount, "Owner": ro.owner, "Status": ro.status, "ECD": ro.ecdFormatted
+                "Opened Date": ro.openedFormatted,
+                "Owner": ro.owner, "Status": ro.status, "ECD": ro.ecdFormatted
             }));
             const worksheet = XLSX.utils.json_to_sheet(excelRows);
             const workbook = XLSX.utils.book_new();
@@ -712,7 +708,6 @@
             XLSX.writeFile(workbook, `workflow_search_${searchTerm}.xlsx`);
         }
 
-        // --- FILTER LOGIC ---
         function setFilter(val) {
             currentFilter = val;
             document.querySelectorAll('.filter-btn').forEach(btn => {
@@ -859,7 +854,6 @@
             resourceRaw.forEach(row => {
                 let keys = Object.keys(row);
                 
-                // Track Dedicated Branches
                 let bVal = getCol(row, ['Branch']);
                 let oVal = getCol(row, ['Owner']);
                 if (bVal && String(oVal).toUpperCase().trim() === 'DEDICATED') {
@@ -869,7 +863,6 @@
                     if (bNorm) dedicatedBranches.add(bNorm);
                 }
 
-                // Left Side (Unit Owners)
                 let unitKey = keys.find(k => k.toLowerCase().replace(/[^a-z0-9]/g, '') === 'unitnumber');
                 let teamKeys = keys.filter(k => k.toLowerCase().replace(/[^a-z0-9]/g, '').includes('team'));
                 let unitTeamKey = teamKeys[0]; 
@@ -881,7 +874,6 @@
                     unitOwnerMap[u] = { owner: o, team: t };
                 }
 
-                // Right Side (Creator mapping & Active Directory)
                 let creatorKey = keys.find(k => k.toLowerCase().replace(/[^a-z0-9]/g, '') === 'createdby');
                 let nameKey = keys.find(k => k.toLowerCase().replace(/[^a-z0-9]/g, '') === 'name');
                 let statusKey = keys.find(k => k.toLowerCase().replace(/[^a-z0-9]/g, '') === 'status');
@@ -923,6 +915,11 @@
                 let openedRaw = getCol(row, ['Opened', 'ROOpenedDate']);
                 let dueRaw = getCol(row, ['Unit Due Date', 'Estimate Due Date', 'Due Date', 'L']);
                 let compRaw = getCol(row, ['Completed Date', 'Completed', 'P']);
+
+                // Opened Date Setup
+                let openedDate = new Date(openedRaw);
+                let openedDT = isNaN(openedDate.getTime()) ? null : openedDate;
+                let openedFormatted = openedDT ? `${openedDT.getMonth()+1}/${openedDT.getDate()}/${openedDT.getFullYear()}` : 'N/A';
 
                 let customerFixed = String(customerRaw || '').toUpperCase().replace('MRTLE', 'MYRTLE');
                 if (customerFixed.includes('HANVER') || customerFixed.includes('HANOVER') || customerFixed.includes('18055') || customerFixed.includes('180-55')) {
@@ -1002,7 +999,6 @@
                     }
                 }
                 
-                // --- THE ASSIGNMENT FUNNEL ---
                 let ownerEmailLower = String(rawOwnerEmail || '').toLowerCase().trim();
                 let finalOwner = '';
                 let finalTeam = 'VENDED REPAIR';
@@ -1012,17 +1008,14 @@
                     isDedicatedFlag = true;
                 }
 
-                // Priority 1: Check Specific Creator List
                 if (specificCreators.includes(ownerEmailLower) && creatorMap[ownerEmailLower]) {
                     finalOwner = creatorMap[ownerEmailLower].name;
                     finalTeam = creatorMap[ownerEmailLower].team;
                 } 
-                // Priority 2: Unit Assignment Match 
                 else if (unitOwnerMap[unit] && !isDedicatedFlag && unitOwnerMap[unit].owner) {
                     finalOwner = unitOwnerMap[unit].owner;
                     finalTeam = unitOwnerMap[unit].team;
                 }
-                // Priority 3: Fallback to the Creator
                 else {
                     if (globalOwnerMap[ownerEmailLower]) {
                         finalOwner = globalOwnerMap[ownerEmailLower].name;
@@ -1036,9 +1029,6 @@
                         finalTeam = 'VENDED REPAIR';
                     }
                 }
-
-                let openedDate = new Date(openedRaw);
-                let openedDT = isNaN(openedDate.getTime()) ? null : openedDate;
 
                 let taskStr = vmrs.toLowerCase();
                 let isPMOrder = false;
@@ -1056,7 +1046,6 @@
                 let isOOS = oosMap[unit] === true; 
                 let isOpen = !excludedStatuses.includes(statusStr);
                 
-                // Only generate tiles for valid/active owners
                 let addTile = false;
                 if (specificCreators.includes(ownerEmailLower)) addTile = true;
                 else if (unitOwnerMap[unit] && !isDedicatedFlag && unitOwnerMap[unit].owner) addTile = true;
@@ -1069,7 +1058,6 @@
                     else activeVended.add(finalOwner);
                 }
                 
-                // --- MAP USEFUL % ---
                 let usefulPct = null;
                 if (branchCode && branchUsefulMap[branchCode] !== undefined) {
                     usefulPct = branchUsefulMap[branchCode];
@@ -1115,7 +1103,7 @@
                     } else isCompletedKPI = false;
                 }
                 
-                return { roNum, customer, custKey, drillTopLevel, owner: finalOwner, unitNo: unit, status, vmrs, isOOS, isOpen, isCompletedKPI, isOnTimeKPI, isLateKPI, roCount: unitROCounts[unit] || 1, subregion: loc.subregion, branch: loc.branch, ecdState, ecdFormatted, openedDT, usefulPct, isDedicated: isDedicatedFlag };
+                return { roNum, customer, custKey, drillTopLevel, owner: finalOwner, unitNo: unit, status, vmrs, isOOS, isOpen, isCompletedKPI, isOnTimeKPI, isLateKPI, roCount: unitROCounts[unit] || 1, subregion: loc.subregion, branch: loc.branch, ecdState, ecdFormatted, openedDT, openedFormatted, usefulPct, isDedicated: isDedicatedFlag };
             }).filter(ro => ro.roNum !== '');
 
             pmOwners = Array.from(activePM).sort();
@@ -1150,10 +1138,8 @@
             return `<span class="badge" style="background-color: ${bg}; color: white; margin-left: 10px; font-size: 11px;">Useful: ${val}%</span>`;
         }
 
-        // --- HIERARCHY / KPI GENERATORS ---
         function generateTileHTML(name, dataSet, chartId = null) {
             let filteredOpen = dataSet.filter(ro => ro.isOpen);
-            
             let priorityCount = dataSet.filter(ro => ro.isOpen && ro.isOOS && ro.usefulPct !== null && Math.round(ro.usefulPct * 100) < 100).length;
             
             let completedOrders = dataSet.filter(ro => ro.isCompletedKPI);
@@ -1326,11 +1312,12 @@
                                 unitsMap[ro.unitNo] = {
                                     unitNo: ro.unitNo,
                                     roNums: [],
+                                    roLinks: [],
+                                    openedDates: [],
                                     statuses: [],
                                     ecdCells: [],
                                     isOOS: ro.isOOS,
                                     usefulPct: ro.usefulPct,
-                                    roCount: ro.roCount,
                                     isDedicated: ro.isDedicated,
                                     custKey: ro.custKey
                                 };
@@ -1341,7 +1328,9 @@
                             else if (ro.ecdState === 'red') ecdCell = `<span class="ecd-red">${ro.ecdFormatted}</span>`;
                             else ecdCell = `<span class="ecd-green">${ro.ecdFormatted}</span>`;
 
-                            unitsMap[ro.unitNo].roNums.push(`<a href="https://afshub.azurewebsites.net/Vendors/VendedRepairOrder/Estimate/${ro.roNum}" target="_blank" class="ro-link">${ro.roNum}</a>`);
+                            unitsMap[ro.unitNo].roNums.push(ro.roNum);
+                            unitsMap[ro.unitNo].roLinks.push(`<a href="https://afshub.azurewebsites.net/Vendors/VendedRepairOrder/Estimate/${ro.roNum}" target="_blank" class="ro-link">${ro.roNum}</a>`);
+                            unitsMap[ro.unitNo].openedDates.push(ro.openedFormatted);
                             unitsMap[ro.unitNo].statuses.push(ro.status);
                             unitsMap[ro.unitNo].ecdCells.push(ecdCell);
                         });
@@ -1356,7 +1345,7 @@
                         let dedicatedBadge = isBranchDedicated ? `<span style="background-color: white; color: black; border: 1px solid black; border-radius: 12px; padding: 2px 6px; margin-left: 5px; font-size: 10px; font-weight: bold;">(DEDICATED)</span>` : '';
 
                         branchHtml += `<details class="ro-detail-node"><summary>${branch} (${branchROs.length} ROs)${branchBadge}${dedicatedBadge}</summary>`;
-                        let tableHTML = `<div class="table-wrapper"><table><colgroup><col style="width:15%;"><col style="width:18%;"><col style="width:15%;"><col style="width:10%;"><col style="width:10%;"><col style="width:17%;"><col style="width:15%;"></colgroup><thead><tr><th>AFS RO #</th><th>Unit No</th><th>Priority Status</th><th>OOS Status</th><th>Total Unit ROs</th><th>Status</th><th>ECD</th></tr></thead><tbody>`;
+                        let tableHTML = `<div class="table-wrapper"><table><colgroup><col style="width:20%;"><col style="width:12%;"><col style="width:12%;"><col style="width:10%;"><col style="width:12%;"><col style="width:20%;"><col style="width:14%;"></colgroup><thead><tr><th>AFS RO # & Dispatch</th><th>Unit No</th><th>Priority Status</th><th>OOS Status</th><th>Opened Date</th><th>Status</th><th>ECD</th></tr></thead><tbody>`;
                         
                         groupedUnits.forEach(u => {
                             let isGarda = u.custKey === 'Garda';
@@ -1365,30 +1354,32 @@
                             let isPriority = u.isOOS && u.usefulPct !== null && Math.round(u.usefulPct * 100) < 100;
                             let priorityStatusBadge = isPriority ? `<span class="badge badge-urgent">Priority</span>` : `<span class="badge badge-low">Normal</span>`;
 
-                            // --- FIREBASE SYNC STATUS BADGE ---
-                            let safeUnit = u.unitNo.replace(/[.#$\[\]]/g, '_');
-                            let isScheduled = !!globalUnitCheckState[safeUnit];
-                            let toggleClass = isScheduled ? 'status-scheduled' : 'status-pending';
-                            let toggleText = isScheduled ? '✓ SCHEDULED' : 'PENDING';
-                            let toggleState = isScheduled ? 'false' : 'true'; 
-                            let statusToggleHtml = `<span class="badge status-toggle ${toggleClass}" data-unit="${safeUnit}" onclick="toggleUnitCheck('${safeUnit}', ${toggleState})">${toggleText}</span>`;
-
                             let rowCount = u.roNums.length;
 
-                            u.roNums.forEach((roHtml, idx) => {
+                            u.roNums.forEach((roNum, idx) => {
+                                let safeRo = roNum.replace(/[.#$\[\]]/g, '_');
+                                let isDispatched = !!globalRoCheckState[safeRo];
+                                let toggleClass = isDispatched ? 'status-dispatched' : 'status-pending';
+                                let toggleText = isDispatched ? '✓ DISPATCHED' : 'PENDING';
+                                let toggleState = isDispatched ? 'false' : 'true'; 
+                                let statusToggleHtml = `<span class="badge status-toggle ${toggleClass}" data-ro="${safeRo}" onclick="toggleRoCheck('${safeRo}', ${toggleState})">${toggleText}</span>`;
+
+                                let roHtml = `<div style="display:flex; align-items:center; gap: 8px;">${statusToggleHtml} ${u.roLinks[idx]}</div>`;
+
                                 tableHTML += `<tr>`;
                                 tableHTML += `<td style="vertical-align:top; padding-top:15px; border-bottom: ${idx === rowCount - 1 ? '1px solid var(--border)' : '1px dashed #eee'};">${roHtml}</td>`;
                                 
                                 if (idx === 0) {
-                                    tableHTML += `<td rowspan="${rowCount}" style="vertical-align:top; padding-top:15px; border-bottom: 1px solid var(--border); border-left: 1px dashed #eee;"><div style="display:flex; align-items:center;">${statusToggleHtml} <strong>${u.unitNo}</strong></div></td>`;
+                                    tableHTML += `<td rowspan="${rowCount}" style="vertical-align:top; padding-top:15px; border-bottom: 1px solid var(--border); border-left: 1px dashed #eee;"><strong>${u.unitNo}</strong></td>`;
                                     tableHTML += `<td rowspan="${rowCount}" style="vertical-align:top; padding-top:15px; border-bottom: 1px solid var(--border);">${priorityStatusBadge}</td>`;
-                                    tableHTML += `<td rowspan="${rowCount}" style="vertical-align:top; padding-top:15px; border-bottom: 1px solid var(--border);">${oosBadge}</td>`;
-                                    tableHTML += `<td rowspan="${rowCount}" style="vertical-align:top; padding-top:15px; border-bottom: 1px solid var(--border); border-right: 1px dashed #eee;">${u.roCount}</td>`;
+                                    tableHTML += `<td rowspan="${rowCount}" style="vertical-align:top; padding-top:15px; border-bottom: 1px solid var(--border); border-right: 1px dashed #eee;">${oosBadge}</td>`;
                                 }
 
+                                let od = u.openedDates[idx] || '';
                                 let st = u.statuses[idx] || '';
                                 let ec = u.ecdCells[idx] || '';
 
+                                tableHTML += `<td style="vertical-align:top; padding-top:15px; border-bottom: ${idx === rowCount - 1 ? '1px solid var(--border)' : '1px dashed #eee'}; font-size:12px; font-weight: 700; color: #555;">${od}</td>`;
                                 tableHTML += `<td style="vertical-align:top; padding-top:15px; border-bottom: ${idx === rowCount - 1 ? '1px solid var(--border)' : '1px dashed #eee'}; font-size:11px; line-height:1.2;">${st}</td>`;
                                 tableHTML += `<td style="vertical-align:top; padding-top:15px; border-bottom: ${idx === rowCount - 1 ? '1px solid var(--border)' : '1px dashed #eee'};">${ec}</td>`;
                                 tableHTML += `</tr>`;
@@ -1456,12 +1447,13 @@
                             searchUnitsMap[ro.unitNo] = {
                                 unitNo: ro.unitNo,
                                 roNums: [],
+                                roLinks: [],
+                                openedDates: [],
                                 statuses: [],
                                 ecdCells: [],
                                 owners: [],
                                 isOOS: ro.isOOS,
                                 usefulPct: ro.usefulPct,
-                                roCount: ro.roCount,
                                 custKey: ro.custKey
                             };
                         }
@@ -1471,7 +1463,9 @@
                         else if (ro.ecdState === 'red') ecdCell = `<span class="ecd-red">${ro.ecdFormatted}</span>`;
                         else ecdCell = `<span class="ecd-green">${ro.ecdFormatted}</span>`;
 
-                        searchUnitsMap[ro.unitNo].roNums.push(`<a href="https://afshub.azurewebsites.net/Vendors/VendedRepairOrder/Estimate/${ro.roNum}" target="_blank" class="ro-link">${ro.roNum}</a>`);
+                        searchUnitsMap[ro.unitNo].roNums.push(ro.roNum);
+                        searchUnitsMap[ro.unitNo].roLinks.push(`<a href="https://afshub.azurewebsites.net/Vendors/VendedRepairOrder/Estimate/${ro.roNum}" target="_blank" class="ro-link">${ro.roNum}</a>`);
+                        searchUnitsMap[ro.unitNo].openedDates.push(ro.openedFormatted);
                         searchUnitsMap[ro.unitNo].statuses.push(ro.status);
                         searchUnitsMap[ro.unitNo].ecdCells.push(ecdCell);
                         searchUnitsMap[ro.unitNo].owners.push(ro.owner);
@@ -1483,32 +1477,38 @@
                         let isPriority = u.isOOS && u.usefulPct !== null && Math.round(u.usefulPct * 100) < 100;
                         let priorityStatusBadge = isPriority ? `<span class="badge badge-urgent">Priority</span>` : `<span class="badge badge-low">Normal</span>`;
 
-                        // --- FIREBASE SYNC STATUS BADGE ---
-                        let safeUnit = u.unitNo.replace(/[.#$\[\]]/g, '_');
-                        let isScheduled = !!globalUnitCheckState[safeUnit];
-                        let toggleClass = isScheduled ? 'status-scheduled' : 'status-pending';
-                        let toggleText = isScheduled ? '✓ SCHEDULED' : 'PENDING';
-                        let toggleState = isScheduled ? 'false' : 'true'; 
-                        let statusToggleHtml = `<span class="badge status-toggle ${toggleClass}" data-unit="${safeUnit}" onclick="toggleUnitCheck('${safeUnit}', ${toggleState})">${toggleText}</span>`;
-
+                        let joinedOwnersHtml = [...new Set(u.owners)].map(ow => `<div class="grouped-ro-item">${ow}</div>`).join('');
                         let rowCount = u.roNums.length;
 
-                        u.roNums.forEach((roHtml, idx) => {
+                        u.roNums.forEach((roNum, idx) => {
+                            let safeRo = roNum.replace(/[.#$\[\]]/g, '_');
+                            let isDispatched = !!globalRoCheckState[safeRo];
+                            let toggleClass = isDispatched ? 'status-dispatched' : 'status-pending';
+                            let toggleText = isDispatched ? '✓ DISPATCHED' : 'PENDING';
+                            let toggleState = isDispatched ? 'false' : 'true'; 
+                            let statusToggleHtml = `<span class="badge status-toggle ${toggleClass}" data-ro="${safeRo}" onclick="toggleRoCheck('${safeRo}', ${toggleState})">${toggleText}</span>`;
+
+                            let roHtml = `<div style="display:flex; align-items:center; gap: 8px;">${statusToggleHtml} ${u.roLinks[idx]}</div>`;
+
                             searchHtml += `<tr>`;
                             searchHtml += `<td style="vertical-align:top; padding-top:15px; border-bottom: ${idx === rowCount - 1 ? '1px solid var(--border)' : '1px dashed #eee'};">${roHtml}</td>`;
                             
                             if (idx === 0) {
-                                searchHtml += `<td rowspan="${rowCount}" style="vertical-align:top; padding-top:15px; border-bottom: 1px solid var(--border); border-left: 1px dashed #eee;"><div style="display:flex; align-items:center;">${statusToggleHtml} <strong>${u.unitNo}</strong></div></td>`;
+                                searchHtml += `<td rowspan="${rowCount}" style="vertical-align:top; padding-top:15px; border-bottom: 1px solid var(--border); border-left: 1px dashed #eee;"><strong>${u.unitNo}</strong></td>`;
                                 searchHtml += `<td rowspan="${rowCount}" style="vertical-align:top; padding-top:15px; border-bottom: 1px solid var(--border);">${priorityStatusBadge}</td>`;
-                                searchHtml += `<td rowspan="${rowCount}" style="vertical-align:top; padding-top:15px; border-bottom: 1px solid var(--border);">${oosBadge}</td>`;
-                                searchHtml += `<td rowspan="${rowCount}" style="vertical-align:top; padding-top:15px; border-bottom: 1px solid var(--border); border-right: 1px dashed #eee;">${u.roCount}</td>`;
+                                searchHtml += `<td rowspan="${rowCount}" style="vertical-align:top; padding-top:15px; border-bottom: 1px solid var(--border); border-right: 1px dashed #eee;">${oosBadge}</td>`;
                             }
 
-                            let ow = u.owners[idx] || '';
+                            let od = u.openedDates[idx] || '';
                             let st = u.statuses[idx] || '';
                             let ec = u.ecdCells[idx] || '';
 
-                            searchHtml += `<td style="vertical-align:top; padding-top:15px; border-bottom: ${idx === rowCount - 1 ? '1px solid var(--border)' : '1px dashed #eee'};">${ow}</td>`;
+                            searchHtml += `<td style="vertical-align:top; padding-top:15px; border-bottom: ${idx === rowCount - 1 ? '1px solid var(--border)' : '1px dashed #eee'}; font-size:12px; font-weight: 700; color: #555;">${od}</td>`;
+                            
+                            if (idx === 0) {
+                                searchHtml += `<td rowspan="${rowCount}" style="vertical-align:top; padding-top:15px; border-bottom: 1px solid var(--border); border-left: 1px dashed #eee;">${joinedOwnersHtml}</td>`;
+                            }
+                            
                             searchHtml += `<td style="vertical-align:top; padding-top:15px; border-bottom: ${idx === rowCount - 1 ? '1px solid var(--border)' : '1px dashed #eee'}; font-size:11px; line-height:1.2;"><b>Status:</b> ${st}<br><b>ECD:</b> ${ec}</td>`;
                             searchHtml += `</tr>`;
                         });
