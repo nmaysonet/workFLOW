@@ -153,7 +153,7 @@
         table { width: 100%; border-collapse: collapse; min-width: 1000px; font-size: 13px; table-layout: fixed; }
         th { background: #f4f6f9; padding: 12px; text-align: left; color: #555; text-transform: uppercase; font-size: 11px; border-bottom: 2px solid var(--border); font-weight: 700; cursor: pointer;}
         th:hover { background-color: #e2e8f0; }
-        td { padding: 12px; border-bottom: 1px solid var(--border); vertical-align: middle; font-weight: 500; word-wrap: break-word;}
+        td { padding: 12px; border-bottom: 1px solid var(--border); vertical-align: top; font-weight: 500; word-wrap: break-word;}
         tr:hover td { background-color: #fcfcfc; }
 
         .ro-link { color: #0066cc; font-weight: 700; }
@@ -167,6 +167,10 @@
         .ecd-red { color: #d9534f; font-weight: 800; }
         .ecd-green { color: #5cb85c; font-weight: 800; }
         .badge-ecd-missing { background-color: #fff3cd; color: #d9534f; padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: 800; border: 1px solid #d9534f; white-space: nowrap; display: inline-block; }
+        
+        /* Spacing for grouped ROs */
+        .grouped-ro-item { margin-bottom: 8px; }
+        .grouped-ro-item:last-child { margin-bottom: 0; }
     </style>
 </head>
 <body>
@@ -349,15 +353,15 @@
             <div class="drilldown-container table-wrapper">
                 <table>
                     <colgroup>
-                        <col style="width: 10%;"> <col style="width: 10%;"> <col style="width: 8%;">
-                        <col style="width: 7%;">  <col style="width: 6%;">  <col style="width: 12%;">
-                        <col style="width: 10%;"> <col style="width: 10%;"> <col style="width: 27%;">
+                        <col style="width: 15%;"> <col style="width: 15%;"> <col style="width: 15%;">
+                        <col style="width: 10%;">  <col style="width: 10%;">  <col style="width: 20%;">
+                        <col style="width: 15%;">
                     </colgroup>
                     <thead>
                         <tr>
                             <th>AFS RO #</th><th>Unit No</th><th>Priority Status</th>
                             <th>OOS Status</th><th>Total Unit ROs</th><th>Owner</th>
-                            <th>Status</th><th>ECD</th><th>Task / VMRS</th>
+                            <th>Status & ECD</th>
                         </tr>
                     </thead>
                     <tbody id="search-table-body"></tbody>
@@ -384,7 +388,6 @@
         let oosMap = {};
         let dedicatedBranches = new Set();
 
-        // Explicitly defining only the completed status equivalents as excluded
         const excludedStatuses = [
             'COMPLETED', 
             'FINAL CHARGES SUBMITTED'
@@ -626,7 +629,7 @@
                 "OOS Status": ro.isOOS ? "OOS" : "",
                 "Useful %": ro.usefulPct !== null ? Math.round(ro.usefulPct * 100) + '%' : "N/A",
                 "Total Unit ROs": ro.roCount, "Status": ro.status, "ECD": ro.ecdFormatted,
-                "Task / VMRS": ro.vmrs, "Customer Group": ro.drillTopLevel, "Subregion": ro.subregion, "Branch": ro.branch
+                "Customer Group": ro.drillTopLevel, "Subregion": ro.subregion, "Branch": ro.branch
             }));
 
             const worksheet = XLSX.utils.json_to_sheet(excelRows);
@@ -647,8 +650,7 @@
                 "AFS RO #": ro.roNum, "Unit No": ro.unitNo, 
                 "Priority Status": (ro.isOOS && ro.usefulPct !== null && Math.round(ro.usefulPct * 100) < 100) ? "Priority" : "Normal",
                 "OOS Status": ro.isOOS ? "OOS" : "",
-                "Total Unit ROs": ro.roCount, "Owner": ro.owner, "Status": ro.status, "ECD": ro.ecdFormatted,
-                "Task / VMRS": ro.vmrs
+                "Total Unit ROs": ro.roCount, "Owner": ro.owner, "Status": ro.status, "ECD": ro.ecdFormatted
             }));
             const worksheet = XLSX.utils.json_to_sheet(excelRows);
             const workbook = XLSX.utils.book_new();
@@ -929,26 +931,11 @@
                     activeVended.add(finalOwner);
                 }
 
-                let openedDate = new Date(openedRaw);
-                let openedDT = isNaN(openedDate.getTime()) ? null : openedDate;
-
-                let taskStr = vmrs.toLowerCase();
-                let isPMOrder = false;
-                for (let kw of pmKeywords) {
-                    if (kw && taskStr.includes(kw)) {
-                        isPMOrder = true;
-                        break;
-                    }
-                }
-
                 let drillTopLevel = custKey + (loc.region !== 'Unknown State' && loc.region !== 'Unknown Region' ? ' ' + loc.region : '');
                 allCustSet.add(custKey);
 
                 let statusStr = String(status || '').toUpperCase().trim();
                 let isOOS = oosMap[unit] === true; 
-                
-                // --- STRICT OPEN FLAG ---
-                // Open means any status OTHER THAN 'COMPLETED' or 'FINAL CHARGES SUBMITTED'
                 let isOpen = !excludedStatuses.includes(statusStr);
                 
                 // --- MAP USEFUL % ---
@@ -984,7 +971,6 @@
                 }
 
                 let isCompletedKPI = false; let isOnTimeKPI = false; let isLateKPI = false;
-                // If it is in an excluded status (i.e. closed) and has a completed date...
                 if (excludedStatuses.includes(statusStr) && compRaw !== '') {
                     isCompletedKPI = true; let cDate = new Date(compRaw);
                     if (!isNaN(cDate.getTime())) {
@@ -1032,23 +1018,19 @@
 
         // --- HIERARCHY / KPI GENERATORS ---
         function generateTileHTML(name, dataSet, chartId = null) {
-            // Apply strict definition: ONLY Open ROs
             let filteredOpen = dataSet.filter(ro => ro.isOpen);
-            
-            // If the user clicks the "Priority" tab filter on the UI
             if(currentFilter === 'PRIORITY') {
                 filteredOpen = filteredOpen.filter(ro => ro.isOOS && ro.usefulPct !== null && Math.round(ro.usefulPct * 100) < 100);
             }
             
-            // Priority is strictly OOS && Useful % < 100 (Calculated for the second box always)
             let priorityCount = dataSet.filter(ro => ro.isOpen && ro.isOOS && ro.usefulPct !== null && Math.round(ro.usefulPct * 100) < 100).length;
-            
             let completedOrders = dataSet.filter(ro => ro.isCompletedKPI);
             let compCount = completedOrders.length;
             let onTimeCount = completedOrders.filter(ro => ro.isOnTimeKPI).length;
             let lateCount = completedOrders.filter(ro => ro.isLateKPI).length;
             let compPct = compCount > 0 ? Math.round((onTimeCount / compCount) * 100) : 0;
             let latePct = compCount > 0 ? Math.round((lateCount / compCount) * 100) : 0;
+            let filterLabel = currentFilter === 'ALL' ? 'Open ROs' : `Priority ROs`;
 
             let chartHTML = '';
             if (chartId) {
@@ -1059,7 +1041,7 @@
                 <div class="kpi-name">${name}</div>
                 <div class="kpi-top-metrics">
                     <div class="highlight-box">
-                        <div class="title">Open ROs</div>
+                        <div class="title">${filterLabel}</div>
                         <div class="num">${filteredOpen.length}</div>
                     </div>
                     <div class="highlight-box urgent-box">
@@ -1206,32 +1188,68 @@
                             subLvlUseful.push(bPct);
                             topLvlUseful.push(bPct);
                         }
-                        
-                        branchROs.sort((a,b) => { 
-                            return (b.isOOS === true ? 1 : 0) - (a.isOOS === true ? 1 : 0);
-                        });
-                        
-                        let branchBadge = getUsefulBadge(bPct !== null && bPct !== undefined ? [bPct] : []);
-                        
-                        let isBranchDedicated = branchROs.some(ro => ro.isDedicated);
-                        let dedicatedBadge = isBranchDedicated ? `<span style="background-color: white; color: black; border: 1px solid black; border-radius: 12px; padding: 2px 6px; margin-left: 5px; font-size: 10px; font-weight: bold;">(DEDICATED)</span>` : '';
 
-                        branchHtml += `<details class="ro-detail-node"><summary>${branch} (${branchROs.length} ROs)${branchBadge}${dedicatedBadge}</summary>`;
-                        let tableHTML = `<div class="table-wrapper"><table><colgroup><col style="width:12%;"><col style="width:10%;"><col style="width:10%;"><col style="width:8%;"><col style="width:6%;"><col style="width:14%;"><col style="width:10%;"><col style="width:30%;"></colgroup><thead><tr><th>AFS RO #</th><th>Unit No</th><th>Priority Status</th><th>OOS Status</th><th>Total Unit ROs</th><th>Status</th><th>ECD</th><th>Task / VMRS</th></tr></thead><tbody>`;
+                        // --- NEW: Group ROs by UnitNo ---
+                        let unitsMap = {};
                         branchROs.forEach(ro => {
+                            if(!unitsMap[ro.unitNo]) {
+                                unitsMap[ro.unitNo] = {
+                                    unitNo: ro.unitNo,
+                                    roNums: [],
+                                    statuses: [],
+                                    ecdCells: [],
+                                    isOOS: ro.isOOS,
+                                    usefulPct: ro.usefulPct,
+                                    roCount: ro.roCount,
+                                    isDedicated: ro.isDedicated,
+                                    custKey: ro.custKey
+                                };
+                            }
+                            
                             let ecdCell = '';
                             if (ro.ecdState === 'missing') ecdCell = `<span class="badge-ecd-missing">${ro.ecdFormatted}</span>`;
                             else if (ro.ecdState === 'red') ecdCell = `<span class="ecd-red">${ro.ecdFormatted}</span>`;
                             else ecdCell = `<span class="ecd-green">${ro.ecdFormatted}</span>`;
+
+                            unitsMap[ro.unitNo].roNums.push(`<a href="https://afshub.azurewebsites.net/Vendors/VendedRepairOrder/Estimate/${ro.roNum}" target="_blank" class="ro-link">${ro.roNum}</a>`);
+                            unitsMap[ro.unitNo].statuses.push(ro.status);
+                            unitsMap[ro.unitNo].ecdCells.push(ecdCell);
+                        });
+
+                        let groupedUnits = Object.values(unitsMap);
+                        groupedUnits.sort((a,b) => { 
+                            return (b.isOOS === true ? 1 : 0) - (a.isOOS === true ? 1 : 0);
+                        });
+                        
+                        let branchBadge = getUsefulBadge(bPct !== null && bPct !== undefined ? [bPct] : []);
+                        let isBranchDedicated = branchROs.some(ro => ro.isDedicated);
+                        let dedicatedBadge = isBranchDedicated ? `<span style="background-color: white; color: black; border: 1px solid black; border-radius: 12px; padding: 2px 6px; margin-left: 5px; font-size: 10px; font-weight: bold;">(DEDICATED)</span>` : '';
+
+                        branchHtml += `<details class="ro-detail-node"><summary>${branch} (${branchROs.length} ROs)${branchBadge}${dedicatedBadge}</summary>`;
+                        let tableHTML = `<div class="table-wrapper"><table><colgroup><col style="width:15%;"><col style="width:15%;"><col style="width:15%;"><col style="width:10%;"><col style="width:10%;"><col style="width:20%;"><col style="width:15%;"></colgroup><thead><tr><th>AFS RO #</th><th>Unit No</th><th>Priority Status</th><th>OOS Status</th><th>Total Unit ROs</th><th>Status</th><th>ECD</th></tr></thead><tbody>`;
+                        
+                        groupedUnits.forEach(u => {
+                            let isGarda = u.custKey === 'Garda';
+                            let oosBadge = isGarda ? (u.isOOS ? `<span class="badge badge-oos">OOS</span>` : `<span class="badge badge-active">ACTIVE</span>`) : '';
                             
-                            let isGarda = ro.custKey === 'Garda';
-                            let oosBadge = isGarda ? (ro.isOOS ? `<span class="badge badge-oos">OOS</span>` : `<span class="badge badge-active">ACTIVE</span>`) : '';
-                            
-                            let isPriority = ro.isOOS && ro.usefulPct !== null && Math.round(ro.usefulPct * 100) < 100;
+                            let isPriority = u.isOOS && u.usefulPct !== null && Math.round(u.usefulPct * 100) < 100;
                             let priorityStatusBadge = isPriority ? `<span class="badge badge-urgent">Priority</span>` : `<span class="badge badge-low">Normal</span>`;
 
-                            tableHTML += `<tr><td><a href="https://afshub.azurewebsites.net/Vendors/VendedRepairOrder/Estimate/${ro.roNum}" target="_blank" class="ro-link">${ro.roNum}</a></td><td><strong>${ro.unitNo}</strong></td><td>${priorityStatusBadge}</td><td>${oosBadge}</td><td>${ro.roCount}</td><td>${ro.status}</td><td>${ecdCell}</td><td>${ro.vmrs}</td></tr>`;
+                            let joinedROsHtml = u.roNums.map(ro => `<div class="grouped-ro-item">${ro}</div>`).join('');
+                            let joinedStatusesHtml = u.statuses.map(st => `<div class="grouped-ro-item" style="font-size:11px; line-height:1.2;">${st}</div>`).join('');
+                            let joinedECDsHtml = u.ecdCells.map(ec => `<div class="grouped-ro-item">${ec}</div>`).join('');
+
+                            tableHTML += `<tr>
+                                <td style="vertical-align:top; padding-top:15px;">${joinedROsHtml}</td>
+                                <td style="vertical-align:top; padding-top:15px;"><strong>${u.unitNo}</strong></td>
+                                <td style="vertical-align:top; padding-top:15px;">${priorityStatusBadge}</td>
+                                <td style="vertical-align:top; padding-top:15px;">${oosBadge}</td>
+                                <td style="vertical-align:top; padding-top:15px;">${u.roCount}</td>
+                                <td style="vertical-align:top; padding-top:15px;">${joinedStatusesHtml}</td>
+                                <td style="vertical-align:top; padding-top:15px;">${joinedECDsHtml}</td>
+                            </tr>`;
                         });
+                        
                         tableHTML += `</tbody></table></div>`; 
                         branchHtml += tableHTML + `</details>`;
                     }
@@ -1281,24 +1299,58 @@
                 if(searchTerm.length === 0) { navigate(lastActiveView, null, true); return; }
                 navigate('search-view', null, true);
                 document.getElementById('search-term-display').innerText = searchTerm;
-                // Exclude closed from search
+                
                 const results = processedData.filter(ro => ro.unitNo.toLowerCase().includes(searchTerm));
                 let searchHtml = '';
-                if(results.length === 0) searchHtml = '<tr><td colspan="9" style="text-align:center;">No matching units.</td></tr>';
-                else {
+                if(results.length === 0) {
+                    searchHtml = '<tr><td colspan="7" style="text-align:center;">No matching units.</td></tr>';
+                } else {
+                    let searchUnitsMap = {};
                     results.forEach(ro => {
+                        if(!searchUnitsMap[ro.unitNo]) {
+                            searchUnitsMap[ro.unitNo] = {
+                                unitNo: ro.unitNo,
+                                roNums: [],
+                                statuses: [],
+                                ecdCells: [],
+                                owners: [],
+                                isOOS: ro.isOOS,
+                                usefulPct: ro.usefulPct,
+                                roCount: ro.roCount,
+                                custKey: ro.custKey
+                            };
+                        }
+                        
                         let ecdCell = '';
                         if (ro.ecdState === 'missing') ecdCell = `<span class="badge-ecd-missing">${ro.ecdFormatted}</span>`;
                         else if (ro.ecdState === 'red') ecdCell = `<span class="ecd-red">${ro.ecdFormatted}</span>`;
                         else ecdCell = `<span class="ecd-green">${ro.ecdFormatted}</span>`;
 
-                        let isGarda = ro.custKey === 'Garda';
-                        let oosBadge = isGarda ? (ro.isOOS ? `<span class="badge badge-oos">OOS</span>` : `<span class="badge badge-active">ACTIVE</span>`) : '';
-                        
-                        let isPriority = ro.isOOS && ro.usefulPct !== null && Math.round(ro.usefulPct * 100) < 100;
+                        searchUnitsMap[ro.unitNo].roNums.push(`<a href="https://afshub.azurewebsites.net/Vendors/VendedRepairOrder/Estimate/${ro.roNum}" target="_blank" class="ro-link">${ro.roNum}</a>`);
+                        searchUnitsMap[ro.unitNo].statuses.push(ro.status);
+                        searchUnitsMap[ro.unitNo].ecdCells.push(ecdCell);
+                        searchUnitsMap[ro.unitNo].owners.push(ro.owner);
+                    });
+
+                    Object.values(searchUnitsMap).forEach(u => {
+                        let isGarda = u.custKey === 'Garda';
+                        let oosBadge = isGarda ? (u.isOOS ? `<span class="badge badge-oos">OOS</span>` : `<span class="badge badge-active">ACTIVE</span>`) : '';
+                        let isPriority = u.isOOS && u.usefulPct !== null && Math.round(u.usefulPct * 100) < 100;
                         let priorityStatusBadge = isPriority ? `<span class="badge badge-urgent">Priority</span>` : `<span class="badge badge-low">Normal</span>`;
 
-                        searchHtml += `<tr><td><a href="https://afshub.azurewebsites.net/Vendors/VendedRepairOrder/Estimate/${ro.roNum}" target="_blank" class="ro-link">${ro.roNum}</a></td><td><strong>${ro.unitNo}</strong></td><td>${priorityStatusBadge}</td><td>${oosBadge}</td><td>${ro.roCount}</td><td>${ro.owner}</td><td>${ro.status}</td><td>${ecdCell}</td><td>${ro.vmrs}</td></tr>`;
+                        let joinedROsHtml = u.roNums.map(ro => `<div class="grouped-ro-item">${ro}</div>`).join('');
+                        let joinedStatusesAndECDsHtml = u.statuses.map((st, i) => `<div class="grouped-ro-item" style="font-size:11px; line-height:1.2;"><b>Status:</b> ${st}<br><b>ECD:</b> ${u.ecdCells[i]}</div>`).join('<hr style="border-top:1px dashed #eee; margin:5px 0;">');
+                        let joinedOwnersHtml = [...new Set(u.owners)].map(ow => `<div class="grouped-ro-item">${ow}</div>`).join('');
+
+                        searchHtml += `<tr>
+                            <td style="vertical-align:top; padding-top:15px;">${joinedROsHtml}</td>
+                            <td style="vertical-align:top; padding-top:15px;"><strong>${u.unitNo}</strong></td>
+                            <td style="vertical-align:top; padding-top:15px;">${priorityStatusBadge}</td>
+                            <td style="vertical-align:top; padding-top:15px;">${oosBadge}</td>
+                            <td style="vertical-align:top; padding-top:15px;">${u.roCount}</td>
+                            <td style="vertical-align:top; padding-top:15px;">${joinedOwnersHtml}</td>
+                            <td style="vertical-align:top; padding-top:15px;">${joinedStatusesAndECDsHtml}</td>
+                        </tr>`;
                     });
                 }
                 document.getElementById('search-table-body').innerHTML = searchHtml;
