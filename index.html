@@ -171,6 +171,12 @@
         .ecd-green { color: #5cb85c; font-weight: 800; }
         .badge-ecd-missing { background-color: #fff3cd; color: #d9534f; padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: 800; border: 1px solid #d9534f; white-space: nowrap; display: inline-block; }
         
+        /* Custom Status Toggles */
+        .status-toggle { cursor: pointer; margin-right: 8px; user-select: none; transition: 0.2s; box-shadow: 0 1px 3px rgba(0,0,0,0.2); display: inline-block; text-align: center; min-width: 85px; font-size: 10px; letter-spacing: 0.5px;}
+        .status-toggle:hover { opacity: 0.8; transform: translateY(-1px); }
+        .status-pending { background-color: var(--urgent-red); color: white; border: 1px solid #c9302c; }
+        .status-dispatched { background-color: var(--low-green); color: white; border: 1px solid #4cae4c; }
+
         .grouped-ro-item { margin-bottom: 8px; }
         .grouped-ro-item:last-child { margin-bottom: 0; }
     </style>
@@ -343,7 +349,7 @@
             <div class="drilldown-container table-wrapper">
                 <table>
                     <colgroup>
-                        <col style="width: 15%;"> <col style="width: 15%;"> <col style="width: 15%;">
+                        <col style="width: 15%;"> <col style="width: 18%;"> <col style="width: 12%;">
                         <col style="width: 10%;">  <col style="width: 10%;">  <col style="width: 20%;">
                         <col style="width: 15%;">
                     </colgroup>
@@ -375,19 +381,28 @@
         const db = firebase.database();
         let globalUnitCheckState = {};
 
-        // Listen for Realtime Checkbox Updates
+        // Listen for Realtime Button Updates
         db.ref('unitChecks').on('value', (snapshot) => {
             globalUnitCheckState = snapshot.val() || {};
-            // Update all rendered checkboxes instantly
-            document.querySelectorAll('.unit-checkbox').forEach(cb => {
-                let unit = cb.getAttribute('data-unit');
-                cb.checked = !!globalUnitCheckState[unit];
+            // Update all rendered buttons instantly
+            document.querySelectorAll('.status-toggle').forEach(btn => {
+                let unit = btn.getAttribute('data-unit');
+                let isDispatched = !!globalUnitCheckState[unit];
+                if (isDispatched) {
+                    btn.className = 'badge status-toggle status-dispatched';
+                    btn.innerHTML = '✓ DISPATCHED';
+                    btn.onclick = function() { toggleUnitCheck(unit, false); };
+                } else {
+                    btn.className = 'badge status-toggle status-pending';
+                    btn.innerHTML = 'PENDING';
+                    btn.onclick = function() { toggleUnitCheck(unit, true); };
+                }
             });
         });
 
-        // Triggered when a user clicks a checkbox
+        // Triggered when a user clicks the status badge
         function toggleUnitCheck(unit, isChecked) {
-            let safeUnit = unit.replace(/[.#$\[\]]/g, '_'); // Firebase rejects weird chars in keys
+            let safeUnit = unit.replace(/[.#$\[\]]/g, '_'); 
             db.ref('unitChecks/' + safeUnit).set(isChecked);
         }
 
@@ -436,7 +451,7 @@
             return n;
         }
 
-        // Extremely aggressive normalizer to fix typos in Excel like "hanver tnshp" or "mrtle beach"
+        // Extremely aggressive normalizer to fix typos in Excel
         function normalizeBranchStr(str) {
             if (!str) return null;
             return String(str).toUpperCase().replace(/\d{3}[- ]?\d{2}/g, '').replace(/[^A-Z0-9]/ig, '');
@@ -1138,7 +1153,6 @@
         // --- HIERARCHY / KPI GENERATORS ---
         function generateTileHTML(name, dataSet, chartId = null) {
             let filteredOpen = dataSet.filter(ro => ro.isOpen);
-            
             let priorityCount = dataSet.filter(ro => ro.isOpen && ro.isOOS && ro.usefulPct !== null && Math.round(ro.usefulPct * 100) < 100).length;
             
             let completedOrders = dataSet.filter(ro => ro.isCompletedKPI);
@@ -1341,7 +1355,7 @@
                         let dedicatedBadge = isBranchDedicated ? `<span style="background-color: white; color: black; border: 1px solid black; border-radius: 12px; padding: 2px 6px; margin-left: 5px; font-size: 10px; font-weight: bold;">(DEDICATED)</span>` : '';
 
                         branchHtml += `<details class="ro-detail-node"><summary>${branch} (${branchROs.length} ROs)${branchBadge}${dedicatedBadge}</summary>`;
-                        let tableHTML = `<div class="table-wrapper"><table><colgroup><col style="width:15%;"><col style="width:15%;"><col style="width:15%;"><col style="width:10%;"><col style="width:10%;"><col style="width:20%;"><col style="width:15%;"></colgroup><thead><tr><th>AFS RO #</th><th>Unit No</th><th>Priority Status</th><th>OOS Status</th><th>Total Unit ROs</th><th>Status</th><th>ECD</th></tr></thead><tbody>`;
+                        let tableHTML = `<div class="table-wrapper"><table><colgroup><col style="width:15%;"><col style="width:18%;"><col style="width:15%;"><col style="width:10%;"><col style="width:10%;"><col style="width:17%;"><col style="width:15%;"></colgroup><thead><tr><th>AFS RO #</th><th>Unit No</th><th>Priority Status</th><th>OOS Status</th><th>Total Unit ROs</th><th>Status</th><th>ECD</th></tr></thead><tbody>`;
                         
                         groupedUnits.forEach(u => {
                             let isGarda = u.custKey === 'Garda';
@@ -1350,10 +1364,13 @@
                             let isPriority = u.isOOS && u.usefulPct !== null && Math.round(u.usefulPct * 100) < 100;
                             let priorityStatusBadge = isPriority ? `<span class="badge badge-urgent">Priority</span>` : `<span class="badge badge-low">Normal</span>`;
 
-                            // --- FIREBASE SYNC CHECKBOX ---
+                            // --- FIREBASE SYNC STATUS BADGE ---
                             let safeUnit = u.unitNo.replace(/[.#$\[\]]/g, '_');
-                            let isChecked = globalUnitCheckState[safeUnit] ? 'checked' : '';
-                            let checkboxHtml = `<input type="checkbox" class="unit-checkbox" data-unit="${safeUnit}" onchange="toggleUnitCheck('${safeUnit}', this.checked)" ${isChecked} style="margin-right: 8px; cursor: pointer; transform: scale(1.2);">`;
+                            let isDispatched = !!globalUnitCheckState[safeUnit];
+                            let toggleClass = isDispatched ? 'status-dispatched' : 'status-pending';
+                            let toggleText = isDispatched ? '✓ DISPATCHED' : 'PENDING';
+                            let toggleState = isDispatched ? 'false' : 'true'; 
+                            let statusToggleHtml = `<span class="badge status-toggle ${toggleClass}" data-unit="${safeUnit}" onclick="toggleUnitCheck('${safeUnit}', ${toggleState})">${toggleText}</span>`;
 
                             let rowCount = u.roNums.length;
 
@@ -1362,7 +1379,7 @@
                                 tableHTML += `<td style="vertical-align:top; padding-top:15px; border-bottom: ${idx === rowCount - 1 ? '1px solid var(--border)' : '1px dashed #eee'};">${roHtml}</td>`;
                                 
                                 if (idx === 0) {
-                                    tableHTML += `<td rowspan="${rowCount}" style="vertical-align:top; padding-top:15px; border-bottom: 1px solid var(--border); border-left: 1px dashed #eee;"><div style="display:flex; align-items:center;">${checkboxHtml} <strong>${u.unitNo}</strong></div></td>`;
+                                    tableHTML += `<td rowspan="${rowCount}" style="vertical-align:top; padding-top:15px; border-bottom: 1px solid var(--border); border-left: 1px dashed #eee;"><div style="display:flex; align-items:center;">${statusToggleHtml} <strong>${u.unitNo}</strong></div></td>`;
                                     tableHTML += `<td rowspan="${rowCount}" style="vertical-align:top; padding-top:15px; border-bottom: 1px solid var(--border);">${priorityStatusBadge}</td>`;
                                     tableHTML += `<td rowspan="${rowCount}" style="vertical-align:top; padding-top:15px; border-bottom: 1px solid var(--border);">${oosBadge}</td>`;
                                     tableHTML += `<td rowspan="${rowCount}" style="vertical-align:top; padding-top:15px; border-bottom: 1px solid var(--border); border-right: 1px dashed #eee;">${u.roCount}</td>`;
@@ -1465,10 +1482,13 @@
                         let isPriority = u.isOOS && u.usefulPct !== null && Math.round(u.usefulPct * 100) < 100;
                         let priorityStatusBadge = isPriority ? `<span class="badge badge-urgent">Priority</span>` : `<span class="badge badge-low">Normal</span>`;
 
-                        // --- FIREBASE SYNC CHECKBOX ---
+                        // --- FIREBASE SYNC STATUS BADGE ---
                         let safeUnit = u.unitNo.replace(/[.#$\[\]]/g, '_');
-                        let isChecked = globalUnitCheckState[safeUnit] ? 'checked' : '';
-                        let checkboxHtml = `<input type="checkbox" class="unit-checkbox" data-unit="${safeUnit}" onchange="toggleUnitCheck('${safeUnit}', this.checked)" ${isChecked} style="margin-right: 8px; cursor: pointer; transform: scale(1.2);">`;
+                        let isDispatched = !!globalUnitCheckState[safeUnit];
+                        let toggleClass = isDispatched ? 'status-dispatched' : 'status-pending';
+                        let toggleText = isDispatched ? '✓ DISPATCHED' : 'PENDING';
+                        let toggleState = isDispatched ? 'false' : 'true'; 
+                        let statusToggleHtml = `<span class="badge status-toggle ${toggleClass}" data-unit="${safeUnit}" onclick="toggleUnitCheck('${safeUnit}', ${toggleState})">${toggleText}</span>`;
 
                         let rowCount = u.roNums.length;
 
@@ -1477,7 +1497,7 @@
                             searchHtml += `<td style="vertical-align:top; padding-top:15px; border-bottom: ${idx === rowCount - 1 ? '1px solid var(--border)' : '1px dashed #eee'};">${roHtml}</td>`;
                             
                             if (idx === 0) {
-                                searchHtml += `<td rowspan="${rowCount}" style="vertical-align:top; padding-top:15px; border-bottom: 1px solid var(--border); border-left: 1px dashed #eee;"><div style="display:flex; align-items:center;">${checkboxHtml} <strong>${u.unitNo}</strong></div></td>`;
+                                searchHtml += `<td rowspan="${rowCount}" style="vertical-align:top; padding-top:15px; border-bottom: 1px solid var(--border); border-left: 1px dashed #eee;"><div style="display:flex; align-items:center;">${statusToggleHtml} <strong>${u.unitNo}</strong></div></td>`;
                                 searchHtml += `<td rowspan="${rowCount}" style="vertical-align:top; padding-top:15px; border-bottom: 1px solid var(--border);">${priorityStatusBadge}</td>`;
                                 searchHtml += `<td rowspan="${rowCount}" style="vertical-align:top; padding-top:15px; border-bottom: 1px solid var(--border);">${oosBadge}</td>`;
                                 searchHtml += `<td rowspan="${rowCount}" style="vertical-align:top; padding-top:15px; border-bottom: 1px solid var(--border); border-right: 1px dashed #eee;">${u.roCount}</td>`;
