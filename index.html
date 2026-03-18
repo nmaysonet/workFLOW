@@ -8,8 +8,8 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js" async></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js" async></script>
 
     <style>
         /* Global Styles & Reset */
@@ -260,7 +260,7 @@
                 <p style="color: #666; margin-bottom: 15px; font-size: 14px;">Attempting to fetch <b>master_workFLOW.xlsx</b> from local directory...</p>
                 <div id="upload-status" style="font-size: 15px; font-weight: bold; color: #888;">Initializing...</div>
                 <div id="manual-upload-section" style="display: none; margin-top: 25px; padding-top: 20px; border-top: 1px dashed #ccc;">
-                    <p style="font-size: 13px; color: #888; margin-bottom: 10px;">Fallback: File not found. Upload manually below.</p>
+                    <p style="font-size: 13px; color: #888; margin-bottom: 10px;">Fallback: File not found or network blocked. Upload manually below.</p>
                     <label for="excelFileInput" class="upload-btn">Browse Files</label>
                     <input type="file" id="excelFileInput" accept=".xlsx, .xls, .csv" multiple />
                 </div>
@@ -367,33 +367,40 @@
     </div>
 
     <script>
-        // --- FIREBASE SYNC ENGINE (With Fallback) ---
+        // --- BACKGROUND FIREBASE ENGINE (Non-Blocking) ---
         let db = null;
         let globalRoCheckState = {};
 
-        try {
-            if (typeof firebase !== 'undefined') {
-                const firebaseConfig = {
-                    apiKey: "AIzaSyCr3VAldI-pPCb7APx3rJAEZvf_nl0iz1g",
-                    authDomain: "workflow-dashboard-e6134.firebaseapp.com",
-                    databaseURL: "https://workflow-dashboard-e6134-default-rtdb.firebaseio.com",
-                    projectId: "workflow-dashboard-e6134",
-                    storageBucket: "workflow-dashboard-e6134.firebasestorage.app",
-                    messagingSenderId: "641710248116",
-                    appId: "1:641710248116:web:1546701879d573041447e1"
-                };
-                firebase.initializeApp(firebaseConfig);
-                db = firebase.database();
+        function initializeSyncEngine() {
+            try {
+                if (typeof firebase !== 'undefined') {
+                    const firebaseConfig = {
+                        apiKey: "AIzaSyCr3VAldI-pPCb7APx3rJAEZvf_nl0iz1g",
+                        authDomain: "workflow-dashboard-e6134.firebaseapp.com",
+                        databaseURL: "https://workflow-dashboard-e6134-default-rtdb.firebaseio.com",
+                        projectId: "workflow-dashboard-e6134",
+                        storageBucket: "workflow-dashboard-e6134.firebasestorage.app",
+                        messagingSenderId: "641710248116",
+                        appId: "1:641710248116:web:1546701879d573041447e1"
+                    };
+                    firebase.initializeApp(firebaseConfig);
+                    db = firebase.database();
 
-                // Listen for Realtime Button Updates
-                db.ref('roChecks').on('value', (snapshot) => {
-                    globalRoCheckState = snapshot.val() || {};
-                    updateAllStatusBadges();
-                });
+                    db.ref('roChecks').on('value', (snapshot) => {
+                        globalRoCheckState = snapshot.val() || {};
+                        updateAllStatusBadges();
+                    });
+                } else {
+                    // Try again in 1 second if script hasn't loaded yet
+                    setTimeout(initializeSyncEngine, 1000);
+                }
+            } catch (error) {
+                console.warn("Firebase blocked by network or browser. Falling back to local state.", error);
             }
-        } catch (error) {
-            console.warn("Firebase blocked by network or browser. Falling back to local tracking.", error);
         }
+        
+        // Start trying to connect in the background
+        setTimeout(initializeSyncEngine, 500);
 
         function updateAllStatusBadges() {
             document.querySelectorAll('.status-toggle').forEach(btn => {
@@ -567,7 +574,8 @@
             }
         }
 
-        window.onload = fetchData;
+        // --- KICKOFF SCRIPT (Bypasses onload block) ---
+        setTimeout(fetchData, 50);
 
         document.getElementById('excelFileInput').addEventListener('change', async function(e) {
             const files = Array.from(e.target.files);
