@@ -458,7 +458,6 @@
                         let headerIdx = -1;
                         let tabType = 'UNKNOWN';
                         
-                        // Robust Header Scanner (skips completely blank format rows)
                         for(let i=0; i < Math.min(20, aoa.length); i++) {
                             if (!aoa[i] || !Array.isArray(aoa[i])) continue; 
                             
@@ -912,7 +911,6 @@
                 let finalTeam = 'VENDED REPAIR';
                 let isDedicatedFlag = false;
 
-                // Check if unit is explicitly marked Dedicated
                 if (unitOwnerMap[unit] && unitOwnerMap[unit].owner.toUpperCase() === 'DEDICATED') {
                     isDedicatedFlag = true;
                 }
@@ -928,24 +926,35 @@
                     finalTeam = unitOwnerMap[unit].team;
                 }
 
-                // Priority 3: Fallback to the Creator if active
+                // Priority 3: Fallback to the Creator
                 if (!finalOwner || finalOwner === '') {
-                    if (globalOwnerMap[ownerEmailLower] && globalOwnerMap[ownerEmailLower].status === 'ACTIVE') {
+                    if (globalOwnerMap[ownerEmailLower]) {
                         finalOwner = globalOwnerMap[ownerEmailLower].name;
                         finalTeam = globalOwnerMap[ownerEmailLower].team;
+                    } else if (rawOwnerEmail) {
+                        finalOwner = String(rawOwnerEmail).split('@')[0];
+                        finalOwner = finalOwner.charAt(0).toUpperCase() + finalOwner.slice(1);
+                        finalTeam = 'VENDED REPAIR';
                     } else {
-                        // Drop from system entirely if not caught by any priority
-                        return { roNum: '' };
+                        finalOwner = 'Unassigned';
+                        finalTeam = 'VENDED REPAIR';
                     }
                 }
 
-                // Dynamically ensure the owner exists in the correct array so their tile renders
-                if (finalTeam === 'PM') {
-                    activePM.add(finalOwner);
-                } else if (finalTeam === 'ERS') {
-                    activeERS.add(finalOwner);
-                } else {
-                    activeVended.add(finalOwner);
+                // Determine if we should generate a tile for this owner
+                let creatorIsActive = (globalOwnerMap[ownerEmailLower] && globalOwnerMap[ownerEmailLower].status === 'ACTIVE');
+                let creatorIsSpecific = specificCreators.includes(ownerEmailLower);
+                let ownerFromUnit = (unitOwnerMap[unit] && !isDedicatedFlag && unitOwnerMap[unit].owner);
+                
+                // Only add to tile arrays if they are active, specific, unit owners, dedicated, or unassigned
+                if (creatorIsActive || creatorIsSpecific || ownerFromUnit || finalOwner === 'Dedicated' || finalOwner === 'Unassigned') {
+                    if (finalTeam === 'PM') {
+                        activePM.add(finalOwner);
+                    } else if (finalTeam === 'ERS') {
+                        activeERS.add(finalOwner);
+                    } else {
+                        activeVended.add(finalOwner);
+                    }
                 }
 
                 let openedDate = new Date(openedRaw);
@@ -1048,9 +1057,6 @@
         // --- HIERARCHY / KPI GENERATORS ---
         function generateTileHTML(name, dataSet, chartId = null) {
             let filteredOpen = dataSet.filter(ro => ro.isOpen);
-            if(currentFilter === 'PRIORITY') {
-                filteredOpen = filteredOpen.filter(ro => ro.isOOS && ro.usefulPct !== null && Math.round(ro.usefulPct * 100) < 100);
-            }
             
             let priorityCount = dataSet.filter(ro => ro.isOpen && ro.isOOS && ro.usefulPct !== null && Math.round(ro.usefulPct * 100) < 100).length;
             let completedOrders = dataSet.filter(ro => ro.isCompletedKPI);
@@ -1059,7 +1065,6 @@
             let lateCount = completedOrders.filter(ro => ro.isLateKPI).length;
             let compPct = compCount > 0 ? Math.round((onTimeCount / compCount) * 100) : 0;
             let latePct = compCount > 0 ? Math.round((lateCount / compCount) * 100) : 0;
-            let filterLabel = currentFilter === 'ALL' ? 'Open ROs' : `Priority ROs`;
 
             let chartHTML = '';
             if (chartId) {
@@ -1070,7 +1075,7 @@
                 <div class="kpi-name">${name}</div>
                 <div class="kpi-top-metrics">
                     <div class="highlight-box">
-                        <div class="title">${filterLabel}</div>
+                        <div class="title">Open ROs</div>
                         <div class="num">${filteredOpen.length}</div>
                     </div>
                     <div class="highlight-box urgent-box">
