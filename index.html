@@ -175,7 +175,7 @@
         .status-toggle { cursor: pointer; margin-right: 8px; user-select: none; transition: 0.2s; box-shadow: 0 1px 3px rgba(0,0,0,0.2); display: inline-block; text-align: center; min-width: 85px; font-size: 10px; letter-spacing: 0.5px;}
         .status-toggle:hover { opacity: 0.8; transform: translateY(-1px); }
         .status-pending { background-color: var(--urgent-red); color: white; border: 1px solid #c9302c; }
-        .status-dispatched { background-color: var(--low-green); color: white; border: 1px solid #4cae4c; }
+        .status-scheduled { background-color: var(--low-green); color: white; border: 1px solid #4cae4c; }
 
         .grouped-ro-item { margin-bottom: 8px; }
         .grouped-ro-item:last-child { margin-bottom: 0; }
@@ -387,10 +387,10 @@
             // Update all rendered buttons instantly
             document.querySelectorAll('.status-toggle').forEach(btn => {
                 let unit = btn.getAttribute('data-unit');
-                let isDispatched = !!globalUnitCheckState[unit];
-                if (isDispatched) {
-                    btn.className = 'badge status-toggle status-dispatched';
-                    btn.innerHTML = '✓ DISPATCHED';
+                let isScheduled = !!globalUnitCheckState[unit];
+                if (isScheduled) {
+                    btn.className = 'badge status-toggle status-scheduled';
+                    btn.innerHTML = '✓ SCHEDULED';
                     btn.onclick = function() { toggleUnitCheck(unit, false); };
                 } else {
                     btn.className = 'badge status-toggle status-pending';
@@ -1153,6 +1153,7 @@
         // --- HIERARCHY / KPI GENERATORS ---
         function generateTileHTML(name, dataSet, chartId = null) {
             let filteredOpen = dataSet.filter(ro => ro.isOpen);
+            
             let priorityCount = dataSet.filter(ro => ro.isOpen && ro.isOOS && ro.usefulPct !== null && Math.round(ro.usefulPct * 100) < 100).length;
             
             let completedOrders = dataSet.filter(ro => ro.isCompletedKPI);
@@ -1366,10 +1367,10 @@
 
                             // --- FIREBASE SYNC STATUS BADGE ---
                             let safeUnit = u.unitNo.replace(/[.#$\[\]]/g, '_');
-                            let isDispatched = !!globalUnitCheckState[safeUnit];
-                            let toggleClass = isDispatched ? 'status-dispatched' : 'status-pending';
-                            let toggleText = isDispatched ? '✓ DISPATCHED' : 'PENDING';
-                            let toggleState = isDispatched ? 'false' : 'true'; 
+                            let isScheduled = !!globalUnitCheckState[safeUnit];
+                            let toggleClass = isScheduled ? 'status-scheduled' : 'status-pending';
+                            let toggleText = isScheduled ? '✓ SCHEDULED' : 'PENDING';
+                            let toggleState = isScheduled ? 'false' : 'true'; 
                             let statusToggleHtml = `<span class="badge status-toggle ${toggleClass}" data-unit="${safeUnit}" onclick="toggleUnitCheck('${safeUnit}', ${toggleState})">${toggleText}</span>`;
 
                             let rowCount = u.roNums.length;
@@ -1484,10 +1485,10 @@
 
                         // --- FIREBASE SYNC STATUS BADGE ---
                         let safeUnit = u.unitNo.replace(/[.#$\[\]]/g, '_');
-                        let isDispatched = !!globalUnitCheckState[safeUnit];
-                        let toggleClass = isDispatched ? 'status-dispatched' : 'status-pending';
-                        let toggleText = isDispatched ? '✓ DISPATCHED' : 'PENDING';
-                        let toggleState = isDispatched ? 'false' : 'true'; 
+                        let isScheduled = !!globalUnitCheckState[safeUnit];
+                        let toggleClass = isScheduled ? 'status-scheduled' : 'status-pending';
+                        let toggleText = isScheduled ? '✓ SCHEDULED' : 'PENDING';
+                        let toggleState = isScheduled ? 'false' : 'true'; 
                         let statusToggleHtml = `<span class="badge status-toggle ${toggleClass}" data-unit="${safeUnit}" onclick="toggleUnitCheck('${safeUnit}', ${toggleState})">${toggleText}</span>`;
 
                         let rowCount = u.roNums.length;
