@@ -367,23 +367,35 @@
     </div>
 
     <script>
-        // --- FIREBASE SYNC ENGINE ---
-        const firebaseConfig = {
-            apiKey: "AIzaSyCr3VAldI-pPCb7APx3rJAEZvf_nl0iz1g",
-            authDomain: "workflow-dashboard-e6134.firebaseapp.com",
-            databaseURL: "https://workflow-dashboard-e6134-default-rtdb.firebaseio.com",
-            projectId: "workflow-dashboard-e6134",
-            storageBucket: "workflow-dashboard-e6134.firebasestorage.app",
-            messagingSenderId: "641710248116",
-            appId: "1:641710248116:web:1546701879d573041447e1"
-        };
-        firebase.initializeApp(firebaseConfig);
-        const db = firebase.database();
+        // --- FIREBASE SYNC ENGINE (With Fallback) ---
+        let db = null;
         let globalRoCheckState = {};
 
-        // Listen for Realtime Button Updates tracked per individual RO
-        db.ref('roChecks').on('value', (snapshot) => {
-            globalRoCheckState = snapshot.val() || {};
+        try {
+            if (typeof firebase !== 'undefined') {
+                const firebaseConfig = {
+                    apiKey: "AIzaSyCr3VAldI-pPCb7APx3rJAEZvf_nl0iz1g",
+                    authDomain: "workflow-dashboard-e6134.firebaseapp.com",
+                    databaseURL: "https://workflow-dashboard-e6134-default-rtdb.firebaseio.com",
+                    projectId: "workflow-dashboard-e6134",
+                    storageBucket: "workflow-dashboard-e6134.firebasestorage.app",
+                    messagingSenderId: "641710248116",
+                    appId: "1:641710248116:web:1546701879d573041447e1"
+                };
+                firebase.initializeApp(firebaseConfig);
+                db = firebase.database();
+
+                // Listen for Realtime Button Updates
+                db.ref('roChecks').on('value', (snapshot) => {
+                    globalRoCheckState = snapshot.val() || {};
+                    updateAllStatusBadges();
+                });
+            }
+        } catch (error) {
+            console.warn("Firebase blocked by network or browser. Falling back to local tracking.", error);
+        }
+
+        function updateAllStatusBadges() {
             document.querySelectorAll('.status-toggle').forEach(btn => {
                 let ro = btn.getAttribute('data-ro');
                 let isDispatched = !!globalRoCheckState[ro];
@@ -397,11 +409,16 @@
                     btn.onclick = function() { toggleRoCheck(ro, true); };
                 }
             });
-        });
+        }
 
         function toggleRoCheck(ro, isChecked) {
             let safeRo = ro.replace(/[.#$\[\]]/g, '_'); 
-            db.ref('roChecks/' + safeRo).set(isChecked);
+            if (db) {
+                db.ref('roChecks/' + safeRo).set(isChecked);
+            } else {
+                globalRoCheckState[safeRo] = isChecked;
+                updateAllStatusBadges();
+            }
         }
 
         // --- GLOBAL DATA ---
