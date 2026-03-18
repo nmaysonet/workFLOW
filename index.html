@@ -323,7 +323,7 @@
                     </select>
                 </div>
                 <div class="controls-group" style="display: flex; align-items: center;">
-                    <button class="btn-green" onclick="exportDrilldownToExcel()">Export to XLSX</button>
+                    <button class="btn-green" onclick="exportDrilldownToExcel()">&#11139; Export to XLSX</button>
                     <button onclick="toggleAllDetails(true)">Expand All</button>
                     <button onclick="toggleAllDetails(false)">Collapse All</button>
                     <button id="dynamic-back-btn">&larr; Back</button>
@@ -337,7 +337,15 @@
         </div>
 
         <div id="search-view" class="view-section">
-            <h2 class="view-title">Search Results: <span id="search-term-display"></span></h2>
+            <div class="view-title">
+                <div style="display:flex; align-items:center; gap: 20px;">
+                    <span style="font-weight: 700;">Search Results: <span id="search-term-display"></span></span>
+                </div>
+                <div class="controls-group" style="display: flex; align-items: center;">
+                    <button class="btn-green" onclick="exportSearchToExcel()">&#11139; Export to XLSX</button>
+                    <button onclick="navigate(lastActiveView, null, true)">&larr; Back</button>
+                </div>
+            </div>
             <div class="drilldown-container table-wrapper">
                 <table>
                     <colgroup>
@@ -376,17 +384,10 @@
         let oosMap = {};
         let dedicatedBranches = new Set();
 
+        // Explicitly defining only the completed status equivalents as excluded
         const excludedStatuses = [
             'COMPLETED', 
-            'FINAL CHARGES SUBMITTED', 
-            'CREDIT VROS', 
-            'CANCELED', 
-            'CANCELLED', 
-            'CLOSED', 
-            'REJECTED', 
-            'DECLINED', 
-            'VOID', 
-            'VOIDED'
+            'FINAL CHARGES SUBMITTED'
         ];
 
         // Specific Creators (Priority 1)
@@ -599,6 +600,7 @@
             return rawStr.split('-')[0].trim() || 'Unknown Customer';
         }
 
+        // --- EXPORT LOGIC (DRILLDOWN) ---
         function exportDrilldownToExcel() {
             if (!currentOwnerView || processedData.length === 0) return;
             
@@ -614,7 +616,7 @@
 
             let targetData = ownerDataAll.filter(ro => ro.isOpen);
             if(currentFilter === 'PRIORITY') {
-                targetData = targetData.filter(ro => ro.isOOS && (ro.usefulPct !== null && Math.round(ro.usefulPct * 100) < 100));
+                targetData = targetData.filter(ro => ro.isOOS && ro.usefulPct !== null && Math.round(ro.usefulPct * 100) < 100);
             }
 
             if (targetData.length === 0) { alert("No data available to export."); return; }
@@ -633,6 +635,28 @@
             XLSX.writeFile(workbook, `workflow_export_${String(currentOwnerView).replace(/\s+/g, '_')}_${currentFilter.toLowerCase()}.xlsx`);
         }
 
+        // --- EXPORT LOGIC (SEARCH) ---
+        function exportSearchToExcel() {
+            const searchTerm = document.getElementById('global-search').value.toLowerCase();
+            if(!searchTerm) return;
+            
+            const results = processedData.filter(ro => ro.unitNo.toLowerCase().includes(searchTerm));
+            if(results.length === 0) { alert("No data to export."); return; }
+            
+            const excelRows = results.map(ro => ({
+                "AFS RO #": ro.roNum, "Unit No": ro.unitNo, 
+                "Priority Status": (ro.isOOS && ro.usefulPct !== null && Math.round(ro.usefulPct * 100) < 100) ? "Priority" : "Normal",
+                "OOS Status": ro.isOOS ? "OOS" : "",
+                "Total Unit ROs": ro.roCount, "Owner": ro.owner, "Status": ro.status, "ECD": ro.ecdFormatted,
+                "Task / VMRS": ro.vmrs
+            }));
+            const worksheet = XLSX.utils.json_to_sheet(excelRows);
+            const workbook = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(workbook, worksheet, "Search Results");
+            XLSX.writeFile(workbook, `workflow_search_${searchTerm}.xlsx`);
+        }
+
+        // --- FILTER LOGIC ---
         function setFilter(val) {
             currentFilter = val;
             document.querySelectorAll('.filter-btn').forEach(btn => {
@@ -704,6 +728,7 @@
 
             let unitToLocation = {};
             oosMap = {};
+            globalBranchToRegionMap = {}; 
             
             oosRaw.forEach(row => {
                 let unit = getCol(row, ['UNITNUMBER', 'Unit No', 'Vehicle']);
@@ -722,6 +747,15 @@
                         subregion: String(subregion || 'Unspecified Subregion').trim(), 
                         branch: String(branch || 'Unspecified Branch').trim() 
                     };
+                }
+                
+                if (region && branch) {
+                    let regNorm = normalizeName(region).toUpperCase();
+                    let bCode = extractGardaCode(branch);
+                    if (bCode) globalBranchToRegionMap[bCode] = regNorm;
+                    
+                    let bNorm = normalizeBranchStr(branch);
+                    if (bNorm) globalBranchToRegionMap[bNorm] = regNorm;
                 }
             });
 
@@ -848,6 +882,7 @@
                 }
 
                 let fallbackLoc = { region: stateName, subregion: cityName, branch: String(customer).trim() };
+                
                 if(custKey === 'Ferguson' || custKey === 'Amerit Fleet Solutions' || custKey === 'Brinks' || custKey === 'US Foods' || custKey === 'Frontier' || custKey === 'Colony Hardware' || custKey === 'Sukut Construction' || custKey === 'Garda') { 
                     if(loc.region === 'Unknown Region' || loc.region === 'Unspecified Region') loc = fallbackLoc;
                 }
@@ -911,6 +946,9 @@
 
                 let statusStr = String(status || '').toUpperCase().trim();
                 let isOOS = oosMap[unit] === true; 
+                
+                // --- STRICT OPEN FLAG ---
+                // Open means any status OTHER THAN 'COMPLETED' or 'FINAL CHARGES SUBMITTED'
                 let isOpen = !excludedStatuses.includes(statusStr);
                 
                 // --- MAP USEFUL % ---
@@ -946,6 +984,7 @@
                 }
 
                 let isCompletedKPI = false; let isOnTimeKPI = false; let isLateKPI = false;
+                // If it is in an excluded status (i.e. closed) and has a completed date...
                 if (excludedStatuses.includes(statusStr) && compRaw !== '') {
                     isCompletedKPI = true; let cDate = new Date(compRaw);
                     if (!isNaN(cDate.getTime())) {
@@ -993,19 +1032,23 @@
 
         // --- HIERARCHY / KPI GENERATORS ---
         function generateTileHTML(name, dataSet, chartId = null) {
+            // Apply strict definition: ONLY Open ROs
             let filteredOpen = dataSet.filter(ro => ro.isOpen);
+            
+            // If the user clicks the "Priority" tab filter on the UI
             if(currentFilter === 'PRIORITY') {
                 filteredOpen = filteredOpen.filter(ro => ro.isOOS && ro.usefulPct !== null && Math.round(ro.usefulPct * 100) < 100);
             }
             
+            // Priority is strictly OOS && Useful % < 100 (Calculated for the second box always)
             let priorityCount = dataSet.filter(ro => ro.isOpen && ro.isOOS && ro.usefulPct !== null && Math.round(ro.usefulPct * 100) < 100).length;
+            
             let completedOrders = dataSet.filter(ro => ro.isCompletedKPI);
             let compCount = completedOrders.length;
             let onTimeCount = completedOrders.filter(ro => ro.isOnTimeKPI).length;
             let lateCount = completedOrders.filter(ro => ro.isLateKPI).length;
             let compPct = compCount > 0 ? Math.round((onTimeCount / compCount) * 100) : 0;
             let latePct = compCount > 0 ? Math.round((lateCount / compCount) * 100) : 0;
-            let filterLabel = currentFilter === 'ALL' ? 'Open ROs' : `Priority ROs`;
 
             let chartHTML = '';
             if (chartId) {
@@ -1016,11 +1059,11 @@
                 <div class="kpi-name">${name}</div>
                 <div class="kpi-top-metrics">
                     <div class="highlight-box">
-                        <div class="title">${filterLabel}</div>
+                        <div class="title">Open ROs</div>
                         <div class="num">${filteredOpen.length}</div>
                     </div>
                     <div class="highlight-box urgent-box">
-                        <div class="title">Priority</div>
+                        <div class="title">Priority ROs</div>
                         <div class="num">${priorityCount}</div>
                     </div>
                     ${chartHTML}
