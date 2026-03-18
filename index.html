@@ -168,7 +168,6 @@
         .ecd-green { color: #5cb85c; font-weight: 800; }
         .badge-ecd-missing { background-color: #fff3cd; color: #d9534f; padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: 800; border: 1px solid #d9534f; white-space: nowrap; display: inline-block; }
         
-        /* Spacing for grouped ROs */
         .grouped-ro-item { margin-bottom: 8px; }
         .grouped-ro-item:last-child { margin-bottom: 0; }
     </style>
@@ -452,51 +451,60 @@
                 let vroRaw = [], resourceRaw = [], oosRaw = [], usefulRaw = [];
                 
                 workbook.SheetNames.forEach(sheetName => {
-                    const aoa = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], {header: 1, defval: ''});
-                    if (aoa.length === 0) return;
-                    
-                    let headerIdx = -1;
-                    let tabType = 'UNKNOWN';
-                    
-                    for(let i=0; i < Math.min(15, aoa.length); i++) {
-                        let rowStr = aoa[i].map(c => String(c).toLowerCase().replace(/[^a-z0-9]/g, '')).join('');
+                    try {
+                        const aoa = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], {header: 1, defval: ''});
+                        if (!aoa || aoa.length === 0) return;
                         
-                        if (rowStr.includes('createdby') || (rowStr.includes('unitnumber') && rowStr.includes('team'))) {
-                            headerIdx = i; tabType = 'RESOURCE'; break;
-                        } else if (rowStr.includes('gardaregion') && rowStr.includes('oosflag')) {
-                            headerIdx = i; tabType = 'OOS'; break;
-                        } else if (rowStr.includes('gardaregion') && rowStr.includes('branch') && rowStr.includes('useful')) {
-                            headerIdx = i; tabType = 'USEFUL'; break;
-                        } else if (rowStr.includes('ronumber') || rowStr.includes('order') || rowStr.includes('estimaterequesteddate') || rowStr.includes('customer')) {
-                            headerIdx = i; tabType = 'VRO'; break;
+                        let headerIdx = -1;
+                        let tabType = 'UNKNOWN';
+                        
+                        // Robust Header Scanner (skips completely blank format rows)
+                        for(let i=0; i < Math.min(20, aoa.length); i++) {
+                            if (!aoa[i] || !Array.isArray(aoa[i])) continue; 
+                            
+                            let rowStr = aoa[i].map(c => c ? String(c).toLowerCase().replace(/[^a-z0-9]/g, '') : '').join('');
+                            if (!rowStr) continue;
+                            
+                            if (rowStr.includes('createdby') || (rowStr.includes('unitnumber') && rowStr.includes('team'))) {
+                                headerIdx = i; tabType = 'RESOURCE'; break;
+                            } else if (rowStr.includes('gardaregion') && rowStr.includes('oosflag')) {
+                                headerIdx = i; tabType = 'OOS'; break;
+                            } else if (rowStr.includes('gardaregion') && rowStr.includes('branch') && rowStr.includes('useful')) {
+                                headerIdx = i; tabType = 'USEFUL'; break;
+                            } else if (rowStr.includes('ronumber') || rowStr.includes('order') || rowStr.includes('estimaterequesteddate') || rowStr.includes('customer')) {
+                                headerIdx = i; tabType = 'VRO'; break;
+                            }
                         }
-                    }
-                    
-                    if (headerIdx !== -1) {
-                        let headers = aoa[headerIdx];
-                        let sheetData = [];
-                        for(let i = headerIdx + 1; i < aoa.length; i++) {
-                            let obj = {};
-                            let hasData = false;
-                            headers.forEach((h, j) => {
-                                let key = String(h).trim();
-                                if (key) {
-                                    if (obj[key] !== undefined) {
-                                        let c = 1;
-                                        while(obj[key + '_' + c] !== undefined) c++;
-                                        key = key + '_' + c;
+                        
+                        if (headerIdx !== -1) {
+                            let headers = aoa[headerIdx];
+                            let sheetData = [];
+                            for(let i = headerIdx + 1; i < aoa.length; i++) {
+                                if (!aoa[i] || !Array.isArray(aoa[i])) continue;
+                                let obj = {};
+                                let hasData = false;
+                                headers.forEach((h, j) => {
+                                    let key = h ? String(h).trim() : '';
+                                    if (key) {
+                                        if (obj[key] !== undefined) {
+                                            let c = 1;
+                                            while(obj[key + '_' + c] !== undefined) c++;
+                                            key = key + '_' + c;
+                                        }
+                                        obj[key] = aoa[i][j];
+                                        if (aoa[i][j] !== '' && aoa[i][j] !== undefined && aoa[i][j] !== null) hasData = true;
                                     }
-                                    obj[key] = aoa[i][j];
-                                    if (aoa[i][j] !== '') hasData = true;
-                                }
-                            });
-                            if (hasData) sheetData.push(obj);
+                                });
+                                if (hasData) sheetData.push(obj);
+                            }
+                            
+                            if (tabType === 'RESOURCE') resourceRaw = resourceRaw.concat(sheetData);
+                            else if (tabType === 'OOS') oosRaw = oosRaw.concat(sheetData);
+                            else if (tabType === 'USEFUL') usefulRaw = usefulRaw.concat(sheetData);
+                            else if (tabType === 'VRO') vroRaw = vroRaw.concat(sheetData);
                         }
-                        
-                        if (tabType === 'RESOURCE') resourceRaw = resourceRaw.concat(sheetData);
-                        else if (tabType === 'OOS') oosRaw = oosRaw.concat(sheetData);
-                        else if (tabType === 'USEFUL') usefulRaw = usefulRaw.concat(sheetData);
-                        else if (tabType === 'VRO') vroRaw = vroRaw.concat(sheetData);
+                    } catch (err) {
+                        console.warn("Skipped sheet due to parsing error:", sheetName, err);
                     }
                 });
                 
@@ -527,49 +535,58 @@
                     const workbook = XLSX.read(data, {type: 'array'});
                     
                     workbook.SheetNames.forEach(sheetName => {
-                        const aoa = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], {header: 1, defval: ''});
-                        if (aoa.length === 0) return;
-                        
-                        let headerIdx = -1;
-                        let tabType = 'UNKNOWN';
-                        
-                        for(let i=0; i < Math.min(15, aoa.length); i++) {
-                            let rowStr = aoa[i].map(c => String(c).toLowerCase().replace(/[^a-z0-9]/g, '')).join('');
-                            if (rowStr.includes('createdby') || (rowStr.includes('unitnumber') && rowStr.includes('team'))) {
-                                headerIdx = i; tabType = 'RESOURCE'; break;
-                            } else if (rowStr.includes('gardaregion') && rowStr.includes('oosflag')) {
-                                headerIdx = i; tabType = 'OOS'; break;
-                            } else if (rowStr.includes('gardaregion') && rowStr.includes('branch') && rowStr.includes('useful')) {
-                                headerIdx = i; tabType = 'USEFUL'; break;
-                            } else if (rowStr.includes('ronumber') || rowStr.includes('order') || rowStr.includes('estimaterequesteddate') || rowStr.includes('customer')) {
-                                headerIdx = i; tabType = 'VRO'; break;
+                        try {
+                            const aoa = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], {header: 1, defval: ''});
+                            if (!aoa || aoa.length === 0) return;
+                            
+                            let headerIdx = -1;
+                            let tabType = 'UNKNOWN';
+                            
+                            for(let i=0; i < Math.min(20, aoa.length); i++) {
+                                if (!aoa[i] || !Array.isArray(aoa[i])) continue;
+                                let rowStr = aoa[i].map(c => c ? String(c).toLowerCase().replace(/[^a-z0-9]/g, '') : '').join('');
+                                if (!rowStr) continue;
+
+                                if (rowStr.includes('createdby') || (rowStr.includes('unitnumber') && rowStr.includes('team'))) {
+                                    headerIdx = i; tabType = 'RESOURCE'; break;
+                                } else if (rowStr.includes('gardaregion') && rowStr.includes('oosflag')) {
+                                    headerIdx = i; tabType = 'OOS'; break;
+                                } else if (rowStr.includes('gardaregion') && rowStr.includes('branch') && rowStr.includes('useful')) {
+                                    headerIdx = i; tabType = 'USEFUL'; break;
+                                } else if (rowStr.includes('ronumber') || rowStr.includes('order') || rowStr.includes('estimaterequesteddate') || rowStr.includes('customer')) {
+                                    headerIdx = i; tabType = 'VRO'; break;
+                                }
                             }
-                        }
-                        
-                        if (headerIdx !== -1) {
-                            let headers = aoa[headerIdx];
-                            let sheetData = [];
-                            for(let i = headerIdx + 1; i < aoa.length; i++) {
-                                let obj = {};
-                                let hasData = false;
-                                headers.forEach((h, j) => {
-                                    let key = String(h).trim();
-                                    if (key) {
-                                        if (obj[key] !== undefined) {
-                                            let c = 1;
-                                            while(obj[key + '_' + c] !== undefined) c++;
-                                            key = key + '_' + c;
+                            
+                            if (headerIdx !== -1) {
+                                let headers = aoa[headerIdx];
+                                let sheetData = [];
+                                for(let i = headerIdx + 1; i < aoa.length; i++) {
+                                    if (!aoa[i] || !Array.isArray(aoa[i])) continue;
+                                    let obj = {};
+                                    let hasData = false;
+                                    headers.forEach((h, j) => {
+                                        let key = h ? String(h).trim() : '';
+                                        if (key) {
+                                            if (obj[key] !== undefined) {
+                                                let c = 1;
+                                                while(obj[key + '_' + c] !== undefined) c++;
+                                                key = key + '_' + c;
+                                            }
+                                            obj[key] = aoa[i][j];
+                                            if (aoa[i][j] !== '' && aoa[i][j] !== undefined && aoa[i][j] !== null) hasData = true;
                                         }
-                                        obj[key] = aoa[i][j];
-                                        if (aoa[i][j] !== '') hasData = true;
-                                    }
-                                });
-                                if (hasData) sheetData.push(obj);
+                                    });
+                                    if (hasData) sheetData.push(obj);
+                                }
+                                
+                                if (tabType === 'RESOURCE') resourceRaw = resourceRaw.concat(sheetData);
+                                else if (tabType === 'OOS') oosRaw = oosRaw.concat(sheetData);
+                                else if (tabType === 'USEFUL') usefulRaw = usefulRaw.concat(sheetData);
+                                else if (tabType === 'VRO') vroRaw = vroRaw.concat(sheetData);
                             }
-                            if (tabType === 'RESOURCE') resourceRaw = resourceRaw.concat(sheetData);
-                            else if (tabType === 'OOS') oosRaw = oosRaw.concat(sheetData);
-                            else if (tabType === 'USEFUL') usefulRaw = usefulRaw.concat(sheetData);
-                            else if (tabType === 'VRO') vroRaw = vroRaw.concat(sheetData);
+                        } catch(err) {
+                            console.warn("Skipped sheet", sheetName, err);
                         }
                     });
                 }
@@ -929,6 +946,18 @@
                     activeERS.add(finalOwner);
                 } else {
                     activeVended.add(finalOwner);
+                }
+
+                let openedDate = new Date(openedRaw);
+                let openedDT = isNaN(openedDate.getTime()) ? null : openedDate;
+
+                let taskStr = vmrs.toLowerCase();
+                let isPMOrder = false;
+                for (let kw of pmKeywords) {
+                    if (kw && taskStr.includes(kw)) {
+                        isPMOrder = true;
+                        break;
+                    }
                 }
 
                 let drillTopLevel = custKey + (loc.region !== 'Unknown State' && loc.region !== 'Unknown Region' ? ' ' + loc.region : '');
