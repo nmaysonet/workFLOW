@@ -373,7 +373,6 @@
         let ersOwners = [];
 
         let branchUsefulMap = {}; 
-        let globalBranchToRegionMap = {}; 
         let oosMap = {};
         let dedicatedBranches = new Set();
 
@@ -458,17 +457,13 @@
                     for(let i=0; i < Math.min(15, aoa.length); i++) {
                         let rowStr = aoa[i].map(c => String(c).toLowerCase().replace(/[^a-z0-9]/g, '')).join('');
                         
-                        // Strict Header Scanners
                         if (rowStr.includes('createdby') || (rowStr.includes('unitnumber') && rowStr.includes('team'))) {
                             headerIdx = i; tabType = 'RESOURCE'; break;
-                        } 
-                        else if (rowStr.includes('gardaregion') && rowStr.includes('oosflag')) {
+                        } else if (rowStr.includes('gardaregion') && rowStr.includes('oosflag')) {
                             headerIdx = i; tabType = 'OOS'; break;
-                        } 
-                        else if (rowStr.includes('gardaregion') && rowStr.includes('branch') && rowStr.includes('useful')) {
+                        } else if (rowStr.includes('gardaregion') && rowStr.includes('branch') && rowStr.includes('useful')) {
                             headerIdx = i; tabType = 'USEFUL'; break;
-                        } 
-                        else if (rowStr.includes('ronumber') || rowStr.includes('order') || rowStr.includes('estimaterequesteddate') || rowStr.includes('customer')) {
+                        } else if (rowStr.includes('ronumber') || rowStr.includes('order') || rowStr.includes('estimaterequesteddate') || rowStr.includes('customer')) {
                             headerIdx = i; tabType = 'VRO'; break;
                         }
                     }
@@ -709,7 +704,6 @@
 
             let unitToLocation = {};
             oosMap = {};
-            globalBranchToRegionMap = {}; 
             
             oosRaw.forEach(row => {
                 let unit = getCol(row, ['UNITNUMBER', 'Unit No', 'Vehicle']);
@@ -729,20 +723,11 @@
                         branch: String(branch || 'Unspecified Branch').trim() 
                     };
                 }
-                
-                if (region && branch) {
-                    let regNorm = normalizeName(region).toUpperCase();
-                    let bCode = extractGardaCode(branch);
-                    if (bCode) globalBranchToRegionMap[bCode] = regNorm;
-                    
-                    let bNorm = normalizeBranchStr(branch);
-                    if (bNorm) globalBranchToRegionMap[bNorm] = regNorm;
-                }
             });
 
             let unitOwnerMap = {};
             let creatorMap = {};
-            let ownerMap = {}; 
+            let globalOwnerMap = {}; 
             
             let activePM = new Set();
             let activeVended = new Set();
@@ -751,12 +736,10 @@
             
             dedicatedBranches = new Set();
 
-            // Setup Universal Base
-            activeVended.add('Dedicated');
-
             resourceRaw.forEach(row => {
                 let keys = Object.keys(row);
                 
+                // Track Dedicated Branches
                 let bVal = getCol(row, ['Branch']);
                 let oVal = getCol(row, ['Owner']);
                 if (bVal && String(oVal).toUpperCase().trim() === 'DEDICATED') {
@@ -776,12 +759,6 @@
                     let o = oVal ? String(oVal).trim() : '';
                     let t = row[unitTeamKey] ? String(row[unitTeamKey]).toUpperCase().trim() : 'VENDED REPAIR';
                     unitOwnerMap[u] = { owner: o, team: t };
-                    
-                    if (o && o.toUpperCase() !== 'DEDICATED') {
-                        if (t === 'PM') activePM.add(o);
-                        else if (t === 'ERS') activeERS.add(o);
-                        else activeVended.add(o);
-                    }
                 }
 
                 // Right Side (Creator mapping & Active Directory)
@@ -798,16 +775,7 @@
                     let cStatus = row[statusKey] ? String(row[statusKey]).toUpperCase().trim() : 'INACTIVE';
                     
                     creatorMap[cEmail] = { name: cName, team: cTeam };
-                    ownerMap[cEmail] = { name: cName, status: cStatus, team: cTeam };
-
-                    if (specificCreators.includes(cEmail)) {
-                        if (cTeam === 'PM') activePM.add(cName);
-                        else activeERS.add(cName);
-                    } else if (cStatus === 'ACTIVE') {
-                        if (cTeam === 'PM') activePM.add(cName);
-                        else if (cTeam === 'ERS') activeERS.add(cName);
-                        else activeVended.add(cName);
-                    }
+                    globalOwnerMap[cEmail] = { name: cName, status: cStatus, team: cTeam };
                 }
                 
                 if (pmComp && pmComp.toUpperCase() !== 'PM COMP:' && pmComp.trim() !== '') {
@@ -828,7 +796,7 @@
             processedData = vroRaw.map(row => {
                 let roNum = getCol(row, ['Order', 'RO Number', 'RONum', 'AFS RO #']).toUpperCase().trim();
                 let customer = getCol(row, ['Customer', 'CUSTOMERNAME', 'Customer Name']); 
-                let rawOwnerEmail = getCol(row, ['Owner', 'Created By', 'Email']); // Column N
+                let rawOwnerEmail = getCol(row, ['Owner', 'Created By', 'Email']); // Assuming Tab 1 Col N
                 let unit = getCol(row, ['Unit No', 'UNITNUMBER', 'Vehicle']).toUpperCase().trim();
                 let status = getCol(row, ['Status']);
                 let vmrs = getCol(row, ['Task', 'DESCRIP', 'VMRS Description']);
@@ -840,7 +808,7 @@
                 let custKey = getCustKey(customer);
                 
                 let cStr = String(customer || '').toUpperCase();
-                let cStrNorm = normalizeBranchStr(customer);
+                let cStrNorm = cStr.replace(/[^A-Z0-9]/ig, '');
                 let branchCode = extractGardaCode(customer); 
                 if (!branchCode && loc.branch) branchCode = extractGardaCode(loc.branch);
                 
@@ -890,33 +858,27 @@
                 let finalTeam = 'VENDED REPAIR';
                 let isDedicatedFlag = false;
 
+                // Check if unit is explicitly marked Dedicated
+                if (unitOwnerMap[unit] && unitOwnerMap[unit].owner.toUpperCase() === 'DEDICATED') {
+                    isDedicatedFlag = true;
+                }
+
                 // Priority 1: Check Specific Creator List
                 if (specificCreators.includes(ownerEmailLower) && creatorMap[ownerEmailLower]) {
                     finalOwner = creatorMap[ownerEmailLower].name;
                     finalTeam = creatorMap[ownerEmailLower].team;
-                    // Tag as dedicated if the unit is marked dedicated, but keep owner as creator
-                    if (unitOwnerMap[unit] && unitOwnerMap[unit].owner.toUpperCase() === 'DEDICATED') {
-                        isDedicatedFlag = true;
-                    }
                 } 
-                // Priority 2: Unit Assignment Match
-                else if (unitOwnerMap[unit]) {
-                    let uData = unitOwnerMap[unit];
-                    if (uData.owner.toUpperCase() === 'DEDICATED') {
-                        isDedicatedFlag = true;
-                        finalOwner = 'Dedicated';
-                        finalTeam = 'VENDED REPAIR';
-                    } else if (uData.owner) {
-                        finalOwner = uData.owner;
-                        finalTeam = uData.team;
-                    }
+                // Priority 2: Unit Assignment Match (Only applies if NOT dedicated)
+                else if (unitOwnerMap[unit] && !isDedicatedFlag && unitOwnerMap[unit].owner) {
+                    finalOwner = unitOwnerMap[unit].owner;
+                    finalTeam = unitOwnerMap[unit].team;
                 }
 
                 // Priority 3: Fallback to the Creator if active
                 if (!finalOwner || finalOwner === '') {
-                    if (ownerMap[ownerEmailLower] && ownerMap[ownerEmailLower].status === 'ACTIVE') {
-                        finalOwner = ownerMap[ownerEmailLower].name;
-                        finalTeam = ownerMap[ownerEmailLower].team;
+                    if (globalOwnerMap[ownerEmailLower] && globalOwnerMap[ownerEmailLower].status === 'ACTIVE') {
+                        finalOwner = globalOwnerMap[ownerEmailLower].name;
+                        finalTeam = globalOwnerMap[ownerEmailLower].team;
                     } else {
                         // Drop from system entirely if not caught by any priority
                         return { roNum: '' };
@@ -1209,7 +1171,7 @@
                         let branchBadge = getUsefulBadge(bPct !== null && bPct !== undefined ? [bPct] : []);
                         
                         let isBranchDedicated = branchROs.some(ro => ro.isDedicated);
-                        let dedicatedBadge = isBranchDedicated ? `<span style="background-color: white; color: black; border: 1px solid black; border-radius: 12px; padding: 2px 6px; margin-left: 5px; font-size: 10px; font-weight: bold;">DEDICATED</span>` : '';
+                        let dedicatedBadge = isBranchDedicated ? `<span style="background-color: white; color: black; border: 1px solid black; border-radius: 12px; padding: 2px 6px; margin-left: 5px; font-size: 10px; font-weight: bold;">(DEDICATED)</span>` : '';
 
                         branchHtml += `<details class="ro-detail-node"><summary>${branch} (${branchROs.length} ROs)${branchBadge}${dedicatedBadge}</summary>`;
                         let tableHTML = `<div class="table-wrapper"><table><colgroup><col style="width:12%;"><col style="width:10%;"><col style="width:10%;"><col style="width:8%;"><col style="width:6%;"><col style="width:14%;"><col style="width:10%;"><col style="width:30%;"></colgroup><thead><tr><th>AFS RO #</th><th>Unit No</th><th>Priority Status</th><th>OOS Status</th><th>Total Unit ROs</th><th>Status</th><th>ECD</th><th>Task / VMRS</th></tr></thead><tbody>`;
