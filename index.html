@@ -167,9 +167,6 @@
         .ecd-red { color: #d9534f; font-weight: 800; }
         .ecd-green { color: #5cb85c; font-weight: 800; }
         .badge-ecd-missing { background-color: #fff3cd; color: #d9534f; padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: 800; border: 1px solid #d9534f; white-space: nowrap; display: inline-block; }
-        
-        .grouped-ro-item { margin-bottom: 8px; }
-        .grouped-ro-item:last-child { margin-bottom: 0; }
     </style>
 </head>
 <body>
@@ -278,6 +275,10 @@
                     </select>
                 </div>
             </div>
+            <div class="filter-bar">
+                <button class="filter-btn active" data-filter="ALL" onclick="setFilter('ALL')">All Units</button>
+                <button class="filter-btn" data-filter="PRIORITY" onclick="setFilter('PRIORITY')">Priority</button>
+            </div>
             <div class="kpi-grid" id="pm-kpi-container"></div>
         </div>
 
@@ -290,6 +291,10 @@
                     </select>
                 </div>
             </div>
+            <div class="filter-bar">
+                <button class="filter-btn active" data-filter="ALL" onclick="setFilter('ALL')">All Units</button>
+                <button class="filter-btn" data-filter="PRIORITY" onclick="setFilter('PRIORITY')">Priority</button>
+            </div>
             <div class="kpi-grid" id="vended-kpi-container"></div>
         </div>
 
@@ -301,6 +306,10 @@
                         <option value="ALL">All Customers</option>
                     </select>
                 </div>
+            </div>
+            <div class="filter-bar">
+                <button class="filter-btn active" data-filter="ALL" onclick="setFilter('ALL')">All Units</button>
+                <button class="filter-btn" data-filter="PRIORITY" onclick="setFilter('PRIORITY')">Priority</button>
             </div>
             <div class="kpi-grid" id="ers-kpi-container"></div>
         </div>
@@ -1003,7 +1012,7 @@
                     usefulPct = branchUsefulMap[bStrNorm];
                 } else {
                     for (let bKey in branchUsefulMap) {
-                        if (cStrNorm && cStrNorm.includes(bKey)) {
+                        if (cStrNorm.includes(bKey)) {
                             usefulPct = branchUsefulMap[bKey];
                             break;
                         }
@@ -1075,8 +1084,8 @@
         // --- HIERARCHY / KPI GENERATORS ---
         function generateTileHTML(name, dataSet, chartId = null) {
             let filteredOpen = dataSet.filter(ro => ro.isOpen);
-            let priorityCount = dataSet.filter(ro => ro.isOpen && ro.isOOS && ro.usefulPct !== null && Math.round(ro.usefulPct * 100) < 100).length;
             
+            let priorityCount = dataSet.filter(ro => ro.isOpen && ro.isOOS && ro.usefulPct !== null && Math.round(ro.usefulPct * 100) < 100).length;
             let completedOrders = dataSet.filter(ro => ro.isCompletedKPI);
             let compCount = completedOrders.length;
             let onTimeCount = completedOrders.filter(ro => ro.isOnTimeKPI).length;
@@ -1194,6 +1203,9 @@
                 }
 
                 let targetData = ownerDataAll.filter(ro => ro.isOpen);
+                if(currentFilter === 'PRIORITY') {
+                    targetData = targetData.filter(ro => ro.isOOS && ro.usefulPct !== null && Math.round(ro.usefulPct * 100) < 100);
+                }
                 
                 if (targetData.length === 0) return; 
 
@@ -1238,7 +1250,7 @@
                             topLvlUseful.push(bPct);
                         }
 
-                        // --- NEW: Group ROs by UnitNo ---
+                        // --- Group ROs by UnitNo ---
                         let unitsMap = {};
                         branchROs.forEach(ro => {
                             if(!unitsMap[ro.unitNo]) {
@@ -1284,19 +1296,27 @@
                             let isPriority = u.isOOS && u.usefulPct !== null && Math.round(u.usefulPct * 100) < 100;
                             let priorityStatusBadge = isPriority ? `<span class="badge badge-urgent">Priority</span>` : `<span class="badge badge-low">Normal</span>`;
 
-                            let joinedROsHtml = u.roNums.map(ro => `<div class="grouped-ro-item">${ro}</div>`).join('');
-                            let joinedStatusesHtml = u.statuses.map(st => `<div class="grouped-ro-item" style="font-size:11px; line-height:1.2;">${st}</div>`).join('');
-                            let joinedECDsHtml = u.ecdCells.map(ec => `<div class="grouped-ro-item">${ec}</div>`).join('');
+                            // Use rowspan for aligned output
+                            let rowCount = u.roNums.length;
 
-                            tableHTML += `<tr>
-                                <td style="vertical-align:top; padding-top:15px;">${joinedROsHtml}</td>
-                                <td style="vertical-align:top; padding-top:15px;"><strong>${u.unitNo}</strong></td>
-                                <td style="vertical-align:top; padding-top:15px;">${priorityStatusBadge}</td>
-                                <td style="vertical-align:top; padding-top:15px;">${oosBadge}</td>
-                                <td style="vertical-align:top; padding-top:15px;">${u.roCount}</td>
-                                <td style="vertical-align:top; padding-top:15px;">${joinedStatusesHtml}</td>
-                                <td style="vertical-align:top; padding-top:15px;">${joinedECDsHtml}</td>
-                            </tr>`;
+                            u.roNums.forEach((roHtml, idx) => {
+                                tableHTML += `<tr>`;
+                                tableHTML += `<td style="vertical-align:top; padding-top:15px; border-bottom: ${idx === rowCount - 1 ? '1px solid var(--border)' : '1px dashed #eee'};">${roHtml}</td>`;
+                                
+                                if (idx === 0) {
+                                    tableHTML += `<td rowspan="${rowCount}" style="vertical-align:top; padding-top:15px; border-bottom: 1px solid var(--border); border-left: 1px dashed #eee;"><strong>${u.unitNo}</strong></td>`;
+                                    tableHTML += `<td rowspan="${rowCount}" style="vertical-align:top; padding-top:15px; border-bottom: 1px solid var(--border);">${priorityStatusBadge}</td>`;
+                                    tableHTML += `<td rowspan="${rowCount}" style="vertical-align:top; padding-top:15px; border-bottom: 1px solid var(--border);">${oosBadge}</td>`;
+                                    tableHTML += `<td rowspan="${rowCount}" style="vertical-align:top; padding-top:15px; border-bottom: 1px solid var(--border); border-right: 1px dashed #eee;">${u.roCount}</td>`;
+                                }
+
+                                let st = u.statuses[idx] || '';
+                                let ec = u.ecdCells[idx] || '';
+
+                                tableHTML += `<td style="vertical-align:top; padding-top:15px; border-bottom: ${idx === rowCount - 1 ? '1px solid var(--border)' : '1px dashed #eee'}; font-size:11px; line-height:1.2;">${st}</td>`;
+                                tableHTML += `<td style="vertical-align:top; padding-top:15px; border-bottom: ${idx === rowCount - 1 ? '1px solid var(--border)' : '1px dashed #eee'};">${ec}</td>`;
+                                tableHTML += `</tr>`;
+                            });
                         });
                         
                         tableHTML += `</tbody></table></div>`; 
@@ -1387,19 +1407,27 @@
                         let isPriority = u.isOOS && u.usefulPct !== null && Math.round(u.usefulPct * 100) < 100;
                         let priorityStatusBadge = isPriority ? `<span class="badge badge-urgent">Priority</span>` : `<span class="badge badge-low">Normal</span>`;
 
-                        let joinedROsHtml = u.roNums.map(ro => `<div class="grouped-ro-item">${ro}</div>`).join('');
-                        let joinedStatusesAndECDsHtml = u.statuses.map((st, i) => `<div class="grouped-ro-item" style="font-size:11px; line-height:1.2;"><b>Status:</b> ${st}<br><b>ECD:</b> ${u.ecdCells[i]}</div>`).join('<hr style="border-top:1px dashed #eee; margin:5px 0;">');
-                        let joinedOwnersHtml = [...new Set(u.owners)].map(ow => `<div class="grouped-ro-item">${ow}</div>`).join('');
+                        let rowCount = u.roNums.length;
 
-                        searchHtml += `<tr>
-                            <td style="vertical-align:top; padding-top:15px;">${joinedROsHtml}</td>
-                            <td style="vertical-align:top; padding-top:15px;"><strong>${u.unitNo}</strong></td>
-                            <td style="vertical-align:top; padding-top:15px;">${priorityStatusBadge}</td>
-                            <td style="vertical-align:top; padding-top:15px;">${oosBadge}</td>
-                            <td style="vertical-align:top; padding-top:15px;">${u.roCount}</td>
-                            <td style="vertical-align:top; padding-top:15px;">${joinedOwnersHtml}</td>
-                            <td style="vertical-align:top; padding-top:15px;">${joinedStatusesAndECDsHtml}</td>
-                        </tr>`;
+                        u.roNums.forEach((roHtml, idx) => {
+                            searchHtml += `<tr>`;
+                            searchHtml += `<td style="vertical-align:top; padding-top:15px; border-bottom: ${idx === rowCount - 1 ? '1px solid var(--border)' : '1px dashed #eee'};">${roHtml}</td>`;
+                            
+                            if (idx === 0) {
+                                searchHtml += `<td rowspan="${rowCount}" style="vertical-align:top; padding-top:15px; border-bottom: 1px solid var(--border); border-left: 1px dashed #eee;"><strong>${u.unitNo}</strong></td>`;
+                                searchHtml += `<td rowspan="${rowCount}" style="vertical-align:top; padding-top:15px; border-bottom: 1px solid var(--border);">${priorityStatusBadge}</td>`;
+                                searchHtml += `<td rowspan="${rowCount}" style="vertical-align:top; padding-top:15px; border-bottom: 1px solid var(--border);">${oosBadge}</td>`;
+                                searchHtml += `<td rowspan="${rowCount}" style="vertical-align:top; padding-top:15px; border-bottom: 1px solid var(--border); border-right: 1px dashed #eee;">${u.roCount}</td>`;
+                            }
+
+                            let ow = u.owners[idx] || '';
+                            let st = u.statuses[idx] || '';
+                            let ec = u.ecdCells[idx] || '';
+
+                            searchHtml += `<td style="vertical-align:top; padding-top:15px; border-bottom: ${idx === rowCount - 1 ? '1px solid var(--border)' : '1px dashed #eee'};">${ow}</td>`;
+                            searchHtml += `<td style="vertical-align:top; padding-top:15px; border-bottom: ${idx === rowCount - 1 ? '1px solid var(--border)' : '1px dashed #eee'}; font-size:11px; line-height:1.2;"><b>Status:</b> ${st}<br><b>ECD:</b> ${ec}</td>`;
+                            searchHtml += `</tr>`;
+                        });
                     });
                 }
                 document.getElementById('search-table-body').innerHTML = searchHtml;
