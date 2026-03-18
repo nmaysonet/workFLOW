@@ -245,7 +245,7 @@
             <h1 class="home-title">Welcome to workFLOW +</h1>
             <div class="upload-container" id="upload-box">
                 <h3>Loading Dashboard Data</h3>
-                <p style="color: #666; margin-bottom: 15px; font-size: 14px;">Attempting to automatically fetch <b>master_workFLOW.xlsx</b> from the repository...</p>
+                <p style="color: #666; margin-bottom: 15px; font-size: 14px;">Attempting to fetch <b>master_workFLOW.xlsx</b> from local directory...</p>
                 <div id="upload-status" style="font-size: 15px; font-weight: bold; color: #888;">Initializing...</div>
                 <div id="manual-upload-section" style="display: none; margin-top: 25px; padding-top: 20px; border-top: 1px dashed #ccc;">
                     <p style="font-size: 13px; color: #888; margin-bottom: 10px;">Fallback: File not found. Upload manually below.</p>
@@ -373,8 +373,9 @@
         let ersOwners = [];
 
         let branchUsefulMap = {}; 
-        let dedicatedBranches = new Set();
+        let globalBranchToRegionMap = {}; 
         let oosMap = {};
+        let dedicatedBranches = new Set();
 
         const excludedStatuses = [
             'COMPLETED', 
@@ -402,7 +403,7 @@
         
         let lastActiveView = 'home-view';
 
-        // --- NAME NORMALIZERS & EXTRACTORS ---
+        // --- NAME NORMALIZERS ---
         function normalizeName(str) {
             if (!str) return '';
             let n = String(str).trim().replace(/\s+/g, ' '); 
@@ -411,16 +412,16 @@
             return n;
         }
 
+        function normalizeBranchStr(str) {
+            if (!str) return null;
+            return String(str).toUpperCase().replace(/[^A-Z0-9]/ig, '');
+        }
+
         function extractGardaCode(str) {
             if (!str) return null;
             let match = String(str).match(/(\d{3})[- ]?(\d{2})/);
             if (match) return match[1] + match[2];
             return null;
-        }
-        
-        function normalizeBranchStr(str) {
-            if(!str) return null;
-            return String(str).toUpperCase().replace(/[^A-Z0-9]/ig, '');
         }
 
         // --- FETCH LOCAL DATA ---
@@ -455,22 +456,19 @@
                     let tabType = 'UNKNOWN';
                     
                     for(let i=0; i < Math.min(15, aoa.length); i++) {
-                        let rowStr = aoa[i].map(c => String(c).toLowerCase().replace(/[^a-z0-9]/g, '')).join(' ');
+                        let rowStr = aoa[i].map(c => String(c).toLowerCase().replace(/[^a-z0-9]/g, '')).join('');
                         
-                        // Tab 2
+                        // Strict Header Scanners
                         if (rowStr.includes('createdby') || (rowStr.includes('unitnumber') && rowStr.includes('team'))) {
                             headerIdx = i; tabType = 'RESOURCE'; break;
                         } 
-                        // Tab 3
-                        else if (rowStr.includes('gardaregion') && !rowStr.includes('useful')) {
+                        else if (rowStr.includes('gardaregion') && rowStr.includes('oosflag')) {
                             headerIdx = i; tabType = 'OOS'; break;
                         } 
-                        // Tab 4/5
-                        else if (rowStr.includes('useful') || String(sheetName).toLowerCase().includes('useful')) {
+                        else if (rowStr.includes('gardaregion') && rowStr.includes('branch') && rowStr.includes('useful')) {
                             headerIdx = i; tabType = 'USEFUL'; break;
                         } 
-                        // Tab 1
-                        else if (rowStr.includes('ronumber') || rowStr.includes('order') || rowStr.includes('estimaterequesteddate')) {
+                        else if (rowStr.includes('ronumber') || rowStr.includes('order') || rowStr.includes('estimaterequesteddate') || rowStr.includes('customer')) {
                             headerIdx = i; tabType = 'VRO'; break;
                         }
                     }
@@ -516,7 +514,6 @@
 
         window.onload = fetchData;
 
-        // --- MANUAL UPLOAD FALLBACK ---
         document.getElementById('excelFileInput').addEventListener('change', async function(e) {
             const files = Array.from(e.target.files);
             if (files.length === 0) return;
@@ -538,14 +535,14 @@
                         let tabType = 'UNKNOWN';
                         
                         for(let i=0; i < Math.min(15, aoa.length); i++) {
-                            let rowStr = aoa[i].map(c => String(c).toLowerCase().replace(/[^a-z0-9]/g, '')).join(' ');
+                            let rowStr = aoa[i].map(c => String(c).toLowerCase().replace(/[^a-z0-9]/g, '')).join('');
                             if (rowStr.includes('createdby') || (rowStr.includes('unitnumber') && rowStr.includes('team'))) {
                                 headerIdx = i; tabType = 'RESOURCE'; break;
-                            } else if (rowStr.includes('gardaregion') && !rowStr.includes('useful')) {
+                            } else if (rowStr.includes('gardaregion') && rowStr.includes('oosflag')) {
                                 headerIdx = i; tabType = 'OOS'; break;
-                            } else if (rowStr.includes('useful') || String(sheetName).toLowerCase().includes('useful')) {
+                            } else if (rowStr.includes('gardaregion') && rowStr.includes('branch') && rowStr.includes('useful')) {
                                 headerIdx = i; tabType = 'USEFUL'; break;
-                            } else if (rowStr.includes('ronumber') || rowStr.includes('order') || rowStr.includes('estimaterequesteddate')) {
+                            } else if (rowStr.includes('ronumber') || rowStr.includes('order') || rowStr.includes('estimaterequesteddate') || rowStr.includes('customer')) {
                                 headerIdx = i; tabType = 'VRO'; break;
                             }
                         }
@@ -584,7 +581,6 @@
             }
         });
 
-        // --- DATA PARSERS ---
         function getCol(row, possibleNames) {
             const rowKeys = Object.keys(row);
             for (let name of possibleNames) {
@@ -608,7 +604,6 @@
             return rawStr.split('-')[0].trim() || 'Unknown Customer';
         }
 
-        // --- EXPORT LOGIC ---
         function exportDrilldownToExcel() {
             if (!currentOwnerView || processedData.length === 0) return;
             
@@ -631,7 +626,7 @@
 
             const excelRows = targetData.map(ro => ({
                 "AFS RO #": ro.roNum, "Unit No": ro.unitNo, 
-                "OOS Status": (ro.custKey === 'Garda' && ro.isOOS) ? "OOS" : "",
+                "OOS Status": ro.isOOS ? "OOS" : "",
                 "Useful %": ro.usefulPct !== null ? Math.round(ro.usefulPct * 100) + '%' : "N/A",
                 "Total Unit ROs": ro.roCount, "Status": ro.status, "ECD": ro.ecdFormatted,
                 "Task / VMRS": ro.vmrs, "Customer Group": ro.drillTopLevel, "Subregion": ro.subregion, "Branch": ro.branch
@@ -643,7 +638,6 @@
             XLSX.writeFile(workbook, `workflow_export_${String(currentOwnerView).replace(/\s+/g, '_')}_${currentFilter.toLowerCase()}.xlsx`);
         }
 
-        // --- FILTER LOGIC ---
         function setFilter(val) {
             currentFilter = val;
             document.querySelectorAll('.filter-btn').forEach(btn => {
@@ -682,17 +676,30 @@
                     if (branch && String(branch).trim() !== '') {
                         let pct = NaN;
                         let usefulKeys = Object.keys(row).filter(k => k.toLowerCase().includes('useful'));
-                        let totalKey = usefulKeys.find(k => k.toLowerCase().includes('total')) || usefulKeys[usefulKeys.length - 1];
+                        let totalKey = usefulKeys.find(k => k.toLowerCase().includes('total'));
                         
                         if (totalKey && row[totalKey] !== undefined && row[totalKey] !== '') {
                             let val = parseFloat(row[totalKey]);
                             if (!isNaN(val)) pct = val;
                         }
                         
+                        // Fallback if Total is empty
+                        if (isNaN(pct)) {
+                            for(let i = usefulKeys.length - 1; i >= 0; i--) {
+                                let k = usefulKeys[i];
+                                if (row[k] !== undefined && row[k] !== '') {
+                                    let val = parseFloat(row[k]);
+                                    if (!isNaN(val)) {
+                                        pct = val;
+                                        break;
+                                    }
+                                }
+                            }
+                        }
+                        
                         if (!isNaN(pct)) {
                             let bCode = extractGardaCode(branch);
                             if (bCode) branchUsefulMap[bCode] = pct;
-                            
                             let normKey = normalizeBranchStr(branch);
                             if (normKey) branchUsefulMap[normKey] = pct;
                         }
@@ -700,9 +707,10 @@
                 });
             }
 
-            // Map OOS from Tab 3
-            oosMap = {};
             let unitToLocation = {};
+            oosMap = {};
+            globalBranchToRegionMap = {}; 
+            
             oosRaw.forEach(row => {
                 let unit = getCol(row, ['UNITNUMBER', 'Unit No', 'Vehicle']);
                 let oosFlag = getCol(row, ['OOS Flag', 'Open RO Category']);
@@ -721,34 +729,44 @@
                         branch: String(branch || 'Unspecified Branch').trim() 
                     };
                 }
+                
+                if (region && branch) {
+                    let regNorm = normalizeName(region).toUpperCase();
+                    let bCode = extractGardaCode(branch);
+                    if (bCode) globalBranchToRegionMap[bCode] = regNorm;
+                    
+                    let bNorm = normalizeBranchStr(branch);
+                    if (bNorm) globalBranchToRegionMap[bNorm] = regNorm;
+                }
             });
 
-            // Map Creators, Unit Owners & Dedicated Branches from Tab 2
             let unitOwnerMap = {};
             let creatorMap = {};
-            let globalOwnerMap = {}; 
-            dedicatedBranches = new Set();
+            let ownerMap = {}; 
             
             let activePM = new Set();
             let activeVended = new Set();
             let activeERS = new Set();
             let pmKeywords = [];
+            
+            dedicatedBranches = new Set();
 
-            // Add the dedicated placeholder to ensure the tile renders
-            activeVended.add("Dedicated");
+            // Setup Universal Base
+            activeVended.add('Dedicated');
 
             resourceRaw.forEach(row => {
                 let keys = Object.keys(row);
                 
-                // Track Dedicated Branches
                 let bVal = getCol(row, ['Branch']);
                 let oVal = getCol(row, ['Owner']);
                 if (bVal && String(oVal).toUpperCase().trim() === 'DEDICATED') {
                     let bCode = extractGardaCode(bVal);
                     if (bCode) dedicatedBranches.add(bCode);
+                    let bNorm = normalizeBranchStr(bVal);
+                    if (bNorm) dedicatedBranches.add(bNorm);
                 }
 
-                // Parse Unit Assignments
+                // Left Side (Unit Owners)
                 let unitKey = keys.find(k => k.toLowerCase().replace(/[^a-z0-9]/g, '') === 'unitnumber');
                 let teamKeys = keys.filter(k => k.toLowerCase().replace(/[^a-z0-9]/g, '').includes('team'));
                 let unitTeamKey = teamKeys[0]; 
@@ -766,7 +784,7 @@
                     }
                 }
 
-                // Parse Creator Assignment & Universal Active Roster
+                // Right Side (Creator mapping & Active Directory)
                 let creatorKey = keys.find(k => k.toLowerCase().replace(/[^a-z0-9]/g, '') === 'createdby');
                 let nameKey = keys.find(k => k.toLowerCase().replace(/[^a-z0-9]/g, '') === 'name');
                 let statusKey = keys.find(k => k.toLowerCase().replace(/[^a-z0-9]/g, '') === 'status');
@@ -780,9 +798,7 @@
                     let cStatus = row[statusKey] ? String(row[statusKey]).toUpperCase().trim() : 'INACTIVE';
                     
                     creatorMap[cEmail] = { name: cName, team: cTeam };
-                    
-                    // Maintain global map for dynamic tile generation (Priority 3 Fallback)
-                    globalOwnerMap[cEmail] = { name: cName, status: cStatus, team: cTeam };
+                    ownerMap[cEmail] = { name: cName, status: cStatus, team: cTeam };
 
                     if (specificCreators.includes(cEmail)) {
                         if (cTeam === 'PM') activePM.add(cName);
@@ -803,7 +819,7 @@
 
             let unitROCounts = {};
             vroRaw.forEach(row => {
-                let unit = getCol(row, ['Unit No', 'UNITNUMBER', 'Vehicle']).toUpperCase();
+                let unit = getCol(row, ['Unit No', 'UNITNUMBER', 'Vehicle']).toUpperCase().trim();
                 if(unit) unitROCounts[unit] = (unitROCounts[unit] || 0) + 1;
             });
 
@@ -812,7 +828,7 @@
             processedData = vroRaw.map(row => {
                 let roNum = getCol(row, ['Order', 'RO Number', 'RONum', 'AFS RO #']).toUpperCase().trim();
                 let customer = getCol(row, ['Customer', 'CUSTOMERNAME', 'Customer Name']); 
-                let rawOwnerEmail = getCol(row, ['Owner', 'Created By', 'Email']); 
+                let rawOwnerEmail = getCol(row, ['Owner', 'Created By', 'Email']); // Column N
                 let unit = getCol(row, ['Unit No', 'UNITNUMBER', 'Vehicle']).toUpperCase().trim();
                 let status = getCol(row, ['Status']);
                 let vmrs = getCol(row, ['Task', 'DESCRIP', 'VMRS Description']);
@@ -864,12 +880,7 @@
                 }
 
                 let fallbackLoc = { region: stateName, subregion: cityName, branch: String(customer).trim() };
-                
-                if(custKey === 'Ferguson' || custKey === 'Amerit Fleet Solutions' || custKey === 'Brinks' || custKey === 'US Foods' || custKey === 'Frontier' || custKey === 'Colony Hardware' || custKey === 'Sukut Construction') { 
-                    loc = fallbackLoc; 
-                } else if(custKey === 'Garda') {
-                    if(loc.region === 'Unknown Region' || loc.region === 'Unspecified Region') loc = fallbackLoc;
-                } else {
+                if(custKey === 'Ferguson' || custKey === 'Amerit Fleet Solutions' || custKey === 'Brinks' || custKey === 'US Foods' || custKey === 'Frontier' || custKey === 'Colony Hardware' || custKey === 'Sukut Construction' || custKey === 'Garda') { 
                     if(loc.region === 'Unknown Region' || loc.region === 'Unspecified Region') loc = fallbackLoc;
                 }
                 
@@ -877,16 +888,22 @@
                 let ownerEmailLower = String(rawOwnerEmail || '').toLowerCase().trim();
                 let finalOwner = '';
                 let finalTeam = 'VENDED REPAIR';
+                let isDedicatedFlag = false;
 
                 // Priority 1: Check Specific Creator List
                 if (specificCreators.includes(ownerEmailLower) && creatorMap[ownerEmailLower]) {
                     finalOwner = creatorMap[ownerEmailLower].name;
                     finalTeam = creatorMap[ownerEmailLower].team;
+                    // Tag as dedicated if the unit is marked dedicated, but keep owner as creator
+                    if (unitOwnerMap[unit] && unitOwnerMap[unit].owner.toUpperCase() === 'DEDICATED') {
+                        isDedicatedFlag = true;
+                    }
                 } 
                 // Priority 2: Unit Assignment Match
                 else if (unitOwnerMap[unit]) {
                     let uData = unitOwnerMap[unit];
                     if (uData.owner.toUpperCase() === 'DEDICATED') {
+                        isDedicatedFlag = true;
                         finalOwner = 'Dedicated';
                         finalTeam = 'VENDED REPAIR';
                     } else if (uData.owner) {
@@ -897,11 +914,11 @@
 
                 // Priority 3: Fallback to the Creator if active
                 if (!finalOwner || finalOwner === '') {
-                    if (globalOwnerMap[ownerEmailLower] && globalOwnerMap[ownerEmailLower].status === 'ACTIVE') {
-                        finalOwner = globalOwnerMap[ownerEmailLower].name;
-                        finalTeam = globalOwnerMap[ownerEmailLower].team;
+                    if (ownerMap[ownerEmailLower] && ownerMap[ownerEmailLower].status === 'ACTIVE') {
+                        finalOwner = ownerMap[ownerEmailLower].name;
+                        finalTeam = ownerMap[ownerEmailLower].team;
                     } else {
-                        // Dead end drop
+                        // Drop from system entirely if not caught by any priority
                         return { roNum: '' };
                     }
                 }
@@ -931,7 +948,6 @@
                 allCustSet.add(custKey);
 
                 let statusStr = String(status || '').toUpperCase().trim();
-                // Explicitly check boolean flag in OOS Map
                 let isOOS = oosMap[unit] === true; 
                 let isOpen = !excludedStatuses.includes(statusStr);
                 
@@ -951,7 +967,11 @@
                     }
                 }
 
-                let isBranchDedicated = branchCode ? dedicatedBranches.has(branchCode) : false;
+                // Dedicated branch flag fallback
+                if (!isDedicatedFlag) {
+                    if (branchCode && dedicatedBranches.has(branchCode)) isDedicatedFlag = true;
+                    else if (bStrNorm && dedicatedBranches.has(bStrNorm)) isDedicatedFlag = true;
+                }
 
                 let ecdState = 'missing'; let ecdFormatted = 'NO ECD, UPDATE';
                 let ecdDate = new Date(dueRaw);
@@ -974,7 +994,7 @@
                     } else isCompletedKPI = false;
                 }
                 
-                return { roNum, customer, custKey, drillTopLevel, owner: finalOwner, unitNo: unit, status, vmrs, isOOS, isOpen, isCompletedKPI, isOnTimeKPI, isLateKPI, roCount: unitROCounts[unit] || 1, subregion: loc.subregion, branch: loc.branch, ecdState, ecdFormatted, openedDT, usefulPct, isBranchDedicated };
+                return { roNum, customer, custKey, drillTopLevel, owner: finalOwner, unitNo: unit, status, vmrs, isOOS, isOpen, isCompletedKPI, isOnTimeKPI, isLateKPI, roCount: unitROCounts[unit] || 1, subregion: loc.subregion, branch: loc.branch, ecdState, ecdFormatted, openedDT, usefulPct, isDedicated: isDedicatedFlag };
             }).filter(ro => ro.roNum !== '');
 
             pmOwners = Array.from(activePM).sort();
@@ -1016,7 +1036,6 @@
                 filteredOpen = filteredOpen.filter(ro => ro.isOOS && ro.usefulPct !== null && Math.round(ro.usefulPct * 100) < 100);
             }
             
-            // Priority is strictly OOS && Useful % < 100
             let priorityCount = dataSet.filter(ro => ro.isOpen && ro.isOOS && ro.usefulPct !== null && Math.round(ro.usefulPct * 100) < 100).length;
             let completedOrders = dataSet.filter(ro => ro.isCompletedKPI);
             let compCount = completedOrders.length;
@@ -1189,7 +1208,7 @@
                         
                         let branchBadge = getUsefulBadge(bPct !== null && bPct !== undefined ? [bPct] : []);
                         
-                        let isBranchDedicated = branchROs.some(ro => ro.isBranchDedicated);
+                        let isBranchDedicated = branchROs.some(ro => ro.isDedicated);
                         let dedicatedBadge = isBranchDedicated ? `<span style="background-color: white; color: black; border: 1px solid black; border-radius: 12px; padding: 2px 6px; margin-left: 5px; font-size: 10px; font-weight: bold;">DEDICATED</span>` : '';
 
                         branchHtml += `<details class="ro-detail-node"><summary>${branch} (${branchROs.length} ROs)${branchBadge}${dedicatedBadge}</summary>`;
