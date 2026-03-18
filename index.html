@@ -167,6 +167,9 @@
         .ecd-red { color: #d9534f; font-weight: 800; }
         .ecd-green { color: #5cb85c; font-weight: 800; }
         .badge-ecd-missing { background-color: #fff3cd; color: #d9534f; padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: 800; border: 1px solid #d9534f; white-space: nowrap; display: inline-block; }
+        
+        .grouped-ro-item { margin-bottom: 8px; }
+        .grouped-ro-item:last-child { margin-bottom: 0; }
     </style>
 </head>
 <body>
@@ -275,10 +278,6 @@
                     </select>
                 </div>
             </div>
-            <div class="filter-bar">
-                <button class="filter-btn active" data-filter="ALL" onclick="setFilter('ALL')">All Units</button>
-                <button class="filter-btn" data-filter="PRIORITY" onclick="setFilter('PRIORITY')">Priority</button>
-            </div>
             <div class="kpi-grid" id="pm-kpi-container"></div>
         </div>
 
@@ -291,10 +290,6 @@
                     </select>
                 </div>
             </div>
-            <div class="filter-bar">
-                <button class="filter-btn active" data-filter="ALL" onclick="setFilter('ALL')">All Units</button>
-                <button class="filter-btn" data-filter="PRIORITY" onclick="setFilter('PRIORITY')">Priority</button>
-            </div>
             <div class="kpi-grid" id="vended-kpi-container"></div>
         </div>
 
@@ -306,10 +301,6 @@
                         <option value="ALL">All Customers</option>
                     </select>
                 </div>
-            </div>
-            <div class="filter-bar">
-                <button class="filter-btn active" data-filter="ALL" onclick="setFilter('ALL')">All Units</button>
-                <button class="filter-btn" data-filter="PRIORITY" onclick="setFilter('PRIORITY')">Priority</button>
             </div>
             <div class="kpi-grid" id="ers-kpi-container"></div>
         </div>
@@ -412,9 +403,10 @@
             return n;
         }
 
+        // Extremely aggressive normalizer to fix typos in Excel like "hanver tnshp" or "mrtle beach"
         function normalizeBranchStr(str) {
             if (!str) return null;
-            return String(str).toUpperCase().replace(/[^A-Z0-9]/ig, '');
+            return String(str).toUpperCase().replace(/\d{3}[- ]?\d{2}/g, '').replace(/[^A-Z0-9]/ig, '');
         }
 
         function extractGardaCode(str) {
@@ -724,9 +716,9 @@
 
             if (usefulRaw && usefulRaw.length > 0) {
                 usefulRaw.forEach(row => {
-                    let rKey = Object.keys(row).find(k => k.toLowerCase().includes('region'));
-                    let subKey = Object.keys(row).find(k => k.toLowerCase().includes('subregion'));
-                    let bKey = Object.keys(row).find(k => k.toLowerCase() === 'branch');
+                    let rKey = Object.keys(row).find(k => k.trim().toLowerCase().includes('region'));
+                    let subKey = Object.keys(row).find(k => k.trim().toLowerCase().includes('subregion'));
+                    let bKey = Object.keys(row).find(k => k.trim().toLowerCase() === 'branch');
                     
                     let r = rKey ? row[rKey] : null;
                     let s = subKey ? row[subKey] : null;
@@ -749,17 +741,21 @@
                         let totalKey = usefulKeys.find(k => k.toLowerCase().includes('total'));
                         
                         if (totalKey && row[totalKey] !== undefined && row[totalKey] !== '') {
-                            let val = parseFloat(row[totalKey]);
-                            if (!isNaN(val)) pct = val;
+                            let valStr = String(row[totalKey]).trim();
+                            let val = parseFloat(valStr);
+                            if (!isNaN(val)) {
+                                pct = valStr.includes('%') ? val / 100 : val;
+                            }
                         }
                         
                         if (isNaN(pct)) {
                             for(let i = usefulKeys.length - 1; i >= 0; i--) {
                                 let k = usefulKeys[i];
                                 if (row[k] !== undefined && row[k] !== '') {
-                                    let val = parseFloat(row[k]);
+                                    let valStr = String(row[k]).trim();
+                                    let val = parseFloat(valStr);
                                     if (!isNaN(val)) {
-                                        pct = val;
+                                        pct = valStr.includes('%') ? val / 100 : val;
                                         break;
                                     }
                                 }
@@ -867,7 +863,7 @@
 
             processedData = vroRaw.map(row => {
                 let roNum = getCol(row, ['Order', 'RO Number', 'RONum', 'AFS RO #']).toUpperCase().trim();
-                let customer = getCol(row, ['Customer', 'CUSTOMERNAME', 'Customer Name']); 
+                let customerRaw = getCol(row, ['Customer', 'CUSTOMERNAME', 'Customer Name']); 
                 let rawOwnerEmail = getCol(row, ['Owner', 'Created By', 'Email']); 
                 let unit = getCol(row, ['Unit No', 'UNITNUMBER', 'Vehicle']).toUpperCase().trim();
                 let status = getCol(row, ['Status']);
@@ -876,31 +872,35 @@
                 let dueRaw = getCol(row, ['Unit Due Date', 'Estimate Due Date', 'Due Date', 'L']);
                 let compRaw = getCol(row, ['Completed Date', 'Completed', 'P']);
 
+                // Force fix notorious typos in customer string (e.g. Hanver -> Hanover)
+                let customerFixed = String(customerRaw || '').toUpperCase().replace('HANVER', 'HANOVER').replace('MRTLE', 'MYRTLE').replace('TNSHP', 'TOWNSHIP');
+                let customer = customerFixed;
+
                 let loc = unitToLocation[unit] || { region: 'Unknown Region', subregion: 'Unknown Subregion', branch: 'Unknown Branch' };
                 let custKey = getCustKey(customer);
                 
-                let cStr = String(customer || '').toUpperCase();
-                let cStrNorm = cStr.replace(/[^A-Z0-9]/ig, '');
+                let cStrNorm = customerFixed.replace(/[^A-Z0-9]/ig, '');
+                let cNameOnly = customerFixed.replace(/\d{3}[- ]?\d{2}/g, '').replace(/[^A-Z0-9]/ig, '');
                 let branchCode = extractGardaCode(customer); 
                 if (!branchCode && loc.branch) branchCode = extractGardaCode(loc.branch);
                 
                 // Force location override via Code Match to sync variations like Hanover Township
                 if (custKey === 'Garda') {
                     if (branchCode && branchMasterInfo[branchCode]) {
-                        loc = branchMasterInfo[branchCode];
-                    } else if (cStrNorm && branchMasterInfo[cStrNorm]) {
-                        loc = branchMasterInfo[cStrNorm];
+                        loc = Object.assign({}, loc, branchMasterInfo[branchCode]);
                     } else {
+                        // Match strictly by alphanumeric name (ignoring codes to fix missing code issues like Fontana)
                         for (let bKey in branchMasterInfo) {
-                            if (cStrNorm.includes(bKey)) {
-                                loc = branchMasterInfo[bKey];
+                            if (bKey.length > 4 && cNameOnly.includes(bKey)) {
+                                loc = Object.assign({}, loc, branchMasterInfo[bKey]);
                                 break;
                             }
                         }
                     }
                 }
 
-                if (!loc || loc.region === 'Unknown Region' || loc.region === 'Unspecified Region') {
+                // Fallback for completely unknown regions
+                if (loc.region === 'Unknown Region' || loc.region === 'Unspecified Region') {
                     let locPart = customer;
                     if(String(customer).includes('-')) locPart = customer.substring(customer.indexOf('-') + 1).trim(); 
                     
@@ -933,7 +933,12 @@
                             cityName = locPart;
                         }
                     }
-                    loc = { region: stateName, subregion: cityName, branch: String(customer).trim() };
+                    
+                    loc.region = stateName;
+                    loc.subregion = cityName;
+                    if (loc.branch === 'Unknown Branch' || loc.branch === 'Unspecified Branch') {
+                        loc.branch = String(customerRaw).trim(); // Keep raw spelling if completely unmatched
+                    }
                 }
                 
                 // --- THE ASSIGNMENT FUNNEL ---
@@ -1005,14 +1010,11 @@
                 
                 // --- MAP USEFUL % ---
                 let usefulPct = null;
-                let bStrNorm = normalizeBranchStr(loc.branch);
                 if (branchCode && branchUsefulMap[branchCode] !== undefined) {
                     usefulPct = branchUsefulMap[branchCode];
-                } else if (bStrNorm && branchUsefulMap[bStrNorm] !== undefined) {
-                    usefulPct = branchUsefulMap[bStrNorm];
                 } else {
                     for (let bKey in branchUsefulMap) {
-                        if (cStrNorm.includes(bKey)) {
+                        if (bKey.length > 4 && cNameOnly.includes(bKey)) {
                             usefulPct = branchUsefulMap[bKey];
                             break;
                         }
@@ -1022,7 +1024,14 @@
                 // Dedicated branch flag fallback
                 if (!isDedicatedFlag) {
                     if (branchCode && dedicatedBranches.has(branchCode)) isDedicatedFlag = true;
-                    else if (bStrNorm && dedicatedBranches.has(bStrNorm)) isDedicatedFlag = true;
+                    else {
+                        for (let bKey of dedicatedBranches) {
+                            if (bKey.length > 4 && cNameOnly.includes(bKey)) {
+                                isDedicatedFlag = true;
+                                break;
+                            }
+                        }
+                    }
                 }
 
                 let ecdState = 'missing'; let ecdFormatted = 'NO ECD, UPDATE';
@@ -1084,6 +1093,9 @@
         // --- HIERARCHY / KPI GENERATORS ---
         function generateTileHTML(name, dataSet, chartId = null) {
             let filteredOpen = dataSet.filter(ro => ro.isOpen);
+            if(currentFilter === 'PRIORITY') {
+                filteredOpen = filteredOpen.filter(ro => ro.isOOS && ro.usefulPct !== null && Math.round(ro.usefulPct * 100) < 100);
+            }
             
             let priorityCount = dataSet.filter(ro => ro.isOpen && ro.isOOS && ro.usefulPct !== null && Math.round(ro.usefulPct * 100) < 100).length;
             let completedOrders = dataSet.filter(ro => ro.isCompletedKPI);
