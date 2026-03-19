@@ -124,7 +124,7 @@
         .highlight-box .num { font-size: 26px; font-weight: 800; color: var(--gold); line-height: 1; text-align: right; }
         .highlight-box.urgent-box .num { color: var(--urgent-red); }
 
-        .chart-box { width: 50px; height: 50px; flex-shrink: 0; position: relative; display: flex; align-items: center; justify-content: center; margin: auto 5px; }
+        .chart-box { width: 50px; height: 50px; flex-shrink: 0; position: relative; display: flex; align-items: center; justify-content: margin: auto 5px; }
 
         /* KPI Layout - Bottom Row */
         .kpi-stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; border-top: 1px solid #eee; padding-top: 15px; width: 100%;}
@@ -922,7 +922,7 @@
             oosRaw.forEach(row => {
                 let region = getCol(row, ['GARDA REGION']);
                 let subregion = getCol(row, ['GARDA SUBREGION']);
-                let branch = getCol(row, ['Branch']);
+                let branch = getCol(row, ['Branch', 'GARDA SHOPNAME']);
                 if (branch) {
                     let bCode = extractGardaCode(branch);
                     let info = {
@@ -994,11 +994,11 @@
             oosMap = {};
             
             oosRaw.forEach(row => {
-                let unit = getCol(row, ['UNITNUMBER', 'Unit No', 'Vehicle']);
-                let oosFlag = getCol(row, ['OOS Flag', 'Open RO Category']);
+                let unit = getCol(row, ['UNITNUMBER', 'Unit No', 'Vehicle', 'UNIT #']);
+                let oosFlag = getCol(row, ['OOS Flag', 'Open RO Category', 'OOS FLAG']);
                 let region = getCol(row, ['GARDA REGION']);
                 let subregion = getCol(row, ['GARDA SUBREGION']);
-                let branch = getCol(row, ['Branch']);
+                let branch = getCol(row, ['Branch', 'GARDA SHOPNAME']);
                 
                 if(unit) {
                     let u = unit.toUpperCase().trim();
@@ -1069,12 +1069,6 @@
             });
 
             pmKeywords = [...new Set(pmKeywords)]; 
-
-            let unitROCounts = {};
-            vroRaw.forEach(row => {
-                let unit = getCol(row, ['Unit No', 'UNITNUMBER', 'Vehicle']).toUpperCase().trim();
-                if(unit) unitROCounts[unit] = (unitROCounts[unit] || 0) + 1;
-            });
 
             let allCustSet = new Set();
 
@@ -1275,7 +1269,7 @@
                     } else isCompletedKPI = false;
                 }
                 
-                return { roNum, customer, custKey, drillTopLevel, owner: finalOwner, unitNo: unit, status, vmrs, isOOS, isOpen, isCompletedKPI, isOnTimeKPI, isLateKPI, roCount: unitROCounts[unit] || 1, subregion: loc.subregion, branch: loc.branch, ecdState, ecdFormatted, openedDT, openedFormatted, usefulPct, isDedicated: isDedicatedFlag };
+                return { roNum, customer, custKey, drillTopLevel, owner: finalOwner, unitNo: unit, status, vmrs, isOOS, isOpen, isCompletedKPI, isOnTimeKPI, isLateKPI, subregion: loc.subregion, branch: loc.branch, ecdState, ecdFormatted, openedDT, openedFormatted, usefulPct, isDedicated: isDedicatedFlag };
             }).filter(ro => ro.roNum !== '');
 
             pmOwners = Array.from(activePM).sort();
@@ -1297,7 +1291,7 @@
             document.getElementById('home-dashboard').style.display = 'block';
             
             triggerViewUpdate();
-            updateAllNoteButtons(); // Refresh buttons on load
+            updateAllNoteButtons(); 
         }
 
         function getUsefulBadge(usefulArray) {
@@ -1640,7 +1634,7 @@
             }
 
             container.innerHTML = generateRoDrilldownHtml(ownerDataAll, isPM);
-            updateAllNoteButtons(); // Refresh note buttons on new HTML render
+            updateAllNoteButtons(); 
         }
 
         function toggleAllDetails(expand) { 
