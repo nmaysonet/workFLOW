@@ -120,11 +120,13 @@
         .kpi-top-metrics { display: flex; gap: 10px; margin-bottom: 15px; align-items: stretch; }
         .highlight-box { flex: 1; background: #fffaf0; border: 1px solid var(--gold); border-radius: 6px; padding: 10px; display: flex; flex-direction: column; justify-content: center;}
         .highlight-box.urgent-box { background: #fff0f0; border-color: var(--urgent-red); }
+        .highlight-box.oos-box { background: #fffde7; border-color: var(--medium-yellow); }
+        .highlight-box.oos-box .num { color: var(--medium-yellow); }
         .highlight-box .title { font-size: 12px; font-weight: 800; color: #555; text-transform: uppercase; margin-bottom: 5px; text-align: left; }
         .highlight-box .num { font-size: 26px; font-weight: 800; color: var(--gold); line-height: 1; text-align: right; }
         .highlight-box.urgent-box .num { color: var(--urgent-red); }
 
-        .chart-box { width: 50px; height: 50px; flex-shrink: 0; position: relative; display: flex; align-items: center; justify-content: margin: auto 5px; }
+        .chart-box { width: 50px; height: 50px; flex-shrink: 0; position: relative; display: flex; align-items: center; justify-content: center; margin: auto 5px; }
 
         /* KPI Layout - Bottom Row */
         .kpi-stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; border-top: 1px solid #eee; padding-top: 15px; width: 100%;}
@@ -300,6 +302,10 @@
                     </select>
                 </div>
             </div>
+            <div class="filter-bar">
+                <button class="filter-btn active" data-filter="ALL" onclick="setFilter('ALL')">All Units</button>
+                <button class="filter-btn" data-filter="OOS" onclick="setFilter('OOS')">Only OOS</button>
+            </div>
             <div class="kpi-grid" id="pm-kpi-container"></div>
         </div>
 
@@ -314,6 +320,7 @@
             </div>
             <div class="filter-bar">
                 <button class="filter-btn active" data-filter="ALL" onclick="setFilter('ALL')">All Units</button>
+                <button class="filter-btn" data-filter="OOS" onclick="setFilter('OOS')">Only OOS</button>
                 <button class="filter-btn" data-filter="PRIORITY" onclick="setFilter('PRIORITY')">Priority</button>
             </div>
             <div class="kpi-grid" id="vended-kpi-container"></div>
@@ -330,6 +337,7 @@
             </div>
             <div class="filter-bar">
                 <button class="filter-btn active" data-filter="ALL" onclick="setFilter('ALL')">All Units</button>
+                <button class="filter-btn" data-filter="OOS" onclick="setFilter('OOS')">Only OOS</button>
                 <button class="filter-btn" data-filter="PRIORITY" onclick="setFilter('PRIORITY')">Priority</button>
             </div>
             <div class="kpi-grid" id="ers-kpi-container"></div>
@@ -352,6 +360,7 @@
             </div>
             <div class="filter-bar" id="standard-drilldown-filters">
                 <button class="filter-btn active" data-filter="ALL" onclick="setFilter('ALL')">All Units</button>
+                <button class="filter-btn" data-filter="OOS" onclick="setFilter('OOS')">Only OOS</button>
                 <button class="filter-btn" data-filter="PRIORITY" onclick="setFilter('PRIORITY')">Priority</button>
             </div>
             <div class="drilldown-container" id="drilldown-body"></div>
@@ -402,7 +411,7 @@
     </div>
 
     <script>
-        // --- SECURE FIREBASE SYNC ENGINE (Wrapped in Try/Catch to prevent Firewall Crash) ---
+        // --- SAFE FIREBASE SYNC ENGINE ---
         let db = null;
         let globalRoCheckState = {};
         let globalRoNotesState = {};
@@ -423,7 +432,7 @@
                     messagingSenderId: "641710248116",
                     appId: "1:641710248116:web:1546701879d573041447e1"
                 };
-                firebase.initializeApp(firebaseConfig);
+                if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
                 db = firebase.database();
 
                 db.ref('roChecks').on('value', (snapshot) => {
@@ -439,10 +448,9 @@
                 });
             }
         } catch (error) {
-            console.warn("Firebase Init blocked by network. Running locally.");
+            console.warn("Firebase Init blocked.", error);
         }
 
-        // Status Button Engine
         function updateAllStatusBadges() {
             document.querySelectorAll('.status-toggle').forEach(btn => {
                 let ro = btn.getAttribute('data-ro');
@@ -848,7 +856,9 @@
 
             let isPM = currentOwnerView === 'ALL_PM' || pmOwners.includes(currentOwnerView);
             let targetData = ownerDataAll.filter(ro => ro.isOpen);
-            if(!isPM && currentFilter === 'PRIORITY') {
+            if(currentFilter === 'OOS') {
+                targetData = targetData.filter(ro => ro.isOOS);
+            } else if(!isPM && currentFilter === 'PRIORITY') {
                 targetData = targetData.filter(ro => ro.isOOS && ro.usefulPct !== null && Math.round(ro.usefulPct * 100) < 100);
             }
 
@@ -1307,6 +1317,7 @@
 
         function generateTileHTML(name, dataSet, chartId = null, isPM = false) {
             let filteredOpen = dataSet.filter(ro => ro.isOpen);
+            let oosCount = dataSet.filter(ro => ro.isOpen && ro.isOOS).length;
             let priorityCount = dataSet.filter(ro => ro.isOpen && ro.isOOS && ro.usefulPct !== null && Math.round(ro.usefulPct * 100) < 100).length;
             
             let completedOrders = dataSet.filter(ro => ro.isCompletedKPI);
@@ -1334,6 +1345,10 @@
                     <div class="highlight-box">
                         <div class="title">Open ROs</div>
                         <div class="num">${filteredOpen.length}</div>
+                    </div>
+                    <div class="highlight-box oos-box">
+                        <div class="title">OOS ROs</div>
+                        <div class="num">${oosCount}</div>
                     </div>
                     ${priorityBoxHtml}
                     ${chartHTML}
@@ -1432,7 +1447,9 @@
                 }
 
                 let targetData = ownerDataAll.filter(ro => ro.isOpen);
-                if(!isPM && currentFilter === 'PRIORITY') {
+                if (currentFilter === 'OOS') {
+                    targetData = targetData.filter(ro => ro.isOOS);
+                } else if(!isPM && currentFilter === 'PRIORITY') {
                     targetData = targetData.filter(ro => ro.isOOS && ro.usefulPct !== null && Math.round(ro.usefulPct * 100) < 100);
                 }
                 
@@ -1475,7 +1492,9 @@
 
             // PASS 2: Apply Filters
             let targetData = baseOpenData;
-            if(!isPM && currentFilter === 'PRIORITY') {
+            if(currentFilter === 'OOS') {
+                targetData = targetData.filter(ro => ro.isOOS);
+            } else if(!isPM && currentFilter === 'PRIORITY') {
                 targetData = targetData.filter(ro => ro.isOOS && ro.usefulPct !== null && Math.round(ro.usefulPct * 100) < 100);
             }
 
@@ -1615,10 +1634,16 @@
             document.getElementById('dynamic-back-btn').onclick = () => navigate(parentViewId, null, true);
             
             if (isPM) {
-                document.getElementById('standard-drilldown-filters').style.display = 'none';
-                currentFilter = 'ALL';
+                document.querySelector('#standard-drilldown-filters button[data-filter="PRIORITY"]').style.display = 'none';
+                if (currentFilter === 'PRIORITY') {
+                    currentFilter = 'ALL';
+                    document.querySelectorAll('.filter-btn').forEach(btn => {
+                        if(btn.dataset.filter === 'ALL') { btn.classList.add('active'); btn.style.background = 'var(--gold)'; } 
+                        else { btn.classList.remove('active'); btn.style.background = '#e0e0e0'; }
+                    });
+                }
             } else {
-                document.getElementById('standard-drilldown-filters').style.display = 'flex';
+                document.querySelector('#standard-drilldown-filters button[data-filter="PRIORITY"]').style.display = 'inline-block';
             }
 
             const container = document.getElementById('drilldown-body'); 
