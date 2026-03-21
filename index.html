@@ -321,10 +321,6 @@
                     </select>
                 </div>
             </div>
-            <div class="filter-bar">
-                <button class="filter-btn active" data-filter="ALL" onclick="setFilter('ALL')">All Units</button>
-                <button class="filter-btn" data-filter="OOS" onclick="setFilter('OOS')">Only OOS</button>
-            </div>
             <div class="kpi-grid" id="pm-kpi-container"></div>
         </div>
 
@@ -881,9 +877,9 @@
 
             let isPM = currentOwnerView === 'ALL_PM' || pmOwners.includes(currentOwnerView);
             let targetData = ownerDataAll.filter(ro => ro.isOpen);
-            if(currentFilter === 'OOS') {
+            if(currentFilter === 'OOS' && !isPM) {
                 targetData = targetData.filter(ro => ro.isOOS);
-            } else if(!isPM && currentFilter === 'PRIORITY') {
+            } else if(currentFilter === 'PRIORITY' && !isPM) {
                 targetData = targetData.filter(ro => ro.isOOS && ro.usefulPct !== null && Math.round(ro.usefulPct * 100) < 100);
             }
 
@@ -1304,7 +1300,7 @@
                     } else isCompletedKPI = false;
                 }
                 
-                return { roNum, customer, custKey, drillTopLevel, owner: finalOwner, unitNo: unit, status, vmrs, isOOS, isOpen, isCompletedKPI, isOnTimeKPI, isLateKPI, subregion: loc.subregion, branch: loc.branch, ecdState, ecdFormatted, openedDT, openedFormatted, usefulPct, isDedicated: isDedicatedFlag };
+                return { roNum, customer, custKey, drillTopLevel, owner: finalOwner, unitNo: unit, status, vmrs, isOOS, isOpen, isCompletedKPI, isOnTimeKPI, isLateKPI, roCount: unitROCounts[unit] || 1, subregion: loc.subregion, branch: loc.branch, ecdState, ecdFormatted, openedDT, openedFormatted, usefulPct, isDedicated: isDedicatedFlag };
             }).filter(ro => ro.roNum !== '');
 
             pmOwners = Array.from(activePM).sort();
@@ -1342,8 +1338,6 @@
 
         function generateTileHTML(name, dataSet, chartId = null, isPM = false) {
             let filteredOpen = dataSet.filter(ro => ro.isOpen);
-            let oosCount = dataSet.filter(ro => ro.isOpen && ro.isOOS).length;
-            let priorityCount = dataSet.filter(ro => ro.isOpen && ro.isOOS && ro.usefulPct !== null && Math.round(ro.usefulPct * 100) < 100).length;
             
             let completedOrders = dataSet.filter(ro => ro.isCompletedKPI);
             let compCount = completedOrders.length;
@@ -1357,12 +1351,21 @@
                 chartHTML = `<div class="chart-box"><canvas id="${chartId}" data-comp="${compPct}" data-late="${latePct}"></canvas></div>`;
             }
 
-            let priorityBoxHtml = isPM ? '' : `
-                <div class="highlight-box urgent-box">
-                    <div class="title">Priority ROs</div>
-                    <div class="num">${priorityCount}</div>
-                </div>
-            `;
+            let oosAndPriorityHtml = '';
+            if (!isPM) {
+                let oosCount = dataSet.filter(ro => ro.isOpen && ro.isOOS).length;
+                let priorityCount = dataSet.filter(ro => ro.isOpen && ro.isOOS && ro.usefulPct !== null && Math.round(ro.usefulPct * 100) < 100).length;
+                oosAndPriorityHtml = `
+                    <div class="highlight-box oos-box">
+                        <div class="title">OOS ROs</div>
+                        <div class="num">${oosCount}</div>
+                    </div>
+                    <div class="highlight-box urgent-box">
+                        <div class="title">Priority ROs</div>
+                        <div class="num">${priorityCount}</div>
+                    </div>
+                `;
+            }
 
             let innerHtml = `
                 <div class="kpi-name">${name}</div>
@@ -1371,11 +1374,7 @@
                         <div class="title">Open ROs</div>
                         <div class="num">${filteredOpen.length}</div>
                     </div>
-                    <div class="highlight-box oos-box">
-                        <div class="title">OOS ROs</div>
-                        <div class="num">${oosCount}</div>
-                    </div>
-                    ${priorityBoxHtml}
+                    ${oosAndPriorityHtml}
                     ${chartHTML}
                 </div>
                 <div class="kpi-stats-grid">
@@ -1472,10 +1471,14 @@
                 }
 
                 let targetData = ownerDataAll.filter(ro => ro.isOpen);
-                if (currentFilter === 'OOS') {
-                    targetData = targetData.filter(ro => ro.isOOS);
-                } else if(!isPM && currentFilter === 'PRIORITY') {
-                    targetData = targetData.filter(ro => ro.isOOS && ro.usefulPct !== null && Math.round(ro.usefulPct * 100) < 100);
+                
+                // IGNORE filter parameters entirely if it is PM
+                if (!isPM) {
+                    if (currentFilter === 'OOS') {
+                        targetData = targetData.filter(ro => ro.isOOS);
+                    } else if (currentFilter === 'PRIORITY') {
+                        targetData = targetData.filter(ro => ro.isOOS && ro.usefulPct !== null && Math.round(ro.usefulPct * 100) < 100);
+                    }
                 }
                 
                 if (targetData.length === 0) return; 
@@ -1517,10 +1520,13 @@
 
             // PASS 2: Apply Filters
             let targetData = baseOpenData;
-            if(currentFilter === 'OOS') {
-                targetData = targetData.filter(ro => ro.isOOS);
-            } else if(!isPM && currentFilter === 'PRIORITY') {
-                targetData = targetData.filter(ro => ro.isOOS && ro.usefulPct !== null && Math.round(ro.usefulPct * 100) < 100);
+            
+            if (!isPM) {
+                if (currentFilter === 'OOS') {
+                    targetData = targetData.filter(ro => ro.isOOS);
+                } else if(currentFilter === 'PRIORITY') {
+                    targetData = targetData.filter(ro => ro.isOOS && ro.usefulPct !== null && Math.round(ro.usefulPct * 100) < 100);
+                }
             }
 
             if(targetData.length === 0) return `<p style="margin-top:15px; color:#666;">No active Repair Orders to display under the current filters.</p>`;
@@ -1659,16 +1665,10 @@
             document.getElementById('dynamic-back-btn').onclick = () => navigate(parentViewId, null, true);
             
             if (isPM) {
-                document.querySelector('#standard-drilldown-filters button[data-filter="PRIORITY"]').style.display = 'none';
-                if (currentFilter === 'PRIORITY') {
-                    currentFilter = 'ALL';
-                    document.querySelectorAll('.filter-btn').forEach(btn => {
-                        if(btn.dataset.filter === 'ALL') { btn.classList.add('active'); btn.style.background = 'var(--gold)'; } 
-                        else { btn.classList.remove('active'); btn.style.background = '#e0e0e0'; }
-                    });
-                }
+                document.getElementById('standard-drilldown-filters').style.display = 'none';
+                currentFilter = 'ALL';
             } else {
-                document.querySelector('#standard-drilldown-filters button[data-filter="PRIORITY"]').style.display = 'inline-block';
+                document.getElementById('standard-drilldown-filters').style.display = 'flex';
             }
 
             const container = document.getElementById('drilldown-body'); 
@@ -1790,6 +1790,9 @@
             if (!preserveCustomerFilter) {
                 currentCustomerFilter = 'ALL';
                 document.querySelectorAll('.customer-filter-select').forEach(sel => { sel.value = 'ALL'; });
+            }
+            if(viewId === 'pm-view') {
+                currentFilter = 'ALL';
             }
             document.querySelectorAll('.view-section').forEach(v => v.classList.remove('active'));
             document.getElementById(viewId).classList.add('active');
