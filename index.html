@@ -7,6 +7,9 @@
     <link href="https://fonts.googleapis.com/css2?family=Raleway:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 
     <style>
         /* Global Styles & Reset */
@@ -58,7 +61,7 @@
         .top-actions { display: flex; gap: 15px; align-items: center; }
         
         .btn-action { background-color: var(--gold); color: #fff; padding: 10px 20px; border-radius: 4px; font-weight: bold; transition: 0.2s; border: none; cursor: pointer; font-size: 13px;}
-        .btn-action:hover { background-color: var(--gold-hover); color: white;}
+        .btn-action:hover { background-color: var(--gold-hover); color: white; }
         
         .btn-green { background-color: #5cb85c; color: #fff; padding: 8px 15px; border-radius: 4px; font-weight: bold; transition: 0.2s; border: none; cursor: pointer; font-size: 13px; display: inline-flex; align-items: center; gap: 5px;}
         .btn-green:hover { background-color: #4cae4c; color: white;}
@@ -427,47 +430,33 @@
     </div>
 
     <script>
-        // --- SAFE FIREBASE SYNC ENGINE ---
-        let db = null;
+        // --- FIREBASE SYNC ENGINE ---
+        const firebaseConfig = {
+            apiKey: "AIzaSyCr3VAldI-pPCb7APx3rJAEZvf_nl0iz1g",
+            authDomain: "workflow-dashboard-e6134.firebaseapp.com",
+            databaseURL: "https://workflow-dashboard-e6134-default-rtdb.firebaseio.com",
+            projectId: "workflow-dashboard-e6134",
+            storageBucket: "workflow-dashboard-e6134.firebasestorage.app",
+            messagingSenderId: "641710248116",
+            appId: "1:641710248116:web:1546701879d573041447e1"
+        };
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
+        
         let globalRoCheckState = {};
         let globalRoNotesState = {};
 
-        try {
-            globalRoCheckState = JSON.parse(localStorage.getItem('workflow_checks') || '{}');
-            globalRoNotesState = JSON.parse(localStorage.getItem('workflow_notes') || '{}');
-        } catch(e) {}
+        // Listen for Realtime Button Updates
+        db.ref('roChecks').on('value', (snapshot) => {
+            globalRoCheckState = snapshot.val() || {};
+            updateAllStatusBadges();
+        });
 
-        function initFirebaseSync() {
-            try {
-                if (typeof firebase !== 'undefined') {
-                    const firebaseConfig = {
-                        apiKey: "AIzaSyCr3VAldI-pPCb7APx3rJAEZvf_nl0iz1g",
-                        authDomain: "workflow-dashboard-e6134.firebaseapp.com",
-                        databaseURL: "https://workflow-dashboard-e6134-default-rtdb.firebaseio.com",
-                        projectId: "workflow-dashboard-e6134",
-                        storageBucket: "workflow-dashboard-e6134.firebasestorage.app",
-                        messagingSenderId: "641710248116",
-                        appId: "1:641710248116:web:1546701879d573041447e1"
-                    };
-                    if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
-                    db = firebase.database();
-
-                    db.ref('roChecks').on('value', (snapshot) => {
-                        globalRoCheckState = snapshot.val() || {};
-                        try { localStorage.setItem('workflow_checks', JSON.stringify(globalRoCheckState)); } catch(e) {}
-                        updateAllStatusBadges();
-                    });
-
-                    db.ref('roNotes').on('value', (snapshot) => {
-                        globalRoNotesState = snapshot.val() || {};
-                        try { localStorage.setItem('workflow_notes', JSON.stringify(globalRoNotesState)); } catch(e) {}
-                        updateAllNoteButtons();
-                    });
-                }
-            } catch (error) {
-                console.warn("Firebase Init blocked.", error);
-            }
-        }
+        // Listen for Realtime Notes Updates
+        db.ref('roNotes').on('value', (snapshot) => {
+            globalRoNotesState = snapshot.val() || {};
+            updateAllNoteButtons();
+        });
 
         function updateAllStatusBadges() {
             document.querySelectorAll('.status-toggle').forEach(btn => {
@@ -487,13 +476,7 @@
 
         function toggleRoCheck(ro, isChecked) {
             let safeRo = ro.replace(/[.#$\[\]]/g, '_'); 
-            if (db) {
-                db.ref('roChecks/' + safeRo).set(isChecked);
-            } else {
-                globalRoCheckState[safeRo] = isChecked;
-                try { localStorage.setItem('workflow_checks', JSON.stringify(globalRoCheckState)); } catch(e) {}
-                updateAllStatusBadges();
-            }
+            db.ref('roChecks/' + safeRo).set(isChecked);
         }
 
         // Notes Engine
@@ -529,13 +512,7 @@
         window.saveNote = function() {
             if (!currentEditingRo) return;
             let noteText = document.getElementById('note-textarea').value;
-            if (db) {
-                db.ref('roNotes/' + currentEditingRo).set(noteText);
-            } else {
-                globalRoNotesState[currentEditingRo] = noteText;
-                try { localStorage.setItem('workflow_notes', JSON.stringify(globalRoNotesState)); } catch(e) {}
-                updateAllNoteButtons();
-            }
+            db.ref('roNotes/' + currentEditingRo).set(noteText);
             closeNoteModal();
         }
 
@@ -594,7 +571,7 @@
             return null;
         }
 
-        // --- ROBUST STARTUP AND FETCHING LOGIC ---
+        // --- STARTUP LOGIC ---
         function startAppOnce() {
             if (window.__workflowStarted) return;
             window.__workflowStarted = true;
@@ -640,7 +617,7 @@
                     }
 
                     const sig = new Uint8Array(data.slice(0, 2));
-                    const isZip = sig[0] === 0x50 && sig[1] === 0x4B; 
+                    const isZip = sig[0] === 0x50 && sig[1] === 0x4B; // "PK"
                     if (!isZip) {
                         throw new Error('Response is not a valid XLSX file.');
                     }
@@ -752,9 +729,6 @@
                 await new Promise(resolve => requestAnimationFrame(resolve));
                 processExcelData(vroRaw, resourceRaw, oosRaw, usefulRaw);
 
-                // Safely Init Firebase after everything is done
-                setTimeout(initFirebaseSync, 500);
-
             } catch (error) {
                 console.error('Fetch failed:', error);
                 statusEl.innerText = `Failed to load live data. ${error.message}`;
@@ -833,7 +807,6 @@
                     });
                 }
                 processExcelData(vroRaw, resourceRaw, oosRaw, usefulRaw);
-                setTimeout(initFirebaseSync, 500); 
             } catch (error) { 
                 console.error(error); 
                 statusEl.innerText = "Error parsing files."; 
@@ -1634,10 +1607,8 @@
                         tableHTML += `</tbody></table></div>`; 
                         branchHtml += tableHTML + `</details>`;
                     }
-                    let subBadge = getUsefulBadge(subLvlUseful);
                     subHtml += `<details class="ro-detail-node"><summary>${sub}${subBadge}</summary>${branchHtml}</details>`;
                 }
-                let topBadge = getUsefulBadge(topLvlUseful);
                 htmlStr += `<details class="ro-detail-node"><summary>${topLvl}${topBadge}</summary>${subHtml}</details>`;
             }
             return htmlStr;
@@ -1658,16 +1629,10 @@
             document.getElementById('dynamic-back-btn').onclick = () => navigate(parentViewId, null, true);
             
             if (isPM) {
-                document.querySelector('#standard-drilldown-filters button[data-filter="PRIORITY"]').style.display = 'none';
-                if (currentFilter === 'PRIORITY') {
-                    currentFilter = 'ALL';
-                    document.querySelectorAll('.filter-btn').forEach(btn => {
-                        if(btn.dataset.filter === 'ALL') { btn.classList.add('active'); btn.style.background = 'var(--gold)'; } 
-                        else { btn.classList.remove('active'); btn.style.background = '#e0e0e0'; }
-                    });
-                }
+                document.getElementById('standard-drilldown-filters').style.display = 'none';
+                currentFilter = 'ALL';
             } else {
-                document.querySelector('#standard-drilldown-filters button[data-filter="PRIORITY"]').style.display = 'inline-block';
+                document.getElementById('standard-drilldown-filters').style.display = 'flex';
             }
 
             const container = document.getElementById('drilldown-body'); 
