@@ -60,8 +60,8 @@
         .search-container input { padding: 10px 15px; width: 300px; border: 1px solid var(--border); border-radius: 4px; font-size: 14px; }
         .top-actions { display: flex; gap: 15px; align-items: center; }
         
-        .btn-action { background-color: var(--gold); color: #fff; padding: 10px 20px; border-radius: 4px; font-weight: bold; transition: 0.2s; border: none; cursor: pointer; font-size: 13px;}
-        .btn-action:hover { background-color: var(--gold-hover); color: white; }
+        .btn-action { background-color: var(--gold); color: #333; padding: 10px 20px; border-radius: 4px; font-weight: bold; transition: 0.2s; border: none; cursor: pointer; font-size: 13px;}
+        .btn-action:hover { background-color: var(--gold-hover); color: #111; }
         
         .btn-green { background-color: #5cb85c; color: #fff; padding: 8px 15px; border-radius: 4px; font-weight: bold; transition: 0.2s; border: none; cursor: pointer; font-size: 13px; display: inline-flex; align-items: center; gap: 5px;}
         .btn-green:hover { background-color: #4cae4c; color: white;}
@@ -97,11 +97,11 @@
         .filter-bar { display: flex; gap: 10px; margin-bottom: 20px; padding-bottom: 15px; border-bottom: 1px solid var(--border); flex-wrap: wrap; }
         .filter-btn { padding: 10px 20px; border: none; background-color: #e0e0e0; color: #333; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 13px; transition: 0.2s; }
         .filter-btn:hover { background-color: #d0d0d0; }
-        .filter-btn.active { background-color: var(--gold); color: #fff; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .filter-btn.active { background-color: var(--gold); color: #333; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
         .filter-btn.active:hover { background-color: var(--gold-hover); }
 
         /* General KPI Tiles Grid */
-        .kpi-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 20px; }
+        .kpi-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 20px; padding-top: 10px;}
         .kpi-tile { 
             background: #fff; padding: 25px 20px; border-radius: 8px; 
             box-shadow: 0 1px 3px rgba(0,0,0,0.1); cursor: pointer; 
@@ -111,16 +111,16 @@
         }
         .kpi-tile:hover { 
             transform: translateY(-5px); 
-            box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); 
+            box-shadow: 0 12px 20px rgba(0,0,0,0.12); 
             border-top-color: #000000 !important; 
         }
         .kpi-name { font-size: 20px; font-weight: 800; margin-bottom: 15px; color: #333; }
         
         /* Master Dashboard Container & Layout */
-        .home-dashboard-header { display: flex; justify-content: space-between; align-items: center; margin-top: 40px; margin-bottom: 20px; padding-bottom: 10px; border-bottom: 2px solid var(--border); flex-wrap: wrap; gap: 15px;}
+        .home-dashboard-header { display: flex; justify-content: space-between; align-items: center; margin-top: 40px; margin-bottom: 10px; padding-bottom: 10px; border-bottom: 2px solid var(--border); flex-wrap: wrap; gap: 15px;}
         .filter-select { padding: 8px 15px; border-radius: 4px; border: 1px solid #ccc; font-weight: 700; font-size: 14px; background: #fff;}
         
-        .home-kpi-container { display: flex; gap: 15px; flex-wrap: nowrap; width: 100%; overflow-x: auto; padding-bottom: 15px; }
+        .home-kpi-container { display: flex; gap: 15px; flex-wrap: nowrap; width: 100%; overflow-x: auto; padding-top: 10px; padding-bottom: 15px; }
         
         .home-master-tile { 
             flex: 1; min-width: 360px; padding: 20px; cursor: pointer; 
@@ -130,7 +130,7 @@
         }
         .home-master-tile:hover { 
             transform: translateY(-5px); 
-            box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); 
+            box-shadow: 0 12px 20px rgba(0,0,0,0.12); 
             border-top-color: #000000 !important; 
         }
         .home-master-tile .kpi-name { font-size: 18px; margin-bottom: 15px; }
@@ -201,7 +201,7 @@
         /* Notes UI Elements */
         .note-btn { background: #f0f0f0; border: 1px solid #ccc; border-radius: 4px; cursor: pointer; padding: 2px 6px; font-size: 12px; transition: 0.2s; opacity: 0.7;}
         .note-btn:hover { background: #e0e0e0; opacity: 1; }
-        .note-btn.has-note { background: var(--gold); color: white; border-color: var(--gold-hover); opacity: 1; box-shadow: 0 1px 3px rgba(0,0,0,0.2); }
+        .note-btn.has-note { background: var(--gold); color: #333; border-color: var(--gold-hover); opacity: 1; box-shadow: 0 1px 3px rgba(0,0,0,0.2); }
 
         .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center; }
         .modal-box { background: white; padding: 20px; border-radius: 8px; width: 450px; max-width: 90%; box-shadow: 0 4px 15px rgba(0,0,0,0.2); }
@@ -430,33 +430,47 @@
     </div>
 
     <script>
-        // --- FIREBASE SYNC ENGINE ---
-        const firebaseConfig = {
-            apiKey: "AIzaSyCr3VAldI-pPCb7APx3rJAEZvf_nl0iz1g",
-            authDomain: "workflow-dashboard-e6134.firebaseapp.com",
-            databaseURL: "https://workflow-dashboard-e6134-default-rtdb.firebaseio.com",
-            projectId: "workflow-dashboard-e6134",
-            storageBucket: "workflow-dashboard-e6134.firebasestorage.app",
-            messagingSenderId: "641710248116",
-            appId: "1:641710248116:web:1546701879d573041447e1"
-        };
-        firebase.initializeApp(firebaseConfig);
-        const db = firebase.database();
-        
+        // --- SAFE FIREBASE SYNC ENGINE ---
+        let db = null;
         let globalRoCheckState = {};
         let globalRoNotesState = {};
 
-        // Listen for Realtime Button Updates
-        db.ref('roChecks').on('value', (snapshot) => {
-            globalRoCheckState = snapshot.val() || {};
-            updateAllStatusBadges();
-        });
+        try {
+            globalRoCheckState = JSON.parse(localStorage.getItem('workflow_checks') || '{}');
+            globalRoNotesState = JSON.parse(localStorage.getItem('workflow_notes') || '{}');
+        } catch(e) {}
 
-        // Listen for Realtime Notes Updates
-        db.ref('roNotes').on('value', (snapshot) => {
-            globalRoNotesState = snapshot.val() || {};
-            updateAllNoteButtons();
-        });
+        function initFirebaseSync() {
+            try {
+                if (typeof firebase !== 'undefined') {
+                    const firebaseConfig = {
+                        apiKey: "AIzaSyCr3VAldI-pPCb7APx3rJAEZvf_nl0iz1g",
+                        authDomain: "workflow-dashboard-e6134.firebaseapp.com",
+                        databaseURL: "https://workflow-dashboard-e6134-default-rtdb.firebaseio.com",
+                        projectId: "workflow-dashboard-e6134",
+                        storageBucket: "workflow-dashboard-e6134.firebasestorage.app",
+                        messagingSenderId: "641710248116",
+                        appId: "1:641710248116:web:1546701879d573041447e1"
+                    };
+                    if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+                    db = firebase.database();
+
+                    db.ref('roChecks').on('value', (snapshot) => {
+                        globalRoCheckState = snapshot.val() || {};
+                        try { localStorage.setItem('workflow_checks', JSON.stringify(globalRoCheckState)); } catch(e) {}
+                        updateAllStatusBadges();
+                    });
+
+                    db.ref('roNotes').on('value', (snapshot) => {
+                        globalRoNotesState = snapshot.val() || {};
+                        try { localStorage.setItem('workflow_notes', JSON.stringify(globalRoNotesState)); } catch(e) {}
+                        updateAllNoteButtons();
+                    });
+                }
+            } catch (error) {
+                console.warn("Firebase Init blocked.", error);
+            }
+        }
 
         function updateAllStatusBadges() {
             document.querySelectorAll('.status-toggle').forEach(btn => {
@@ -476,7 +490,13 @@
 
         function toggleRoCheck(ro, isChecked) {
             let safeRo = ro.replace(/[.#$\[\]]/g, '_'); 
-            db.ref('roChecks/' + safeRo).set(isChecked);
+            if (db) {
+                db.ref('roChecks/' + safeRo).set(isChecked);
+            } else {
+                globalRoCheckState[safeRo] = isChecked;
+                try { localStorage.setItem('workflow_checks', JSON.stringify(globalRoCheckState)); } catch(e) {}
+                updateAllStatusBadges();
+            }
         }
 
         // Notes Engine
@@ -512,7 +532,13 @@
         window.saveNote = function() {
             if (!currentEditingRo) return;
             let noteText = document.getElementById('note-textarea').value;
-            db.ref('roNotes/' + currentEditingRo).set(noteText);
+            if (db) {
+                db.ref('roNotes/' + currentEditingRo).set(noteText);
+            } else {
+                globalRoNotesState[currentEditingRo] = noteText;
+                try { localStorage.setItem('workflow_notes', JSON.stringify(globalRoNotesState)); } catch(e) {}
+                updateAllNoteButtons();
+            }
             closeNoteModal();
         }
 
@@ -571,7 +597,7 @@
             return null;
         }
 
-        // --- STARTUP LOGIC ---
+        // --- ROBUST STARTUP AND FETCHING LOGIC ---
         function startAppOnce() {
             if (window.__workflowStarted) return;
             window.__workflowStarted = true;
@@ -617,7 +643,7 @@
                     }
 
                     const sig = new Uint8Array(data.slice(0, 2));
-                    const isZip = sig[0] === 0x50 && sig[1] === 0x4B; // "PK"
+                    const isZip = sig[0] === 0x50 && sig[1] === 0x4B; 
                     if (!isZip) {
                         throw new Error('Response is not a valid XLSX file.');
                     }
@@ -729,6 +755,9 @@
                 await new Promise(resolve => requestAnimationFrame(resolve));
                 processExcelData(vroRaw, resourceRaw, oosRaw, usefulRaw);
 
+                // Safely Init Firebase after everything is done
+                setTimeout(initFirebaseSync, 500);
+
             } catch (error) {
                 console.error('Fetch failed:', error);
                 statusEl.innerText = `Failed to load live data. ${error.message}`;
@@ -807,6 +836,7 @@
                     });
                 }
                 processExcelData(vroRaw, resourceRaw, oosRaw, usefulRaw);
+                setTimeout(initFirebaseSync, 500); 
             } catch (error) { 
                 console.error(error); 
                 statusEl.innerText = "Error parsing files."; 
@@ -1629,10 +1659,16 @@
             document.getElementById('dynamic-back-btn').onclick = () => navigate(parentViewId, null, true);
             
             if (isPM) {
-                document.getElementById('standard-drilldown-filters').style.display = 'none';
-                currentFilter = 'ALL';
+                document.querySelector('#standard-drilldown-filters button[data-filter="PRIORITY"]').style.display = 'none';
+                if (currentFilter === 'PRIORITY') {
+                    currentFilter = 'ALL';
+                    document.querySelectorAll('.filter-btn').forEach(btn => {
+                        if(btn.dataset.filter === 'ALL') { btn.classList.add('active'); btn.style.background = 'var(--gold)'; } 
+                        else { btn.classList.remove('active'); btn.style.background = '#e0e0e0'; }
+                    });
+                }
             } else {
-                document.getElementById('standard-drilldown-filters').style.display = 'flex';
+                document.querySelector('#standard-drilldown-filters button[data-filter="PRIORITY"]').style.display = 'inline-block';
             }
 
             const container = document.getElementById('drilldown-body'); 
