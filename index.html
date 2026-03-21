@@ -7,9 +7,6 @@
     <link href="https://fonts.googleapis.com/css2?family=Raleway:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 
     <style>
         /* Global Styles & Reset */
@@ -21,8 +18,8 @@
         :root {
             --sidebar-bg: #3a3b40;
             --sidebar-hover: #4a4b50;
-            --gold: #dfb122;
-            --gold-hover: #c49a1d;
+            --gold: #FFC600; /* Standard Amerit Yellow */
+            --gold-hover: #e5b200;
             --urgent-red: #d9534f;
             --medium-yellow: #f0ad4e;
             --low-green: #5cb85c;
@@ -61,10 +58,10 @@
         .top-actions { display: flex; gap: 15px; align-items: center; }
         
         .btn-action { background-color: var(--gold); color: #fff; padding: 10px 20px; border-radius: 4px; font-weight: bold; transition: 0.2s; border: none; cursor: pointer; font-size: 13px;}
-        .btn-action:hover { background-color: var(--gold-hover); }
+        .btn-action:hover { background-color: var(--gold-hover); color: white;}
         
         .btn-green { background-color: #5cb85c; color: #fff; padding: 8px 15px; border-radius: 4px; font-weight: bold; transition: 0.2s; border: none; cursor: pointer; font-size: 13px; display: inline-flex; align-items: center; gap: 5px;}
-        .btn-green:hover { background-color: #4cae4c; }
+        .btn-green:hover { background-color: #4cae4c; color: white;}
 
         /* Vendor Maps Dropdown Styling */
         .dropdown { position: relative; display: inline-block; }
@@ -102,8 +99,18 @@
 
         /* General KPI Tiles Grid */
         .kpi-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 20px; }
-        .kpi-tile { background: #fff; padding: 25px 20px; border-radius: 8px; box-shadow: 0 2px 6px rgba(0,0,0,0.08); cursor: pointer; border-top: 4px solid var(--gold); transition: transform 0.2s, box-shadow 0.2s; display: flex; flex-direction: column;}
-        .kpi-tile:hover { transform: translateY(-3px); box-shadow: 0 4px 12px rgba(0,0,0,0.12); }
+        .kpi-tile { 
+            background: #fff; padding: 25px 20px; border-radius: 8px; 
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1); cursor: pointer; 
+            border-top: 4px solid var(--gold) !important; 
+            transition: transform 0.2s ease, box-shadow 0.2s ease, border-top-color 0.2s ease; 
+            display: flex; flex-direction: column;
+        }
+        .kpi-tile:hover { 
+            transform: translateY(-5px); 
+            box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); 
+            border-top-color: #000000 !important; 
+        }
         .kpi-name { font-size: 20px; font-weight: 800; margin-bottom: 15px; color: #333; }
         
         /* Master Dashboard Container & Layout */
@@ -112,8 +119,17 @@
         
         .home-kpi-container { display: flex; gap: 15px; flex-wrap: nowrap; width: 100%; overflow-x: auto; padding-bottom: 15px; }
         
-        .home-master-tile { flex: 1; min-width: 360px; padding: 20px; cursor: pointer; border-top: 4px solid #333 !important; transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s;}
-        .home-master-tile:hover { transform: translateY(-3px); box-shadow: 0 4px 12px rgba(0,0,0,0.12); border-top-color: var(--gold) !important; }
+        .home-master-tile { 
+            flex: 1; min-width: 360px; padding: 20px; cursor: pointer; 
+            border-top: 4px solid var(--gold) !important; 
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            transition: transform 0.2s ease, box-shadow 0.2s ease, border-top-color 0.2s ease;
+        }
+        .home-master-tile:hover { 
+            transform: translateY(-5px); 
+            box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); 
+            border-top-color: #000000 !important; 
+        }
         .home-master-tile .kpi-name { font-size: 18px; margin-bottom: 15px; }
 
         /* KPI Layout - Master Highlight Boxes */
@@ -261,7 +277,7 @@
                 <div class="dropdown">
                     <button class="btn-action dropbtn">VENDOR MAPS ▼</button>
                     <div class="dropdown-content">
-                        <a href="https://app.mapline.com/map/map_282c81fe/TWZ2TzJHRGcrd3BjaG1QMDNPekVGYUhxNThJd080SUZTK2MwZG" target="_blank">Garda</a>
+                        <a href="https://app.mapline.com/map/map_282c81fe/TWZ2TzJHRGcrd3BjaG1QMDNPekVGYUhxNThJd080SUZTK2MwZG" target="_blank">Armored</a>
                     </div>
                 </div>
                 <a href="https://afshub.azurewebsites.net/Vendors/VendedRepairOrder/CreateVRO" target="_blank" class="btn-action">CREATE A VRO</a>
@@ -421,34 +437,36 @@
             globalRoNotesState = JSON.parse(localStorage.getItem('workflow_notes') || '{}');
         } catch(e) {}
 
-        try {
-            if (typeof firebase !== 'undefined') {
-                const firebaseConfig = {
-                    apiKey: "AIzaSyCr3VAldI-pPCb7APx3rJAEZvf_nl0iz1g",
-                    authDomain: "workflow-dashboard-e6134.firebaseapp.com",
-                    databaseURL: "https://workflow-dashboard-e6134-default-rtdb.firebaseio.com",
-                    projectId: "workflow-dashboard-e6134",
-                    storageBucket: "workflow-dashboard-e6134.firebasestorage.app",
-                    messagingSenderId: "641710248116",
-                    appId: "1:641710248116:web:1546701879d573041447e1"
-                };
-                if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
-                db = firebase.database();
+        function initFirebaseSync() {
+            try {
+                if (typeof firebase !== 'undefined') {
+                    const firebaseConfig = {
+                        apiKey: "AIzaSyCr3VAldI-pPCb7APx3rJAEZvf_nl0iz1g",
+                        authDomain: "workflow-dashboard-e6134.firebaseapp.com",
+                        databaseURL: "https://workflow-dashboard-e6134-default-rtdb.firebaseio.com",
+                        projectId: "workflow-dashboard-e6134",
+                        storageBucket: "workflow-dashboard-e6134.firebasestorage.app",
+                        messagingSenderId: "641710248116",
+                        appId: "1:641710248116:web:1546701879d573041447e1"
+                    };
+                    if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+                    db = firebase.database();
 
-                db.ref('roChecks').on('value', (snapshot) => {
-                    globalRoCheckState = snapshot.val() || {};
-                    try { localStorage.setItem('workflow_checks', JSON.stringify(globalRoCheckState)); } catch(e) {}
-                    updateAllStatusBadges();
-                });
+                    db.ref('roChecks').on('value', (snapshot) => {
+                        globalRoCheckState = snapshot.val() || {};
+                        try { localStorage.setItem('workflow_checks', JSON.stringify(globalRoCheckState)); } catch(e) {}
+                        updateAllStatusBadges();
+                    });
 
-                db.ref('roNotes').on('value', (snapshot) => {
-                    globalRoNotesState = snapshot.val() || {};
-                    try { localStorage.setItem('workflow_notes', JSON.stringify(globalRoNotesState)); } catch(e) {}
-                    updateAllNoteButtons();
-                });
+                    db.ref('roNotes').on('value', (snapshot) => {
+                        globalRoNotesState = snapshot.val() || {};
+                        try { localStorage.setItem('workflow_notes', JSON.stringify(globalRoNotesState)); } catch(e) {}
+                        updateAllNoteButtons();
+                    });
+                }
+            } catch (error) {
+                console.warn("Firebase Init blocked.", error);
             }
-        } catch (error) {
-            console.warn("Firebase Init blocked.", error);
         }
 
         function updateAllStatusBadges() {
@@ -734,6 +752,9 @@
                 await new Promise(resolve => requestAnimationFrame(resolve));
                 processExcelData(vroRaw, resourceRaw, oosRaw, usefulRaw);
 
+                // Safely Init Firebase after everything is done
+                setTimeout(initFirebaseSync, 500);
+
             } catch (error) {
                 console.error('Fetch failed:', error);
                 statusEl.innerText = `Failed to load live data. ${error.message}`;
@@ -812,6 +833,7 @@
                     });
                 }
                 processExcelData(vroRaw, resourceRaw, oosRaw, usefulRaw);
+                setTimeout(initFirebaseSync, 500); 
             } catch (error) { 
                 console.error(error); 
                 statusEl.innerText = "Error parsing files."; 
@@ -1612,8 +1634,10 @@
                         tableHTML += `</tbody></table></div>`; 
                         branchHtml += tableHTML + `</details>`;
                     }
+                    let subBadge = getUsefulBadge(subLvlUseful);
                     subHtml += `<details class="ro-detail-node"><summary>${sub}${subBadge}</summary>${branchHtml}</details>`;
                 }
+                let topBadge = getUsefulBadge(topLvlUseful);
                 htmlStr += `<details class="ro-detail-node"><summary>${topLvl}${topBadge}</summary>${subHtml}</details>`;
             }
             return htmlStr;
