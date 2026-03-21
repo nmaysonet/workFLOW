@@ -751,7 +751,6 @@
                 await new Promise(resolve => requestAnimationFrame(resolve));
                 processExcelData(vroRaw, resourceRaw, oosRaw, usefulRaw);
 
-                // Safely Init Firebase after everything is done
                 setTimeout(initFirebaseSync, 500);
 
             } catch (error) {
@@ -1300,7 +1299,8 @@
                     } else isCompletedKPI = false;
                 }
                 
-                return { roNum, customer, custKey, drillTopLevel, owner: finalOwner, unitNo: unit, status, vmrs, isOOS, isOpen, isCompletedKPI, isOnTimeKPI, isLateKPI, roCount: unitROCounts[unit] || 1, subregion: loc.subregion, branch: loc.branch, ecdState, ecdFormatted, openedDT, openedFormatted, usefulPct, isDedicated: isDedicatedFlag };
+                // NO roCount returned here
+                return { roNum, customer, custKey, drillTopLevel, owner: finalOwner, unitNo: unit, status, vmrs, isOOS, isOpen, isCompletedKPI, isOnTimeKPI, isLateKPI, subregion: loc.subregion, branch: loc.branch, ecdState, ecdFormatted, openedDT, openedFormatted, usefulPct, isDedicated: isDedicatedFlag };
             }).filter(ro => ro.roNum !== '');
 
             pmOwners = Array.from(activePM).sort();
@@ -1338,6 +1338,8 @@
 
         function generateTileHTML(name, dataSet, chartId = null, isPM = false) {
             let filteredOpen = dataSet.filter(ro => ro.isOpen);
+            let oosCount = dataSet.filter(ro => ro.isOpen && ro.isOOS).length;
+            let priorityCount = dataSet.filter(ro => ro.isOpen && ro.isOOS && ro.usefulPct !== null && Math.round(ro.usefulPct * 100) < 100).length;
             
             let completedOrders = dataSet.filter(ro => ro.isCompletedKPI);
             let compCount = completedOrders.length;
@@ -1353,8 +1355,6 @@
 
             let oosAndPriorityHtml = '';
             if (!isPM) {
-                let oosCount = dataSet.filter(ro => ro.isOpen && ro.isOOS).length;
-                let priorityCount = dataSet.filter(ro => ro.isOpen && ro.isOOS && ro.usefulPct !== null && Math.round(ro.usefulPct * 100) < 100).length;
                 oosAndPriorityHtml = `
                     <div class="highlight-box oos-box">
                         <div class="title">OOS ROs</div>
@@ -1472,7 +1472,6 @@
 
                 let targetData = ownerDataAll.filter(ro => ro.isOpen);
                 
-                // IGNORE filter parameters entirely if it is PM
                 if (!isPM) {
                     if (currentFilter === 'OOS') {
                         targetData = targetData.filter(ro => ro.isOOS);
