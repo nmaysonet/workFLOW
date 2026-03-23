@@ -94,7 +94,7 @@
         #upload-status { margin-top: 15px; font-size: 14px; font-weight: bold; color: #2e7d32; }
 
         /* Filter Tabs */
-        .filter-bar { display: flex; gap: 10px; margin-bottom: 20px; padding-bottom: 15px; border-bottom: 1px solid var(--border); flex-wrap: wrap; }
+        .filter-bar { display: flex; gap: 10px; margin-bottom: 20px; padding-bottom: 15px; border-bottom: 1px solid var(--border); flex-wrap: wrap; align-items: center; }
         .filter-btn { padding: 10px 20px; border: none; background-color: #e0e0e0; color: #333; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 13px; transition: 0.2s; }
         .filter-btn:hover { background-color: #d0d0d0; }
         .filter-btn.active { background-color: var(--gold); color: #333; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
@@ -237,6 +237,7 @@
         <div class="menu-item" id="menu-pm" onclick="navigate('pm-view', this)">PM Queue</div>
         <div class="menu-item" id="menu-vended" onclick="navigate('vended-view', this)">Vended Repair Queue</div>
         <div class="menu-item" id="menu-ers" onclick="navigate('ers-view', this)">ERS Queue</div>
+        <div class="menu-item" id="menu-reports" onclick="navigate('reports-view', this)">Reports</div>
         
         <div class="sidebar-truck">
             <svg width="140" height="70" viewBox="0 0 120 60" xmlns="http://www.w3.org/2000/svg" class="moving-truck-svg">
@@ -379,6 +380,44 @@
                 <button class="filter-btn" data-filter="PRIORITY" onclick="setFilter('PRIORITY')">Priority</button>
             </div>
             <div class="drilldown-container" id="drilldown-body"></div>
+        </div>
+
+        <div id="reports-view" class="view-section">
+            <div class="view-title">
+                <span style="font-weight: 700;">Reports</span>
+            </div>
+            <div class="filter-bar" style="align-items: center;">
+                <select id="report-region-select" class="filter-select" style="margin-right: 15px; width: 200px;">
+                    <option value="">Select Region...</option>
+                </select>
+                <button class="btn-green" onclick="generateReport()">Generate Report</button>
+                <button class="btn-action" id="btn-email-report" onclick="emailReport()" style="display: none; margin-left: auto;">📧 Email Report</button>
+            </div>
+            <div class="drilldown-container table-wrapper" id="report-table-container" style="display: none;">
+                <table>
+                    <colgroup>
+                        <col style="width: 12%;">
+                        <col style="width: 13%;">
+                        <col style="width: 15%;">
+                        <col style="width: 10%;">
+                        <col style="width: 10%;">
+                        <col style="width: 10%;">
+                        <col style="width: 30%;">
+                    </colgroup>
+                    <thead>
+                        <tr>
+                            <th>Region</th>
+                            <th>Sub Region</th>
+                            <th>Branch</th>
+                            <th>Truck #</th>
+                            <th>OOS Status</th>
+                            <th>ECD</th>
+                            <th>Notes</th>
+                        </tr>
+                    </thead>
+                    <tbody id="report-table-body"></tbody>
+                </table>
+            </div>
         </div>
 
         <div id="search-view" class="view-section">
@@ -751,6 +790,7 @@
                 await new Promise(resolve => requestAnimationFrame(resolve));
                 processExcelData(vroRaw, resourceRaw, oosRaw, usefulRaw);
 
+                // Safely Init Firebase after everything is done
                 setTimeout(initFirebaseSync, 500);
 
             } catch (error) {
@@ -1101,6 +1141,7 @@
             pmKeywords = [...new Set(pmKeywords)]; 
 
             let allCustSet = new Set();
+            let allRegionsSet = new Set();
 
             processedData = vroRaw.map(row => {
                 let roNum = getCol(row, ['Order', 'RO Number', 'RONum', 'AFS RO #']).toUpperCase().trim();
@@ -1237,6 +1278,7 @@
 
                 let drillTopLevel = custKey + (loc.region !== 'Unknown State' && loc.region !== 'Unknown Region' ? ' ' + loc.region : '');
                 allCustSet.add(custKey);
+                allRegionsSet.add(loc.region);
 
                 let statusStr = String(status || '').toUpperCase().trim();
                 let isOOS = oosMap[unit] === true; 
@@ -1299,8 +1341,7 @@
                     } else isCompletedKPI = false;
                 }
                 
-                // NO roCount returned here
-                return { roNum, customer, custKey, drillTopLevel, owner: finalOwner, unitNo: unit, status, vmrs, isOOS, isOpen, isCompletedKPI, isOnTimeKPI, isLateKPI, subregion: loc.subregion, branch: loc.branch, ecdState, ecdFormatted, openedDT, openedFormatted, usefulPct, isDedicated: isDedicatedFlag };
+                return { roNum, customer, custKey, drillTopLevel, owner: finalOwner, unitNo: unit, status, vmrs, isOOS, isOpen, isCompletedKPI, isOnTimeKPI, isLateKPI, subregion: loc.subregion, branch: loc.branch, ecdState, ecdFormatted, openedDT, openedFormatted, usefulPct, isDedicated: isDedicatedFlag, region: loc.region };
             }).filter(ro => ro.roNum !== '');
 
             pmOwners = Array.from(activePM).sort();
@@ -1318,11 +1359,96 @@
                 });
             });
 
+            let sortedRegions = Array.from(allRegionsSet).sort();
+            let repRegionSelect = document.getElementById('report-region-select');
+            repRegionSelect.innerHTML = '<option value="">Select Region...</option>';
+            sortedRegions.forEach(r => {
+                if (r && r !== 'Unknown Region' && r !== 'Unspecified Region') {
+                    let opt = document.createElement('option');
+                    opt.value = r;
+                    opt.innerText = r;
+                    repRegionSelect.appendChild(opt);
+                }
+            });
+
             document.getElementById('upload-box').style.display = 'none';
             document.getElementById('home-dashboard').style.display = 'block';
             
             triggerViewUpdate();
             updateAllNoteButtons(); 
+        }
+
+        // --- REPORTS ENGINE ---
+        let currentReportData = [];
+
+        window.generateReport = function() {
+            const region = document.getElementById('report-region-select').value;
+            if (!region) {
+                alert("Please select a Region to generate the report.");
+                return;
+            }
+
+            currentReportData = processedData.filter(ro => ro.isOpen && ro.region === region);
+
+            const tbody = document.getElementById('report-table-body');
+            let html = '';
+
+            if (currentReportData.length === 0) {
+                html = '<tr><td colspan="7" style="text-align: center; padding: 20px;">No open orders found for this region.</td></tr>';
+            } else {
+                currentReportData.forEach(ro => {
+                    let safeRo = ro.roNum.replace(/[.#$\[\]]/g, '_');
+                    let note = globalRoNotesState[safeRo] || '';
+                    let oosBadge = ro.isOOS ? '<span class="badge badge-oos">OOS</span>' : '<span class="badge badge-active">ACTIVE</span>';
+                    
+                    html += `<tr>
+                        <td>${ro.region}</td>
+                        <td>${ro.subregion}</td>
+                        <td>${ro.branch}</td>
+                        <td><strong>${ro.unitNo}</strong></td>
+                        <td>${oosBadge}</td>
+                        <td>${ro.ecdFormatted}</td>
+                        <td style="white-space: pre-wrap;">${note}</td>
+                    </tr>`;
+                });
+            }
+
+            tbody.innerHTML = html;
+            document.getElementById('report-table-container').style.display = 'block';
+            document.getElementById('btn-email-report').style.display = currentReportData.length > 0 ? 'inline-block' : 'none';
+        }
+
+        window.emailReport = function() {
+            if (currentReportData.length === 0) return;
+
+            const region = document.getElementById('report-region-select').value;
+            let subject = encodeURIComponent(`Open RO Report - ${region}`);
+            
+            let bodyText = `Report for Region: ${region}\n\n`;
+            bodyText += `Sub Region\tBranch\tTruck #\tOOS Status\tECD\tNotes\n`;
+            bodyText += `--------------------------------------------------------------------------------\n`;
+
+            currentReportData.forEach(ro => {
+                let safeRo = ro.roNum.replace(/[.#$\[\]]/g, '_');
+                let note = globalRoNotesState[safeRo] || 'N/A';
+                note = note.replace(/\n/g, ' / '); 
+                let oosText = ro.isOOS ? 'OOS' : 'ACTIVE';
+                bodyText += `${ro.subregion}\t${ro.branch}\t${ro.unitNo}\t${oosText}\t${ro.ecdFormatted}\t${note}\n`;
+            });
+
+            let encodedBody = encodeURIComponent(bodyText);
+            
+            if (encodedBody.length > 1800) {
+                let clipboardText = bodyText;
+                navigator.clipboard.writeText(clipboardText).then(() => {
+                    alert("The report is too long for an automatic email draft, so the data has been copied to your clipboard!\n\nYou can now Paste (Ctrl+V) it directly into a new email.");
+                    window.location.href = `mailto:?subject=${subject}`;
+                }).catch(err => {
+                    alert("Report too large to email directly and clipboard access failed.");
+                });
+            } else {
+                window.location.href = `mailto:?subject=${subject}&body=${encodedBody}`;
+            }
         }
 
         function getUsefulBadge(usefulArray) {
@@ -1338,8 +1464,6 @@
 
         function generateTileHTML(name, dataSet, chartId = null, isPM = false) {
             let filteredOpen = dataSet.filter(ro => ro.isOpen);
-            let oosCount = dataSet.filter(ro => ro.isOpen && ro.isOOS).length;
-            let priorityCount = dataSet.filter(ro => ro.isOpen && ro.isOOS && ro.usefulPct !== null && Math.round(ro.usefulPct * 100) < 100).length;
             
             let completedOrders = dataSet.filter(ro => ro.isCompletedKPI);
             let compCount = completedOrders.length;
@@ -1355,6 +1479,8 @@
 
             let oosAndPriorityHtml = '';
             if (!isPM) {
+                let oosCount = dataSet.filter(ro => ro.isOpen && ro.isOOS).length;
+                let priorityCount = dataSet.filter(ro => ro.isOpen && ro.isOOS && ro.usefulPct !== null && Math.round(ro.usefulPct * 100) < 100).length;
                 oosAndPriorityHtml = `
                     <div class="highlight-box oos-box">
                         <div class="title">OOS ROs</div>
@@ -1804,6 +1930,7 @@
             else if (viewId === 'vended-view') renderKPITiles(vendedOwners, 'vended-kpi-container', 'vended-view');
             else if (viewId === 'ers-view') renderKPITiles(ersOwners, 'ers-kpi-container', 'ers-view');
             else if (viewId === 'home-view') renderHomeDashboard();
+            else if (viewId === 'reports-view') { /* nothing specific to refresh on load */ }
         }
     </script>
 </body>
