@@ -390,11 +390,14 @@
                 <select id="report-region-select" class="filter-select" style="margin-right: 15px; width: 200px;">
                     <option value="">Select Region...</option>
                 </select>
+                <label style="margin-right: 15px; font-weight: bold; font-size: 13px; display: flex; align-items: center; gap: 5px; cursor: pointer;">
+                    <input type="checkbox" id="report-notes-only" style="cursor: pointer;"> Has Notes Only
+                </label>
                 <button class="btn-green" onclick="generateReport()">Generate Report</button>
                 <button class="btn-action" id="btn-email-report" onclick="emailReport()" style="display: none; margin-left: auto;">📧 Email Report</button>
             </div>
             <div class="drilldown-container table-wrapper" id="report-table-container" style="display: none;">
-                <table>
+                <table id="reportTable">
                     <colgroup>
                         <col style="width: 12%;">
                         <col style="width: 13%;">
@@ -406,13 +409,13 @@
                     </colgroup>
                     <thead>
                         <tr>
-                            <th>Region</th>
-                            <th>Sub Region</th>
-                            <th>Branch</th>
-                            <th>Truck #</th>
-                            <th>OOS Status</th>
-                            <th>ECD</th>
-                            <th>Notes</th>
+                            <th onclick="sortReport(0, 'string')">Region ↕</th>
+                            <th onclick="sortReport(1, 'string')">Sub Region ↕</th>
+                            <th onclick="sortReport(2, 'string')">Branch ↕</th>
+                            <th onclick="sortReport(3, 'string')">Truck # ↕</th>
+                            <th onclick="sortReport(4, 'string')">OOS Status ↕</th>
+                            <th onclick="sortReport(5, 'string')">ECD ↕</th>
+                            <th onclick="sortReport(6, 'string')">Notes ↕</th>
                         </tr>
                     </thead>
                     <tbody id="report-table-body"></tbody>
@@ -1383,39 +1386,67 @@
 
         window.generateReport = function() {
             const region = document.getElementById('report-region-select').value;
+            const notesOnly = document.getElementById('report-notes-only').checked;
+            
             if (!region) {
                 alert("Please select a Region to generate the report.");
                 return;
             }
 
-            currentReportData = processedData.filter(ro => ro.isOpen && ro.region === region);
+            let baseData = processedData.filter(ro => ro.isOpen && ro.region === region);
+            currentReportData = [];
 
             const tbody = document.getElementById('report-table-body');
             let html = '';
 
+            baseData.forEach(ro => {
+                let safeRo = ro.roNum.replace(/[.#$\[\]]/g, '_');
+                let note = globalRoNotesState[safeRo] || '';
+                let hasNote = note.trim() !== '';
+
+                if (notesOnly && !hasNote) return;
+
+                currentReportData.push(ro);
+
+                let oosBadge = ro.isOOS ? '<span class="badge badge-oos">OOS</span>' : '<span class="badge badge-active">ACTIVE</span>';
+                html += `<tr>
+                    <td>${ro.region}</td>
+                    <td>${ro.subregion}</td>
+                    <td>${ro.branch}</td>
+                    <td><strong>${ro.unitNo}</strong></td>
+                    <td>${oosBadge}</td>
+                    <td>${ro.ecdFormatted}</td>
+                    <td style="white-space: pre-wrap;">${note}</td>
+                </tr>`;
+            });
+
             if (currentReportData.length === 0) {
-                html = '<tr><td colspan="7" style="text-align: center; padding: 20px;">No open orders found for this region.</td></tr>';
-            } else {
-                currentReportData.forEach(ro => {
-                    let safeRo = ro.roNum.replace(/[.#$\[\]]/g, '_');
-                    let note = globalRoNotesState[safeRo] || '';
-                    let oosBadge = ro.isOOS ? '<span class="badge badge-oos">OOS</span>' : '<span class="badge badge-active">ACTIVE</span>';
-                    
-                    html += `<tr>
-                        <td>${ro.region}</td>
-                        <td>${ro.subregion}</td>
-                        <td>${ro.branch}</td>
-                        <td><strong>${ro.unitNo}</strong></td>
-                        <td>${oosBadge}</td>
-                        <td>${ro.ecdFormatted}</td>
-                        <td style="white-space: pre-wrap;">${note}</td>
-                    </tr>`;
-                });
+                html = '<tr><td colspan="7" style="text-align: center; padding: 20px;">No matching orders found.</td></tr>';
             }
 
             tbody.innerHTML = html;
             document.getElementById('report-table-container').style.display = 'block';
             document.getElementById('btn-email-report').style.display = currentReportData.length > 0 ? 'inline-block' : 'none';
+        }
+
+        let reportSortCol = -1, reportSortAsc = true;
+        window.sortReport = function(idx, type) {
+            const tbody = document.getElementById("report-table-body");
+            const rows = Array.from(tbody.rows);
+            if(rows.length <= 1 || rows[0].cells.length === 1) return; // Ignore if empty or "no matching orders" state
+            
+            reportSortAsc = (reportSortCol === idx) ? !reportSortAsc : true;
+            reportSortCol = idx;
+
+            rows.sort((a, b) => {
+                let va = a.cells[idx].innerText.trim(), vb = b.cells[idx].innerText.trim();
+                if (type === 'number') {
+                    va = parseFloat(va) || 0; vb = parseFloat(vb) || 0;
+                    return reportSortAsc ? va - vb : vb - va;
+                }
+                return reportSortAsc ? va.localeCompare(vb) : vb.localeCompare(va);
+            });
+            rows.forEach(r => tbody.appendChild(r));
         }
 
         window.emailReport = function() {
@@ -1428,12 +1459,21 @@
             bodyText += `Sub Region\tBranch\tTruck #\tOOS Status\tECD\tNotes\n`;
             bodyText += `--------------------------------------------------------------------------------\n`;
 
-            currentReportData.forEach(ro => {
-                let safeRo = ro.roNum.replace(/[.#$\[\]]/g, '_');
-                let note = globalRoNotesState[safeRo] || 'N/A';
-                note = note.replace(/\n/g, ' / '); 
-                let oosText = ro.isOOS ? 'OOS' : 'ACTIVE';
-                bodyText += `${ro.subregion}\t${ro.branch}\t${ro.unitNo}\t${oosText}\t${ro.ecdFormatted}\t${note}\n`;
+            // Since we sort the DOM but currentReportData isn't sorted, we rebuild from DOM to keep the user's sorted order!
+            const tbody = document.getElementById("report-table-body");
+            const rows = Array.from(tbody.rows);
+            
+            rows.forEach(row => {
+                if(row.cells.length > 1) {
+                    let subRegion = row.cells[1].innerText.trim();
+                    let branch = row.cells[2].innerText.trim();
+                    let unitNo = row.cells[3].innerText.trim();
+                    let oosStatus = row.cells[4].innerText.trim();
+                    let ecd = row.cells[5].innerText.trim();
+                    let note = row.cells[6].innerText.trim().replace(/\n/g, ' / ') || 'N/A';
+                    
+                    bodyText += `${subRegion}\t${branch}\t${unitNo}\t${oosStatus}\t${ecd}\t${note}\n`;
+                }
             });
 
             let encodedBody = encodeURIComponent(bodyText);
