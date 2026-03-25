@@ -730,17 +730,20 @@
                         
                         // Strict exact coordinate extraction for Useful Tab
                         if (sheetNameLower.includes('useful')) {
+                            // Start precisely on Row 3 (index 2)
                             for (let i = 2; i < aoa.length; i++) {
                                 let row = aoa[i];
                                 if (!row || !Array.isArray(row)) continue;
 
-                                let branch = row.length > 2 ? row[2] : null;
-                                let usefulPct = row.length > 27 ? row[27] : null;
+                                let region = row[0];    // Col A
+                                let subregion = row[1]; // Col B
+                                let branch = row[2];    // Col C
+                                let usefulPct = row[27];// Col AB
 
                                 if (branch && String(branch).trim() !== '') {
                                     usefulRaw.push({
-                                        branch: branch,
-                                        usefulPct: usefulPct
+                                        'Branch': branch,
+                                        'Useful %': usefulPct
                                     });
                                 }
                             }
@@ -811,6 +814,7 @@
                 await new Promise(resolve => requestAnimationFrame(resolve));
                 processExcelData(vroRaw, resourceRaw, oosRaw, usefulRaw);
 
+                // Safely Init Firebase after everything is done
                 setTimeout(initFirebaseSync, 500);
 
             } catch (error) {
@@ -847,13 +851,13 @@
                                     let row = aoa[i];
                                     if (!row || !Array.isArray(row)) continue;
 
-                                    let branch = row.length > 2 ? row[2] : null;
-                                    let usefulPct = row.length > 27 ? row[27] : null;
+                                    let branch = row[2]; // Col C
+                                    let usefulPct = row[27]; // Col AB
 
                                     if (branch && String(branch).trim() !== '') {
                                         usefulRaw.push({
-                                            branch: branch,
-                                            usefulPct: usefulPct
+                                            'Branch': branch,
+                                            'Useful %': usefulPct
                                         });
                                     }
                                 }
@@ -1044,10 +1048,11 @@
                 }
             });
 
+            // STRICT Coordinate-Based Mapping for Useful %
             if (usefulRaw && usefulRaw.length > 0) {
-                usefulRaw.forEach(item => {
-                    let b = item.branch || item['BRANCH'] || item['Branch'] || item['GARDA SHOPNAME'];
-                    let rawPct = item.usefulPct !== undefined ? item.usefulPct : (item['USEFUL %'] !== undefined ? item['USEFUL %'] : item['Useful %']);
+                usefulRaw.forEach(row => {
+                    let b = row['Branch'];
+                    let rawPct = row['Useful %'];
 
                     if (b && String(b).trim() !== '') {
                         let bCode = extractGardaCode(b);
@@ -1153,12 +1158,6 @@
             });
 
             pmKeywords = [...new Set(pmKeywords)]; 
-
-            let unitROCounts = {};
-            vroRaw.forEach(row => {
-                let unit = getCol(row, ['Unit No', 'UNITNUMBER', 'Vehicle']).toUpperCase().trim();
-                if(unit) unitROCounts[unit] = (unitROCounts[unit] || 0) + 1;
-            });
 
             let allCustSet = new Set();
             let allRegionsSet = new Set();
@@ -1361,7 +1360,6 @@
                     } else isCompletedKPI = false;
                 }
                 
-                // Safely returning WITHOUT the old roCount
                 return { roNum, customer, custKey, drillTopLevel, owner: finalOwner, unitNo: unit, status, vmrs, isOOS, isOpen, isCompletedKPI, isOnTimeKPI, isLateKPI, subregion: loc.subregion, branch: loc.branch, ecdState, ecdFormatted, openedDT, openedFormatted, usefulPct, isDedicated: isDedicatedFlag, region: loc.region };
             }).filter(ro => ro.roNum !== '');
 
@@ -1397,115 +1395,6 @@
             
             triggerViewUpdate();
             updateAllNoteButtons(); 
-        }
-
-        // --- REPORTS ENGINE ---
-        let currentReportData = [];
-
-        window.generateReport = function() {
-            const region = document.getElementById('report-region-select').value;
-            const notesOnly = document.getElementById('report-notes-only').checked;
-            
-            if (!region) {
-                alert("Please select a Region to generate the report.");
-                return;
-            }
-
-            let baseData = processedData.filter(ro => ro.isOpen && ro.region === region);
-            currentReportData = [];
-
-            const tbody = document.getElementById('report-table-body');
-            let html = '';
-
-            baseData.forEach(ro => {
-                let safeRo = ro.roNum.replace(/[.#$\[\]]/g, '_');
-                let note = globalRoNotesState[safeRo] || '';
-                let hasNote = note.trim() !== '';
-
-                if (notesOnly && !hasNote) return;
-
-                currentReportData.push(ro);
-
-                let oosBadge = ro.isOOS ? '<span class="badge badge-oos">OOS</span>' : '<span class="badge badge-active">ACTIVE</span>';
-                html += `<tr>
-                    <td>${ro.region}</td>
-                    <td>${ro.subregion}</td>
-                    <td>${ro.branch}</td>
-                    <td><strong>${ro.unitNo}</strong></td>
-                    <td>${oosBadge}</td>
-                    <td>${ro.ecdFormatted}</td>
-                    <td style="white-space: pre-wrap;">${note}</td>
-                </tr>`;
-            });
-
-            if (currentReportData.length === 0) {
-                html = '<tr><td colspan="7" style="text-align: center; padding: 20px;">No matching orders found.</td></tr>';
-            }
-
-            tbody.innerHTML = html;
-            document.getElementById('report-table-container').style.display = 'block';
-            document.getElementById('btn-email-report').style.display = currentReportData.length > 0 ? 'inline-block' : 'none';
-        }
-
-        let reportSortCol = -1, reportSortAsc = true;
-        window.sortReport = function(idx, type) {
-            const tbody = document.getElementById("report-table-body");
-            const rows = Array.from(tbody.rows);
-            if(rows.length <= 1 || rows[0].cells.length === 1) return; 
-            
-            reportSortAsc = (reportSortCol === idx) ? !reportSortAsc : true;
-            reportSortCol = idx;
-
-            rows.sort((a, b) => {
-                let va = a.cells[idx].innerText.trim(), vb = b.cells[idx].innerText.trim();
-                if (type === 'number') {
-                    va = parseFloat(va) || 0; vb = parseFloat(vb) || 0;
-                    return reportSortAsc ? va - vb : vb - va;
-                }
-                return reportSortAsc ? va.localeCompare(vb) : vb.localeCompare(va);
-            });
-            rows.forEach(r => tbody.appendChild(r));
-        }
-
-        window.emailReport = function() {
-            if (currentReportData.length === 0) return;
-
-            const region = document.getElementById('report-region-select').value;
-            let subject = encodeURIComponent(`Open RO Report - ${region}`);
-            
-            let bodyText = `Report for Region: ${region}\n\n`;
-            bodyText += `Sub Region\tBranch\tTruck #\tOOS Status\tECD\tNotes\n`;
-            bodyText += `--------------------------------------------------------------------------------\n`;
-
-            const tbody = document.getElementById("report-table-body");
-            const rows = Array.from(tbody.rows);
-            
-            rows.forEach(row => {
-                if(row.cells.length > 1) {
-                    let subRegion = row.cells[1].innerText.trim();
-                    let branch = row.cells[2].innerText.trim();
-                    let unitNo = row.cells[3].innerText.trim();
-                    let oosStatus = row.cells[4].innerText.trim();
-                    let ecd = row.cells[5].innerText.trim();
-                    let note = row.cells[6].innerText.trim().replace(/\n/g, ' / ') || 'N/A';
-                    
-                    bodyText += `${subRegion}\t${branch}\t${unitNo}\t${oosStatus}\t${ecd}\t${note}\n`;
-                }
-            });
-
-            let encodedBody = encodeURIComponent(bodyText);
-            
-            if (encodedBody.length > 1800) {
-                let clipboardText = bodyText;
-                navigator.clipboard.writeText(clipboardText).then(() => {
-                    alert("The report is too long for an automatic email draft, so the data has been copied to your clipboard!\n\nYou can now Paste (Ctrl+V) it directly into a new email.");
-                    window.location.href = `mailto:?subject=${subject}`;
-                }).catch(err => {
-                    alert("Report too large to email directly and clipboard access failed.");
-                });
-            } else {
-                window.location.href = `mailto:?subject=${subject}&body=${encodedBody}`;
-            }
         }
 
         function getUsefulBadge(usefulArray) {
@@ -1966,6 +1855,115 @@
                 }
                 document.getElementById('search-table-body').innerHTML = searchHtml;
             }, 300);
+        }
+
+        // --- REPORTS ENGINE ---
+        let currentReportData = [];
+
+        window.generateReport = function() {
+            const region = document.getElementById('report-region-select').value;
+            const notesOnly = document.getElementById('report-notes-only').checked;
+            
+            if (!region) {
+                alert("Please select a Region to generate the report.");
+                return;
+            }
+
+            let baseData = processedData.filter(ro => ro.isOpen && ro.region === region);
+            currentReportData = [];
+
+            const tbody = document.getElementById('report-table-body');
+            let html = '';
+
+            baseData.forEach(ro => {
+                let safeRo = ro.roNum.replace(/[.#$\[\]]/g, '_');
+                let note = globalRoNotesState[safeRo] || '';
+                let hasNote = note.trim() !== '';
+
+                if (notesOnly && !hasNote) return;
+
+                currentReportData.push(ro);
+
+                let oosBadge = ro.isOOS ? '<span class="badge badge-oos">OOS</span>' : '<span class="badge badge-active">ACTIVE</span>';
+                html += `<tr>
+                    <td>${ro.region}</td>
+                    <td>${ro.subregion}</td>
+                    <td>${ro.branch}</td>
+                    <td><strong>${ro.unitNo}</strong></td>
+                    <td>${oosBadge}</td>
+                    <td>${ro.ecdFormatted}</td>
+                    <td style="white-space: pre-wrap;">${note}</td>
+                </tr>`;
+            });
+
+            if (currentReportData.length === 0) {
+                html = '<tr><td colspan="7" style="text-align: center; padding: 20px;">No matching orders found.</td></tr>';
+            }
+
+            tbody.innerHTML = html;
+            document.getElementById('report-table-container').style.display = 'block';
+            document.getElementById('btn-email-report').style.display = currentReportData.length > 0 ? 'inline-block' : 'none';
+        }
+
+        let reportSortCol = -1, reportSortAsc = true;
+        window.sortReport = function(idx, type) {
+            const tbody = document.getElementById("report-table-body");
+            const rows = Array.from(tbody.rows);
+            if(rows.length <= 1 || rows[0].cells.length === 1) return; 
+            
+            reportSortAsc = (reportSortCol === idx) ? !reportSortAsc : true;
+            reportSortCol = idx;
+
+            rows.sort((a, b) => {
+                let va = a.cells[idx].innerText.trim(), vb = b.cells[idx].innerText.trim();
+                if (type === 'number') {
+                    va = parseFloat(va) || 0; vb = parseFloat(vb) || 0;
+                    return reportSortAsc ? va - vb : vb - va;
+                }
+                return reportSortAsc ? va.localeCompare(vb) : vb.localeCompare(va);
+            });
+            rows.forEach(r => tbody.appendChild(r));
+        }
+
+        window.emailReport = function() {
+            if (currentReportData.length === 0) return;
+
+            const region = document.getElementById('report-region-select').value;
+            let subject = encodeURIComponent(`Open RO Report - ${region}`);
+            
+            let bodyText = `Report for Region: ${region}\n\n`;
+            bodyText += `Sub Region\tBranch\tTruck #\tOOS Status\tECD\tNotes\n`;
+            bodyText += `--------------------------------------------------------------------------------\n`;
+
+            const tbody = document.getElementById("report-table-body");
+            const rows = Array.from(tbody.rows);
+            
+            rows.forEach(row => {
+                if(row.cells.length > 1) {
+                    let subRegion = row.cells[1].innerText.trim();
+                    let branch = row.cells[2].innerText.trim();
+                    let unitNo = row.cells[3].innerText.trim();
+                    let oosStatus = row.cells[4].innerText.trim();
+                    let ecd = row.cells[5].innerText.trim();
+                    let note = row.cells[6].innerText.trim().replace(/\n/g, ' / ') || 'N/A';
+                    
+                    bodyText += `${subRegion}\t${branch}\t${unitNo}\t${oosStatus}\t${ecd}\t${note}\n`;
+                }
+            });
+
+            let encodedBody = encodeURIComponent(bodyText);
+            
+            if (encodedBody.length > 1800) {
+                let clipboardText = bodyText;
+                navigator.clipboard.writeText(clipboardText).then(() => {
+                    alert("The report is too long for an automatic email draft, so the data has been copied to your clipboard!\n\nYou can now Paste (Ctrl+V) it directly into a new email.");
+                    window.location.href = `mailto:?subject=${subject}`;
+                }).catch(err => {
+                    alert("Report too large to email directly and clipboard access failed.");
+                });
+            } else {
+                window.location.href = `mailto:?subject=${subject}&body=${encodedBody}`;
+            }
         }
 
         function navigate(viewId, menuElement = null, preserveCustomerFilter = false) {
