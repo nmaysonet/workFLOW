@@ -728,27 +728,23 @@
 
                         let sheetNameLower = sheetName.toLowerCase();
                         
-                        // Strict parsing for Useful % Tab based on fixed coordinates
+                        // Strict exact coordinate extraction for Useful Tab
                         if (sheetNameLower.includes('useful')) {
-                            // Start on Row 3 (index 2)
                             for (let i = 2; i < aoa.length; i++) {
                                 let row = aoa[i];
                                 if (!row || !Array.isArray(row)) continue;
-                                let region = row[0];     // Column A
-                                let subregion = row[1];  // Column B
-                                let branch = row[2];     // Column C
-                                let usefulPct = row[27]; // Column AB
+
+                                let branch = row.length > 2 ? row[2] : null;
+                                let usefulPct = row.length > 27 ? row[27] : null;
 
                                 if (branch && String(branch).trim() !== '') {
                                     usefulRaw.push({
-                                        'GARDA REGION': region,
-                                        'GARDA SUBREGION': subregion,
-                                        'BRANCH': branch,
-                                        'USEFUL %': usefulPct
+                                        branch: branch,
+                                        usefulPct: usefulPct
                                     });
                                 }
                             }
-                            return; // Skip normal heuristic parsing
+                            return; 
                         }
 
                         let headerIdx = -1;
@@ -815,7 +811,6 @@
                 await new Promise(resolve => requestAnimationFrame(resolve));
                 processExcelData(vroRaw, resourceRaw, oosRaw, usefulRaw);
 
-                // Safely Init Firebase after everything is done
                 setTimeout(initFirebaseSync, 500);
 
             } catch (error) {
@@ -846,25 +841,23 @@
                             
                             let sheetNameLower = sheetName.toLowerCase();
                             
+                            // Strict exact coordinate extraction for Useful Tab
                             if (sheetNameLower.includes('useful')) {
                                 for (let i = 2; i < aoa.length; i++) {
                                     let row = aoa[i];
                                     if (!row || !Array.isArray(row)) continue;
-                                    let region = row[0];
-                                    let subregion = row[1];
-                                    let branch = row[2];
-                                    let usefulPct = row[27];
+
+                                    let branch = row.length > 2 ? row[2] : null;
+                                    let usefulPct = row.length > 27 ? row[27] : null;
 
                                     if (branch && String(branch).trim() !== '') {
                                         usefulRaw.push({
-                                            'GARDA REGION': region,
-                                            'GARDA SUBREGION': subregion,
-                                            'BRANCH': branch,
-                                            'USEFUL %': usefulPct
+                                            branch: branch,
+                                            usefulPct: usefulPct
                                         });
                                     }
                                 }
-                                return;
+                                return; 
                             }
                             
                             let headerIdx = -1;
@@ -1052,47 +1045,23 @@
             });
 
             if (usefulRaw && usefulRaw.length > 0) {
-                usefulRaw.forEach(row => {
-                    let rKey = Object.keys(row).find(k => k.trim().toLowerCase().includes('region'));
-                    let subKey = Object.keys(row).find(k => k.trim().toLowerCase().includes('subregion'));
-                    let bKey = Object.keys(row).find(k => k.trim().toLowerCase() === 'branch');
-                    
-                    let r = rKey ? row[rKey] : null;
-                    let s = subKey ? row[subKey] : null;
-                    let b = bKey ? row[bKey] : null;
-                    
-                    if (b) {
+                usefulRaw.forEach(item => {
+                    let b = item.branch || item['BRANCH'] || item['Branch'] || item['GARDA SHOPNAME'];
+                    let rawPct = item.usefulPct !== undefined ? item.usefulPct : (item['USEFUL %'] !== undefined ? item['USEFUL %'] : item['Useful %']);
+
+                    if (b && String(b).trim() !== '') {
                         let bCode = extractGardaCode(b);
-                        let info = {
-                            region: String(r || 'Unspecified Region').trim(),
-                            subregion: String(s || 'Unspecified Subregion').trim(),
-                            branch: String(b).trim()
-                        };
-                        
-                        if (bCode && !branchMasterInfo[bCode]) branchMasterInfo[bCode] = info;
                         let bNorm = normalizeBranchStr(b);
-                        if (bNorm && !branchMasterInfo[bNorm]) branchMasterInfo[bNorm] = info;
 
                         let pct = NaN;
-                        let keys = Object.keys(row);
-                        
-                        let exactUsefulKey = keys.find(k => k.trim().toLowerCase() === 'useful %');
-                        
-                        if (exactUsefulKey && row[exactUsefulKey] !== undefined && row[exactUsefulKey] !== '') {
-                            let valStr = String(row[exactUsefulKey]).trim();
+                        if (rawPct !== undefined && rawPct !== null && rawPct !== '') {
+                            let valStr = String(rawPct).trim();
                             let val = parseFloat(valStr);
                             if (!isNaN(val)) {
                                 pct = valStr.includes('%') ? val / 100 : val;
                             }
-                        } else {
-                            let usefulKey = keys.find(k => k.toLowerCase().includes('useful'));
-                            if (usefulKey && row[usefulKey] !== undefined && row[usefulKey] !== '') {
-                                let valStr = String(row[usefulKey]).trim();
-                                let val = parseFloat(valStr);
-                                if (!isNaN(val)) pct = valStr.includes('%') ? val / 100 : val;
-                            }
                         }
-                        
+
                         if (!isNaN(pct)) {
                             if (bCode) {
                                 branchUsefulMap[bCode] = pct;
@@ -1184,6 +1153,12 @@
             });
 
             pmKeywords = [...new Set(pmKeywords)]; 
+
+            let unitROCounts = {};
+            vroRaw.forEach(row => {
+                let unit = getCol(row, ['Unit No', 'UNITNUMBER', 'Vehicle']).toUpperCase().trim();
+                if(unit) unitROCounts[unit] = (unitROCounts[unit] || 0) + 1;
+            });
 
             let allCustSet = new Set();
             let allRegionsSet = new Set();
@@ -1386,6 +1361,7 @@
                     } else isCompletedKPI = false;
                 }
                 
+                // Safely returning WITHOUT the old roCount
                 return { roNum, customer, custKey, drillTopLevel, owner: finalOwner, unitNo: unit, status, vmrs, isOOS, isOpen, isCompletedKPI, isOnTimeKPI, isLateKPI, subregion: loc.subregion, branch: loc.branch, ecdState, ecdFormatted, openedDT, openedFormatted, usefulPct, isDedicated: isDedicatedFlag, region: loc.region };
             }).filter(ro => ro.roNum !== '');
 
