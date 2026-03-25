@@ -3,12 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>VDR + | Amerit GAP Analysis</title>
+    <title>workFLOW + | Workflow Management</title>
     <link href="https://fonts.googleapis.com/css2?family=Raleway:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 
     <style>
-        /* Global Styles & Reset (Workflow+ Standard) */
+        /* Global Styles & Reset */
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Raleway', sans-serif; }
         body { display: flex; height: 100vh; background-color: #f4f6f9; color: #333; overflow: hidden; }
         a { text-decoration: none; }
@@ -17,21 +21,16 @@
         :root {
             --sidebar-bg: #3a3b40;
             --sidebar-hover: #4a4b50;
-            --gold: #FFC600; 
+            --gold: #FFC600; /* Standard Amerit Yellow */
             --gold-hover: #e5b200;
             --urgent-red: #d9534f;
             --medium-yellow: #f0ad4e;
             --low-green: #5cb85c;
             --text-light: #f1f1f1;
             --border: #e0e0e0;
-            --card-bg: #ffffff;
-            --text-main: #333333;
-            --text-muted: #64748b;
         }
 
-        /* -------------------------------------- */
-        /* SIDEBAR DESIGN                         */
-        /* -------------------------------------- */
+        /* Sidebar */
         .sidebar { width: 280px; background-color: var(--sidebar-bg); color: var(--text-light); display: flex; flex-direction: column; flex-shrink: 0; }
         .sidebar-header { padding: 20px; font-size: 24px; font-weight: bold; display: flex; align-items: center; border-bottom: 1px solid #2a2b30; color: var(--gold); }
         .sidebar-header .logo-text { color: white; margin-left: 8px; font-weight: 800; letter-spacing: 0.5px; }
@@ -40,155 +39,180 @@
         .menu-item { padding: 15px 20px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #4a4b50; font-size: 14px; font-weight: 600; transition: 0.2s;}
         .menu-item:hover, .menu-item.active { background-color: var(--sidebar-hover); color: var(--gold); }
         
+        /* Sidebar Truck Graphic */
         .sidebar-truck { margin-top: auto; padding: 30px; text-align: center; border-top: 1px solid #4a4b50; background: #2a2b30; }
 
+        /* Animations CSS */
         @keyframes spin { 100% { transform: rotate(360deg); } }
         @keyframes bump { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-1.5px); } }
         @keyframes moveRoad { from { stroke-dashoffset: 0; } to { stroke-dashoffset: 15; } }
-        
         .logo-spin { animation: spin 4s linear infinite; transform-origin: center; display: inline-block; }
         .moving-truck-svg { overflow: visible; }
         .truck-body { animation: bump 0.4s ease-in-out infinite; }
         .wheel { animation: spin 0.8s linear infinite; }
         .road-line { animation: moveRoad 0.4s linear infinite; }
 
-        /* -------------------------------------- */
-        /* MAIN CONTENT & TOP BAR                 */
-        /* -------------------------------------- */
-        .main-content { flex-grow: 1; display: flex; flex-direction: column; overflow-y: auto; overflow-x: hidden; width: 100%; }
+        /* Main Content Area */
+        .main-content { flex-grow: 1; display: flex; flex-direction: column; overflow-y: auto; overflow-x: hidden; }
         
+        /* Top Navigation Bar & Dropdowns */
         .top-bar { background: #fff; padding: 15px 30px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 5px rgba(0,0,0,0.05); z-index: 10; flex-shrink: 0; }
-        .search-container input { padding: 10px 15px; width: 350px; border: 1px solid var(--border); border-radius: 4px; font-size: 14px; font-weight: 500; font-family: 'Raleway', sans-serif;}
-        .search-container input:focus { border-color: var(--gold); outline: none; box-shadow: 0 0 0 3px rgba(255, 198, 0, 0.2); }
+        .search-container input { padding: 10px 15px; width: 300px; border: 1px solid var(--border); border-radius: 4px; font-size: 14px; }
+        .top-actions { display: flex; gap: 15px; align-items: center; }
         
-        .top-actions { display: flex; align-items: center; gap: 20px; }
-        .btn-domo { background-color: #0ea5e9; color: white; padding: 8px 18px; border-radius: 6px; font-weight: 700; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px; transition: all 0.2s ease; box-shadow: 0 1px 3px rgba(0,0,0,0.1); border: none; cursor: pointer; text-decoration: none;}
-        .btn-domo:hover { background-color: #0284c7; transform: translateY(-1px); box-shadow: 0 4px 6px rgba(0,0,0,0.1); color: white;}
+        .btn-action { background-color: var(--gold); color: #333; padding: 10px 20px; border-radius: 4px; font-weight: bold; transition: 0.2s; border: none; cursor: pointer; font-size: 13px;}
+        .btn-action:hover { background-color: var(--gold-hover); color: #111; }
+        
+        .btn-green { background-color: #5cb85c; color: #fff; padding: 8px 15px; border-radius: 4px; font-weight: bold; transition: 0.2s; border: none; cursor: pointer; font-size: 13px; display: inline-flex; align-items: center; gap: 5px;}
+        .btn-green:hover { background-color: #4cae4c; color: white;}
 
-        #loadingBanner { 
-            background: var(--card-bg); padding: 30px; border-radius: 8px; 
-            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); margin: 30px; 
-            border: 2px dashed var(--gold); text-align: center; 
-            font-size: 1.2rem; font-weight: bold; color: var(--text-main); 
+        /* Vendor Maps Dropdown Styling */
+        .dropdown { position: relative; display: inline-block; }
+        .dropdown-content { 
+            display: none; position: absolute; right: 0; top: 100%; background-color: #fff; 
+            min-width: 200px; box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.15); 
+            z-index: 20; border-radius: 4px; overflow: hidden; border: 1px solid var(--border);
         }
+        .dropdown-content a { color: #333; padding: 12px 16px; text-decoration: none; display: block; font-size: 13px; font-weight: 600; border-bottom: 1px solid #f4f6f9; }
+        .dropdown-content a:hover { background-color: #f9f9f9; color: var(--gold); }
+        .dropdown:hover .dropdown-content { display: block; margin-top: -2px; padding-top: 2px; }
 
-        .view-section { display: none; padding: 30px; }
+        /* Views */
+        .view-section { padding: 30px; display: none; }
         .view-section.active { display: block; }
 
-        /* Sub-Tabs */
-        .sub-tabs-container { display: flex; gap: 8px; margin-bottom: 20px; border-bottom: 2px solid var(--border); padding-bottom: 0px; }
-        .sub-tab { padding: 12px 20px; background: transparent; border: none; font-size: 14px; font-weight: 700; color: var(--text-muted); cursor: pointer; border-bottom: 3px solid transparent; transition: all 0.2s ease; text-transform: uppercase; letter-spacing: 0.5px; }
-        .sub-tab:hover { color: var(--text-main); }
-        .sub-tab.active { color: var(--gold-hover); border-bottom: 3px solid var(--gold); }
-
-        .sub-section { display: none; }
-        .sub-section.active { display: block; }
-
-        /* -------------------------------------- */
-        /* DATA DASHBOARD SPECIFICS               */
-        /* -------------------------------------- */
-        .controls-wrapper {
-            background: var(--card-bg); border-radius: 8px; padding: 15px 25px; 
-            box-shadow: 0 1px 3px rgba(16, 24, 40, 0.05); margin-bottom: 25px; 
-            border: 1px solid var(--border); width: 100%;
-        }
-
-        .filter-section { display: flex; gap: 15px; width: 100%; justify-content: space-between; align-items: flex-end; }
-        .filter-group { flex: 1; display: flex; flex-direction: column; gap: 5px; min-width: 140px; }
-        .filter-group label { font-size: 12px; font-weight: 800; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px;}
+        /* Home View & File Upload */
+        .home-title { font-size: 36px; font-weight: 300; margin-bottom: 5px; color: #444; }
+        .home-subtitle { font-size: 16px; color: #777; margin-bottom: 30px; }
         
-        select {
-            font-family: 'Raleway', sans-serif; padding: 10px 14px; border-radius: 6px; 
-            border: 1px solid var(--border); font-size: 14px; width: 100%; min-width: auto;
-            background-color: white; color: var(--text-main); outline: none; cursor: pointer;
-            box-shadow: 0 1px 2px rgba(0,0,0,0.05); font-weight: 600;
-        }
-        select:focus { border-color: var(--gold); box-shadow: 0 0 0 3px rgba(255, 198, 0, 0.2); }
+        .upload-container { background: #fff; padding: 30px; border-radius: 8px; border: 2px dashed #ccc; text-align: center; max-width: 500px; margin-top: 20px; transition: 0.2s; }
+        .upload-container:hover { border-color: var(--gold); background: #fdfdfd; }
+        .upload-container h3 { margin-bottom: 15px; color: #444; }
+        .upload-container input[type="file"] { display: none; }
+        .upload-btn { background-color: #444; color: white; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-weight: bold; display: inline-block; transition: 0.2s; font-size: 13px;}
+        .upload-btn:hover { background-color: #222; }
+        #upload-status { margin-top: 15px; font-size: 14px; font-weight: bold; color: #2e7d32; }
 
-        .section-title { font-size: 1.25rem; color: var(--text-main); margin-bottom: 15px; font-weight: 800; border-bottom: 2px solid var(--border); padding-bottom: 5px; }
-        .section-title.spaced { margin-top: 40px; }
+        /* Filter Tabs */
+        .filter-bar { display: flex; gap: 10px; margin-bottom: 20px; padding-bottom: 15px; border-bottom: 1px solid var(--border); flex-wrap: wrap; align-items: center; }
+        .filter-btn { padding: 10px 20px; border: none; background-color: #e0e0e0; color: #333; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 13px; transition: 0.2s; }
+        .filter-btn:hover { background-color: #d0d0d0; }
+        .filter-btn.active { background-color: var(--gold); color: #333; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .filter-btn.active:hover { background-color: var(--gold-hover); }
 
-        /* KPI Dashboards */
-        .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 15px; margin-bottom: 30px; }
-        .kpi-card { 
-            background: var(--card-bg); border-radius: 8px; padding: 15px; 
-            box-shadow: 0 1px 3px rgba(0,0,0,0.1); 
+        /* General KPI Tiles Grid */
+        .kpi-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 20px; padding-top: 10px;}
+        .kpi-tile { 
+            background: #fff; padding: 25px 20px; border-radius: 8px; 
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1); cursor: pointer; 
             border-top: 4px solid var(--gold) !important; 
-            display: flex; flex-direction: column; justify-content: center; 
-            transition: transform 0.2s ease, box-shadow 0.2s ease, border-top-color 0.2s ease, background-color 0.2s ease;
-            cursor: pointer;
+            transition: transform 0.2s ease, box-shadow 0.2s ease, border-top-color 0.2s ease; 
+            display: flex; flex-direction: column;
         }
-        .kpi-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1);
+        .kpi-tile:hover { 
+            transform: translateY(-5px); 
+            box-shadow: 0 12px 20px rgba(0,0,0,0.12); 
             border-top-color: #000000 !important; 
         }
-        .kpi-card.active-kpi {
-            background-color: #fff9e6;
-            border: 2px solid var(--gold) !important;
-            border-top: 4px solid #000000 !important;
-            transform: translateY(-2px);
-            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
+        .kpi-name { font-size: 20px; font-weight: 800; margin-bottom: 15px; color: #333; }
+        
+        /* Master Dashboard Container & Layout */
+        .home-dashboard-header { display: flex; justify-content: space-between; align-items: center; margin-top: 40px; margin-bottom: 10px; padding-bottom: 10px; border-bottom: 2px solid var(--border); flex-wrap: wrap; gap: 15px;}
+        .filter-select { padding: 8px 15px; border-radius: 4px; border: 1px solid #ccc; font-weight: 700; font-size: 14px; background: #fff;}
+        
+        .home-kpi-container { display: flex; gap: 15px; flex-wrap: nowrap; width: 100%; overflow-x: auto; padding-top: 10px; padding-bottom: 15px; }
+        
+        .home-master-tile { 
+            flex: 1; min-width: 360px; padding: 20px; cursor: pointer; 
+            border-top: 4px solid var(--gold) !important; 
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            transition: transform 0.2s ease, box-shadow 0.2s ease, border-top-color 0.2s ease;
         }
+        .home-master-tile:hover { 
+            transform: translateY(-5px); 
+            box-shadow: 0 12px 20px rgba(0,0,0,0.12); 
+            border-top-color: #000000 !important; 
+        }
+        .home-master-tile .kpi-name { font-size: 18px; margin-bottom: 15px; }
 
-        .stat-box { text-align: center; }
-        .stat-value { font-size: 1.8rem; font-weight: 800; color: var(--text-main); margin-bottom: 4px; }
-        .stat-label { font-size: 0.8rem; color: var(--text-muted); font-weight: 800; text-transform: uppercase; line-height: 1.2; }
+        /* KPI Layout - Master Highlight Boxes */
+        .kpi-top-metrics { display: flex; gap: 10px; margin-bottom: 15px; align-items: stretch; }
+        .highlight-box { flex: 1; background: #fffaf0; border: 1px solid var(--gold); border-radius: 6px; padding: 10px; display: flex; flex-direction: column; justify-content: center;}
+        .highlight-box.urgent-box { background: #fff0f0; border-color: var(--urgent-red); }
+        .highlight-box.oos-box { background: #fffde7; border-color: var(--medium-yellow); }
+        .highlight-box.oos-box .num { color: var(--medium-yellow); }
+        .highlight-box .title { font-size: 12px; font-weight: 800; color: #555; text-transform: uppercase; margin-bottom: 5px; text-align: left; }
+        .highlight-box .num { font-size: 26px; font-weight: 800; color: var(--gold); line-height: 1; text-align: right; }
+        .highlight-box.urgent-box .num { color: var(--urgent-red); }
 
-        /* Table Base Styles */
-        .table-container { margin-bottom: 40px; background: white; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); overflow-x: auto; border: 1px solid var(--border); }
-        .table-header-row { display: flex; justify-content: space-between; align-items: flex-end; padding: 15px 20px; border-bottom: 1px solid var(--border); background: #fcfcfd;}
-        .table-header-row .section-title { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
-        
-        .btn { background-color: white; color: var(--text-main); border: 1px solid #d0d5dd; padding: 8px 16px; font-size: 0.85rem; border-radius: 6px; cursor: pointer; font-weight: 700; font-family: 'Raleway', sans-serif; box-shadow: 0 1px 2px rgba(16,24,40,0.05); transition: 0.2s;}
-        .btn:hover { background-color: #f9fafb; }
-        .btn-export { background-color: var(--low-green); color: white; border: none;}
-        .btn-export:hover { background-color: #4cae4c; }
+        .chart-box { width: 50px; height: 50px; flex-shrink: 0; position: relative; display: flex; align-items: center; justify-content: center; margin: auto 5px; }
 
-        table { width: 100%; border-collapse: collapse; text-align: left; }
-        th, td { padding: 12px 16px; border-bottom: 1px solid var(--border); vertical-align: top; }
-        
-        td { font-size: 13px !important; color: #444; font-weight: 500; }
-        td strong { font-weight: 800; color: var(--text-main); }
-        
-        th { background-color: #f9fafb; color: #475467; font-weight: 800; text-transform: uppercase; font-size: 0.75rem; letter-spacing: 0.05em; cursor: pointer; white-space: nowrap; }
-        tbody tr:hover { background-color: #f8fafc; }
+        /* KPI Layout - Bottom Row */
+        .kpi-stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; border-top: 1px solid #eee; padding-top: 15px; width: 100%;}
+        .stat-box { background: #f9f9f9; padding: 10px 5px; border-radius: 4px; text-align: center; }
+        .stat-box .title { font-size: 10px; color: #666; text-transform: uppercase; font-weight: 700; margin-bottom: 5px; }
+        .stat-box .num { font-size: 16px; font-weight: 700; color: #444; }
+        .stat-box .num.urgent { color: var(--urgent-red); }
+        .stat-box .num.good { color: var(--low-green); }
 
-        /* Tree Table Specifics */
-        .group-header { text-align: center !important; font-size: 13px; color: var(--text-main); border-bottom: none; background: white; }
-        .col-garda { border-left: 2px solid var(--border); text-align: right;}
-        .col-domo { border-left: 2px solid var(--border); text-align: right;}
-        .col-delta { border-left: 2px solid var(--border); background: #ffffff; text-align: right;} 
-        .num-col { text-align: right; }
-        .row-region td { background-color: #fcfcfd; font-weight: 800; cursor: pointer; color: var(--text-main); }
-        .row-subregion td { background-color: #ffffff; padding-left: 30px !important; cursor: pointer; font-weight: 700; color: #444; }
-        .row-branch td { padding-left: 50px !important; color: #555; font-weight: 600;}
-        .expander { display: inline-block; width: 20px; text-align: center; font-size: 11px; cursor: pointer; user-select: none; color: #98a2b3; }
-        .hidden { display: none !important; }
+        .home-master-tile .stat-box { padding: 10px 5px; }
+        .home-master-tile .stat-box .title { font-size: 11px; }
+        .home-master-tile .stat-box .num { font-size: 18px; }
 
-        /* Badges */
-        .badge { padding: 4px 10px; border-radius: 12px; font-size: 11px !important; font-weight: 800; display: inline-block; text-align: center; }
-        .status-green { background: var(--green-bg); color: var(--green-text); border: 1px solid #bbf7d0; }
-        .status-red { background: var(--red-bg); color: var(--red-text); border: 1px solid #fecaca; }
-        .status-dark { background: var(--text-main); color: var(--gold); }
-        .status-dod-up { color: #d9534f; font-weight: 800; }
-        .status-dod-down { color: #5cb85c; font-weight: 800; }
-        .status-dod-flat { color: #98a2b3; font-weight: 800; }
+        /* Data Table & Drilldown Elements */
+        .view-title { font-size: 24px; margin-bottom: 15px; color: #333; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px;}
+        .controls-group button { padding: 8px 15px; margin-left: 10px; cursor: pointer; background: #666; color: #fff; border: none; border-radius: 4px; font-weight: bold; transition: 0.2s; }
+        .controls-group button:hover { background: #444; }
         
-        .badge-vendor { background: #ecfdf3; color: #027a48; padding: 2px 6px; font-size: 10px !important;}
-        .badge-standard { background: #f2f4f7; color: #344054; padding: 2px 6px; font-size: 10px !important;}
-        .vended-highlight { background-color: #fef08a; padding: 2px 6px; border-radius: 4px; font-weight: 800; color: #854d0e; }
+        .drilldown-container { background: #fff; border-radius: 6px; box-shadow: 0 2px 6px rgba(0,0,0,0.08); padding: 20px; margin-top: 10px; }
+        details { margin-bottom: 10px; }
+        summary { font-weight: 700; padding: 10px; background-color: #f9fafc; border: 1px solid var(--border); border-radius: 4px; cursor: pointer; user-select: none; display: flex; align-items: center;}
+        summary:hover { background-color: #f1f3f6; }
+        details details { margin-left: 20px; margin-top: 5px; }
+        details details summary { background-color: #fff; color: #555; border-left: 3px solid var(--gold); }
+        details details details { margin-left: 20px; }
+        details details details summary { border-left: 3px solid #666; font-weight: 700; }
 
-        /* Drilldown & Content Expanders */
-        .oos-row td { background-color: #fef2f2; }
-        .ghost-row td { background-color: #fef9c3 !important; }
+        .table-wrapper { overflow-x: auto; margin-top: 10px; margin-bottom: 10px; }
+        table { width: 100%; border-collapse: collapse; min-width: 1000px; font-size: 13px; table-layout: fixed; }
+        th { background: #f4f6f9; padding: 12px; text-align: left; color: #555; text-transform: uppercase; font-size: 11px; border-bottom: 2px solid var(--border); font-weight: 700; cursor: pointer;}
+        th:hover { background-color: #e2e8f0; }
+        td { padding: 12px; border-bottom: 1px solid var(--border); vertical-align: top; font-weight: 500; word-wrap: break-word;}
+        tr:hover td { background-color: #fcfcfc; }
+
+        .ro-link { color: #0066cc; font-weight: 700; }
+        .ro-link:hover { text-decoration: underline; }
+        .badge { padding: 4px 8px; border-radius: 12px; font-size: 11px; font-weight: 700; display: inline-block;}
+        .badge-oos { background-color: var(--urgent-red); color: white; }
+        .badge-active { background-color: var(--low-green); color: white; }
+        .badge-urgent { background-color: var(--urgent-red); color: white; }
+        .badge-low { background-color: var(--low-green); color: white; }
         
-        .cell-collapsed { max-width: 250px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block; }
-        .cell-expanded { max-width: 500px; white-space: normal; display: block; }
+        .ecd-red { color: #d9534f; font-weight: 800; }
+        .ecd-green { color: #5cb85c; font-weight: 800; }
+        .badge-ecd-missing { background-color: #fff3cd; color: #d9534f; padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: 800; border: 1px solid #d9534f; white-space: nowrap; display: inline-block; }
         
-        .ro-link { color: #026aa2; text-decoration: none; font-weight: 800; }
-        .ro-link:hover { text-decoration: underline; color: #004e7a; }
-        .vdr-comment { color: #555; line-height: 1.4; font-weight: 500;}
+        /* Custom Status Toggles */
+        .status-toggle { cursor: pointer; margin-right: 8px; user-select: none; transition: 0.2s; box-shadow: 0 1px 3px rgba(0,0,0,0.2); display: inline-block; text-align: center; min-width: 85px; font-size: 10px; letter-spacing: 0.5px;}
+        .status-toggle:hover { opacity: 0.8; transform: translateY(-1px); }
+        .status-pending { background-color: var(--urgent-red); color: white; border: 1px solid #c9302c; }
+        .status-dispatched { background-color: var(--low-green); color: white; border: 1px solid #4cae4c; }
+
+        /* Notes UI Elements */
+        .note-btn { background: #f0f0f0; border: 1px solid #ccc; border-radius: 4px; cursor: pointer; padding: 2px 6px; font-size: 12px; transition: 0.2s; opacity: 0.7;}
+        .note-btn:hover { background: #e0e0e0; opacity: 1; }
+        .note-btn.has-note { background: var(--gold); color: #333; border-color: var(--gold-hover); opacity: 1; box-shadow: 0 1px 3px rgba(0,0,0,0.2); }
+
+        .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center; }
+        .modal-box { background: white; padding: 20px; border-radius: 8px; width: 450px; max-width: 90%; box-shadow: 0 4px 15px rgba(0,0,0,0.2); }
+        .modal-header { font-size: 18px; font-weight: bold; margin-bottom: 15px; color: #333; display: flex; justify-content: space-between; align-items: center;}
+        .modal-close { cursor: pointer; font-size: 24px; color: #888; border: none; background: none; line-height: 1;}
+        .modal-close:hover { color: #333; }
+        .modal-textarea { width: 100%; height: 120px; padding: 10px; border: 1px solid #ccc; border-radius: 4px; resize: vertical; font-size: 14px; margin-bottom: 15px; font-family: 'Raleway', sans-serif;}
+        .modal-actions { display: flex; justify-content: flex-end; gap: 10px; }
+
+        .grouped-ro-item { margin-bottom: 8px; }
+        .grouped-ro-item:last-child { margin-bottom: 0; }
     </style>
 </head>
 <body>
@@ -206,12 +230,14 @@
                     <line x1="50" y1="50" x2="17" y2="39" />
                 </g>
             </svg>
-            <span class="logo-text">VDR</span>
+            <span class="logo-text">workFLOW</span>
             <span class="logo-plus">+</span>
         </div>
-        
-        <div class="menu-item active" onclick="switchTab('kpiView', this)">Dashboard</div>
-        <div class="menu-item" onclick="switchTab('summaryView', this)">Consolidation Summary</div>
+        <div class="menu-item active" id="menu-home" onclick="navigate('home-view', this)">Home Dashboard</div>
+        <div class="menu-item" id="menu-pm" onclick="navigate('pm-view', this)">PM Queue</div>
+        <div class="menu-item" id="menu-vended" onclick="navigate('vended-view', this)">Vended Repair Queue</div>
+        <div class="menu-item" id="menu-ers" onclick="navigate('ers-view', this)">ERS Queue</div>
+        <div class="menu-item" id="menu-reports" onclick="navigate('reports-view', this)">Reports</div>
         
         <div class="sidebar-truck">
             <svg width="140" height="70" viewBox="0 0 120 60" xmlns="http://www.w3.org/2000/svg" class="moving-truck-svg">
@@ -247,1039 +273,1746 @@
     </div>
 
     <div class="main-content">
-        
         <div class="top-bar">
             <div class="search-container">
-                <input type="text" id="unitSearch" placeholder="Search Unit # (e.g. 15-014)" />
+                <input type="text" id="global-search" placeholder="Search by Unit No..." onkeyup="handleSearch()">
             </div>
             <div class="top-actions">
-                <a href="https://ameritfleetsolutions.domo.com/page/616708093" target="_blank" class="btn-domo">DOMO VDR</a>
-                <div style="font-weight: 800; font-size: 18px; color: var(--gold); letter-spacing: 0.5px;">
-                    KEEP ON ROLLING&trade;
+                <div class="dropdown">
+                    <button class="btn-action dropbtn">VENDOR MAPS ▼</button>
+                    <div class="dropdown-content">
+                        <a href="https://app.mapline.com/map/map_282c81fe/TWZ2TzJHRGcrd3BjaG1QMDNPekVGYUhxNThJd080SUZTK2MwZG" target="_blank">Armored</a>
+                    </div>
                 </div>
+                <a href="https://afshub.azurewebsites.net/Vendors/VendedRepairOrder/CreateVRO" target="_blank" class="btn-action">CREATE A VRO</a>
             </div>
         </div>
 
-        <div id="loadingBanner">
-            🔄 Automatically fetching live data from master_file.xlsx...
+        <div id="home-view" class="view-section active">
+            <h1 class="home-title">Welcome to workFLOW +</h1>
+            <div class="upload-container" id="upload-box">
+                <h3>Loading Dashboard Data</h3>
+                <p style="color: #666; margin-bottom: 15px; font-size: 14px;">Attempting to fetch <b>master_workFLOW.xlsx</b> from local directory...</p>
+                <div id="upload-status" style="font-size: 15px; font-weight: bold; color: #888;">Initializing...</div>
+                <div id="manual-upload-section" style="display: none; margin-top: 25px; padding-top: 20px; border-top: 1px dashed #ccc;">
+                    <p style="font-size: 13px; color: #888; margin-bottom: 10px;">Fallback: File not found. Upload manually below.</p>
+                    <label for="excelFileInput" class="upload-btn">Browse Files</label>
+                    <input type="file" id="excelFileInput" accept=".xlsx, .xls, .csv" multiple />
+                </div>
+            </div>
+            <div id="home-dashboard" style="display:none;">
+                <div class="home-dashboard-header">
+                    <h2 style="margin:0;">Aggregate Performance Overview</h2>
+                    <div>
+                        <select class="filter-select customer-filter-select" onchange="setCustomerFilter(this.value)">
+                            <option value="ALL">All Customers</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="home-kpi-container" id="home-kpi-container"></div>
+            </div>
         </div>
 
-        <div id="appContainer" style="display: none; padding: 30px;">
-
-            <div class="controls-wrapper">
-                <div class="filter-section">
-                    <div class="filter-group">
-                        <label>Region</label>
-                        <select id="regionSelect"><option value="All">All Regions</option></select>
-                    </div>
-                    <div class="filter-group">
-                        <label>Subregion</label>
-                        <select id="subregionSelect"><option value="All">All Subregions</option></select>
-                    </div>
-                    <div class="filter-group">
-                        <label>Branch</label>
-                        <select id="branchSelect"><option value="All">All Branches</option></select>
-                    </div>
-                    <div class="filter-group" id="unitStatusFilterGroup">
-                        <label>Unit Status</label>
-                        <select id="unitStatusFilter">
-                            <option value="All">All Statuses</option>
-                            <option value="Active">Active Only</option>
-                            <option value="OOS">OOS Only</option>
-                        </select>
-                    </div>
-                    <div class="filter-group">
-                        <label>Branch Type</label>
-                        <select id="branchTypeFilter">
-                            <option value="All">All Branches</option>
-                            <option value="Vended">Vended Only</option>
-                            <option value="Dedicated">Dedicated Only</option>
-                        </select>
-                    </div>
+        <div id="pm-view" class="view-section">
+            <div class="view-title">
+                <span style="font-weight: 700;">PM Queue</span>
+                <div>
+                    <select class="filter-select customer-filter-select" onchange="setCustomerFilter(this.value)">
+                        <option value="ALL">All Customers</option>
+                    </select>
                 </div>
             </div>
+            <div class="kpi-grid" id="pm-kpi-container"></div>
+        </div>
 
-            <div id="kpiView" class="view-section active" style="padding: 0;">
-                <div class="section-title">Garda VDR KPIs</div>
-                <div class="kpi-grid" id="kpiContainer"></div>
-
-                <div class="section-title spaced">DOMO VDR KPIs</div>
-                <div class="kpi-grid" id="auditKpiContainer"></div>
-
-                <div class="table-container">
-                    <div class="table-header-row">
-                        <div class="section-title">Unit Drill-Down & Discrepancy Analysis</div>
-                        <div style="display: flex; gap: 8px;">
-                            <button class="btn" onclick="setGlobalDrilldown(true)">Expand All</button>
-                            <button class="btn" onclick="setGlobalDrilldown(false)">Collapse All</button>
-                            <button class="btn btn-export" onclick="exportDrilldown()">📥 Export Drilldown</button>
-                        </div>
-                    </div>
-                    <div style="overflow-x: auto;">
-                        <table id="drilldownTable">
-                            <thead>
-                                <tr>
-                                    <th style="width: 30px; text-align: center;">Exp</th>
-                                    <th onclick="sortDrilldown(1, 'string')">Truck #</th>
-                                    <th onclick="sortDrilldown(2, 'string')">Region</th>
-                                    <th onclick="sortDrilldown(3, 'string')">SubRegion</th>
-                                    <th onclick="sortDrilldown(4, 'string')">Branch</th>
-                                    <th onclick="sortDrilldown(5, 'string')">Garda OOS</th>
-                                    <th onclick="sortDrilldown(6, 'string')">Domo OOS</th>
-                                    <th onclick="sortDrilldown(7, 'string')">Discrepancy</th>
-                                    <th style="text-align: center;" onclick="sortDrilldown(8, 'number')">RO Count</th>
-                                    <th onclick="sortDrilldown(9, 'string')">Active ROs</th>
-                                    <th onclick="sortDrilldown(10, 'string')">Repair Comments</th>
-                                </tr>
-                            </thead>
-                            <tbody id="assetTableBody"></tbody>
-                        </table>
-                    </div>
+        <div id="vended-view" class="view-section">
+            <div class="view-title">
+                <span style="font-weight: 700;">Vended Repair Queue</span>
+                <div>
+                    <select class="filter-select customer-filter-select" onchange="setCustomerFilter(this.value)">
+                        <option value="ALL">All Customers</option>
+                    </select>
                 </div>
             </div>
-
-            <div id="summaryView" class="view-section" style="padding: 0;">
-                
-                <div class="sub-tabs-container">
-                    <button class="sub-tab active" onclick="switchSubTab('sub-summary', this)">VDR Consolidation Summary</button>
-                    <button class="sub-tab" onclick="switchSubTab('sub-amerit', this)">Amerit OOS Trucks</button>
-                    <button class="sub-tab" onclick="switchSubTab('sub-garda', this)">Garda VDR OOS Trucks</button>
-                </div>
-
-                <div id="sub-summary" class="sub-section active">
-                    <div class="table-container">
-                        <div class="table-header-row">
-                            <div class="section-title">VDR Consolidation Summary</div>
-                            <div style="display: flex; gap: 8px;">
-                                <button class="btn" onclick="toggleAllHierarchy(true)">Expand All</button>
-                                <button class="btn" onclick="toggleAllHierarchy(false)">Collapse All</button>
-                                <button class="btn btn-export" onclick="exportSummary()">📥 Export All 3 Reports</button>
-                            </div>
-                        </div>
-                        <div style="overflow-x: auto;">
-                            <table id="summaryTable">
-                                <thead>
-                                    <tr>
-                                        <th>Hierarchy Tree</th>
-                                        <th colspan="4" class="group-header col-garda">National Consolidation (Garda)</th>
-                                        <th colspan="4" class="group-header col-domo">DOMO VDR Summary</th>
-                                        <th colspan="4" class="group-header col-delta">Deltas (Garda - DOMO)</th>
-                                        <th colspan="2" class="group-header col-garda">Discrepancies</th>
-                                        <th colspan="2" class="group-header col-domo">Open ROs</th>
-                                        <th colspan="2" class="group-header col-delta">Day Over Day</th>
-                                    </tr>
-                                    <tr>
-                                        <th>Region / Subregion / Branch</th>
-                                        <th class="col-garda num-col">Max Routes</th><th class="num-col">Total Units</th><th class="num-col">OOS</th><th class="num-col">Useful %</th>
-                                        <th class="col-domo num-col">Max Routes</th><th class="num-col">Total Units</th><th class="num-col">OOS</th><th class="num-col">Useful %</th>
-                                        <th class="col-delta num-col">Max Routes</th><th class="num-col">Total Units</th><th class="num-col">OOS</th><th class="num-col">Useful %</th>
-                                        <th class="col-garda num-col">Not OOS in Domo</th><th class="num-col">Not OOS in Garda</th>
-                                        <th class="col-domo num-col">Std ROs</th><th class="num-col">Vendor ROs</th>
-                                        <th class="col-delta num-col" style="background:#f1f5f9;">DoD OOS</th><th class="num-col" style="background:#f1f5f9;">DoD Change</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="summaryTableBody"></tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
-
-                <div id="sub-amerit" class="sub-section">
-                    <div class="table-container">
-                        <div class="table-header-row">
-                            <div class="section-title">Amerit OOS Trucks</div>
-                            <button class="btn btn-export" onclick="exportSummary()">📥 Export All 3 Reports</button>
-                        </div>
-                        <div style="overflow-x: auto;">
-                            <table id="ameritOosTable">
-                                <thead>
-                                    <tr>
-                                        <th>Truck #</th><th>Region</th><th>SubRegion</th><th>Branch</th><th>DOMO OOS Status</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="ameritOosBody"></tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
-
-                <div id="sub-garda" class="sub-section">
-                    <div class="table-container">
-                        <div class="table-header-row">
-                            <div class="section-title">Garda VDR OOS Trucks</div>
-                            <button class="btn btn-export" onclick="exportSummary()">📥 Export All 3 Reports</button>
-                        </div>
-                        <div style="overflow-x: auto;">
-                            <table id="gardaOosTable">
-                                <thead>
-                                    <tr>
-                                        <th>Truck #</th><th>Region</th><th>SubRegion</th><th>Branch</th><th>Garda OOS Status</th><th>Comments</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="gardaOosBody"></tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
-
+            <div class="filter-bar">
+                <button class="filter-btn active" data-filter="ALL" onclick="setFilter('ALL')">All Units</button>
+                <button class="filter-btn" data-filter="OOS" onclick="setFilter('OOS')">Only OOS</button>
+                <button class="filter-btn" data-filter="PRIORITY" onclick="setFilter('PRIORITY')">Priority</button>
             </div>
+            <div class="kpi-grid" id="vended-kpi-container"></div>
+        </div>
 
+        <div id="ers-view" class="view-section">
+            <div class="view-title">
+                <span style="font-weight: 700;">ERS Queue</span>
+                <div>
+                    <select class="filter-select customer-filter-select" onchange="setCustomerFilter(this.value)">
+                        <option value="ALL">All Customers</option>
+                    </select>
+                </div>
+            </div>
+            <div class="filter-bar">
+                <button class="filter-btn active" data-filter="ALL" onclick="setFilter('ALL')">All Units</button>
+                <button class="filter-btn" data-filter="OOS" onclick="setFilter('OOS')">Only OOS</button>
+                <button class="filter-btn" data-filter="PRIORITY" onclick="setFilter('PRIORITY')">Priority</button>
+            </div>
+            <div class="kpi-grid" id="ers-kpi-container"></div>
+        </div>
+
+        <div id="person-view" class="view-section">
+            <div class="view-title">
+                <div style="display:flex; align-items:center; gap: 20px;">
+                    <span id="person-name-title" style="font-weight: 700;">Owner Details</span>
+                    <select class="filter-select customer-filter-select" onchange="setCustomerFilter(this.value)">
+                        <option value="ALL">All Customers</option>
+                    </select>
+                </div>
+                <div class="controls-group" style="display: flex; align-items: center;">
+                    <button class="btn-green" onclick="exportDrilldownToExcel()">&#11139; Export to XLSX</button>
+                    <button onclick="toggleAllDetails(true)">Expand All</button>
+                    <button onclick="toggleAllDetails(false)">Collapse All</button>
+                    <button id="dynamic-back-btn">&larr; Back</button>
+                </div>
+            </div>
+            <div class="filter-bar" id="standard-drilldown-filters">
+                <button class="filter-btn active" data-filter="ALL" onclick="setFilter('ALL')">All Units</button>
+                <button class="filter-btn" data-filter="OOS" onclick="setFilter('OOS')">Only OOS</button>
+                <button class="filter-btn" data-filter="PRIORITY" onclick="setFilter('PRIORITY')">Priority</button>
+            </div>
+            <div class="drilldown-container" id="drilldown-body"></div>
+        </div>
+
+        <div id="reports-view" class="view-section">
+            <div class="view-title">
+                <span style="font-weight: 700;">Reports</span>
+            </div>
+            <div class="filter-bar" style="align-items: center;">
+                <select id="report-region-select" class="filter-select" style="margin-right: 15px; width: 200px;">
+                    <option value="">Select Region...</option>
+                </select>
+                <label style="margin-right: 15px; font-weight: bold; font-size: 13px; display: flex; align-items: center; gap: 5px; cursor: pointer;">
+                    <input type="checkbox" id="report-notes-only" style="cursor: pointer;"> Has Notes Only
+                </label>
+                <button class="btn-green" onclick="generateReport()">Generate Report</button>
+                <button class="btn-action" id="btn-email-report" onclick="emailReport()" style="display: none; margin-left: auto;">📧 Email Report</button>
+            </div>
+            <div class="drilldown-container table-wrapper" id="report-table-container" style="display: none;">
+                <table id="reportTable">
+                    <colgroup>
+                        <col style="width: 12%;">
+                        <col style="width: 13%;">
+                        <col style="width: 15%;">
+                        <col style="width: 10%;">
+                        <col style="width: 10%;">
+                        <col style="width: 10%;">
+                        <col style="width: 30%;">
+                    </colgroup>
+                    <thead>
+                        <tr>
+                            <th onclick="sortReport(0, 'string')">Region ↕</th>
+                            <th onclick="sortReport(1, 'string')">Sub Region ↕</th>
+                            <th onclick="sortReport(2, 'string')">Branch ↕</th>
+                            <th onclick="sortReport(3, 'string')">Truck # ↕</th>
+                            <th onclick="sortReport(4, 'string')">OOS Status ↕</th>
+                            <th onclick="sortReport(5, 'string')">ECD ↕</th>
+                            <th onclick="sortReport(6, 'string')">Notes ↕</th>
+                        </tr>
+                    </thead>
+                    <tbody id="report-table-body"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <div id="search-view" class="view-section">
+            <div class="view-title">
+                <div style="display:flex; align-items:center; gap: 20px;">
+                    <span style="font-weight: 700;">Search Results: <span id="search-term-display"></span></span>
+                </div>
+                <div class="controls-group" style="display: flex; align-items: center;">
+                    <button class="btn-green" onclick="exportSearchToExcel()">&#11139; Export to XLSX</button>
+                    <button onclick="navigate(lastActiveView, null, true)">&larr; Back</button>
+                </div>
+            </div>
+            <div class="drilldown-container table-wrapper">
+                <table>
+                    <colgroup>
+                        <col style="width: 20%;"> <col style="width: 12%;"> <col style="width: 12%;">
+                        <col style="width: 10%;">  <col style="width: 12%;"> <col style="width: 12%;">
+                        <col style="width: 22%;">
+                    </colgroup>
+                    <thead>
+                        <tr>
+                            <th>AFS RO # & Dispatch</th><th>Unit No</th><th>Priority Status</th>
+                            <th>OOS Status</th><th>Opened Date</th><th>Owner</th>
+                            <th>Status & ECD</th>
+                        </tr>
+                    </thead>
+                    <tbody id="search-table-body"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div id="note-modal" class="modal-overlay">
+        <div class="modal-box">
+            <div class="modal-header">
+                <span id="note-modal-title">Notes</span>
+                <button class="modal-close" onclick="closeNoteModal()">&times;</button>
+            </div>
+            <textarea id="note-textarea" class="modal-textarea" placeholder="Type your note here..."></textarea>
+            <div class="modal-actions">
+                <button class="btn-cancel" onclick="closeNoteModal()">Cancel</button>
+                <button class="btn-save" onclick="saveNote()">Save Note</button>
+            </div>
         </div>
     </div>
 
     <script>
-        const GITHUB_RAW_URL = "master_file.xlsx"; 
-        
-        // Data Stores
-        let baselineData = {}; 
-        let gardaSummaryData = {}; 
-        let masterUnits = {};  
-        let roData = {};       
-        let dodMap = {};       
+        // --- SAFE FIREBASE SYNC ENGINE ---
+        let db = null;
+        let globalRoCheckState = {};
+        let globalRoNotesState = {};
 
-        // View States
-        let expandedState = {}; 
-        let expandedDrilldownRows = {}; 
-        let globalExpandDrilldowns = false; 
-        let activeKpiFilter = null; 
+        try {
+            globalRoCheckState = JSON.parse(localStorage.getItem('workflow_checks') || '{}');
+            globalRoNotesState = JSON.parse(localStorage.getItem('workflow_notes') || '{}');
+        } catch(e) {}
 
-        const vendedSiteCodes = new Set([
-            "250-28", "250-95", "140-31", "260-22", "270-10", "270-32", "250-97", "270-08", "250-92", "140-24",
-            "130-68", "190-52", "130-63", "270-65", "130-62", "130-66", "130-69", "130-65", "190-67", "190-68",
-            "190-51", "190-60", "190-65", "190-50", "190-71", "190-66", "190-64", "190-24", "190-53", "190-45",
-            "190-55", "190-47", "190-58", "190-56", "190-49", "280-55", "140-27", "140-28", "140-92", "140-09",
-            "140-82", "144-21", "130-75", "130-72", "130-20", "130-76", "260-07", "130-11", "130-74", "130-80",
-            "260-03", "260-08", "260-02", "260-19", "260-01", "260-31", "260-23", "260-18", "120-15", "120-38", "120-61",
-            "230-90", "230-39", "230-86", "230-59", "230-88", "230-87", "230-80", "230-91", "230-53", "230-60",
-            "230-51", "230-58", "230-50", "230-52", "230-47", "230-49", "120-25", "120-23", "130-88", "230-95",
-            "230-96", "230-16", "120-27", "230-34", "120-82", "230-37"
-        ]);
-
-        function isVended(branchName) {
-            if (!branchName) return false;
-            let bLower = String(branchName).toLowerCase();
-            if (bLower.includes('evansville') || bLower.includes('miami')) return false;
-            const match = String(branchName).match(/\d{3}-\d{2}/);
-            return match && vendedSiteCodes.has(match[0]);
-        }
-
-        // DOM Elements
-        const regionSelect = document.getElementById('regionSelect');
-        const subregionSelect = document.getElementById('subregionSelect');
-        const branchSelect = document.getElementById('branchSelect');
-        const unitSearch = document.getElementById('unitSearch');
-        const unitStatusFilter = document.getElementById('unitStatusFilter');
-        const branchTypeFilter = document.getElementById('branchTypeFilter');
-
-        // Event Listeners
-        regionSelect.addEventListener('change', () => { populateSubregions(); activeKpiFilter = null; refreshAllViews(); });
-        subregionSelect.addEventListener('change', () => { populateBranches(); activeKpiFilter = null; refreshAllViews(); });
-        branchSelect.addEventListener('change', () => { activeKpiFilter = null; refreshAllViews(); });
-        unitSearch.addEventListener('input', () => { activeKpiFilter = null; refreshAllViews(); });
-        unitStatusFilter.addEventListener('change', () => { activeKpiFilter = null; refreshAllViews(); });
-        branchTypeFilter.addEventListener('change', () => { populateBranches(); activeKpiFilter = null; refreshAllViews(); });
-
-        window.switchTab = function(viewId, btn) {
-            document.querySelectorAll('.view-section').forEach(b => b.classList.remove('active'));
-            document.getElementById(viewId).classList.add('active');
-            
-            document.querySelectorAll('.menu-item').forEach(b => b.classList.remove('active'));
-            if(btn) btn.classList.add('active');
-
-            if (viewId === 'summaryView') {
-                document.getElementById('unitStatusFilterGroup').style.display = 'none';
-            } else {
-                document.getElementById('unitStatusFilterGroup').style.display = 'flex';
-            }
-        }
-
-        window.switchSubTab = function(subId, btn) {
-            document.querySelectorAll('.sub-section').forEach(b => b.classList.remove('active'));
-            document.getElementById(subId).classList.add('active');
-            document.querySelectorAll('.sub-tab').forEach(b => b.classList.remove('active'));
-            btn.classList.add('active');
-        }
-
-        function populateRegions() {
-            regionSelect.innerHTML = '<option value="All">All Regions</option>';
-            Object.keys(baselineData).sort().forEach(r => regionSelect.innerHTML += `<option value="${r}">${r}</option>`);
-            populateSubregions();
-        }
-        function populateSubregions() {
-            subregionSelect.innerHTML = '<option value="All">All Subregions</option>';
-            const reg = regionSelect.value;
-            if (reg !== "All" && baselineData[reg]) {
-                Object.keys(baselineData[reg]).sort().forEach(sr => subregionSelect.innerHTML += `<option value="${sr}">${sr}</option>`);
-            }
-            populateBranches();
-        }
-        function populateBranches() {
-            branchSelect.innerHTML = '<option value="All">All Branches</option>';
-            const reg = regionSelect.value;
-            const subreg = subregionSelect.value;
-            const typeFilter = branchTypeFilter.value;
-
-            if (reg !== "All" && subreg !== "All" && baselineData[reg] && baselineData[reg][subreg]) {
-                Object.keys(baselineData[reg][subreg]).sort().forEach(b => {
-                    const isVend = isVended(b);
-                    if (typeFilter === 'Vended' && !isVend) return;
-                    if (typeFilter === 'Dedicated' && isVend) return;
-
-                    const styleTag = isVend ? 'style="background-color: #fef08a; color: #854d0e; font-weight: 700;"' : '';
-                    const vendedTag = isVend ? ' ★ (Vended)' : '';
-                    branchSelect.innerHTML += `<option value="${b}" ${styleTag}>${b}${vendedTag}</option>`;
-                });
-            }
-        }
-
-        // --- AUTOMATED FETCH ENGINE ---
-        async function loadDataFromGitHub() {
+        function initFirebaseSync() {
             try {
-                const response = await fetch(GITHUB_RAW_URL + '?v=' + new Date().getTime());
-                if (!response.ok) throw new Error("Network response was not ok");
-                const arrayBuffer = await response.arrayBuffer();
-                const workbook = XLSX.read(new Uint8Array(arrayBuffer), {type: 'array'});
-                
-                const names = workbook.SheetNames.map(n => n.toLowerCase());
-                const tabGarda = workbook.SheetNames[names.findIndex(n => n.includes("national"))];
-                const tabDomoOos = workbook.SheetNames[names.findIndex(n => n.includes("domo unit") || n.includes("listing"))];
-                const tabDomoSummary = workbook.SheetNames[names.findIndex(n => n.includes("summary") && !n.includes("dod"))];
-                const tabDomoDoD = workbook.SheetNames[names.findIndex(n => n.includes("dod"))];
-                const tabRoDetail = workbook.SheetNames[names.findIndex(n => n.includes("rodetail") || n.includes("ro detail"))];
+                if (typeof firebase !== 'undefined') {
+                    const firebaseConfig = {
+                        apiKey: "AIzaSyCr3VAldI-pPCb7APx3rJAEZvf_nl0iz1g",
+                        authDomain: "workflow-dashboard-e6134.firebaseapp.com",
+                        databaseURL: "https://workflow-dashboard-e6134-default-rtdb.firebaseio.com",
+                        projectId: "workflow-dashboard-e6134",
+                        storageBucket: "workflow-dashboard-e6134.firebasestorage.app",
+                        messagingSenderId: "641710248116",
+                        appId: "1:641710248116:web:1546701879d573041447e1"
+                    };
+                    if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+                    db = firebase.database();
 
-                if (!tabGarda || !tabDomoOos || !tabDomoSummary) throw new Error("Missing core tabs.");
+                    db.ref('roChecks').on('value', (snapshot) => {
+                        globalRoCheckState = snapshot.val() || {};
+                        try { localStorage.setItem('workflow_checks', JSON.stringify(globalRoCheckState)); } catch(e) {}
+                        updateAllStatusBadges();
+                    });
 
-                // Process DoD Tab First so its mapped before Summary
-                if (tabDomoDoD) {
-                    let sDoD = XLSX.utils.sheet_to_json(workbook.Sheets[tabDomoDoD], {header: 1, defval: ""});
-                    
-                    let rIdx = -1;
-                    for(let i=0; i<10; i++) {
-                        if(sDoD[i]) {
-                            let rowStr = sDoD[i].map(x => String(x).toUpperCase().trim()).join('');
-                            if (rowStr.includes("GARDAREGION") || rowStr.includes("BRANCH")) { rIdx = i; break; }
-                        }
+                    db.ref('roNotes').on('value', (snapshot) => {
+                        globalRoNotesState = snapshot.val() || {};
+                        try { localStorage.setItem('workflow_notes', JSON.stringify(globalRoNotesState)); } catch(e) {}
+                        updateAllNoteButtons();
+                    });
+                }
+            } catch (error) {
+                console.warn("Firebase Init blocked.", error);
+            }
+        }
+
+        function updateAllStatusBadges() {
+            document.querySelectorAll('.status-toggle').forEach(btn => {
+                let ro = btn.getAttribute('data-ro');
+                let isDispatched = !!globalRoCheckState[ro];
+                if (isDispatched) {
+                    btn.className = 'badge status-toggle status-dispatched';
+                    btn.innerHTML = '✓ DISPATCHED';
+                    btn.onclick = function() { toggleRoCheck(ro, false); };
+                } else {
+                    btn.className = 'badge status-toggle status-pending';
+                    btn.innerHTML = 'PENDING';
+                    btn.onclick = function() { toggleRoCheck(ro, true); };
+                }
+            });
+        }
+
+        function toggleRoCheck(ro, isChecked) {
+            let safeRo = ro.replace(/[.#$\[\]]/g, '_'); 
+            if (db) {
+                db.ref('roChecks/' + safeRo).set(isChecked);
+            } else {
+                globalRoCheckState[safeRo] = isChecked;
+                try { localStorage.setItem('workflow_checks', JSON.stringify(globalRoCheckState)); } catch(e) {}
+                updateAllStatusBadges();
+            }
+        }
+
+        // Notes Engine
+        let currentEditingRo = null;
+
+        function updateAllNoteButtons() {
+            document.querySelectorAll('.note-btn').forEach(btn => {
+                let ro = btn.getAttribute('data-ro');
+                let note = globalRoNotesState[ro];
+                if (note && note.trim() !== '') {
+                    btn.className = 'note-btn has-note';
+                    btn.title = note; 
+                } else {
+                    btn.className = 'note-btn';
+                    btn.title = 'Add Note';
+                }
+            });
+        }
+
+        window.openNoteModal = function(safeRo, roNum) {
+            currentEditingRo = safeRo;
+            document.getElementById('note-modal-title').innerText = 'Notes for ' + roNum;
+            document.getElementById('note-textarea').value = globalRoNotesState[safeRo] || '';
+            document.getElementById('note-modal').style.display = 'flex';
+            document.getElementById('note-textarea').focus();
+        }
+
+        window.closeNoteModal = function() {
+            document.getElementById('note-modal').style.display = 'none';
+            currentEditingRo = null;
+        }
+
+        window.saveNote = function() {
+            if (!currentEditingRo) return;
+            let noteText = document.getElementById('note-textarea').value;
+            if (db) {
+                db.ref('roNotes/' + currentEditingRo).set(noteText);
+            } else {
+                globalRoNotesState[currentEditingRo] = noteText;
+                try { localStorage.setItem('workflow_notes', JSON.stringify(globalRoNotesState)); } catch(e) {}
+                updateAllNoteButtons();
+            }
+            closeNoteModal();
+        }
+
+        // --- GLOBAL DATA ---
+        let processedData = []; 
+        let currentFilter = 'ALL';
+        let currentCustomerFilter = 'ALL';
+        let currentOwnerView = '';
+        let currentParentView = '';
+        let globalChartInstances = {}; 
+        let searchTimeout = null;
+
+        let pmOwners = [];
+        let vendedOwners = [];
+        let ersOwners = [];
+
+        let branchUsefulMap = {}; 
+        let branchMasterInfo = {}; 
+        let oosMap = {};
+        let dedicatedBranches = new Set();
+
+        const excludedStatuses = [
+            'COMPLETED', 
+            'FINAL CHARGES SUBMITTED'
+        ];
+
+        const specificCreators = [
+            "aarmes@ameritfleet.com", "ccaylor@ameritfleet.com", "cchristianson@ameritfleet.com",
+            "cdecker@ameritfleet.com", "dnicholson@ameritfleet.com", "fbeardslee@ameritfleet.com",
+            "fmendozacruz@ameritfleet.com", "jkennedy2@ameritfleet.com", "jmccormick@ameritfleet.com",
+            "kanguzza@ameritfleet.com", "khulbert@ameritfleet.com", "ljohnson@ameritfleet.com",
+            "mmcclain2@ameritfleet.com", "pgallagher@ameritfleet.com", "rcastillo@ameritfleet.com",
+            "sgerdes@ameritfleet.com", "swooton@ameritfleet.com", "tblake@ameritfleet.com",
+            "tforrester@ameritfleet.com", "ttodd@ameritfleet.com", "wvaught@ameritfleet.com"
+        ];
+        
+        let lastActiveView = 'home-view';
+
+        function normalizeName(str) {
+            if (!str) return '';
+            let n = String(str).trim().replace(/\s+/g, ' '); 
+            let lower = n.toLowerCase();
+            if (lower === 'kevin a' || lower.includes('kanguzza') || lower === 'kevin anguzza') return 'Kevin Anguzza';
+            return n;
+        }
+
+        function normalizeBranchStr(str) {
+            if (!str) return null;
+            return String(str).toUpperCase().replace(/\d{3}[- ]?\d{2}/g, '').replace(/[^A-Z0-9]/ig, '');
+        }
+
+        function extractGardaCode(str) {
+            if (!str) return null;
+            let match = String(str).match(/(\d{3})[- ]?(\d{2})/);
+            if (match) return match[1] + match[2];
+            return null;
+        }
+
+        // --- ROBUST STARTUP AND FETCHING LOGIC ---
+        function startAppOnce() {
+            if (window.__workflowStarted) return;
+            window.__workflowStarted = true;
+            fetchData();
+        }
+
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', startAppOnce, { once: true });
+        } else {
+            startAppOnce();
+        }
+
+        async function fetchWorkbookBuffer() {
+            const candidates = [
+                new URL('./master_workFLOW.xlsx', window.location.href).href,
+                `${window.location.origin}/master_workFLOW.xlsx`,
+                'master_workFLOW.xlsx'
+            ];
+
+            let lastError = null;
+
+            for (const rawUrl of [...new Set(candidates)]) {
+                const controller = new AbortController();
+                const timeout = setTimeout(() => controller.abort(), 15000);
+
+                try {
+                    const url = rawUrl + (rawUrl.includes('?') ? '&' : '?') + `_=${Date.now()}`;
+                    const response = await fetch(url, {
+                        cache: 'no-store',
+                        signal: controller.signal
+                    });
+
+                    clearTimeout(timeout);
+
+                    if (!response.ok) {
+                        throw new Error(`HTTP ${response.status}`);
                     }
 
-                    if (rIdx !== -1) {
-                        let h = sDoD[rIdx].map(x => String(x).trim().toUpperCase());
-                        let idxBranch = h.indexOf("BRANCH");
-                        if(idxBranch === -1) idxBranch = 2; 
+                    const data = await response.arrayBuffer();
+
+                    if (!data || data.byteLength < 4) {
+                        throw new Error('Empty or invalid file response.');
+                    }
+
+                    const sig = new Uint8Array(data.slice(0, 2));
+                    const isZip = sig[0] === 0x50 && sig[1] === 0x4B; 
+                    if (!isZip) {
+                        throw new Error('Response is not a valid XLSX file.');
+                    }
+
+                    return data;
+                } catch (err) {
+                    clearTimeout(timeout);
+                    lastError = new Error(`${rawUrl} -> ${err.name === 'AbortError' ? 'Request timed out' : err.message}`);
+                    console.warn('Workbook fetch failed:', lastError.message);
+                }
+            }
+
+            throw lastError || new Error('Unable to locate master_workFLOW.xlsx');
+        }
+
+        async function fetchData() {
+            const statusEl = document.getElementById('upload-status');
+            const uploadBox = document.getElementById('upload-box');
+            const dashboard = document.getElementById('home-dashboard');
+            const manualUpload = document.getElementById('manual-upload-section');
+
+            uploadBox.style.display = 'block';
+            dashboard.style.display = 'none';
+            manualUpload.style.display = 'none';
+
+            statusEl.innerText = 'Fetching local database file...';
+            statusEl.style.color = '#888';
+
+            try {
+                const data = await fetchWorkbookBuffer();
+
+                statusEl.innerText = 'File found! Processing data...';
+
+                await new Promise(resolve => requestAnimationFrame(resolve));
+
+                const workbook = XLSX.read(data, { type: 'array' });
+
+                let vroRaw = [], resourceRaw = [], oosRaw = [], usefulRaw = [];
+
+                workbook.SheetNames.forEach(sheetName => {
+                    try {
+                        const aoa = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], { header: 1, defval: '' });
+                        if (!aoa || aoa.length === 0) return;
+
+                        let sheetNameLower = sheetName.toLowerCase();
                         
-                        let idxOOS = h.indexOf("TOTAL - OOS UNITS");
-                        if (idxOOS === -1) idxOOS = h.indexOf("# OOS TOTAL");
-                        if (idxOOS === -1) idxOOS = 24; // Col Y
+                        // Strict parsing for Useful % Tab based on fixed coordinates
+                        if (sheetNameLower.includes('useful')) {
+                            // Start on Row 3 (index 2)
+                            for (let i = 2; i < aoa.length; i++) {
+                                let row = aoa[i];
+                                if (!row || !Array.isArray(row)) continue;
+                                let region = row[0];     // Column A
+                                let subregion = row[1];  // Column B
+                                let branch = row[2];     // Column C
+                                let usefulPct = row[27]; // Column AB
 
-                        for(let i = rIdx+1; i < sDoD.length; i++) {
-                            if(!sDoD[i]) continue;
-                            let b = String(sDoD[i][idxBranch] || "").trim();
-                            if (b.includes("230-88") || b.toUpperCase().includes("GREAT FALLS")) continue;
-
-                            let oosStr = String(sDoD[i][idxOOS] || "").replace(/,/g, '');
-                            let oos = parseFloat(oosStr) || 0;
-                            if (b) dodMap[b] = oos;
+                                if (branch && String(branch).trim() !== '') {
+                                    usefulRaw.push({
+                                        'GARDA REGION': region,
+                                        'GARDA SUBREGION': subregion,
+                                        'BRANCH': branch,
+                                        'USEFUL %': usefulPct
+                                    });
+                                }
+                            }
+                            return; // Skip normal heuristic parsing
                         }
+
+                        let headerIdx = -1;
+                        let tabType = 'UNKNOWN';
+
+                        for (let i = 0; i < Math.min(20, aoa.length); i++) {
+                            if (!aoa[i] || !Array.isArray(aoa[i])) continue;
+
+                            const rowStr = aoa[i]
+                                .map(c => c ? String(c).toLowerCase().replace(/[^a-z0-9]/g, '') : '')
+                                .join('');
+
+                            if (!rowStr) continue;
+
+                            if (rowStr.includes('createdby') || (rowStr.includes('unitnumber') && rowStr.includes('team'))) {
+                                headerIdx = i; tabType = 'RESOURCE'; break;
+                            } else if (rowStr.includes('gardaregion') && rowStr.includes('oosflag')) {
+                                headerIdx = i; tabType = 'OOS'; break;
+                            } else if (rowStr.includes('ronumber') || rowStr.includes('order') || rowStr.includes('estimaterequesteddate') || rowStr.includes('customer')) {
+                                headerIdx = i; tabType = 'VRO'; break;
+                            }
+                        }
+
+                        if (headerIdx !== -1) {
+                            const headers = aoa[headerIdx];
+                            const sheetData = [];
+
+                            for (let i = headerIdx + 1; i < aoa.length; i++) {
+                                if (!aoa[i] || !Array.isArray(aoa[i])) continue;
+
+                                const obj = {};
+                                let hasData = false;
+
+                                headers.forEach((h, j) => {
+                                    let key = h ? String(h).trim() : '';
+                                    if (!key) return;
+
+                                    if (obj[key] !== undefined) {
+                                        let c = 1;
+                                        while (obj[key + '_' + c] !== undefined) c++;
+                                        key = key + '_' + c;
+                                    }
+
+                                    obj[key] = aoa[i][j];
+
+                                    if (aoa[i][j] !== '' && aoa[i][j] !== undefined && aoa[i][j] !== null) {
+                                        hasData = true;
+                                    }
+                                });
+
+                                if (hasData) sheetData.push(obj);
+                            }
+
+                            if (tabType === 'RESOURCE') resourceRaw = resourceRaw.concat(sheetData);
+                            else if (tabType === 'OOS') oosRaw = oosRaw.concat(sheetData);
+                            else if (tabType === 'VRO') vroRaw = vroRaw.concat(sheetData);
+                        }
+                    } catch (err) {
+                        console.warn('Skipped sheet due to parsing error:', sheetName, err);
                     }
-                }
+                });
 
-                const sSummary = XLSX.utils.sheet_to_json(workbook.Sheets[tabDomoSummary], {header: 1, defval: ""});
-                const sDomoOos = XLSX.utils.sheet_to_json(workbook.Sheets[tabDomoOos], {header: 1, defval: ""});
-                const sGarda = XLSX.utils.sheet_to_json(workbook.Sheets[tabGarda], {header: 1, defval: ""});
-                
-                if (tabRoDetail) {
-                    const sRo = XLSX.utils.sheet_to_json(workbook.Sheets[tabRoDetail], {header: 1, defval: ""});
-                    processRODetail(sRo);
-                }
+                statusEl.innerText = 'Building dashboards...';
+                await new Promise(resolve => requestAnimationFrame(resolve));
+                processExcelData(vroRaw, resourceRaw, oosRaw, usefulRaw);
 
-                processSummary(sSummary);
-                processDomoOOS(sDomoOos);
-                processGarda(sGarda);
-                
-                document.getElementById('loadingBanner').style.display = 'none';
-                document.getElementById('appContainer').style.display = 'block';
-                
-                populateRegions();
-                refreshAllViews();
+                // Safely Init Firebase after everything is done
+                setTimeout(initFirebaseSync, 500);
 
             } catch (error) {
-                console.error("Error loading data:", error);
-                document.getElementById('loadingBanner').innerHTML = `❌ System Error: Unable to fetch live data. Please ensure 'master_file.xlsx' contains the required tabs.`;
+                console.error('Fetch failed:', error);
+                statusEl.innerText = `Failed to load live data. ${error.message}`;
+                statusEl.style.color = 'red';
+                manualUpload.style.display = 'block';
             }
         }
 
-        // --- TAB PARSERS ---
-
-        function processRODetail(sheet) {
-            let headerRowIdx = -1;
-            for(let i=0; i<10; i++) {
-                if(sheet[i] && sheet[i].some(c => String(c).toUpperCase() === "RONUM")) {
-                    headerRowIdx = i; break;
-                }
-            }
-            if (headerRowIdx === -1) return;
-
-            let headers = sheet[headerRowIdx].map(x => String(x).trim().toUpperCase());
-            let typeIdx = headers.indexOf("ROTYPE");
-            let roIdx = headers.indexOf("RONUM");
-            let unitIdx = headers.indexOf("UNITNUM");
-            let commentIdx = headers.indexOf("COMMENT");
-
-            roData = {};
-            for (let i = headerRowIdx + 1; i < sheet.length; i++) {
-                let row = sheet[i];
-                if (!row || !row[unitIdx] || !row[roIdx]) continue;
-
-                let cleanUnit = String(row[unitIdx]).toUpperCase().replace(/^GAR-/, "").trim();
-                let roNum = String(row[roIdx]).trim();
-                let roType = typeIdx !== -1 && row[typeIdx] ? String(row[typeIdx]).trim().toUpperCase() : "STANDARD";
-                let comment = commentIdx !== -1 && row[commentIdx] ? String(row[commentIdx]).trim() : "";
-
-                if (!roData[cleanUnit]) roData[cleanUnit] = {};
-                if (!roData[cleanUnit][roNum]) roData[cleanUnit][roNum] = { type: roType, comments: new Set() };
-                if (comment) roData[cleanUnit][roNum].comments.add(comment);
-            }
-        }
-
-        function processSummary(sheet) {
-            let summaryRowIdx = -1;
-            for(let i=0; i<10; i++) {
-                if(sheet[i]) {
-                    let rowUpper = sheet[i].map(x => String(x).toUpperCase().trim());
-                    if (rowUpper.includes("GARDA REGION") && (rowUpper.includes("BRANCH") || rowUpper.includes("GARDA SHOPNAME"))) {
-                        summaryRowIdx = i; break;
-                    }
-                }
-            }
-            if (summaryRowIdx === -1) return;
-
-            let headers = sheet[summaryRowIdx].map(x => String(x).trim().toUpperCase());
+        document.getElementById('excelFileInput').addEventListener('change', async function(e) {
+            const files = Array.from(e.target.files);
+            if (files.length === 0) return;
+            const statusEl = document.getElementById('upload-status');
+            statusEl.innerText = "Reading manual upload...";
             
-            // Hardcoded Fallbacks per explicit instructions
-            let idxMaxRoutes = headers.indexOf("TOTAL - MAX ROUTES");
-            if(idxMaxRoutes === -1) idxMaxRoutes = headers.indexOf("MAX ROUTES TOTAL");
-            if(idxMaxRoutes === -1) idxMaxRoutes = headers.lastIndexOf("MAX ROUTES");
-            if(idxMaxRoutes === -1) idxMaxRoutes = 22; // Col W
-
-            let idxActiveUnits = headers.indexOf("TOTAL - ACTIVE UNITS");
-            if(idxActiveUnits === -1) idxActiveUnits = headers.indexOf("TOTAL UNITS TOTAL");
-            if(idxActiveUnits === -1) idxActiveUnits = headers.lastIndexOf("TOTAL UNITS");
-            if(idxActiveUnits === -1) idxActiveUnits = headers.lastIndexOf("ACTIVE UNITS");
-            if(idxActiveUnits === -1) idxActiveUnits = 23; // Col X
-
-            let idxOos = headers.indexOf("TOTAL - OOS UNITS");
-            if(idxOos === -1) idxOos = headers.indexOf("# OOS TOTAL");
-            if(idxOos === -1) idxOos = headers.lastIndexOf("OOS UNITS");
-            if(idxOos === -1) idxOos = headers.lastIndexOf("# OOS");
-            if(idxOos === -1) idxOos = 24; // Col Y
-
-            let idxUseful = headers.indexOf("TOTAL - USEFUL %");
-            if(idxUseful === -1) idxUseful = headers.indexOf("USEFUL % TOTAL");
-            if(idxUseful === -1) idxUseful = headers.lastIndexOf("USEFUL %");
-            if(idxUseful === -1) idxUseful = 27; // Col AB
-
-            baselineData = {};
-            let lastReg = "Unknown";
-            let lastSub = "Unknown";
-
-            for (let i = summaryRowIdx + 1; i < sheet.length; i++) {
-                let row = sheet[i];
-                if (!row) continue;
-                
-                // Fill Down logic for merged cells in DOMO CSV
-                let rawReg = String(row[headers.indexOf("GARDA REGION")] !== undefined ? row[headers.indexOf("GARDA REGION")] : (row[0] || "")).trim();
-                let rawSub = String(row[headers.indexOf("GARDA SUBREGION")] !== undefined ? row[headers.indexOf("GARDA SUBREGION")] : (row[1] || "")).trim();
-                let branch = String(row[headers.indexOf("BRANCH")] !== undefined ? row[headers.indexOf("BRANCH")] : (row[2] || "")).trim();
-                
-                if (branch.includes("230-88") || branch.toUpperCase().includes("GREAT FALLS")) continue;
-
-                if (rawReg && rawReg.toUpperCase() !== "GRAND TOTAL") lastReg = rawReg;
-                let reg = rawReg || lastReg;
-
-                if (rawSub) lastSub = rawSub;
-                let sub = rawSub || lastSub;
-                if (sub.toUpperCase() === 'NORTHWEST') sub = 'Northwest';
-
-                if (reg.toUpperCase() === "GRAND TOTAL" || !branch) continue;
-
-                if (!baselineData[reg]) baselineData[reg] = {};
-                if (!baselineData[reg][sub]) baselineData[reg][sub] = {};
-                
-                let act = parseFloat(String(row[idxActiveUnits] || '').replace(/,/g, '')) || 0;
-                let oos = parseFloat(String(row[idxOos] || '').replace(/,/g, '')) || 0;
-                let totalU = act; 
-
-                let usefulStr = String(row[idxUseful] || '').trim();
-                let usefulVal = parseFloat(usefulStr);
-                let usefulPct = null;
-                if (!isNaN(usefulVal)) {
-                    usefulPct = usefulStr.includes('%') ? usefulVal / 100 : usefulVal;
-                }
-
-                baselineData[reg][sub][branch] = {
-                    MaxRoutes: parseFloat(String(row[idxMaxRoutes] || '').replace(/,/g, '')) || 0,
-                    TotalUnits: totalU,
-                    OOS: oos,
-                    DoDOOS: dodMap[branch] || 0,
-                    UsefulPct: usefulPct
-                };
-            }
-        }
-
-        function processDomoOOS(sheet) {
-            let headerRowIdx = -1;
-            for(let i=0; i<10; i++) {
-                if(sheet[i]) {
-                    let rowUpper = sheet[i].map(x => String(x).toUpperCase().trim());
-                    if (rowUpper.includes("UNIT #") || rowUpper.includes("UNITNUMBER") || rowUpper.includes("TRUCK #") || rowUpper.includes("TRUCK")) {
-                        headerRowIdx = i; break;
-                    }
-                }
-            }
-            if (headerRowIdx === -1) return;
-
-            let headers = sheet[headerRowIdx].map(x => String(x).trim().toUpperCase());
-            let regIdx = headers.indexOf("GARDA REGION") !== -1 ? headers.indexOf("GARDA REGION") : 0;
-            let subIdx = headers.indexOf("GARDA SUBREGION") !== -1 ? headers.indexOf("GARDA SUBREGION") : 1;
-            let branchIdx = headers.indexOf("BRANCH") !== -1 ? headers.indexOf("BRANCH") : 2;
-            if (branchIdx === -1) branchIdx = headers.indexOf("GARDA SHOPNAME");
+            let vroRaw = [], resourceRaw = [], oosRaw = [], usefulRaw = [];
             
-            // Hardcoded Fallbacks
-            let unitIdx = headers.indexOf("UNIT #");
-            if (unitIdx === -1) unitIdx = headers.indexOf("TRUCK #");
-            if (unitIdx === -1) unitIdx = headers.indexOf("UNITNUMBER");
-            if (unitIdx === -1) unitIdx = 3; // Col D
-
-            let typeIdx = headers.indexOf("UNIT TYPE");
-            if (typeIdx === -1) typeIdx = headers.indexOf("GARDA UNITTYPE");
-            if (typeIdx === -1) typeIdx = headers.indexOf("UNITTYPE");
-            if (typeIdx === -1) typeIdx = 4; // Col E
-
-            let oosIdx = headers.indexOf("OOS");
-            if (oosIdx === -1) oosIdx = headers.indexOf("OOS FLAG");
-            if (oosIdx === -1) oosIdx = 8; // Col I
-            
-            masterUnits = {};
-            let lastReg = "Unknown";
-            let lastSub = "Unknown";
-
-            for (let i = headerRowIdx + 1; i < sheet.length; i++) {
-                let row = sheet[i];
-                if (!row || !row[unitIdx]) continue;
-                
-                let branch = String(row[branchIdx] || "").trim();
-                if (branch.includes("230-88") || branch.toUpperCase().includes("GREAT FALLS")) continue;
-
-                // Exclude UN and TRAILER exactly as requested
-                let unitType = String(row[typeIdx] || "").toUpperCase().trim();
-                if (unitType === 'UN' || unitType === 'TRAILER') continue;
-
-                let cleanUnit = String(row[unitIdx]).toUpperCase().replace(/^GAR-/, "").trim();
-                if (cleanUnit === "") continue;
-
-                let rawReg = String(row[regIdx] !== undefined ? row[regIdx] : "").trim();
-                if (rawReg) lastReg = rawReg;
-                let region = rawReg || lastReg;
-
-                let rawSub = String(row[subIdx] !== undefined ? row[subIdx] : "").trim();
-                if (rawSub) lastSub = rawSub;
-                let subregion = rawSub || lastSub;
-                if (subregion.toUpperCase() === 'NORTHWEST') subregion = 'Northwest';
-                
-                let isOOS = (row[oosIdx] && String(row[oosIdx]).toUpperCase() === "OOS");
-
-                masterUnits[cleanUnit] = {
-                    region: region,
-                    subregion: subregion,
-                    branch: branch,
-                    isDomoOOS: isOOS,
-                    inDomoFile: true,
-                    inGardaFile: false,
-                    gardaOOS: false,
-                    gardaComments: "",
-                    isScrapped: false
-                };
-            }
-        }
-
-        function processGarda(sheet) {
-            let headerRowIdx = -1;
-            for(let i=0; i<10; i++) {
-                if(sheet[i] && sheet[i].some(c => String(c).toUpperCase() === "TRUCK#")) {
-                    headerRowIdx = i; break;
-                }
-            }
-            if (headerRowIdx === -1) return;
-
-            let headers = sheet[headerRowIdx].map(x => String(x).trim().toUpperCase());
-            let unitIdx = headers.indexOf("TRUCK#");
-            let branchIdx = headers.indexOf("BRANCH");
-            let regIdx = headers.indexOf("REGION");
-            let subIdx = headers.indexOf("SUBREGION");
-            let oosIdx = headers.indexOf("OUT OF SERVICE");
-            let commentIdx = headers.indexOf("VSD COMMENTS");
-            
-            let scrappedIdx = headers.indexOf("SCRAPPED OR UNARMORED");
-            if (scrappedIdx === -1) scrappedIdx = headers.findIndex(h => h.includes("SCRAP"));
-            if (scrappedIdx === -1) scrappedIdx = 7; // Fallback Col H
-
-            gardaSummaryData = {}; 
-
-            for (let i = headerRowIdx + 1; i < sheet.length; i++) {
-                let row = sheet[i];
-                if (!row || !row[unitIdx]) continue;
-
-                let bName = String(row[branchIdx] || "").trim();
-                if (bName.includes("230-88") || bName.toUpperCase().includes("GREAT FALLS")) continue;
-
-                let cleanUnit = String(row[unitIdx]).toUpperCase().replace(/^GAR-/, "").trim();
-
-                // Aggressive Scrapped Exclusion
-                if (scrappedIdx !== -1 && row[scrappedIdx]) {
-                    let scrapVal = String(row[scrappedIdx]).trim().toUpperCase();
-                    if (scrapVal.includes("SCRAP") || scrapVal.includes("UNARMORED")) {
-                        continue; 
-                    }
-                }
-                
-                let isOOS = (row[oosIdx] && String(row[oosIdx]).toUpperCase().trim() === "OOS");
-
-                let subregion = String(row[subIdx] || "").trim();
-                if (subregion.toUpperCase() === 'NORTHWEST') subregion = 'Northwest';
-
-                if (!gardaSummaryData[bName]) gardaSummaryData[bName] = { totalUnits: 0, oos: 0 };
-                gardaSummaryData[bName].totalUnits++;
-                if (isOOS) gardaSummaryData[bName].oos++;
-
-                if (masterUnits[cleanUnit]) {
-                    masterUnits[cleanUnit].inGardaFile = true;
-                    if (isOOS) masterUnits[cleanUnit].gardaOOS = true;
-                    masterUnits[cleanUnit].gardaComments = row[commentIdx] ? String(row[commentIdx]).trim() : "";
-                } else {
-                    masterUnits[cleanUnit] = {
-                        region: row[regIdx] ? String(row[regIdx]).trim() : "",
-                        subregion: subregion,
-                        branch: bName,
-                        isDomoOOS: false,
-                        inDomoFile: false,
-                        inGardaFile: true,
-                        gardaOOS: isOOS,
-                        gardaComments: row[commentIdx] ? String(row[commentIdx]).trim() : "",
-                        isScrapped: false
-                    };
-                }
-            }
-        }
-
-        // --- RENDER VIEWS ---
-
-        function checkInclusion(rowReg, rowSub, rowBranch) {
-            const selReg = regionSelect.value;
-            const selSub = subregionSelect.value;
-            const selBra = branchSelect.value;
-            const typeFilter = branchTypeFilter.value;
-
-            if (selReg !== "All" && selReg !== rowReg) return false;
-            if (selSub !== "All" && selSub !== rowSub) return false;
-            if (selBra !== "All" && selBra !== rowBranch) return false;
-            
-            if (rowBranch !== "All") {
-                if (typeFilter === 'Vended' && !isVended(rowBranch)) return false;
-                if (typeFilter === 'Dedicated' && isVended(rowBranch)) return false;
-            }
-
-            return true;
-        }
-
-        window.handleKpiClick = function(filterKey) {
-            activeKpiFilter = (activeKpiFilter === filterKey) ? null : filterKey;
-            refreshAllViews();
-            document.getElementById('drilldownTable').scrollIntoView({ behavior: 'smooth', block: 'start' });
-        }
-
-        window.toggleDrilldownRow = function(unit) {
-            expandedDrilldownRows[unit] = globalExpandDrilldowns ? (expandedDrilldownRows[unit] === false) : (expandedDrilldownRows[unit] !== true);
-            updateKPIAndDrilldown();
-        }
-        window.setGlobalDrilldown = function(state) {
-            globalExpandDrilldowns = state;
-            expandedDrilldownRows = {}; 
-            updateKPIAndDrilldown();
-        }
-
-        function refreshAllViews() {
-            updateKPIAndDrilldown();
-            updateSummaryHierarchy();
-        }
-
-        function updateKPIAndDrilldown() {
-            const statusFilter = unitStatusFilter.value; 
-            const searchT = unitSearch.value.trim().toUpperCase().replace(/^GAR-/, "");
-
-            let gardaOosTotal = 0, domoMaxTotal = 0, gardaUnitTotal = 0, domoUnitTotal = 0, domoOosTotal = 0;
-            let validUnits = [];
-
-            // Sum explicitly from DOMO VDR Summary for Garda Totals
-            for (const reg in baselineData) {
-                for (const sub in baselineData[reg]) {
-                    for (const branch in baselineData[reg][sub]) {
-                        if (!checkInclusion(reg, sub, branch)) continue;
-                        let domoMetrics = baselineData[reg][sub][branch];
-                        domoMaxTotal += domoMetrics.MaxRoutes;
-                        gardaUnitTotal += domoMetrics.TotalUnits;
-                    }
-                }
-            }
-
-            // Sum explicitly from DOMO Unit Listing OOS for Domo Totals
-            for (const [unit, data] of Object.entries(masterUnits)) {
-                if (data.isScrapped) continue; 
-                if (!checkInclusion(data.region, data.subregion, data.branch)) continue;
-                if (searchT && !unit.includes(searchT)) continue;
-
-                let bData = (baselineData[data.region] && baselineData[data.region][data.subregion] && baselineData[data.region][data.subregion][data.branch]);
-                data.usefulPct = bData ? bData.UsefulPct : null;
-
-                if (data.inDomoFile) {
-                    domoUnitTotal++;
-                    if (data.isDomoOOS) domoOosTotal++;
-                }
-
-                if (data.inGardaFile && data.gardaOOS) {
-                    gardaOosTotal++;
-                }
-                
-                validUnits.push({ unit, data });
-            }
-
-            let tableHtml = "";
-            for (const item of validUnits) {
-                const { unit, data } = item;
-                
-                if (activeKpiFilter) {
-                    if (activeKpiFilter === 'GARDA_TOTAL' || activeKpiFilter === 'DOMO_TOTAL') { }
-                    else if (activeKpiFilter === 'GARDA_ACTIVE' && data.gardaOOS) continue;
-                    else if (activeKpiFilter === 'GARDA_OOS' && !data.gardaOOS) continue;
-                    else if (activeKpiFilter === 'DOMO_ACTIVE' && data.isDomoOOS) continue;
-                    else if (activeKpiFilter === 'DOMO_OOS' && !data.isDomoOOS) continue;
-                    else if ((activeKpiFilter === 'GARDA_DELTA' || activeKpiFilter === 'DOMO_DELTA') && (data.gardaOOS === data.isDomoOOS)) continue;
-                } else {
-                    if (statusFilter === 'Active' && (data.gardaOOS || data.isDomoOOS)) continue;
-                    if (statusFilter === 'OOS' && !data.gardaOOS && !data.isDomoOOS) continue;
-                }
-
-                let isGhostRow = !data.inGardaFile;
-                let domoOosHtml = data.isDomoOOS ? `<span class="badge status-red">OOS</span>` : `<span class="badge status-green">Active</span>`;
-                let oosMatchHtml = `<span class="badge status-green">Match</span>`;
-                
-                if (isGhostRow && data.isDomoOOS) oosMatchHtml = `<span class="badge status-red">Missing from Garda</span>`;
-                else if (data.inGardaFile) {
-                    if (data.gardaOOS && !data.isDomoOOS) oosMatchHtml = `<span class="badge status-red">Not OOS in Domo</span>`;
-                    else if (!data.gardaOOS && data.isDomoOOS) oosMatchHtml = `<span class="badge status-red">Not OOS in Garda</span>`;
-                }
-
-                let allROsHtml = `<span style="color: var(--text-muted);">-</span>`;
-                let displayComments = data.gardaComments || "";
-                let roCount = 0;
-                
-                if (roData[unit]) {
-                    let links = [];
-                    let comms = [];
-                    for (let roNum in roData[unit]) {
-                        roCount++;
-                        let rInfo = roData[unit][roNum];
-                        let isVendor = rInfo.type.includes("VENDOR");
-                        let linkHtml = isVendor 
-                            ? `<a href="https://afshub.azurewebsites.net/Vendors/VendedRepairOrder/Estimate/${roNum}" target="_blank" class="ro-link">${roNum}</a>`
-                            : `<span style="font-weight: 800;">${roNum}</span>`;
-                        
-                        links.push(`<div style="margin-bottom: 4px;"><span class="badge ${isVendor ? 'badge-vendor' : 'badge-standard'}">${rInfo.type}</span> ${linkHtml}</div>`);
-                        if (rInfo.comments.size > 0) comms.push(`<strong>${roNum}:</strong> ${Array.from(rInfo.comments).join(" | ")}`);
-                    }
-                    allROsHtml = links.join("");
-                    if (comms.length > 0) displayComments += (displayComments ? "<br><br>" : "") + comms.join('<hr style="border-top:1px dashed var(--border); margin:6px 0;">');
-                }
-
-                let branchHtml = isVended(data.branch) ? `<span class="vended-highlight">${data.branch}</span>` : data.branch;
-                let oosCellContent = isGhostRow ? `<span style="color: var(--red-text); font-weight:800;">Missing (Garda)</span>` : (data.gardaOOS ? "OOS" : "");
-                let trClass = isGhostRow ? 'ghost-row' : ((data.gardaOOS || data.isDomoOOS) ? 'oos-row' : '');
-
-                let isExpanded = globalExpandDrilldowns ? (expandedDrilldownRows[unit] !== false) : (expandedDrilldownRows[unit] === true);
-                let contentClass = isExpanded ? 'cell-expanded' : 'cell-collapsed';
-
-                tableHtml += `
-                    <tr class="${trClass}" style="cursor: pointer;" onclick="toggleDrilldownRow('${unit}')">
-                        <td style="text-align: center; color: var(--gold); font-weight: bold; font-size: 11px; user-select: none;">${isExpanded ? '▼' : '▶'}</td>
-                        <td><strong>${unit}</strong></td><td>${data.region}</td><td>${data.subregion}</td><td>${branchHtml}</td>
-                        <td style="font-weight: 800;">${oosCellContent}</td><td>${domoOosHtml}</td><td>${oosMatchHtml}</td>
-                        <td align="center"><span class="badge status-dark">${roCount}</span></td>
-                        <td><div class="${contentClass} vdr-comment">${allROsHtml}</div></td>
-                        <td><div class="${contentClass} vdr-comment">${displayComments || '<i>No comments</i>'}</div></td>
-                    </tr>
-                `;
-            }
-
-            document.getElementById('assetTableBody').innerHTML = tableHtml || `<tr><td colspan="11" style="text-align: center; padding: 30px; color: var(--text-muted);">No matching records found.</td></tr>`;
-
-            const renderCard = (lbl, val, tc, filterKey) => {
-                let actClass = (activeKpiFilter === filterKey) ? 'active-kpi' : '';
-                return `<div class="kpi-card ${actClass}" onclick="handleKpiClick('${filterKey}')">
-                    <div class="stat-box"><div class="stat-value" style="color:${tc};">${val}</div><div class="stat-label">${lbl}</div></div>
-                </div>`;
-            };
-            
-            // Garda Calc
-            let gActive = Math.max(0, gardaUnitTotal - gardaOosTotal);
-            let gDelta = gActive - domoMaxTotal;
-            let gDc = gDelta < 0 ? 'var(--red-text)' : 'var(--text-main)';
-            let gAvail = gardaUnitTotal > 0 ? ((gActive/gardaUnitTotal)*100).toFixed(1)+'%' : '0%';
-            let gUse = domoMaxTotal > 0 ? ((gActive/domoMaxTotal)*100).toFixed(1)+'%' : '0%';
-            
-            document.getElementById('kpiContainer').innerHTML = 
-                renderCard("Total Units", gardaUnitTotal, "var(--text-main)", 'GARDA_TOTAL') +
-                renderCard("Active Units", gActive, "var(--green-text)", 'GARDA_ACTIVE') +
-                renderCard("Max Routes", domoMaxTotal, "var(--text-main)", 'GARDA_MAX') +
-                renderCard("OOS", gardaOosTotal, "var(--red-text)", 'GARDA_OOS') +
-                renderCard("Delta (Active vs Max)", (gDelta > 0?'+':'')+gDelta, gDc, 'GARDA_DELTA') +
-                renderCard("Overall Useful %", gUse, "var(--text-main)", 'GARDA_USEFUL') +
-                renderCard("Available %", gAvail, "var(--text-main)", 'GARDA_AVAIL');
-
-            // Domo Calc
-            let dActive = Math.max(0, domoUnitTotal - domoOosTotal);
-            let dDelta = dActive - domoMaxTotal;
-            let dDc = dDelta < 0 ? 'var(--red-text)' : 'var(--text-main)';
-            let dAvail = domoUnitTotal > 0 ? ((dActive/domoUnitTotal)*100).toFixed(1)+'%' : '0%';
-            let dUse = domoMaxTotal > 0 ? ((dActive/domoMaxTotal)*100).toFixed(1)+'%' : '0%';
-
-            document.getElementById('auditKpiContainer').innerHTML = 
-                renderCard("Total Units", domoUnitTotal, "var(--text-main)", 'DOMO_TOTAL') +
-                renderCard("Active Units", dActive, "var(--green-text)", 'DOMO_ACTIVE') +
-                renderCard("Max Routes", domoMaxTotal, "var(--text-main)", 'DOMO_MAX') +
-                renderCard("OOS", domoOosTotal, "var(--red-text)", 'DOMO_OOS') +
-                renderCard("Delta (Active vs Max)", (dDelta > 0?'+':'')+dDelta, dDc, 'DOMO_DELTA') +
-                renderCard("Overall Useful %", dUse, "var(--text-main)", 'DOMO_USEFUL') +
-                renderCard("Available %", dAvail, "var(--text-main)", 'DOMO_AVAIL');
-        }
-
-        // --- HIERARCHY TABLE ---
-        function updateSummaryHierarchy() {
-            let branchExtraStats = {};
-            let ameritTableHtml = "";
-            let gardaTableHtml = "";
-
-            for (const [unit, data] of Object.entries(masterUnits)) {
-                if (data.isScrapped) continue; 
-                if (!checkInclusion(data.region, data.subregion, data.branch)) continue;
-                
-                let bName = data.branch;
-                if (!branchExtraStats[bName]) {
-                    branchExtraStats[bName] = { gOosNotD: 0, dOosNotG: 0, stdRo: 0, vro: 0, dTotal: 0, dOos: 0, gOos: 0 };
-                }
-
-                if (data.inDomoFile) {
-                    branchExtraStats[bName].dTotal++;
-                    if (data.isDomoOOS) branchExtraStats[bName].dOos++;
-                }
-
-                if (data.inGardaFile && data.gardaOOS) branchExtraStats[bName].gOos++;
-
-                if (data.gardaOOS && !data.isDomoOOS) branchExtraStats[bName].gOosNotD++;
-                if (!data.gardaOOS && data.isDomoOOS) branchExtraStats[bName].dOosNotG++;
-
-                if (roData[unit]) {
-                    for (let roNum in roData[unit]) {
-                        let rInfo = roData[unit][roNum];
-                        if (rInfo.type.includes("VENDOR")) branchExtraStats[bName].vro++;
-                        else branchExtraStats[bName].stdRo++;
-                    }
-                }
-
-                // Populate Sub-Tab Tables (Unaffected by KPI clicking or Status Filter, just strict OOS mapping)
-                if (data.isDomoOOS) {
-                    ameritTableHtml += `<tr><td><strong>${unit}</strong></td><td>${data.region}</td><td>${data.subregion}</td><td>${data.branch}</td><td><span class="badge status-red">OOS</span></td></tr>`;
-                }
-                if (data.inGardaFile && data.gardaOOS) {
-                    gardaTableHtml += `<tr><td><strong>${unit}</strong></td><td>${data.region}</td><td>${data.subregion}</td><td>${data.branch}</td><td><span class="badge status-red">OOS</span></td><td><div class="vdr-comment">${data.gardaComments || ''}</div></td></tr>`;
-                }
-            }
-
-            document.getElementById('ameritOosBody').innerHTML = ameritTableHtml || `<tr><td colspan="5" align="center" style="padding: 20px;">No Amerit OOS Units found.</td></tr>`;
-            document.getElementById('gardaOosBody').innerHTML = gardaTableHtml || `<tr><td colspan="6" align="center" style="padding: 20px;">No Garda OOS Units found.</td></tr>`;
-
-            let tree = {};
-            const metricsObj = () => ({ gm:0, gt:0, go:0, dm:0, dt:0, do:0, doDoD:0, gOosNotD:0, dOosNotG:0, stdRo:0, vro:0 });
-
-            let allBranches = {};
-            for (const reg in baselineData) {
-                for (const sub in baselineData[reg]) {
-                    for (const branch in baselineData[reg][sub]) {
-                        allBranches[branch] = { reg, sub };
-                    }
-                }
-            }
-            for (const [unit, data] of Object.entries(masterUnits)) {
-                if (data.isScrapped) continue; 
-                if (!allBranches[data.branch]) {
-                    allBranches[data.branch] = { reg: data.region || 'Unknown', sub: data.subregion || 'Unknown' };
-                }
-            }
-
-            for (const branch in allBranches) {
-                let reg = allBranches[branch].reg;
-                let sub = allBranches[branch].sub;
-                
-                if (!checkInclusion(reg, sub, branch)) continue;
-
-                if (!tree[reg]) tree[reg] = { m: metricsObj(), subs: {} };
-                if (!tree[reg].subs[sub]) tree[reg].subs[sub] = { m: metricsObj(), branches: [] };
-
-                let dData = (baselineData[reg] && baselineData[reg][sub] && baselineData[reg][sub][branch]) ? baselineData[reg][sub][branch] : { MaxRoutes: 0, TotalUnits: 0, OOS: 0, DoDOOS: 0, UsefulPct: null };
-                let ext = branchExtraStats[branch] || { gOosNotD: 0, dOosNotG: 0, stdRo: 0, vro: 0, dTotal: 0, dOos: 0, gOos: 0 };
-                
-                let bMetrics = {
-                    branch: branch,
-                    gm: dData.MaxRoutes, gt: dData.TotalUnits, go: ext.gOos, 
-                    dm: dData.MaxRoutes, dt: ext.dTotal, do: ext.dOos, doDoD: dData.DoDOOS,
-                    gOosNotD: ext.gOosNotD, dOosNotG: ext.dOosNotG, stdRo: ext.stdRo, vro: ext.vro,
-                    usefulPct: dData.UsefulPct
-                };
-                
-                tree[reg].subs[sub].branches.push(bMetrics);
-                ['gm','gt','go','dm','dt','do','doDoD','gOosNotD','dOosNotG','stdRo','vro'].forEach(k => tree[reg].subs[sub].m[k] += bMetrics[k]);
-            }
-
-            for (const reg in tree) {
-                let regHasValidBranches = false;
-                for (const sub in tree[reg].subs) {
-                    let subObj = tree[reg].subs[sub];
-                    if (subObj.branches.length > 0) {
-                        regHasValidBranches = true;
-                        ['gm','gt','go','dm','dt','do','doDoD','gOosNotD','dOosNotG','stdRo','vro'].forEach(k => tree[reg].m[k] += subObj.m[k]);
-                        if (expandedState[reg+'|'+sub] === undefined) expandedState[reg+'|'+sub] = false;
-                    } else {
-                        delete tree[reg].subs[sub]; 
-                    }
-                }
-                
-                if (regHasValidBranches) {
-                    if (expandedState[reg] === undefined) expandedState[reg] = true;
-                } else {
-                    delete tree[reg]; 
-                }
-            }
-
-            const formatPct = (act, max) => max > 0 ? ((act/max)*100).toFixed(1)+'%' : '0%';
-            const buildRow = (title, m, cssClass, id, clickLogic, specificUseful = null) => {
-                let gUse = formatPct(Math.max(0, m.gt - m.go), m.gm);
-                let dUse = specificUseful !== null ? (Math.round(specificUseful*100) + '%') : formatPct(Math.max(0, m.dt - m.do), m.dm);
-                
-                let deltaM = m.gm - m.dm;
-                let deltaT = m.gt - m.dt;
-                let deltaO = m.go - m.do;
-                
-                let deltaU = '0%';
-                if (specificUseful !== null && m.gm > 0) {
-                    let gUseDec = Math.max(0, m.gt - m.go) / m.gm;
-                    deltaU = (Math.round((gUseDec - specificUseful)*1000)/10).toFixed(1) + '%';
-                } else {
-                    deltaU = (parseFloat(gUse) - parseFloat(dUse)).toFixed(1) + '%';
-                }
-                
-                let doDChange = m.do - m.doDoD;
-                let doDChangeStr = doDChange > 0 ? `+${doDChange}` : doDChange;
-                let doDClass = doDChange > 0 ? 'status-dod-up' : (doDChange < 0 ? 'status-dod-down' : 'status-dod-flat');
-
-                let icon = id ? (expandedState[id] ? '▼' : '▶') : '';
-                
-                return `<tr class="${cssClass}">
-                    <td onclick="${clickLogic}"><span class="expander">${icon}</span> ${title}</td>
+            try {
+                for(let file of files) {
+                    const data = await file.arrayBuffer();
+                    const workbook = XLSX.read(data, {type: 'array'});
                     
-                    <td class="col-garda num-col">${m.gm}</td>
-                    <td class="num-col">${m.gt}</td>
-                    <td class="num-col">${m.go}</td>
-                    <td class="num-col"><b>${gUse}</b></td>
-                    
-                    <td class="col-domo num-col">${m.dm}</td>
-                    <td class="num-col">${m.dt}</td>
-                    <td class="num-col">${m.do}</td>
-                    <td class="num-col"><b>${dUse}</b></td>
-                    
-                    <td class="col-delta num-col">${deltaM!==0 ? `<b>${deltaM}</b>`: 0}</td>
-                    <td class="num-col">${deltaT!==0 ? `<b>${deltaT}</b>`: 0}</td>
-                    <td class="num-col">${deltaO!==0 ? `<span style="color:var(--red-text)"><b>${deltaO}</b></span>`: 0}</td>
-                    <td class="num-col"><b>${deltaU}</b></td>
-                    
-                    <td class="col-garda num-col">${m.gOosNotD > 0 ? `<span style="color:var(--red-text)"><b>${m.gOosNotD}</b></span>` : 0}</td>
-                    <td class="num-col">${m.dOosNotG > 0 ? `<span style="color:var(--red-text)"><b>${m.dOosNotG}</b></span>` : 0}</td>
-                    
-                    <td class="col-domo num-col"><b>${m.stdRo}</b></td>
-                    <td class="num-col"><b>${m.vro}</b></td>
-                    
-                    <td class="col-delta num-col" style="background:#f1f5f9;">${m.doDoD}</td>
-                    <td class="num-col" style="background:#f1f5f9;"><span class="${doDClass}">${doDChangeStr}</span></td>
-                </tr>`;
-            };
+                    workbook.SheetNames.forEach(sheetName => {
+                        try {
+                            const aoa = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], {header: 1, defval: ''});
+                            if (!aoa || aoa.length === 0) return;
+                            
+                            let sheetNameLower = sheetName.toLowerCase();
+                            
+                            if (sheetNameLower.includes('useful')) {
+                                for (let i = 2; i < aoa.length; i++) {
+                                    let row = aoa[i];
+                                    if (!row || !Array.isArray(row)) continue;
+                                    let region = row[0];
+                                    let subregion = row[1];
+                                    let branch = row[2];
+                                    let usefulPct = row[27];
 
-            let html = "";
-            Object.keys(tree).sort().forEach(r => {
-                html += buildRow(r, tree[r].m, 'row-region', r, `toggleHier('${r}')`);
-                if (expandedState[r]) {
-                    Object.keys(tree[r].subs).sort().forEach(s => {
-                        let sid = r+'|'+s;
-                        html += buildRow(s, tree[r].subs[s].m, 'row-subregion', sid, `toggleHier('${sid}')`);
-                        if (expandedState[sid]) {
-                            tree[r].subs[s].branches.sort((a,b) => a.branch.localeCompare(b.branch)).forEach(b => {
-                                let branchTitle = isVended(b.branch) ? `<span class="vended-highlight">${b.branch}</span>` : b.branch;
-                                html += buildRow(branchTitle, b, 'row-branch', null, '', b.usefulPct);
-                            });
+                                    if (branch && String(branch).trim() !== '') {
+                                        usefulRaw.push({
+                                            'GARDA REGION': region,
+                                            'GARDA SUBREGION': subregion,
+                                            'BRANCH': branch,
+                                            'USEFUL %': usefulPct
+                                        });
+                                    }
+                                }
+                                return;
+                            }
+                            
+                            let headerIdx = -1;
+                            let tabType = 'UNKNOWN';
+                            
+                            for(let i=0; i < Math.min(20, aoa.length); i++) {
+                                if (!aoa[i] || !Array.isArray(aoa[i])) continue;
+                                let rowStr = aoa[i].map(c => c ? String(c).toLowerCase().replace(/[^a-z0-9]/g, '') : '').join('');
+                                if (!rowStr) continue;
+
+                                if (rowStr.includes('createdby') || (rowStr.includes('unitnumber') && rowStr.includes('team'))) {
+                                    headerIdx = i; tabType = 'RESOURCE'; break;
+                                } else if (rowStr.includes('gardaregion') && rowStr.includes('oosflag')) {
+                                    headerIdx = i; tabType = 'OOS'; break;
+                                } else if (rowStr.includes('ronumber') || rowStr.includes('order') || rowStr.includes('estimaterequesteddate') || rowStr.includes('customer')) {
+                                    headerIdx = i; tabType = 'VRO'; break;
+                                }
+                            }
+                            
+                            if (headerIdx !== -1) {
+                                let headers = aoa[headerIdx];
+                                let sheetData = [];
+                                for(let i = headerIdx + 1; i < aoa.length; i++) {
+                                    if (!aoa[i] || !Array.isArray(aoa[i])) continue;
+                                    let obj = {};
+                                    let hasData = false;
+                                    headers.forEach((h, j) => {
+                                        let key = h ? String(h).trim() : '';
+                                        if (key) {
+                                            if (obj[key] !== undefined) {
+                                                let c = 1;
+                                                while(obj[key + '_' + c] !== undefined) c++;
+                                                key = key + '_' + c;
+                                            }
+                                            obj[key] = aoa[i][j];
+                                            if (aoa[i][j] !== '' && aoa[i][j] !== undefined && aoa[i][j] !== null) hasData = true;
+                                        }
+                                    });
+                                    if (hasData) sheetData.push(obj);
+                                }
+                                
+                                if (tabType === 'RESOURCE') resourceRaw = resourceRaw.concat(sheetData);
+                                else if (tabType === 'OOS') oosRaw = oosRaw.concat(sheetData);
+                                else if (tabType === 'VRO') vroRaw = vroRaw.concat(sheetData);
+                            }
+                        } catch(err) {
+                            console.warn("Skipped sheet", sheetName, err);
                         }
                     });
                 }
-            });
+                processExcelData(vroRaw, resourceRaw, oosRaw, usefulRaw);
+                setTimeout(initFirebaseSync, 500); 
+            } catch (error) { 
+                console.error(error); 
+                statusEl.innerText = "Error parsing files."; 
+            }
+        });
 
-            document.getElementById('summaryTableBody').innerHTML = html || `<tr><td colspan="19" align="center" style="padding: 30px; color: var(--text-muted);">No data available under current filters.</td></tr>`;
+        function getCol(row, possibleNames) {
+            const rowKeys = Object.keys(row);
+            for (let name of possibleNames) {
+                const target = name.toLowerCase().replace(/[^a-z0-9]/g, '');
+                const foundKey = rowKeys.find(k => k.toLowerCase().replace(/[^a-z0-9]/g, '') === target);
+                if (foundKey && row[foundKey] !== undefined && row[foundKey] !== null) return String(row[foundKey]).trim();
+            }
+            return '';
         }
 
-        window.toggleHier = function(id) { expandedState[id] = !expandedState[id]; updateSummaryHierarchy(); }
-        window.toggleAllHierarchy = function(expand) { Object.keys(expandedState).forEach(k => expandedState[k] = expand); updateSummaryHierarchy(); }
+        function getCustKey(rawStr) {
+            let c = (rawStr || '').toUpperCase();
+            if (c.includes('FERGUSON')) return 'Ferguson';
+            if (c.includes('AMERIT FLEET SOLUTIONS')) return 'Amerit Fleet Solutions';
+            if (c.includes('BRINKS')) return 'Brinks';
+            if (c.includes('US FOODS')) return 'US Foods';
+            if (c.includes('FRONTIER') || c.includes('CUSTOM TRUCK')) return 'Frontier';
+            if (c.includes('COLONY HARDWARE')) return 'Colony Hardware';
+            if (c.includes('SUKUT CONSTRUCTION')) return 'Sukut Construction';
+            if (c.includes('GARDA')) return 'Garda';
+            return rawStr.split('-')[0].trim() || 'Unknown Customer';
+        }
 
-        // --- UTILS ---
-        let sortCol = -1, sortAsc = true;
-        window.sortDrilldown = function(idx, type) {
-            const tbody = document.getElementById("assetTableBody");
+        function exportDrilldownToExcel() {
+            if (!currentOwnerView || processedData.length === 0) return;
+            
+            let ownerDataAll = processedData;
+            if (currentOwnerView === 'ALL_PM') ownerDataAll = processedData.filter(ro => pmOwners.includes(ro.owner));
+            else if (currentOwnerView === 'ALL_VENDED') ownerDataAll = processedData.filter(ro => vendedOwners.includes(ro.owner));
+            else if (currentOwnerView === 'ALL_ERS') ownerDataAll = processedData.filter(ro => ersOwners.includes(ro.owner));
+            else ownerDataAll = processedData.filter(ro => ro.owner === String(currentOwnerView));
+            
+            if (currentCustomerFilter !== 'ALL') {
+                ownerDataAll = ownerDataAll.filter(ro => ro.custKey === currentCustomerFilter);
+            }
+
+            let isPM = currentOwnerView === 'ALL_PM' || pmOwners.includes(currentOwnerView);
+            let targetData = ownerDataAll.filter(ro => ro.isOpen);
+            if(currentFilter === 'OOS' && !isPM) {
+                targetData = targetData.filter(ro => ro.isOOS);
+            } else if(currentFilter === 'PRIORITY' && !isPM) {
+                targetData = targetData.filter(ro => ro.isOOS && ro.usefulPct !== null && Math.round(ro.usefulPct * 100) < 100);
+            }
+
+            if (targetData.length === 0) { alert("No data available to export."); return; }
+
+            const excelRows = targetData.map(ro => ({
+                "AFS RO #": ro.roNum, "Unit No": ro.unitNo, 
+                "OOS Status": ro.isOOS ? "OOS" : "",
+                "Useful %": ro.usefulPct !== null ? Math.round(ro.usefulPct * 100) + '%' : "N/A",
+                "Opened Date": ro.openedFormatted,
+                "Status": ro.status, "ECD": ro.ecdFormatted,
+                "Customer Group": ro.drillTopLevel, "Subregion": ro.subregion, "Branch": ro.branch
+            }));
+
+            const worksheet = XLSX.utils.json_to_sheet(excelRows);
+            const workbook = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(workbook, worksheet, "Filtered ROs");
+            XLSX.writeFile(workbook, `workflow_export_${String(currentOwnerView).replace(/\s+/g, '_')}_${currentFilter.toLowerCase()}.xlsx`);
+        }
+
+        function exportSearchToExcel() {
+            const searchTerm = document.getElementById('global-search').value.toLowerCase();
+            if(!searchTerm) return;
+            
+            const results = processedData.filter(ro => ro.unitNo.toLowerCase().includes(searchTerm));
+            if(results.length === 0) { alert("No data to export."); return; }
+            
+            const excelRows = results.map(ro => ({
+                "AFS RO #": ro.roNum, "Unit No": ro.unitNo, 
+                "Priority Status": (ro.isOOS && ro.usefulPct !== null && Math.round(ro.usefulPct * 100) < 100) ? "Priority" : "Normal",
+                "OOS Status": ro.isOOS ? "OOS" : "",
+                "Opened Date": ro.openedFormatted,
+                "Owner": ro.owner, "Status": ro.status, "ECD": ro.ecdFormatted
+            }));
+            const worksheet = XLSX.utils.json_to_sheet(excelRows);
+            const workbook = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(workbook, worksheet, "Search Results");
+            XLSX.writeFile(workbook, `workflow_search_${searchTerm}.xlsx`);
+        }
+
+        function setFilter(val) {
+            currentFilter = val;
+            document.querySelectorAll('.filter-btn').forEach(btn => {
+                if(btn.dataset.filter === val) { btn.classList.add('active'); btn.style.background = 'var(--gold)'; } 
+                else { btn.classList.remove('active'); btn.style.background = '#e0e0e0'; }
+            });
+            triggerViewUpdate();
+        }
+
+        function setCustomerFilter(val) {
+            currentCustomerFilter = val;
+            document.querySelectorAll('.customer-filter-select').forEach(sel => { sel.value = val; });
+            triggerViewUpdate();
+        }
+
+        function triggerViewUpdate() {
+            let activeView = document.querySelector('.view-section.active').id;
+            if(activeView === 'home-view') renderHomeDashboard();
+            else if(activeView === 'pm-view') renderKPITiles(pmOwners, 'pm-kpi-container', 'pm-view');
+            else if(activeView === 'vended-view') renderKPITiles(vendedOwners, 'vended-kpi-container', 'vended-view');
+            else if(activeView === 'ers-view') renderKPITiles(ersOwners, 'ers-kpi-container', 'ers-view');
+            else if(activeView === 'person-view') { if(currentOwnerView) loadPersonDrilldown(currentOwnerView, currentParentView); }
+        }
+
+        function processExcelData(vroRaw, resourceRaw, oosRaw, usefulRaw) {
+            const today = new Date(); today.setHours(0, 0, 0, 0);
+            
+            branchMasterInfo = {}; 
+            branchUsefulMap = {};
+            
+            oosRaw.forEach(row => {
+                let region = getCol(row, ['GARDA REGION']);
+                let subregion = getCol(row, ['GARDA SUBREGION']);
+                let branch = getCol(row, ['Branch', 'GARDA SHOPNAME']);
+                if (branch) {
+                    let bCode = extractGardaCode(branch);
+                    let info = {
+                        region: String(region || 'Unspecified Region').trim(),
+                        subregion: String(subregion || 'Unspecified Subregion').trim(),
+                        branch: String(branch).trim()
+                    };
+                    if (bCode) branchMasterInfo[bCode] = info;
+                    let bNorm = normalizeBranchStr(branch);
+                    if (bNorm) branchMasterInfo[bNorm] = info;
+                }
+            });
+
+            if (usefulRaw && usefulRaw.length > 0) {
+                usefulRaw.forEach(row => {
+                    let rKey = Object.keys(row).find(k => k.trim().toLowerCase().includes('region'));
+                    let subKey = Object.keys(row).find(k => k.trim().toLowerCase().includes('subregion'));
+                    let bKey = Object.keys(row).find(k => k.trim().toLowerCase() === 'branch');
+                    
+                    let r = rKey ? row[rKey] : null;
+                    let s = subKey ? row[subKey] : null;
+                    let b = bKey ? row[bKey] : null;
+                    
+                    if (b) {
+                        let bCode = extractGardaCode(b);
+                        let info = {
+                            region: String(r || 'Unspecified Region').trim(),
+                            subregion: String(s || 'Unspecified Subregion').trim(),
+                            branch: String(b).trim()
+                        };
+                        
+                        if (bCode && !branchMasterInfo[bCode]) branchMasterInfo[bCode] = info;
+                        let bNorm = normalizeBranchStr(b);
+                        if (bNorm && !branchMasterInfo[bNorm]) branchMasterInfo[bNorm] = info;
+
+                        let pct = NaN;
+                        let keys = Object.keys(row);
+                        
+                        let exactUsefulKey = keys.find(k => k.trim().toLowerCase() === 'useful %');
+                        
+                        if (exactUsefulKey && row[exactUsefulKey] !== undefined && row[exactUsefulKey] !== '') {
+                            let valStr = String(row[exactUsefulKey]).trim();
+                            let val = parseFloat(valStr);
+                            if (!isNaN(val)) {
+                                pct = valStr.includes('%') ? val / 100 : val;
+                            }
+                        } else {
+                            let usefulKey = keys.find(k => k.toLowerCase().includes('useful'));
+                            if (usefulKey && row[usefulKey] !== undefined && row[usefulKey] !== '') {
+                                let valStr = String(row[usefulKey]).trim();
+                                let val = parseFloat(valStr);
+                                if (!isNaN(val)) pct = valStr.includes('%') ? val / 100 : val;
+                            }
+                        }
+                        
+                        if (!isNaN(pct)) {
+                            if (bCode) {
+                                branchUsefulMap[bCode] = pct;
+                                if (bCode === '18055') branchUsefulMap['14095'] = pct;
+                                if (bCode === '14095') branchUsefulMap['18055'] = pct;
+                            }
+                            if (bNorm) branchUsefulMap[bNorm] = pct;
+                        }
+                    }
+                });
+            }
+
+            let unitToLocation = {};
+            oosMap = {};
+            
+            oosRaw.forEach(row => {
+                let unit = getCol(row, ['UNITNUMBER', 'Unit No', 'Vehicle', 'UNIT #']);
+                let oosFlag = getCol(row, ['OOS Flag', 'Open RO Category', 'OOS FLAG']);
+                let region = getCol(row, ['GARDA REGION']);
+                let subregion = getCol(row, ['GARDA SUBREGION']);
+                let branch = getCol(row, ['Branch', 'GARDA SHOPNAME']);
+                
+                if(unit) {
+                    let u = unit.toUpperCase().trim();
+                    let isOOS = (String(oosFlag).toUpperCase().trim() === 'OOS');
+                    oosMap[u] = isOOS;
+
+                    unitToLocation[u] = { 
+                        region: String(region || 'Unspecified Region').trim(), 
+                        subregion: String(subregion || 'Unspecified Subregion').trim(), 
+                        branch: String(branch || 'Unspecified Branch').trim() 
+                    };
+                }
+            });
+
+            let unitOwnerMap = {};
+            let creatorMap = {};
+            let globalOwnerMap = {}; 
+            
+            let activePM = new Set();
+            let activeVended = new Set();
+            let activeERS = new Set();
+            let pmKeywords = [];
+            
+            dedicatedBranches = new Set();
+
+            resourceRaw.forEach(row => {
+                let keys = Object.keys(row);
+                
+                let bVal = getCol(row, ['Branch']);
+                let oVal = getCol(row, ['Owner']);
+                if (bVal && String(oVal).toUpperCase().trim() === 'DEDICATED') {
+                    let bCode = extractGardaCode(bVal);
+                    if (bCode) dedicatedBranches.add(bCode);
+                    let bNorm = normalizeBranchStr(bVal);
+                    if (bNorm) dedicatedBranches.add(bNorm);
+                }
+
+                let unitKey = keys.find(k => k.toLowerCase().replace(/[^a-z0-9]/g, '') === 'unitnumber');
+                let teamKeys = keys.filter(k => k.toLowerCase().replace(/[^a-z0-9]/g, '').includes('team'));
+                let unitTeamKey = teamKeys[0]; 
+                
+                if (unitKey && row[unitKey]) {
+                    let u = String(row[unitKey]).toUpperCase().trim();
+                    let o = oVal ? String(oVal).trim() : '';
+                    let t = row[unitTeamKey] ? String(row[unitTeamKey]).toUpperCase().trim() : 'VENDED REPAIR';
+                    unitOwnerMap[u] = { owner: o, team: t };
+                }
+
+                let creatorKey = keys.find(k => k.toLowerCase().replace(/[^a-z0-9]/g, '') === 'createdby');
+                let nameKey = keys.find(k => k.toLowerCase().replace(/[^a-z0-9]/g, '') === 'name');
+                let statusKey = keys.find(k => k.toLowerCase().replace(/[^a-z0-9]/g, '') === 'status');
+                let creatorTeamKey = teamKeys.length > 1 ? teamKeys[1] : teamKeys[0];
+                let pmComp = getCol(row, ['PM Comp:']);
+
+                if (creatorKey && row[creatorKey]) {
+                    let cEmail = String(row[creatorKey]).toLowerCase().trim();
+                    let cName = row[nameKey] ? String(row[nameKey]).trim() : cEmail;
+                    let cTeam = row[creatorTeamKey] ? String(row[creatorTeamKey]).toUpperCase().trim() : 'ERS';
+                    let cStatus = row[statusKey] ? String(row[statusKey]).toUpperCase().trim() : 'INACTIVE';
+                    
+                    creatorMap[cEmail] = { name: cName, team: cTeam };
+                    globalOwnerMap[cEmail] = { name: cName, status: cStatus, team: cTeam };
+                }
+                
+                if (pmComp && pmComp.toUpperCase() !== 'PM COMP:' && pmComp.trim() !== '') {
+                    pmKeywords.push(pmComp.toLowerCase().trim());
+                }
+            });
+
+            pmKeywords = [...new Set(pmKeywords)]; 
+
+            let allCustSet = new Set();
+            let allRegionsSet = new Set();
+
+            processedData = vroRaw.map(row => {
+                let roNum = getCol(row, ['Order', 'RO Number', 'RONum', 'AFS RO #']).toUpperCase().trim();
+                let customerRaw = getCol(row, ['Customer', 'CUSTOMERNAME', 'Customer Name']); 
+                let rawOwnerEmail = getCol(row, ['Owner', 'Created By', 'Email']); 
+                let unit = getCol(row, ['Unit No', 'UNITNUMBER', 'Vehicle']).toUpperCase().trim();
+                let status = getCol(row, ['Status']);
+                let vmrs = getCol(row, ['Task', 'DESCRIP', 'VMRS Description']);
+                let openedRaw = getCol(row, ['Opened', 'ROOpenedDate']);
+                let dueRaw = getCol(row, ['Unit Due Date', 'Estimate Due Date', 'Due Date', 'L']);
+                let compRaw = getCol(row, ['Completed Date', 'Completed', 'P']);
+
+                let openedDate = new Date(openedRaw);
+                let openedDT = isNaN(openedDate.getTime()) ? null : openedDate;
+                let openedFormatted = openedDT ? `${openedDT.getMonth()+1}/${openedDT.getDate()}/${openedDT.getFullYear()}` : 'N/A';
+
+                let customerFixed = String(customerRaw || '').toUpperCase().replace('MRTLE', 'MYRTLE');
+                if (customerFixed.includes('HANVER') || customerFixed.includes('HANOVER') || customerFixed.includes('18055') || customerFixed.includes('180-55')) {
+                    customerFixed = 'GARDA - WILKES BARRE, PA 140-95';
+                }
+                if (customerFixed.includes('FONTANA') && !customerFixed.includes('120')) {
+                    customerFixed = 'GARDA - FONTANA, CA 120-14';
+                }
+
+                let customer = customerFixed;
+                let loc = unitToLocation[unit] || { region: 'Unknown Region', subregion: 'Unknown Subregion', branch: 'Unknown Branch' };
+                let custKey = getCustKey(customer);
+                
+                let cStrNorm = customerFixed.replace(/[^A-Z0-9]/ig, '');
+                let cNameOnly = customerFixed.replace(/\d{3}[- ]?\d{2}/g, '').replace(/[^A-Z0-9]/ig, '');
+                let branchCode = extractGardaCode(customer); 
+                if (!branchCode && loc.branch) branchCode = extractGardaCode(loc.branch);
+                
+                if (custKey === 'Garda') {
+                    if (branchCode && branchMasterInfo[branchCode]) {
+                        loc = Object.assign({}, loc, branchMasterInfo[branchCode]);
+                    } else {
+                        for (let bKey in branchMasterInfo) {
+                            if (bKey.length > 4 && cNameOnly.includes(bKey)) {
+                                loc = Object.assign({}, loc, branchMasterInfo[bKey]);
+                                break;
+                            }
+                        }
+                    }
+                }
+
+                if (loc.region === 'Unknown Region' || loc.region === 'Unspecified Region') {
+                    let locPart = customer;
+                    if(String(customer).includes('-')) locPart = customer.substring(customer.indexOf('-') + 1).trim(); 
+                    
+                    let stateName = 'Unknown State';
+                    let cityName = 'Unknown City';
+
+                    if (locPart.includes(',')) {
+                        let splitComma = locPart.split(','); 
+                        cityName = splitComma[0].trim();
+                        let afterComma = splitComma[1].trim().split(' ').filter(s => s.trim() !== ''); 
+                        if(afterComma.length > 0) stateName = afterComma[0].trim();
+                    } else {
+                        let spaceSplit = locPart.split(' ').filter(s => s.trim() !== '');
+                        if (spaceSplit.length === 1 && spaceSplit[0].length === 2) {
+                            stateName = spaceSplit[0].toUpperCase();
+                            cityName = 'Unknown City';
+                        } else if (spaceSplit.length >= 2) {
+                            let last = spaceSplit[spaceSplit.length - 1].trim();
+                            let secLast = spaceSplit[spaceSplit.length - 2].trim();
+                            if (last.length === 2 && !/\d/.test(last)) {
+                                stateName = last.toUpperCase();
+                                cityName = spaceSplit.slice(0, spaceSplit.length - 1).join(' ');
+                            } else if (secLast.length === 2 && !/\d/.test(secLast)) {
+                                stateName = secLast.toUpperCase();
+                                cityName = spaceSplit.slice(0, spaceSplit.length - 2).join(' ');
+                            } else {
+                                cityName = locPart;
+                            }
+                        } else {
+                            cityName = locPart;
+                        }
+                    }
+                    
+                    loc.region = stateName;
+                    loc.subregion = cityName;
+                    if (loc.branch === 'Unknown Branch' || loc.branch === 'Unspecified Branch') {
+                        loc.branch = String(customerRaw).trim(); 
+                    }
+                }
+                
+                if (custKey === 'Garda') {
+                    if (loc.region === 'PA' || customerFixed.includes(', PA') || customerFixed.includes(' PA ')) {
+                        loc.region = 'East';
+                        loc.subregion = 'Midatlantic';
+                    }
+                }
+                
+                let ownerEmailLower = String(rawOwnerEmail || '').toLowerCase().trim();
+                let finalOwner = '';
+                let finalTeam = 'VENDED REPAIR';
+                let isDedicatedFlag = false;
+
+                if (unitOwnerMap[unit] && unitOwnerMap[unit].owner.toUpperCase() === 'DEDICATED') {
+                    isDedicatedFlag = true;
+                }
+
+                if (specificCreators.includes(ownerEmailLower) && creatorMap[ownerEmailLower]) {
+                    finalOwner = creatorMap[ownerEmailLower].name;
+                    finalTeam = creatorMap[ownerEmailLower].team;
+                } 
+                else if (unitOwnerMap[unit] && !isDedicatedFlag && unitOwnerMap[unit].owner) {
+                    finalOwner = unitOwnerMap[unit].owner;
+                    finalTeam = unitOwnerMap[unit].team;
+                }
+                else {
+                    if (globalOwnerMap[ownerEmailLower]) {
+                        finalOwner = globalOwnerMap[ownerEmailLower].name;
+                        finalTeam = globalOwnerMap[ownerEmailLower].team;
+                    } else if (rawOwnerEmail) {
+                        finalOwner = String(rawOwnerEmail).split('@')[0];
+                        finalOwner = finalOwner.charAt(0).toUpperCase() + finalOwner.slice(1);
+                        finalTeam = 'VENDED REPAIR';
+                    } else {
+                        finalOwner = 'Unassigned';
+                        finalTeam = 'VENDED REPAIR';
+                    }
+                }
+
+                let taskStr = vmrs.toLowerCase();
+                let isPMOrder = false;
+                for (let kw of pmKeywords) {
+                    if (kw && taskStr.includes(kw)) {
+                        isPMOrder = true;
+                        break;
+                    }
+                }
+
+                let drillTopLevel = custKey + (loc.region !== 'Unknown State' && loc.region !== 'Unknown Region' ? ' ' + loc.region : '');
+                allCustSet.add(custKey);
+                allRegionsSet.add(loc.region);
+
+                let statusStr = String(status || '').toUpperCase().trim();
+                let isOOS = oosMap[unit] === true; 
+                let isOpen = !excludedStatuses.includes(statusStr);
+                
+                let addTile = false;
+                if (specificCreators.includes(ownerEmailLower)) addTile = true;
+                else if (unitOwnerMap[unit] && !isDedicatedFlag && unitOwnerMap[unit].owner) addTile = true;
+                else if (finalOwner === 'Dedicated' || finalOwner === 'Unassigned') addTile = true;
+                else if (globalOwnerMap[ownerEmailLower] && globalOwnerMap[ownerEmailLower].status === 'ACTIVE') addTile = true;
+
+                if (addTile && isOpen) {
+                    if (finalTeam === 'PM') activePM.add(finalOwner);
+                    else if (finalTeam === 'ERS') activeERS.add(finalOwner);
+                    else activeVended.add(finalOwner);
+                }
+                
+                let usefulPct = null;
+                if (branchCode && branchUsefulMap[branchCode] !== undefined) {
+                    usefulPct = branchUsefulMap[branchCode];
+                } else {
+                    for (let bKey in branchUsefulMap) {
+                        if (bKey.length > 4 && cNameOnly.includes(bKey)) {
+                            usefulPct = branchUsefulMap[bKey];
+                            break;
+                        }
+                    }
+                }
+
+                if (!isDedicatedFlag) {
+                    if (branchCode && dedicatedBranches.has(branchCode)) isDedicatedFlag = true;
+                    else {
+                        for (let bKey of dedicatedBranches) {
+                            if (bKey.length > 4 && cNameOnly.includes(bKey)) {
+                                isDedicatedFlag = true;
+                                break;
+                            }
+                        }
+                    }
+                }
+
+                let ecdState = 'missing'; let ecdFormatted = 'NO ECD, UPDATE';
+                let ecdDate = new Date(dueRaw);
+                if (dueRaw && !isNaN(ecdDate.getTime())) {
+                    let ecdDay = new Date(ecdDate.getFullYear(), ecdDate.getMonth(), ecdDate.getDate());
+                    let todayDay = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+                    ecdFormatted = `${ecdDate.getMonth()+1}/${ecdDate.getDate()}/${ecdDate.getFullYear()}`;
+                    if (ecdDay < todayDay) ecdState = 'red';
+                    else ecdState = 'green';
+                }
+
+                let isCompletedKPI = false; let isOnTimeKPI = false; let isLateKPI = false;
+                if (excludedStatuses.includes(statusStr) && compRaw !== '') {
+                    isCompletedKPI = true; let cDate = new Date(compRaw);
+                    if (!isNaN(cDate.getTime())) {
+                        let dDate = new Date(dueRaw);
+                        if (!isNaN(dDate.getTime()) && cDate <= dDate) isOnTimeKPI = true;
+                        else if (!isNaN(dDate.getTime())) isLateKPI = true;
+                        else isOnTimeKPI = true;
+                    } else isCompletedKPI = false;
+                }
+                
+                return { roNum, customer, custKey, drillTopLevel, owner: finalOwner, unitNo: unit, status, vmrs, isOOS, isOpen, isCompletedKPI, isOnTimeKPI, isLateKPI, subregion: loc.subregion, branch: loc.branch, ecdState, ecdFormatted, openedDT, openedFormatted, usefulPct, isDedicated: isDedicatedFlag, region: loc.region };
+            }).filter(ro => ro.roNum !== '');
+
+            pmOwners = Array.from(activePM).sort();
+            vendedOwners = Array.from(activeVended).sort();
+            ersOwners = Array.from(activeERS).sort();
+
+            let sortedAllCust = Array.from(allCustSet).sort();
+            document.querySelectorAll('.customer-filter-select').forEach(dd => {
+                dd.innerHTML = '<option value="ALL">All Customers</option>';
+                sortedAllCust.forEach(c => {
+                    let opt = document.createElement('option');
+                    opt.value = c;
+                    opt.innerText = c.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
+                    dd.appendChild(opt);
+                });
+            });
+
+            let sortedRegions = Array.from(allRegionsSet).sort();
+            let repRegionSelect = document.getElementById('report-region-select');
+            repRegionSelect.innerHTML = '<option value="">Select Region...</option>';
+            sortedRegions.forEach(r => {
+                if (r && r !== 'Unknown Region' && r !== 'Unspecified Region') {
+                    let opt = document.createElement('option');
+                    opt.value = r;
+                    opt.innerText = r;
+                    repRegionSelect.appendChild(opt);
+                }
+            });
+
+            document.getElementById('upload-box').style.display = 'none';
+            document.getElementById('home-dashboard').style.display = 'block';
+            
+            triggerViewUpdate();
+            updateAllNoteButtons(); 
+        }
+
+        // --- REPORTS ENGINE ---
+        let currentReportData = [];
+
+        window.generateReport = function() {
+            const region = document.getElementById('report-region-select').value;
+            const notesOnly = document.getElementById('report-notes-only').checked;
+            
+            if (!region) {
+                alert("Please select a Region to generate the report.");
+                return;
+            }
+
+            let baseData = processedData.filter(ro => ro.isOpen && ro.region === region);
+            currentReportData = [];
+
+            const tbody = document.getElementById('report-table-body');
+            let html = '';
+
+            baseData.forEach(ro => {
+                let safeRo = ro.roNum.replace(/[.#$\[\]]/g, '_');
+                let note = globalRoNotesState[safeRo] || '';
+                let hasNote = note.trim() !== '';
+
+                if (notesOnly && !hasNote) return;
+
+                currentReportData.push(ro);
+
+                let oosBadge = ro.isOOS ? '<span class="badge badge-oos">OOS</span>' : '<span class="badge badge-active">ACTIVE</span>';
+                html += `<tr>
+                    <td>${ro.region}</td>
+                    <td>${ro.subregion}</td>
+                    <td>${ro.branch}</td>
+                    <td><strong>${ro.unitNo}</strong></td>
+                    <td>${oosBadge}</td>
+                    <td>${ro.ecdFormatted}</td>
+                    <td style="white-space: pre-wrap;">${note}</td>
+                </tr>`;
+            });
+
+            if (currentReportData.length === 0) {
+                html = '<tr><td colspan="7" style="text-align: center; padding: 20px;">No matching orders found.</td></tr>';
+            }
+
+            tbody.innerHTML = html;
+            document.getElementById('report-table-container').style.display = 'block';
+            document.getElementById('btn-email-report').style.display = currentReportData.length > 0 ? 'inline-block' : 'none';
+        }
+
+        let reportSortCol = -1, reportSortAsc = true;
+        window.sortReport = function(idx, type) {
+            const tbody = document.getElementById("report-table-body");
             const rows = Array.from(tbody.rows);
-            if(rows.length <= 1) return;
-            sortAsc = (sortCol === idx) ? !sortAsc : true;
-            sortCol = idx;
+            if(rows.length <= 1 || rows[0].cells.length === 1) return; 
+            
+            reportSortAsc = (reportSortCol === idx) ? !reportSortAsc : true;
+            reportSortCol = idx;
 
             rows.sort((a, b) => {
                 let va = a.cells[idx].innerText.trim(), vb = b.cells[idx].innerText.trim();
                 if (type === 'number') {
                     va = parseFloat(va) || 0; vb = parseFloat(vb) || 0;
-                    return sortAsc ? va - vb : vb - va;
+                    return reportSortAsc ? va - vb : vb - va;
                 }
-                return sortAsc ? va.localeCompare(vb) : vb.localeCompare(va);
+                return reportSortAsc ? va.localeCompare(vb) : vb.localeCompare(va);
             });
             rows.forEach(r => tbody.appendChild(r));
         }
 
-        window.exportDrilldown = function() { XLSX.writeFile(XLSX.utils.table_to_book(document.getElementById("drilldownTable")), "Amerit_Drilldown.xlsx"); }
-        
-        window.exportSummary = function() { 
-            const wb = XLSX.utils.book_new();
+        window.emailReport = function() {
+            if (currentReportData.length === 0) return;
+
+            const region = document.getElementById('report-region-select').value;
+            let subject = encodeURIComponent(`Open RO Report - ${region}`);
             
-            const wsConsolidation = XLSX.utils.table_to_sheet(document.getElementById("summaryTable"));
-            XLSX.utils.book_append_sheet(wb, wsConsolidation, "VDR Consolidation");
+            let bodyText = `Report for Region: ${region}\n\n`;
+            bodyText += `Sub Region\tBranch\tTruck #\tOOS Status\tECD\tNotes\n`;
+            bodyText += `--------------------------------------------------------------------------------\n`;
+
+            const tbody = document.getElementById("report-table-body");
+            const rows = Array.from(tbody.rows);
             
-            const wsAmerit = XLSX.utils.table_to_sheet(document.getElementById("ameritOosTable"));
-            XLSX.utils.book_append_sheet(wb, wsAmerit, "Amerit OOS Trucks");
+            rows.forEach(row => {
+                if(row.cells.length > 1) {
+                    let subRegion = row.cells[1].innerText.trim();
+                    let branch = row.cells[2].innerText.trim();
+                    let unitNo = row.cells[3].innerText.trim();
+                    let oosStatus = row.cells[4].innerText.trim();
+                    let ecd = row.cells[5].innerText.trim();
+                    let note = row.cells[6].innerText.trim().replace(/\n/g, ' / ') || 'N/A';
+                    
+                    bodyText += `${subRegion}\t${branch}\t${unitNo}\t${oosStatus}\t${ecd}\t${note}\n`;
+                }
+            });
+
+            let encodedBody = encodeURIComponent(bodyText);
             
-            const wsGarda = XLSX.utils.table_to_sheet(document.getElementById("gardaOosTable"));
-            XLSX.utils.book_append_sheet(wb, wsGarda, "Garda VDR OOS Trucks");
-            
-            XLSX.writeFile(wb, "Amerit_Consolidation_Reports.xlsx");
+            if (encodedBody.length > 1800) {
+                let clipboardText = bodyText;
+                navigator.clipboard.writeText(clipboardText).then(() => {
+                    alert("The report is too long for an automatic email draft, so the data has been copied to your clipboard!\n\nYou can now Paste (Ctrl+V) it directly into a new email.");
+                    window.location.href = `mailto:?subject=${subject}`;
+                }).catch(err => {
+                    alert("Report too large to email directly and clipboard access failed.");
+                });
+            } else {
+                window.location.href = `mailto:?subject=${subject}&body=${encodedBody}`;
+            }
         }
 
-        document.addEventListener('DOMContentLoaded', loadDataFromGitHub);
+        function getUsefulBadge(usefulArray) {
+            let valid = usefulArray.filter(v => v !== null && v !== undefined && !isNaN(v));
+            if (valid.length === 0) return '';
+            let avg = valid.reduce((a,b) => a+b, 0) / valid.length;
+            let val = Math.round(avg * 100);
+            let bg = 'var(--low-green)';
+            if (val < 100) bg = 'var(--urgent-red)';
+            else if (val === 100) bg = 'var(--medium-yellow)';
+            return `<span class="badge" style="background-color: ${bg}; color: white; margin-left: 10px; font-size: 11px;">Useful: ${val}%</span>`;
+        }
+
+        function generateTileHTML(name, dataSet, chartId = null, isPM = false) {
+            let filteredOpen = dataSet.filter(ro => ro.isOpen);
+            
+            let completedOrders = dataSet.filter(ro => ro.isCompletedKPI);
+            let compCount = completedOrders.length;
+            let onTimeCount = completedOrders.filter(ro => ro.isOnTimeKPI).length;
+            let lateCount = completedOrders.filter(ro => ro.isLateKPI).length;
+            let compPct = compCount > 0 ? Math.round((onTimeCount / compCount) * 100) : 0;
+            let latePct = compCount > 0 ? Math.round((lateCount / compCount) * 100) : 0;
+
+            let chartHTML = '';
+            if (chartId) {
+                chartHTML = `<div class="chart-box"><canvas id="${chartId}" data-comp="${compPct}" data-late="${latePct}"></canvas></div>`;
+            }
+
+            let oosAndPriorityHtml = '';
+            if (!isPM) {
+                let oosCount = dataSet.filter(ro => ro.isOpen && ro.isOOS).length;
+                let priorityCount = dataSet.filter(ro => ro.isOpen && ro.isOOS && ro.usefulPct !== null && Math.round(ro.usefulPct * 100) < 100).length;
+                oosAndPriorityHtml = `
+                    <div class="highlight-box oos-box">
+                        <div class="title">OOS ROs</div>
+                        <div class="num">${oosCount}</div>
+                    </div>
+                    <div class="highlight-box urgent-box">
+                        <div class="title">Priority ROs</div>
+                        <div class="num">${priorityCount}</div>
+                    </div>
+                `;
+            }
+
+            let innerHtml = `
+                <div class="kpi-name">${name}</div>
+                <div class="kpi-top-metrics">
+                    <div class="highlight-box">
+                        <div class="title">Open ROs</div>
+                        <div class="num">${filteredOpen.length}</div>
+                    </div>
+                    ${oosAndPriorityHtml}
+                    ${chartHTML}
+                </div>
+                <div class="kpi-stats-grid">
+                    <div class="stat-box">
+                        <div class="title">Completed</div>
+                        <div class="num">${compCount}</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="title">On-Time</div>
+                        <div class="num">${onTimeCount}</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="title">% Compliance</div>
+                        <div class="num good">${compPct}%</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="title">% Late</div>
+                        <div class="num urgent">${latePct}%</div>
+                    </div>
+                </div>
+            `;
+            return innerHtml;
+        }
+
+        Chart.register({
+            id: 'centerText',
+            beforeDraw: function(chart) {
+                if (chart.config.options.elements.center) {
+                    var ctx = chart.ctx; var centerConfig = chart.config.options.elements.center;
+                    var txt = centerConfig.text;
+                    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+                    var centerX = ((chart.chartArea.left + chart.chartArea.right) / 2);
+                    var centerY = ((chart.chartArea.top + chart.chartArea.bottom) / 2);
+                    ctx.font = "bold 16px Raleway"; ctx.fillStyle = centerConfig.color || '#333';
+                    ctx.fillText(txt, centerX, centerY);
+                }
+            }
+        });
+
+        function initChart(chartId) {
+            const canvas = document.getElementById(chartId); if(!canvas) return;
+            const comp = parseInt(canvas.getAttribute('data-comp')) || 0;
+            const late = parseInt(canvas.getAttribute('data-late')) || 0;
+            let chartData = [comp, late]; let bgColors = ['#5cb85c', '#d9534f'];
+            if (comp === 0 && late === 0) { chartData = [1]; bgColors = ['#e0e0e0']; }
+            if(globalChartInstances[chartId]) globalChartInstances[chartId].destroy();
+            globalChartInstances[chartId] = new Chart(canvas.getContext('2d'), {
+                type: 'doughnut',
+                data: { labels: ['On-Time', 'Late'], datasets: [{ data: chartData, backgroundColor: bgColors, borderWidth: 0 }] },
+                options: { maintainAspectRatio: false, cutout: '70%', plugins: { legend: { display: false } }, elements: { center: { text: comp + '%' } } }
+            });
+        }
+
+        function renderHomeDashboard() {
+            const container = document.getElementById('home-kpi-container'); container.innerHTML = '';
+            
+            let aggData = processedData;
+
+            if (currentCustomerFilter !== 'ALL') {
+                aggData = aggData.filter(ro => ro.custKey === currentCustomerFilter);
+            }
+
+            let pmData = aggData.filter(ro => pmOwners.includes(ro.owner));
+            let vendedData = aggData.filter(ro => vendedOwners.includes(ro.owner));
+            let ersRoData = aggData.filter(ro => ersOwners.includes(ro.owner));
+
+            const pmTile = document.createElement('div'); pmTile.className = 'kpi-tile home-master-tile'; pmTile.innerHTML = generateTileHTML('PM Dashboard', pmData, 'chart-pm', true);
+            pmTile.onclick = () => loadPersonDrilldown('ALL_PM', 'home-view');
+            container.appendChild(pmTile);
+            
+            const vendedTile = document.createElement('div'); vendedTile.className = 'kpi-tile home-master-tile'; vendedTile.innerHTML = generateTileHTML('Vended Repair Dashboard', vendedData, 'chart-vended');
+            vendedTile.onclick = () => loadPersonDrilldown('ALL_VENDED', 'home-view');
+            container.appendChild(vendedTile);
+            
+            const ersTile = document.createElement('div'); ersTile.className = 'kpi-tile home-master-tile'; 
+            ersTile.innerHTML = generateTileHTML('ERS Dashboard', ersRoData, 'chart-ers');
+            ersTile.onclick = () => loadPersonDrilldown('ALL_ERS', 'home-view');
+            container.appendChild(ersTile);
+
+            initChart('chart-pm'); initChart('chart-vended'); initChart('chart-ers');
+        }
+
+        function renderKPITiles(ownersList, containerId, parentViewId) {
+            const container = document.getElementById(containerId); container.innerHTML = ''; 
+            if(processedData.length === 0) return;
+
+            let isPM = containerId === 'pm-kpi-container';
+
+            ownersList.forEach(owner => {
+                let ownerDataAll = processedData.filter(ro => ro.owner === owner);
+                
+                if (currentCustomerFilter !== 'ALL') {
+                    ownerDataAll = ownerDataAll.filter(ro => ro.custKey === currentCustomerFilter);
+                }
+
+                let targetData = ownerDataAll.filter(ro => ro.isOpen);
+                
+                if (!isPM) {
+                    if (currentFilter === 'OOS') {
+                        targetData = targetData.filter(ro => ro.isOOS);
+                    } else if (currentFilter === 'PRIORITY') {
+                        targetData = targetData.filter(ro => ro.isOOS && ro.usefulPct !== null && Math.round(ro.usefulPct * 100) < 100);
+                    }
+                }
+                
+                if (targetData.length === 0) return; 
+
+                const tile = document.createElement('div'); tile.className = 'kpi-tile';
+                tile.onclick = () => loadPersonDrilldown(owner, parentViewId);
+                tile.innerHTML = generateTileHTML(owner, ownerDataAll, null, isPM);
+                container.appendChild(tile);
+            });
+        }
+
+        function generateRoDrilldownHtml(ownerDataAll, isPM) {
+            let baseOpenData = ownerDataAll.filter(ro => ro.isOpen);
+
+            // PASS 1: Build unfiltered static Useful % values
+            let branchUsefulVals = {};
+            let subUsefulMap = {};
+            let topUsefulMap = {};
+
+            baseOpenData.forEach(ro => {
+                if (ro.usefulPct !== null && ro.usefulPct !== undefined) {
+                    let topLvl = ro.drillTopLevel;
+                    let sub = ro.subregion;
+                    let branch = ro.branch;
+                    let branchKey = topLvl + '|||' + sub + '|||' + branch;
+                    let subKey = topLvl + '|||' + sub;
+
+                    if (branchUsefulVals[branchKey] === undefined) {
+                        branchUsefulVals[branchKey] = ro.usefulPct;
+                        
+                        if (!subUsefulMap[subKey]) subUsefulMap[subKey] = [];
+                        subUsefulMap[subKey].push(ro.usefulPct);
+                        
+                        if (!topUsefulMap[topLvl]) topUsefulMap[topLvl] = [];
+                        topUsefulMap[topLvl].push(ro.usefulPct);
+                    }
+                }
+            });
+
+            // PASS 2: Apply Filters
+            let targetData = baseOpenData;
+            
+            if (!isPM) {
+                if (currentFilter === 'OOS') {
+                    targetData = targetData.filter(ro => ro.isOOS);
+                } else if(currentFilter === 'PRIORITY') {
+                    targetData = targetData.filter(ro => ro.isOOS && ro.usefulPct !== null && Math.round(ro.usefulPct * 100) < 100);
+                }
+            }
+
+            if(targetData.length === 0) return `<p style="margin-top:15px; color:#666;">No active Repair Orders to display under the current filters.</p>`;
+            
+            let hierarchy = {};
+            targetData.forEach(ro => {
+                if(!hierarchy[ro.drillTopLevel]) hierarchy[ro.drillTopLevel] = {};
+                if(!hierarchy[ro.drillTopLevel][ro.subregion]) hierarchy[ro.drillTopLevel][ro.subregion] = {};
+                if(!hierarchy[ro.drillTopLevel][ro.subregion][ro.branch]) hierarchy[ro.drillTopLevel][ro.subregion][ro.branch] = [];
+                hierarchy[ro.drillTopLevel][ro.subregion][ro.branch].push(ro);
+            });
+            
+            let htmlStr = '';
+            for(let topLvl in hierarchy) {
+                let topBadge = getUsefulBadge(topUsefulMap[topLvl] || []);
+                let subHtml = '';
+                for(let sub in hierarchy[topLvl]) {
+                    let subKey = topLvl + '|||' + sub;
+                    let subBadge = getUsefulBadge(subUsefulMap[subKey] || []);
+                    let branchHtml = '';
+                    for(let branch in hierarchy[topLvl][sub]) {
+                        let branchKey = subKey + '|||' + branch;
+                        let branchROs = hierarchy[topLvl][sub][branch];
+                        
+                        let bPct = branchUsefulVals[branchKey];
+                        let branchBadge = getUsefulBadge(bPct !== undefined && bPct !== null ? [bPct] : []);
+
+                        let unitsMap = {};
+                        branchROs.forEach(ro => {
+                            if(!unitsMap[ro.unitNo]) {
+                                unitsMap[ro.unitNo] = {
+                                    unitNo: ro.unitNo,
+                                    roNums: [],
+                                    roLinks: [],
+                                    openedDates: [],
+                                    statuses: [],
+                                    ecdCells: [],
+                                    isOOS: ro.isOOS,
+                                    usefulPct: ro.usefulPct,
+                                    isDedicated: ro.isDedicated,
+                                    custKey: ro.custKey
+                                };
+                            }
+                            
+                            let ecdCell = '';
+                            if (ro.ecdState === 'missing') ecdCell = `<span class="badge-ecd-missing">${ro.ecdFormatted}</span>`;
+                            else if (ro.ecdState === 'red') ecdCell = `<span class="ecd-red">${ro.ecdFormatted}</span>`;
+                            else ecdCell = `<span class="ecd-green">${ro.ecdFormatted}</span>`;
+
+                            unitsMap[ro.unitNo].roNums.push(ro.roNum);
+                            unitsMap[ro.unitNo].roLinks.push(`<a href="https://afshub.azurewebsites.net/Vendors/VendedRepairOrder/Estimate/${ro.roNum}" target="_blank" class="ro-link">${ro.roNum}</a>`);
+                            unitsMap[ro.unitNo].openedDates.push(ro.openedFormatted);
+                            unitsMap[ro.unitNo].statuses.push(ro.status);
+                            unitsMap[ro.unitNo].ecdCells.push(ecdCell);
+                        });
+
+                        let groupedUnits = Object.values(unitsMap);
+                        groupedUnits.sort((a,b) => { 
+                            return (b.isOOS === true ? 1 : 0) - (a.isOOS === true ? 1 : 0);
+                        });
+                        
+                        let isBranchDedicated = branchROs.some(ro => ro.isDedicated);
+                        let dedicatedBadge = isBranchDedicated ? `<span style="background-color: white; color: black; border: 1px solid black; border-radius: 12px; padding: 2px 6px; margin-left: 5px; font-size: 10px; font-weight: bold;">(DEDICATED)</span>` : '';
+
+                        branchHtml += `<details class="ro-detail-node"><summary>${branch} (${branchROs.length} ROs)${branchBadge}${dedicatedBadge}</summary>`;
+                        let tableHTML = `<div class="table-wrapper"><table><colgroup><col style="width:23%;"><col style="width:11%;">${isPM ? '' : '<col style="width:11%;">'}<col style="width:9%;"><col style="width:11%;"><col style="width:21%;"><col style="width:14%;"></colgroup><thead><tr><th>AFS RO # & Dispatch</th><th>Unit No</th>${isPM ? '' : '<th>Priority Status</th>'}<th>OOS Status</th><th>Opened Date</th><th>Status</th><th>ECD</th></tr></thead><tbody>`;
+                        
+                        groupedUnits.forEach(u => {
+                            let isGarda = u.custKey === 'Garda';
+                            let oosBadge = isGarda ? (u.isOOS ? `<span class="badge badge-oos">OOS</span>` : `<span class="badge badge-active">ACTIVE</span>`) : '';
+                            
+                            let isPriority = u.isOOS && u.usefulPct !== null && Math.round(u.usefulPct * 100) < 100;
+                            let priorityStatusBadge = isPriority ? `<span class="badge badge-urgent">Priority</span>` : `<span class="badge badge-low">Normal</span>`;
+
+                            let rowCount = u.roNums.length;
+
+                            u.roNums.forEach((roNum, idx) => {
+                                let safeRo = roNum.replace(/[.#$\[\]]/g, '_');
+                                let isDispatched = !!globalRoCheckState[safeRo];
+                                let toggleClass = isDispatched ? 'status-dispatched' : 'status-pending';
+                                let toggleText = isDispatched ? '✓ DISPATCHED' : 'PENDING';
+                                let toggleState = isDispatched ? 'false' : 'true'; 
+                                let statusToggleHtml = `<span class="badge status-toggle ${toggleClass}" data-ro="${safeRo}" onclick="toggleRoCheck('${safeRo}', ${toggleState})">${toggleText}</span>`;
+
+                                let hasNote = globalRoNotesState[safeRo] && globalRoNotesState[safeRo].trim() !== '';
+                                let noteClass = hasNote ? 'note-btn has-note' : 'note-btn';
+                                let noteTitle = hasNote ? globalRoNotesState[safeRo].replace(/"/g, '&quot;') : 'Add Note';
+                                let noteBtnHtml = `<button class="${noteClass}" data-ro="${safeRo}" title="${noteTitle}" onclick="openNoteModal('${safeRo}', '${roNum}')">📝</button>`;
+
+                                let roHtml = `<div style="display:flex; align-items:center; gap: 4px;">${statusToggleHtml} ${u.roLinks[idx]} ${noteBtnHtml}</div>`;
+
+                                tableHTML += `<tr>`;
+                                tableHTML += `<td style="vertical-align:top; padding-top:15px; border-bottom: ${idx === rowCount - 1 ? '1px solid var(--border)' : '1px dashed #eee'};">${roHtml}</td>`;
+                                
+                                if (idx === 0) {
+                                    tableHTML += `<td rowspan="${rowCount}" style="vertical-align:top; padding-top:15px; border-bottom: 1px solid var(--border); border-left: 1px dashed #eee;"><strong>${u.unitNo}</strong></td>`;
+                                    if (!isPM) {
+                                        tableHTML += `<td rowspan="${rowCount}" style="vertical-align:top; padding-top:15px; border-bottom: 1px solid var(--border);">${priorityStatusBadge}</td>`;
+                                    }
+                                    tableHTML += `<td rowspan="${rowCount}" style="vertical-align:top; padding-top:15px; border-bottom: 1px solid var(--border); border-right: 1px dashed #eee;">${oosBadge}</td>`;
+                                }
+
+                                let od = u.openedDates[idx] || '';
+                                let st = u.statuses[idx] || '';
+                                let ec = u.ecdCells[idx] || '';
+
+                                tableHTML += `<td style="vertical-align:top; padding-top:15px; border-bottom: ${idx === rowCount - 1 ? '1px solid var(--border)' : '1px dashed #eee'}; font-size:12px; font-weight: 700; color: #555;">${od}</td>`;
+                                tableHTML += `<td style="vertical-align:top; padding-top:15px; border-bottom: ${idx === rowCount - 1 ? '1px solid var(--border)' : '1px dashed #eee'}; font-size:11px; line-height:1.2;">${st}</td>`;
+                                tableHTML += `<td style="vertical-align:top; padding-top:15px; border-bottom: ${idx === rowCount - 1 ? '1px solid var(--border)' : '1px dashed #eee'};">${ec}</td>`;
+                                tableHTML += `</tr>`;
+                            });
+                        });
+                        
+                        tableHTML += `</tbody></table></div>`; 
+                        branchHtml += tableHTML + `</details>`;
+                    }
+                    subHtml += `<details class="ro-detail-node"><summary>${sub}${subBadge}</summary>${branchHtml}</details>`;
+                }
+                htmlStr += `<details class="ro-detail-node"><summary>${topLvl}${topBadge}</summary>${subHtml}</details>`;
+            }
+            return htmlStr;
+        }
+
+        function loadPersonDrilldown(owner, parentViewId) {
+            navigate('person-view', null, true); 
+            currentOwnerView = owner; currentParentView = parentViewId;
+            
+            let isPM = owner === 'ALL_PM' || pmOwners.includes(owner);
+
+            let titleText = `RO Hierarchy: ${owner}`;
+            if (owner === 'ALL_PM') titleText = 'Overall PM Details';
+            if (owner === 'ALL_VENDED') titleText = 'Overall Vended Repair Details';
+            if (owner === 'ALL_ERS') titleText = 'Overall ERS Details';
+
+            document.getElementById('person-name-title').innerText = titleText;
+            document.getElementById('dynamic-back-btn').onclick = () => navigate(parentViewId, null, true);
+            
+            if (isPM) {
+                document.getElementById('standard-drilldown-filters').style.display = 'none';
+                currentFilter = 'ALL';
+            } else {
+                document.getElementById('standard-drilldown-filters').style.display = 'flex';
+            }
+
+            const container = document.getElementById('drilldown-body'); 
+            
+            let ownerDataAll = processedData;
+            if (owner === 'ALL_PM') ownerDataAll = processedData.filter(ro => pmOwners.includes(ro.owner));
+            else if (owner === 'ALL_VENDED') ownerDataAll = processedData.filter(ro => vendedOwners.includes(ro.owner));
+            else if (owner === 'ALL_ERS') ownerDataAll = processedData.filter(ro => ersOwners.includes(ro.owner));
+            else ownerDataAll = processedData.filter(ro => ro.owner === String(owner));
+            
+            if (currentCustomerFilter !== 'ALL') {
+                ownerDataAll = ownerDataAll.filter(ro => ro.custKey === currentCustomerFilter);
+            }
+
+            container.innerHTML = generateRoDrilldownHtml(ownerDataAll, isPM);
+            updateAllNoteButtons(); 
+        }
+
+        function toggleAllDetails(expand) { 
+            document.querySelectorAll('.ro-detail-node').forEach(d => { if(expand) d.setAttribute('open',''); else d.removeAttribute('open'); }); 
+        }
+
+        function handleSearch() {
+            clearTimeout(searchTimeout);
+            searchTimeout = setTimeout(() => {
+                const searchTerm = document.getElementById('global-search').value.toLowerCase();
+                if(searchTerm.length === 0) { navigate(lastActiveView, null, true); return; }
+                navigate('search-view', null, true);
+                document.getElementById('search-term-display').innerText = searchTerm;
+                
+                const results = processedData.filter(ro => ro.unitNo.toLowerCase().includes(searchTerm));
+                let searchHtml = '';
+                if(results.length === 0) {
+                    searchHtml = '<tr><td colspan="7" style="text-align:center;">No matching units.</td></tr>';
+                } else {
+                    let searchUnitsMap = {};
+                    results.forEach(ro => {
+                        if(!searchUnitsMap[ro.unitNo]) {
+                            searchUnitsMap[ro.unitNo] = {
+                                unitNo: ro.unitNo,
+                                roNums: [],
+                                roLinks: [],
+                                openedDates: [],
+                                statuses: [],
+                                ecdCells: [],
+                                owners: [],
+                                isOOS: ro.isOOS,
+                                usefulPct: ro.usefulPct,
+                                custKey: ro.custKey
+                            };
+                        }
+                        
+                        let ecdCell = '';
+                        if (ro.ecdState === 'missing') ecdCell = `<span class="badge-ecd-missing">${ro.ecdFormatted}</span>`;
+                        else if (ro.ecdState === 'red') ecdCell = `<span class="ecd-red">${ro.ecdFormatted}</span>`;
+                        else ecdCell = `<span class="ecd-green">${ro.ecdFormatted}</span>`;
+
+                        searchUnitsMap[ro.unitNo].roNums.push(ro.roNum);
+                        searchUnitsMap[ro.unitNo].roLinks.push(`<a href="https://afshub.azurewebsites.net/Vendors/VendedRepairOrder/Estimate/${ro.roNum}" target="_blank" class="ro-link">${ro.roNum}</a>`);
+                        searchUnitsMap[ro.unitNo].openedDates.push(ro.openedFormatted);
+                        searchUnitsMap[ro.unitNo].statuses.push(ro.status);
+                        searchUnitsMap[ro.unitNo].ecdCells.push(ecdCell);
+                        searchUnitsMap[ro.unitNo].owners.push(ro.owner);
+                    });
+
+                    Object.values(searchUnitsMap).forEach(u => {
+                        let isGarda = u.custKey === 'Garda';
+                        let oosBadge = isGarda ? (u.isOOS ? `<span class="badge badge-oos">OOS</span>` : `<span class="badge badge-active">ACTIVE</span>`) : '';
+                        let isPriority = u.isOOS && u.usefulPct !== null && Math.round(u.usefulPct * 100) < 100;
+                        let priorityStatusBadge = isPriority ? `<span class="badge badge-urgent">Priority</span>` : `<span class="badge badge-low">Normal</span>`;
+
+                        let joinedOwnersHtml = [...new Set(u.owners)].map(ow => `<div class="grouped-ro-item">${ow}</div>`).join('');
+                        let rowCount = u.roNums.length;
+
+                        u.roNums.forEach((roNum, idx) => {
+                            let safeRo = roNum.replace(/[.#$\[\]]/g, '_');
+                            let isDispatched = !!globalRoCheckState[safeRo];
+                            let toggleClass = isDispatched ? 'status-dispatched' : 'status-pending';
+                            let toggleText = isDispatched ? '✓ DISPATCHED' : 'PENDING';
+                            let toggleState = isDispatched ? 'false' : 'true'; 
+                            let statusToggleHtml = `<span class="badge status-toggle ${toggleClass}" data-ro="${safeRo}" onclick="toggleRoCheck('${safeRo}', ${toggleState})">${toggleText}</span>`;
+
+                            let hasNote = globalRoNotesState[safeRo] && globalRoNotesState[safeRo].trim() !== '';
+                            let noteClass = hasNote ? 'note-btn has-note' : 'note-btn';
+                            let noteTitle = hasNote ? globalRoNotesState[safeRo].replace(/"/g, '&quot;') : 'Add Note';
+                            let noteBtnHtml = `<button class="${noteClass}" data-ro="${safeRo}" title="${noteTitle}" onclick="openNoteModal('${safeRo}', '${roNum}')">📝</button>`;
+
+                            let roHtml = `<div style="display:flex; align-items:center; gap: 4px;">${statusToggleHtml} ${u.roLinks[idx]} ${noteBtnHtml}</div>`;
+
+                            searchHtml += `<tr>`;
+                            searchHtml += `<td style="vertical-align:top; padding-top:15px; border-bottom: ${idx === rowCount - 1 ? '1px solid var(--border)' : '1px dashed #eee'};">${roHtml}</td>`;
+                            
+                            if (idx === 0) {
+                                searchHtml += `<td rowspan="${rowCount}" style="vertical-align:top; padding-top:15px; border-bottom: 1px solid var(--border); border-left: 1px dashed #eee;"><strong>${u.unitNo}</strong></td>`;
+                                searchHtml += `<td rowspan="${rowCount}" style="vertical-align:top; padding-top:15px; border-bottom: 1px solid var(--border);">${priorityStatusBadge}</td>`;
+                                searchHtml += `<td rowspan="${rowCount}" style="vertical-align:top; padding-top:15px; border-bottom: 1px solid var(--border); border-right: 1px dashed #eee;">${oosBadge}</td>`;
+                            }
+
+                            let od = u.openedDates[idx] || '';
+                            let st = u.statuses[idx] || '';
+                            let ec = u.ecdCells[idx] || '';
+
+                            searchHtml += `<td style="vertical-align:top; padding-top:15px; border-bottom: ${idx === rowCount - 1 ? '1px solid var(--border)' : '1px dashed #eee'}; font-size:12px; font-weight: 700; color: #555;">${od}</td>`;
+                            
+                            if (idx === 0) {
+                                searchHtml += `<td rowspan="${rowCount}" style="vertical-align:top; padding-top:15px; border-bottom: 1px solid var(--border); border-left: 1px dashed #eee;">${joinedOwnersHtml}</td>`;
+                            }
+                            
+                            searchHtml += `<td style="vertical-align:top; padding-top:15px; border-bottom: ${idx === rowCount - 1 ? '1px solid var(--border)' : '1px dashed #eee'}; font-size:11px; line-height:1.2;"><b>Status:</b> ${st}<br><b>ECD:</b> ${ec}</td>`;
+                            searchHtml += `</tr>`;
+                        });
+                    });
+                }
+                document.getElementById('search-table-body').innerHTML = searchHtml;
+            }, 300);
+        }
+
+        function navigate(viewId, menuElement = null, preserveCustomerFilter = false) {
+            if (!preserveCustomerFilter) {
+                currentCustomerFilter = 'ALL';
+                document.querySelectorAll('.customer-filter-select').forEach(sel => { sel.value = 'ALL'; });
+            }
+            if(viewId === 'pm-view') {
+                currentFilter = 'ALL';
+            }
+            document.querySelectorAll('.view-section').forEach(v => v.classList.remove('active'));
+            document.getElementById(viewId).classList.add('active');
+            if(viewId !== 'search-view' && viewId !== 'person-view') lastActiveView = viewId;
+            if(menuElement) {
+                document.querySelectorAll('.menu-item').forEach(item => item.classList.remove('active'));
+                menuElement.classList.add('active');
+            }
+            if(viewId === 'pm-view') renderKPITiles(pmOwners, 'pm-kpi-container', 'pm-view');
+            else if (viewId === 'vended-view') renderKPITiles(vendedOwners, 'vended-kpi-container', 'vended-view');
+            else if (viewId === 'ers-view') renderKPITiles(ersOwners, 'ers-kpi-container', 'ers-view');
+            else if (viewId === 'home-view') renderHomeDashboard();
+            else if (viewId === 'reports-view') { /* nothing specific to refresh on load */ }
+        }
     </script>
 </body>
 </html>
