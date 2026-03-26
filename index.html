@@ -967,7 +967,8 @@
             if (targetData.length === 0) { alert("No data available to export."); return; }
 
             const excelRows = targetData.map(ro => ({
-                "AFS RO #": ro.roNum, "Unit No": ro.unitNo, 
+                "AFS RO #": ro.roNum.startsWith('NO RO') ? "NO ACTIVE RO" : ro.roNum, 
+                "Unit No": ro.unitNo, 
                 "OOS Status": ro.isOOS ? "OOS" : "",
                 "Useful %": ro.usefulPct !== null ? Math.round(ro.usefulPct * 100) + '%' : "N/A",
                 "Opened Date": ro.openedFormatted,
@@ -989,7 +990,8 @@
             if(results.length === 0) { alert("No data to export."); return; }
             
             const excelRows = results.map(ro => ({
-                "AFS RO #": ro.roNum, "Unit No": ro.unitNo, 
+                "AFS RO #": ro.roNum.startsWith('NO RO') ? "NO ACTIVE RO" : ro.roNum, 
+                "Unit No": ro.unitNo, 
                 "Priority Status": (ro.isOOS && ro.usefulPct !== null && Math.round(ro.usefulPct * 100) < 100) ? "Priority" : "Normal",
                 "OOS Status": ro.isOOS ? "OOS" : "",
                 "Opened Date": ro.openedFormatted,
@@ -1048,11 +1050,10 @@
                 }
             });
 
-            // STRICT Coordinate-Based Mapping for Useful %
             if (usefulRaw && usefulRaw.length > 0) {
-                usefulRaw.forEach(row => {
-                    let b = row['Branch'];
-                    let rawPct = row['Useful %'];
+                usefulRaw.forEach(item => {
+                    let b = item.branch || item['BRANCH'] || item['Branch'] || item['GARDA SHOPNAME'];
+                    let rawPct = item.usefulPct !== undefined ? item.usefulPct : (item['USEFUL %'] !== undefined ? item['USEFUL %'] : item['Useful %']);
 
                     if (b && String(b).trim() !== '') {
                         let bCode = extractGardaCode(b);
@@ -1363,6 +1364,98 @@
                 return { roNum, customer, custKey, drillTopLevel, owner: finalOwner, unitNo: unit, status, vmrs, isOOS, isOpen, isCompletedKPI, isOnTimeKPI, isLateKPI, subregion: loc.subregion, branch: loc.branch, ecdState, ecdFormatted, openedDT, openedFormatted, usefulPct, isDedicated: isDedicatedFlag, region: loc.region };
             }).filter(ro => ro.roNum !== '');
 
+            // GHOST RO INJECTION: Add trucks that are OOS but have NO Active RO
+            let unitsWithOpenROs = new Set();
+            processedData.forEach(ro => {
+                if (ro.isOpen) unitsWithOpenROs.add(ro.unitNo);
+            });
+
+            for (let unit in oosMap) {
+                if (oosMap[unit] === true && !unitsWithOpenROs.has(unit)) {
+                    let loc = unitToLocation[unit] || { region: 'Unknown Region', subregion: 'Unknown Subregion', branch: 'Unknown Branch' };
+                    let custKey = 'Garda';
+
+                    if (loc.region === 'PA' || loc.branch.includes(', PA') || loc.branch.includes(' PA ')) {
+                        loc.region = 'East';
+                        loc.subregion = 'Midatlantic';
+                    }
+
+                    let drillTopLevel = custKey + (loc.region !== 'Unknown State' && loc.region !== 'Unknown Region' ? ' ' + loc.region : '');
+
+                    let finalOwner = 'Unassigned';
+                    let finalTeam = 'VENDED REPAIR';
+                    let isDedicatedFlag = false;
+
+                    if (unitOwnerMap[unit]) {
+                        if (unitOwnerMap[unit].owner.toUpperCase() === 'DEDICATED') {
+                            isDedicatedFlag = true;
+                        } else if (unitOwnerMap[unit].owner) {
+                            finalOwner = unitOwnerMap[unit].owner;
+                            finalTeam = unitOwnerMap[unit].team;
+                        }
+                    }
+
+                    let branchCode = extractGardaCode(loc.branch);
+                    let cNameOnly = loc.branch.replace(/\d{3}[- ]?\d{2}/g, '').replace(/[^A-Z0-9]/ig, '');
+
+                    let usefulPct = null;
+                    if (branchCode && branchUsefulMap[branchCode] !== undefined) {
+                        usefulPct = branchUsefulMap[branchCode];
+                    } else {
+                        for (let bKey in branchUsefulMap) {
+                            if (bKey.length > 4 && cNameOnly.includes(bKey)) {
+                                usefulPct = branchUsefulMap[bKey];
+                                break;
+                            }
+                        }
+                    }
+
+                    if (!isDedicatedFlag) {
+                        if (branchCode && dedicatedBranches.has(branchCode)) isDedicatedFlag = true;
+                        else {
+                            for (let bKey of dedicatedBranches) {
+                                if (bKey.length > 4 && cNameOnly.includes(bKey)) {
+                                    isDedicatedFlag = true;
+                                    break;
+                                }
+                            }
+                        }
+                    }
+
+                    processedData.push({
+                        roNum: 'NO RO - ' + unit,
+                        customer: loc.branch,
+                        custKey: custKey,
+                        drillTopLevel: drillTopLevel,
+                        owner: finalOwner,
+                        unitNo: unit,
+                        status: 'NO ACTIVE RO',
+                        vmrs: '',
+                        isOOS: true,
+                        isOpen: true,
+                        isCompletedKPI: false,
+                        isOnTimeKPI: false,
+                        isLateKPI: false,
+                        subregion: loc.subregion,
+                        branch: loc.branch,
+                        ecdState: 'missing',
+                        ecdFormatted: 'N/A',
+                        openedDT: null,
+                        openedFormatted: 'N/A',
+                        usefulPct: usefulPct,
+                        isDedicated: isDedicatedFlag,
+                        region: loc.region
+                    });
+
+                    if (finalTeam === 'PM') activePM.add(finalOwner);
+                    else if (finalTeam === 'ERS') activeERS.add(finalOwner);
+                    else activeVended.add(finalOwner);
+                    
+                    allCustSet.add(custKey);
+                    allRegionsSet.add(loc.region);
+                }
+            }
+
             pmOwners = Array.from(activePM).sort();
             vendedOwners = Array.from(activeVended).sort();
             ersOwners = Array.from(activeERS).sort();
@@ -1395,6 +1488,115 @@
             
             triggerViewUpdate();
             updateAllNoteButtons(); 
+        }
+
+        // --- REPORTS ENGINE ---
+        let currentReportData = [];
+
+        window.generateReport = function() {
+            const region = document.getElementById('report-region-select').value;
+            const notesOnly = document.getElementById('report-notes-only').checked;
+            
+            if (!region) {
+                alert("Please select a Region to generate the report.");
+                return;
+            }
+
+            let baseData = processedData.filter(ro => ro.isOpen && ro.region === region);
+            currentReportData = [];
+
+            const tbody = document.getElementById('report-table-body');
+            let html = '';
+
+            baseData.forEach(ro => {
+                let safeRo = ro.roNum.replace(/[.#$\[\]]/g, '_');
+                let note = globalRoNotesState[safeRo] || '';
+                let hasNote = note.trim() !== '';
+
+                if (notesOnly && !hasNote) return;
+
+                currentReportData.push(ro);
+
+                let oosBadge = ro.isOOS ? '<span class="badge badge-oos">OOS</span>' : '<span class="badge badge-active">ACTIVE</span>';
+                html += `<tr>
+                    <td>${ro.region}</td>
+                    <td>${ro.subregion}</td>
+                    <td>${ro.branch}</td>
+                    <td><strong>${ro.unitNo}</strong></td>
+                    <td>${oosBadge}</td>
+                    <td>${ro.ecdFormatted}</td>
+                    <td style="white-space: pre-wrap;">${note}</td>
+                </tr>`;
+            });
+
+            if (currentReportData.length === 0) {
+                html = '<tr><td colspan="7" style="text-align: center; padding: 20px;">No matching orders found.</td></tr>';
+            }
+
+            tbody.innerHTML = html;
+            document.getElementById('report-table-container').style.display = 'block';
+            document.getElementById('btn-email-report').style.display = currentReportData.length > 0 ? 'inline-block' : 'none';
+        }
+
+        let reportSortCol = -1, reportSortAsc = true;
+        window.sortReport = function(idx, type) {
+            const tbody = document.getElementById("report-table-body");
+            const rows = Array.from(tbody.rows);
+            if(rows.length <= 1 || rows[0].cells.length === 1) return; 
+            
+            reportSortAsc = (reportSortCol === idx) ? !reportSortAsc : true;
+            reportSortCol = idx;
+
+            rows.sort((a, b) => {
+                let va = a.cells[idx].innerText.trim(), vb = b.cells[idx].innerText.trim();
+                if (type === 'number') {
+                    va = parseFloat(va) || 0; vb = parseFloat(vb) || 0;
+                    return reportSortAsc ? va - vb : vb - va;
+                }
+                return reportSortAsc ? va.localeCompare(vb) : vb.localeCompare(va);
+            });
+            rows.forEach(r => tbody.appendChild(r));
+        }
+
+        window.emailReport = function() {
+            if (currentReportData.length === 0) return;
+
+            const region = document.getElementById('report-region-select').value;
+            let subject = encodeURIComponent(`Open RO Report - ${region}`);
+            
+            let bodyText = `Report for Region: ${region}\n\n`;
+            bodyText += `Sub Region\tBranch\tTruck #\tOOS Status\tECD\tNotes\n`;
+            bodyText += `--------------------------------------------------------------------------------\n`;
+
+            const tbody = document.getElementById("report-table-body");
+            const rows = Array.from(tbody.rows);
+            
+            rows.forEach(row => {
+                if(row.cells.length > 1) {
+                    let subRegion = row.cells[1].innerText.trim();
+                    let branch = row.cells[2].innerText.trim();
+                    let unitNo = row.cells[3].innerText.trim();
+                    let oosStatus = row.cells[4].innerText.trim();
+                    let ecd = row.cells[5].innerText.trim();
+                    let note = row.cells[6].innerText.trim().replace(/\n/g, ' / ') || 'N/A';
+                    
+                    bodyText += `${subRegion}\t${branch}\t${unitNo}\t${oosStatus}\t${ecd}\t${note}\n`;
+                }
+            });
+
+            let encodedBody = encodeURIComponent(bodyText);
+            
+            if (encodedBody.length > 1800) {
+                let clipboardText = bodyText;
+                navigator.clipboard.writeText(clipboardText).then(() => {
+                    alert("The report is too long for an automatic email draft, so the data has been copied to your clipboard!\n\nYou can now Paste (Ctrl+V) it directly into a new email.");
+                    window.location.href = `mailto:?subject=${subject}`;
+                }).catch(err => {
+                    alert("Report too large to email directly and clipboard access failed.");
+                });
+            } else {
+                window.location.href = `mailto:?subject=${subject}&body=${encodedBody}`;
+            }
         }
 
         function getUsefulBadge(usefulArray) {
@@ -1648,7 +1850,13 @@
                             else ecdCell = `<span class="ecd-green">${ro.ecdFormatted}</span>`;
 
                             unitsMap[ro.unitNo].roNums.push(ro.roNum);
-                            unitsMap[ro.unitNo].roLinks.push(`<a href="https://afshub.azurewebsites.net/Vendors/VendedRepairOrder/Estimate/${ro.roNum}" target="_blank" class="ro-link">${ro.roNum}</a>`);
+                            
+                            let roLinkHtml = ro.roNum.startsWith('NO RO') 
+                                ? `<span style="font-weight: 800; color: var(--urgent-red);">NO ACTIVE RO</span>` 
+                                : `<a href="https://afshub.azurewebsites.net/Vendors/VendedRepairOrder/Estimate/${ro.roNum}" target="_blank" class="ro-link">${ro.roNum}</a>`;
+                            
+                            unitsMap[ro.unitNo].roLinks.push(roLinkHtml);
+                            
                             unitsMap[ro.unitNo].openedDates.push(ro.openedFormatted);
                             unitsMap[ro.unitNo].statuses.push(ro.status);
                             unitsMap[ro.unitNo].ecdCells.push(ecdCell);
@@ -1798,7 +2006,12 @@
                         else ecdCell = `<span class="ecd-green">${ro.ecdFormatted}</span>`;
 
                         searchUnitsMap[ro.unitNo].roNums.push(ro.roNum);
-                        searchUnitsMap[ro.unitNo].roLinks.push(`<a href="https://afshub.azurewebsites.net/Vendors/VendedRepairOrder/Estimate/${ro.roNum}" target="_blank" class="ro-link">${ro.roNum}</a>`);
+                        
+                        let roLinkHtml = ro.roNum.startsWith('NO RO') 
+                            ? `<span style="font-weight: 800; color: var(--urgent-red);">NO ACTIVE RO</span>` 
+                            : `<a href="https://afshub.azurewebsites.net/Vendors/VendedRepairOrder/Estimate/${ro.roNum}" target="_blank" class="ro-link">${ro.roNum}</a>`;
+                            
+                        searchUnitsMap[ro.unitNo].roLinks.push(roLinkHtml);
                         searchUnitsMap[ro.unitNo].openedDates.push(ro.openedFormatted);
                         searchUnitsMap[ro.unitNo].statuses.push(ro.status);
                         searchUnitsMap[ro.unitNo].ecdCells.push(ecdCell);
@@ -1855,115 +2068,6 @@
                 }
                 document.getElementById('search-table-body').innerHTML = searchHtml;
             }, 300);
-        }
-
-        // --- REPORTS ENGINE ---
-        let currentReportData = [];
-
-        window.generateReport = function() {
-            const region = document.getElementById('report-region-select').value;
-            const notesOnly = document.getElementById('report-notes-only').checked;
-            
-            if (!region) {
-                alert("Please select a Region to generate the report.");
-                return;
-            }
-
-            let baseData = processedData.filter(ro => ro.isOpen && ro.region === region);
-            currentReportData = [];
-
-            const tbody = document.getElementById('report-table-body');
-            let html = '';
-
-            baseData.forEach(ro => {
-                let safeRo = ro.roNum.replace(/[.#$\[\]]/g, '_');
-                let note = globalRoNotesState[safeRo] || '';
-                let hasNote = note.trim() !== '';
-
-                if (notesOnly && !hasNote) return;
-
-                currentReportData.push(ro);
-
-                let oosBadge = ro.isOOS ? '<span class="badge badge-oos">OOS</span>' : '<span class="badge badge-active">ACTIVE</span>';
-                html += `<tr>
-                    <td>${ro.region}</td>
-                    <td>${ro.subregion}</td>
-                    <td>${ro.branch}</td>
-                    <td><strong>${ro.unitNo}</strong></td>
-                    <td>${oosBadge}</td>
-                    <td>${ro.ecdFormatted}</td>
-                    <td style="white-space: pre-wrap;">${note}</td>
-                </tr>`;
-            });
-
-            if (currentReportData.length === 0) {
-                html = '<tr><td colspan="7" style="text-align: center; padding: 20px;">No matching orders found.</td></tr>';
-            }
-
-            tbody.innerHTML = html;
-            document.getElementById('report-table-container').style.display = 'block';
-            document.getElementById('btn-email-report').style.display = currentReportData.length > 0 ? 'inline-block' : 'none';
-        }
-
-        let reportSortCol = -1, reportSortAsc = true;
-        window.sortReport = function(idx, type) {
-            const tbody = document.getElementById("report-table-body");
-            const rows = Array.from(tbody.rows);
-            if(rows.length <= 1 || rows[0].cells.length === 1) return; 
-            
-            reportSortAsc = (reportSortCol === idx) ? !reportSortAsc : true;
-            reportSortCol = idx;
-
-            rows.sort((a, b) => {
-                let va = a.cells[idx].innerText.trim(), vb = b.cells[idx].innerText.trim();
-                if (type === 'number') {
-                    va = parseFloat(va) || 0; vb = parseFloat(vb) || 0;
-                    return reportSortAsc ? va - vb : vb - va;
-                }
-                return reportSortAsc ? va.localeCompare(vb) : vb.localeCompare(va);
-            });
-            rows.forEach(r => tbody.appendChild(r));
-        }
-
-        window.emailReport = function() {
-            if (currentReportData.length === 0) return;
-
-            const region = document.getElementById('report-region-select').value;
-            let subject = encodeURIComponent(`Open RO Report - ${region}`);
-            
-            let bodyText = `Report for Region: ${region}\n\n`;
-            bodyText += `Sub Region\tBranch\tTruck #\tOOS Status\tECD\tNotes\n`;
-            bodyText += `--------------------------------------------------------------------------------\n`;
-
-            const tbody = document.getElementById("report-table-body");
-            const rows = Array.from(tbody.rows);
-            
-            rows.forEach(row => {
-                if(row.cells.length > 1) {
-                    let subRegion = row.cells[1].innerText.trim();
-                    let branch = row.cells[2].innerText.trim();
-                    let unitNo = row.cells[3].innerText.trim();
-                    let oosStatus = row.cells[4].innerText.trim();
-                    let ecd = row.cells[5].innerText.trim();
-                    let note = row.cells[6].innerText.trim().replace(/\n/g, ' / ') || 'N/A';
-                    
-                    bodyText += `${subRegion}\t${branch}\t${unitNo}\t${oosStatus}\t${ecd}\t${note}\n`;
-                }
-            });
-
-            let encodedBody = encodeURIComponent(bodyText);
-            
-            if (encodedBody.length > 1800) {
-                let clipboardText = bodyText;
-                navigator.clipboard.writeText(clipboardText).then(() => {
-                    alert("The report is too long for an automatic email draft, so the data has been copied to your clipboard!\n\nYou can now Paste (Ctrl+V) it directly into a new email.");
-                    window.location.href = `mailto:?subject=${subject}`;
-                }).catch(err => {
-                    alert("Report too large to email directly and clipboard access failed.");
-                });
-            } else {
-                window.location.href = `mailto:?subject=${subject}&body=${encodedBody}`;
-            }
         }
 
         function navigate(viewId, menuElement = null, preserveCustomerFilter = false) {
