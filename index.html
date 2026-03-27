@@ -735,10 +735,8 @@
                                 let row = aoa[i];
                                 if (!row || !Array.isArray(row)) continue;
 
-                                let region = row[0];    // Col A
-                                let subregion = row[1]; // Col B
-                                let branch = row[2];    // Col C
-                                let usefulPct = row[27];// Col AB
+                                let branch = row[2]; // Col C
+                                let usefulPct = row[27]; // Col AB
 
                                 if (branch && String(branch).trim() !== '') {
                                     usefulRaw.push({
@@ -814,7 +812,6 @@
                 await new Promise(resolve => requestAnimationFrame(resolve));
                 processExcelData(vroRaw, resourceRaw, oosRaw, usefulRaw);
 
-                // Safely Init Firebase after everything is done
                 setTimeout(initFirebaseSync, 500);
 
             } catch (error) {
@@ -1050,10 +1047,11 @@
                 }
             });
 
+            // STRICT Coordinate-Based Mapping for Useful %
             if (usefulRaw && usefulRaw.length > 0) {
-                usefulRaw.forEach(item => {
-                    let b = item.branch || item['BRANCH'] || item['Branch'] || item['GARDA SHOPNAME'];
-                    let rawPct = item.usefulPct !== undefined ? item.usefulPct : (item['USEFUL %'] !== undefined ? item['USEFUL %'] : item['Useful %']);
+                usefulRaw.forEach(row => {
+                    let b = row['Branch'];
+                    let rawPct = row['Useful %'];
 
                     if (b && String(b).trim() !== '') {
                         let bCode = extractGardaCode(b);
@@ -1307,10 +1305,10 @@
                 let addTile = false;
                 if (specificCreators.includes(ownerEmailLower)) addTile = true;
                 else if (unitOwnerMap[unit] && !isDedicatedFlag && unitOwnerMap[unit].owner) addTile = true;
-                else if (finalOwner === 'Dedicated' || finalOwner === 'Unassigned') addTile = true;
                 else if (globalOwnerMap[ownerEmailLower] && globalOwnerMap[ownerEmailLower].status === 'ACTIVE') addTile = true;
 
-                if (addTile && isOpen) {
+                let isUnassigned = finalOwner.toLowerCase().includes('unassigned');
+                if (addTile && isOpen && !isUnassigned && finalOwner.trim() !== '') {
                     if (finalTeam === 'PM') activePM.add(finalOwner);
                     else if (finalTeam === 'ERS') activeERS.add(finalOwner);
                     else activeVended.add(finalOwner);
@@ -1362,7 +1360,7 @@
                 }
                 
                 return { roNum, customer, custKey, drillTopLevel, owner: finalOwner, unitNo: unit, status, vmrs, isOOS, isOpen, isCompletedKPI, isOnTimeKPI, isLateKPI, subregion: loc.subregion, branch: loc.branch, ecdState, ecdFormatted, openedDT, openedFormatted, usefulPct, isDedicated: isDedicatedFlag, region: loc.region };
-            }).filter(ro => ro.roNum !== '');
+            }).filter(ro => ro && ro.roNum !== '' && !ro.isDedicated);
 
             // GHOST RO INJECTION: Add trucks that are OOS but have NO Active RO
             let unitsWithOpenROs = new Set();
@@ -1398,18 +1396,6 @@
                     let branchCode = extractGardaCode(loc.branch);
                     let cNameOnly = loc.branch.replace(/\d{3}[- ]?\d{2}/g, '').replace(/[^A-Z0-9]/ig, '');
 
-                    let usefulPct = null;
-                    if (branchCode && branchUsefulMap[branchCode] !== undefined) {
-                        usefulPct = branchUsefulMap[branchCode];
-                    } else {
-                        for (let bKey in branchUsefulMap) {
-                            if (bKey.length > 4 && cNameOnly.includes(bKey)) {
-                                usefulPct = branchUsefulMap[bKey];
-                                break;
-                            }
-                        }
-                    }
-
                     if (!isDedicatedFlag) {
                         if (branchCode && dedicatedBranches.has(branchCode)) isDedicatedFlag = true;
                         else {
@@ -1418,6 +1404,20 @@
                                     isDedicatedFlag = true;
                                     break;
                                 }
+                            }
+                        }
+                    }
+
+                    if (isDedicatedFlag) continue; // scrub dedicated completely
+
+                    let usefulPct = null;
+                    if (branchCode && branchUsefulMap[branchCode] !== undefined) {
+                        usefulPct = branchUsefulMap[branchCode];
+                    } else {
+                        for (let bKey in branchUsefulMap) {
+                            if (bKey.length > 4 && cNameOnly.includes(bKey)) {
+                                usefulPct = branchUsefulMap[bKey];
+                                break;
                             }
                         }
                     }
@@ -1447,9 +1447,12 @@
                         region: loc.region
                     });
 
-                    if (finalTeam === 'PM') activePM.add(finalOwner);
-                    else if (finalTeam === 'ERS') activeERS.add(finalOwner);
-                    else activeVended.add(finalOwner);
+                    let isUnassigned = finalOwner.toLowerCase().includes('unassigned');
+                    if (!isUnassigned && finalOwner.trim() !== '') {
+                        if (finalTeam === 'PM') activePM.add(finalOwner);
+                        else if (finalTeam === 'ERS') activeERS.add(finalOwner);
+                        else activeVended.add(finalOwner);
+                    }
                     
                     allCustSet.add(custKey);
                     allRegionsSet.add(loc.region);
