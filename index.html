@@ -461,166 +461,13 @@
     </div>
 
     <script>
-        // --- SECURE FIREBASE SYNC ENGINE ---
-        let db = null;
-        let globalRoCheckState = {};
-        let globalRoNotesState = {};
-
-        try {
-            globalRoCheckState = JSON.parse(localStorage.getItem('workflow_checks') || '{}');
-            globalRoNotesState = JSON.parse(localStorage.getItem('workflow_notes') || '{}');
-        } catch(e) {}
-
-        function initFirebaseSync() {
-            try {
-                if (typeof firebase !== 'undefined') {
-                    const firebaseConfig = {
-                        apiKey: "AIzaSyCr3VAldI-pPCb7APx3rJAEZvf_nl0iz1g",
-                        authDomain: "workflow-dashboard-e6134.firebaseapp.com",
-                        databaseURL: "https://workflow-dashboard-e6134-default-rtdb.firebaseio.com",
-                        projectId: "workflow-dashboard-e6134",
-                        storageBucket: "workflow-dashboard-e6134.firebasestorage.app",
-                        messagingSenderId: "641710248116",
-                        appId: "1:641710248116:web:1546701879d573041447e1"
-                    };
-                    if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
-                    db = firebase.database();
-
-                    db.ref('roChecks').on('value', (snapshot) => {
-                        globalRoCheckState = snapshot.val() || {};
-                        try { localStorage.setItem('workflow_checks', JSON.stringify(globalRoCheckState)); } catch(e) {}
-                        updateAllStatusBadges();
-                    });
-
-                    db.ref('roNotes').on('value', (snapshot) => {
-                        globalRoNotesState = snapshot.val() || {};
-                        try { localStorage.setItem('workflow_notes', JSON.stringify(globalRoNotesState)); } catch(e) {}
-                        updateAllNoteButtons();
-                    });
-                }
-            } catch (error) {
-                console.warn("Firebase Init blocked.", error);
-            }
-        }
-
-        function updateAllStatusBadges() {
-            document.querySelectorAll('.status-toggle').forEach(btn => {
-                let ro = btn.getAttribute('data-ro');
-                let isDispatched = !!globalRoCheckState[ro];
-                if (isDispatched) {
-                    btn.className = 'badge status-toggle status-dispatched';
-                    btn.innerHTML = '✓ DISPATCHED';
-                    btn.onclick = function() { toggleRoCheck(ro, false); };
-                } else {
-                    btn.className = 'badge status-toggle status-pending';
-                    btn.innerHTML = 'PENDING';
-                    btn.onclick = function() { toggleRoCheck(ro, true); };
-                }
-            });
-        }
-
-        function toggleRoCheck(ro, isChecked) {
-            let safeRo = ro.replace(/[.#$\[\]]/g, '_'); 
-            if (db) {
-                db.ref('roChecks/' + safeRo).set(isChecked);
-            } else {
-                globalRoCheckState[safeRo] = isChecked;
-                try { localStorage.setItem('workflow_checks', JSON.stringify(globalRoCheckState)); } catch(e) {}
-                updateAllStatusBadges();
-            }
-        }
-
-        // Notes Engine
-        let currentEditingRo = null;
-
-        function updateAllNoteButtons() {
-            document.querySelectorAll('.note-btn').forEach(btn => {
-                let ro = btn.getAttribute('data-ro');
-                let note = globalRoNotesState[ro];
-                if (note && note.trim() !== '') {
-                    btn.className = 'note-btn has-note';
-                    btn.title = note; 
-                } else {
-                    btn.className = 'note-btn';
-                    btn.title = 'Add Note';
-                }
-            });
-        }
-
-        window.openNoteModal = function(safeRo, roNum) {
-            currentEditingRo = safeRo;
-            document.getElementById('note-modal-title').innerText = 'Notes for ' + roNum;
-            document.getElementById('note-textarea').value = globalRoNotesState[safeRo] || '';
-            document.getElementById('note-modal').style.display = 'flex';
-            document.getElementById('note-textarea').focus();
-        }
-
-        window.closeNoteModal = function() {
-            document.getElementById('note-modal').style.display = 'none';
-            currentEditingRo = null;
-        }
-
-        window.saveNote = function() {
-            if (!currentEditingRo) return;
-            let noteText = document.getElementById('note-textarea').value;
-            if (db) {
-                db.ref('roNotes/' + currentEditingRo).set(noteText);
-            } else {
-                globalRoNotesState[currentEditingRo] = noteText;
-                try { localStorage.setItem('workflow_notes', JSON.stringify(globalRoNotesState)); } catch(e) {}
-                updateAllNoteButtons();
-            }
-            closeNoteModal();
-        }
-
-        // --- GLOBAL DATA ---
-        let processedData = []; 
-        let currentFilter = 'ALL';
-        let currentCustomerFilter = 'ALL';
-        let currentOwnerView = '';
-        let currentParentView = '';
-        let globalChartInstances = {}; 
-        let searchTimeout = null;
-
-        let pmOwners = [];
-        let vendedOwners = [];
-        let ersOwners = [];
-
-        let branchUsefulMap = {}; 
-        let masterUnits = {}; 
-        let ownerNameToTeam = {};
-
-        const excludedStatuses = [
-            'COMPLETED', 
-            'FINAL CHARGES SUBMITTED'
-        ];
-
-        let lastActiveView = 'home-view';
-
-        function normalizeBranchStr(str) {
-            if (!str) return null;
-            return String(str).toUpperCase().replace(/\d{3}[- ]?\d{2}/g, '').replace(/[^A-Z0-9]/ig, '');
-        }
-
-        function extractGardaCode(str) {
-            if (!str) return null;
-            let match = String(str).match(/(\d{3})[- ]?(\d{2})/);
-            if (match) return match[1] + match[2];
-            return null;
-        }
-
-        // --- ROBUST STARTUP AND FETCHING LOGIC ---
         function startAppOnce() {
             if (window.__workflowStarted) return;
             window.__workflowStarted = true;
             fetchData();
         }
 
-        if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', startAppOnce, { once: true });
-        } else {
-            startAppOnce();
-        }
+        window.addEventListener('DOMContentLoaded', startAppOnce, { once: true });
 
         async function fetchWorkbookBuffer() {
             const candidates = [
@@ -656,7 +503,8 @@
                     }
 
                     const sig = new Uint8Array(data.slice(0, 2));
-                    const isZip = sig[0] === 0x50 && sig[1] === 0x4B; 
+                    const isZip = sig[0] === 0x50 && sig[1] === 0x4B;
+
                     if (!isZip) {
                         throw new Error('Response is not a valid XLSX file.');
                     }
@@ -664,7 +512,9 @@
                     return data;
                 } catch (err) {
                     clearTimeout(timeout);
-                    lastError = new Error(`${rawUrl} -> ${err.name === 'AbortError' ? 'Request timed out' : err.message}`);
+                    lastError = new Error(
+                        `${rawUrl} -> ${err.name === 'AbortError' ? 'Request timed out' : err.message}`
+                    );
                     console.warn('Workbook fetch failed:', lastError.message);
                 }
             }
@@ -772,7 +622,9 @@
             });
 
             if (!usefulRawAOA.length && !resourceRawAOA.length && !oosRawAOA.length && !vroRaw.length) {
-                throw new Error('Workbook loaded, but no expected sheets were recognized. Check tab names in master_workFLOW.xlsx.');
+                throw new Error(
+                    'Workbook loaded, but no expected sheets were recognized. Check tab names in master_workFLOW.xlsx.'
+                );
             }
 
             processExcelData(vroRaw, resourceRawAOA, oosRawAOA, usefulRawAOA);
@@ -801,6 +653,165 @@
                 statusEl.style.color = 'red';
             }
         });
+
+        let db = null;
+        let globalRoCheckState = {};
+        let globalRoNotesState = {};
+
+        try {
+            globalRoCheckState = JSON.parse(localStorage.getItem('workflow_checks') || '{}');
+            globalRoNotesState = JSON.parse(localStorage.getItem('workflow_notes') || '{}');
+        } catch(e) {}
+
+        function initFirebaseSync() {
+            try {
+                if (typeof firebase !== 'undefined') {
+                    const firebaseConfig = {
+                        apiKey: "AIzaSyCr3VAldI-pPCb7APx3rJAEZvf_nl0iz1g",
+                        authDomain: "workflow-dashboard-e6134.firebaseapp.com",
+                        databaseURL: "https://workflow-dashboard-e6134-default-rtdb.firebaseio.com",
+                        projectId: "workflow-dashboard-e6134",
+                        storageBucket: "workflow-dashboard-e6134.firebasestorage.app",
+                        messagingSenderId: "641710248116",
+                        appId: "1:641710248116:web:1546701879d573041447e1"
+                    };
+                    if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+                    db = firebase.database();
+
+                    db.ref('roChecks').on('value', (snapshot) => {
+                        globalRoCheckState = snapshot.val() || {};
+                        try { localStorage.setItem('workflow_checks', JSON.stringify(globalRoCheckState)); } catch(e) {}
+                        updateAllStatusBadges();
+                    });
+
+                    db.ref('roNotes').on('value', (snapshot) => {
+                        globalRoNotesState = snapshot.val() || {};
+                        try { localStorage.setItem('workflow_notes', JSON.stringify(globalRoNotesState)); } catch(e) {}
+                        updateAllNoteButtons();
+                    });
+                }
+            } catch (error) {
+                console.warn("Firebase Init blocked.", error);
+            }
+        }
+
+        function updateAllStatusBadges() {
+            document.querySelectorAll('.status-toggle').forEach(btn => {
+                let ro = btn.getAttribute('data-ro');
+                let isDispatched = !!globalRoCheckState[ro];
+                if (isDispatched) {
+                    btn.className = 'badge status-toggle status-dispatched';
+                    btn.innerHTML = '✓ DISPATCHED';
+                    btn.onclick = function() { toggleRoCheck(ro, false); };
+                } else {
+                    btn.className = 'badge status-toggle status-pending';
+                    btn.innerHTML = 'PENDING';
+                    btn.onclick = function() { toggleRoCheck(ro, true); };
+                }
+            });
+        }
+
+        function toggleRoCheck(ro, isChecked) {
+            let safeRo = ro.replace(/[.#$\[\]]/g, '_'); 
+            if (db) {
+                db.ref('roChecks/' + safeRo).set(isChecked);
+            } else {
+                globalRoCheckState[safeRo] = isChecked;
+                try { localStorage.setItem('workflow_checks', JSON.stringify(globalRoCheckState)); } catch(e) {}
+                updateAllStatusBadges();
+            }
+        }
+
+        let currentEditingRo = null;
+
+        function updateAllNoteButtons() {
+            document.querySelectorAll('.note-btn').forEach(btn => {
+                let ro = btn.getAttribute('data-ro');
+                let note = globalRoNotesState[ro];
+                if (note && note.trim() !== '') {
+                    btn.className = 'note-btn has-note';
+                    btn.title = note; 
+                } else {
+                    btn.className = 'note-btn';
+                    btn.title = 'Add Note';
+                }
+            });
+        }
+
+        window.openNoteModal = function(safeRo, roNum) {
+            currentEditingRo = safeRo;
+            document.getElementById('note-modal-title').innerText = 'Notes for ' + roNum;
+            document.getElementById('note-textarea').value = globalRoNotesState[safeRo] || '';
+            document.getElementById('note-modal').style.display = 'flex';
+            document.getElementById('note-textarea').focus();
+        }
+
+        window.closeNoteModal = function() {
+            document.getElementById('note-modal').style.display = 'none';
+            currentEditingRo = null;
+        }
+
+        window.saveNote = function() {
+            if (!currentEditingRo) return;
+            let noteText = document.getElementById('note-textarea').value;
+            if (db) {
+                db.ref('roNotes/' + currentEditingRo).set(noteText);
+            } else {
+                globalRoNotesState[currentEditingRo] = noteText;
+                try { localStorage.setItem('workflow_notes', JSON.stringify(globalRoNotesState)); } catch(e) {}
+                updateAllNoteButtons();
+            }
+            closeNoteModal();
+        }
+
+        let processedData = []; 
+        let currentFilter = 'ALL';
+        let currentCustomerFilter = 'ALL';
+        let currentOwnerView = '';
+        let currentParentView = '';
+        let globalChartInstances = {}; 
+        let searchTimeout = null;
+
+        let pmOwners = [];
+        let vendedOwners = [];
+        let ersOwners = [];
+
+        let branchUsefulMap = {}; 
+        let masterUnits = {}; 
+        let ownerNameToTeam = {};
+
+        const excludedStatuses = [
+            'COMPLETED', 
+            'FINAL CHARGES SUBMITTED'
+        ];
+
+        let lastActiveView = 'home-view';
+
+        function normalizeBranchStr(str) {
+            if (!str) return null;
+            return String(str).toUpperCase().replace(/\d{3}[- ]?\d{2}/g, '').replace(/[^A-Z0-9]/ig, '');
+        }
+
+        function extractGardaCode(str) {
+            if (!str) return null;
+            let match = String(str).match(/(\d{3})[- ]?(\d{2})/);
+            if (match) return match[1] + match[2];
+            return null;
+        }
+
+        function getCustKey(branch) {
+            const value = String(branch || '').trim();
+            if (!value) return 'UNKNOWN';
+
+            const upper = value.toUpperCase();
+
+            if (upper.includes('GARDA') || extractGardaCode(value)) return 'GARDA';
+            if (upper.includes('BRINK')) return 'BRINKS';
+            if (upper.includes('LOOMIS')) return 'LOOMIS';
+            if (upper.includes('PUROLATOR')) return 'PUROLATOR';
+
+            return 'UNKNOWN';
+        }
 
         function getCol(row, possibleNames) {
             const rowKeys = Object.keys(row);
@@ -935,11 +946,10 @@
             
             branchUsefulMap = {};
             
-            // Hardcoded Logic for Useful % (Starts at Row 3)
             for (let i = 2; i < usefulRawAOA.length; i++) {
                 let row = usefulRawAOA[i];
                 if (!row || row.length < 3) continue;
-                let branch = row[2]; // Col C
+                let branch = row[2]; 
                 if (branch && String(branch).trim() !== '') {
                     let bCode = extractGardaCode(branch);
                     let bNorm = normalizeBranchStr(branch);
@@ -952,10 +962,10 @@
                     };
                     
                     let pcts = {
-                        LTS: parsePct(row[9]),     // Col J
-                        ST: parsePct(row[15]),     // Col P
-                        SHUTTLE: parsePct(row[21]),// Col V
-                        TOTAL: parsePct(row[27])   // Col AB
+                        LTS: parsePct(row[9]),     
+                        ST: parsePct(row[15]),     
+                        SHUTTLE: parsePct(row[21]),
+                        TOTAL: parsePct(row[27])   
                     };
                     
                     if (bCode) branchUsefulMap[bCode] = pcts;
@@ -963,7 +973,6 @@
                 }
             }
 
-            // Hardcoded Logic for Resource Table
             let resourceMap = {};
             ownerNameToTeam = {};
             resourceMap['kanguzza@ameritfleet.com'] = { name: 'Kevin Anguzza', team: 'PM', hasBranch: false };
@@ -1005,7 +1014,6 @@
                 }
             }
 
-            // Hardcoded Logic for Master OOS GARDA
             masterUnits = {};
             for (let i = 1; i < oosRawAOA.length; i++) {
                 let row = oosRawAOA[i];
@@ -1070,7 +1078,6 @@
                 allCustSet.add(custKey);
                 if(mUnit.region) allRegionsSet.add(mUnit.region);
 
-                // Multi-Ownership Array Generation
                 let tileOwners = new Set();
                 let unitOwner = mUnit.owner;
 
@@ -1137,7 +1144,6 @@
                 return roObj;
             }).filter(ro => ro !== null);
 
-            // GHOST RO INJECTION: Add trucks that are OOS but have NO Active RO
             for (let unit in masterUnits) {
                 let mUnit = masterUnits[unit];
                 if (mUnit.isOOS && !openROsInUnits.has(unit)) {
@@ -1229,7 +1235,6 @@
             updateAllNoteButtons(); 
         }
 
-        // --- REPORTS ENGINE ---
         let currentReportData = [];
 
         window.generateReport = function() {
@@ -1341,12 +1346,12 @@
         function formatUsefulBadge(label, val) {
             if(val === null || val === undefined || isNaN(val) || val === '') return '';
             let pct = Math.round(val * 100);
-            let bg = '#90ee90'; // light green
+            let bg = '#90ee90'; 
             let tc = 'black';
             
             if (pct < 95) { bg = '#d9534f'; tc = 'white'; } 
             else if (pct >= 95 && pct < 100) { bg = '#FFC600'; tc = 'black'; } 
-            else if (pct > 100) { bg = '#00ff00'; tc = 'black'; } // bright green
+            else if (pct > 100) { bg = '#00ff00'; tc = 'black'; } 
 
             return `<span class="badge" style="background-color: ${bg}; color: ${tc}; margin-right: 20px; font-size: 11px;">${label}: ${pct}%</span>`;
         }
@@ -1595,9 +1600,6 @@
                         groupedUnits.sort((a,b) => { 
                             return (b.isOOS === true ? 1 : 0) - (a.isOOS === true ? 1 : 0);
                         });
-                        
-                        let isBranchDedicated = branchROs.some(ro => ro.isDedicated);
-                        let dedicatedBadge = isBranchDedicated ? `<span style="background-color: white; color: black; border: 1px solid black; border-radius: 12px; padding: 2px 6px; margin-left: 5px; font-size: 10px; font-weight: bold;">(DEDICATED)</span>` : '';
 
                         branchHtml += `<details class="ro-detail-node"><summary><div style="flex-grow:1; display:flex; align-items:center;">${branch} (${branchROs.length} ROs)</div><div>${badgesHtml}</div></summary>`;
                         let tableHTML = `<div class="table-wrapper"><table><colgroup><col style="width:23%;"><col style="width:11%;">${isPM ? '' : '<col style="width:11%;">'}<col style="width:9%;"><col style="width:11%;"><col style="width:21%;"><col style="width:14%;"></colgroup><thead><tr><th>AFS RO # & Dispatch</th><th>Unit No</th>${isPM ? '' : '<th>Priority Status</th>'}<th>OOS Status</th><th>Opened Date</th><th>Status</th><th>ECD</th></tr></thead><tbody>`;
@@ -1749,8 +1751,7 @@
                     });
 
                     Object.values(searchUnitsMap).forEach(u => {
-                        let isGarda = u.custKey === 'Garda';
-                        let oosBadge = isGarda ? (u.isOOS ? `<span class="badge badge-oos">OOS</span>` : `<span class="badge badge-active">ACTIVE</span>`) : '';
+                        let oosBadge = u.isOOS ? `<span class="badge badge-oos">OOS</span>` : `<span class="badge badge-active">ACTIVE</span>`;
                         let isPri = (u.isOOS && isPriority({isOOS: u.isOOS, usefulPct: u.usefulPct, unitType: u.unitType}));
                         let priorityStatusBadge = isPri ? `<span class="badge badge-urgent">Priority</span>` : `<span class="badge badge-low">Normal</span>`;
 
