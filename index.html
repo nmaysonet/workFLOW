@@ -230,7 +230,7 @@
         <div class="menu-item" id="menu-pm" onclick="navigate('pm-view', this)">PM Queue</div>
         <div class="menu-item" id="menu-vended" onclick="navigate('vended-view', this)">Vended Repair Queue</div>
         <div class="menu-item" id="menu-ers" onclick="navigate('ers-view', this)">ERS Queue</div>
-        <div class="menu-item" id="menu-reports" onclick="navigate('reports-view', this)">Reports</div>
+        <div class="menu-item" id="menu-summary" onclick="navigate('summary-view', this)">Consolidation Summary</div>
         
         <div class="sidebar-truck">
             <svg width="140" height="70" viewBox="0 0 120 60" xmlns="http://www.w3.org/2000/svg" class="moving-truck-svg">
@@ -375,43 +375,38 @@
             <div class="drilldown-container" id="drilldown-body"></div>
         </div>
 
-        <div id="reports-view" class="view-section">
+        <div id="summary-view" class="view-section">
             <div class="view-title">
-                <span style="font-weight: 700;">Reports</span>
+                <span style="font-weight: 700;">Consolidation Summary</span>
+                <div class="controls-group" style="display: flex; align-items: center;">
+                    <button class="btn-green" onclick="exportSummaryToExcel()">&#11139; Export to XLSX</button>
+                    <button onclick="toggleAllSummary(true)">Expand All</button>
+                    <button onclick="toggleAllSummary(false)">Collapse All</button>
+                </div>
             </div>
-            <div class="filter-bar" style="align-items: center;">
-                <select id="report-region-select" class="filter-select" style="margin-right: 15px; width: 200px;">
-                    <option value="">Select Region...</option>
-                </select>
-                <label style="margin-right: 15px; font-weight: bold; font-size: 13px; display: flex; align-items: center; gap: 5px; cursor: pointer;">
-                    <input type="checkbox" id="report-notes-only" style="cursor: pointer;"> Has Notes Only
-                </label>
-                <button class="btn-green" onclick="generateReport()">Generate Report</button>
-                <button class="btn-action" id="btn-email-report" onclick="emailReport()" style="display: none; margin-left: auto;">📧 Email Report</button>
-            </div>
-            <div class="drilldown-container table-wrapper" id="report-table-container" style="display: none;">
-                <table id="reportTable">
+            <div class="drilldown-container table-wrapper">
+                <table id="summaryTable">
                     <colgroup>
-                        <col style="width: 12%;">
-                        <col style="width: 13%;">
+                        <col style="width: 35%;">
+                        <col style="width: 10%;">
+                        <col style="width: 10%;">
+                        <col style="width: 10%;">
+                        <col style="width: 10%;">
+                        <col style="width: 10%;">
                         <col style="width: 15%;">
-                        <col style="width: 10%;">
-                        <col style="width: 10%;">
-                        <col style="width: 10%;">
-                        <col style="width: 30%;">
                     </colgroup>
                     <thead>
                         <tr>
-                            <th onclick="sortReport(0, 'string')">Region ↕</th>
-                            <th onclick="sortReport(1, 'string')">Sub Region ↕</th>
-                            <th onclick="sortReport(2, 'string')">Branch ↕</th>
-                            <th onclick="sortReport(3, 'string')">Truck # ↕</th>
-                            <th onclick="sortReport(4, 'string')">OOS Status ↕</th>
-                            <th onclick="sortReport(5, 'string')">ECD ↕</th>
-                            <th onclick="sortReport(6, 'string')">Notes ↕</th>
+                            <th>Region / Subregion / Branch</th>
+                            <th style="text-align:right;">Max Routes</th>
+                            <th style="text-align:right;">Total Units</th>
+                            <th style="text-align:right;">OOS</th>
+                            <th style="text-align:right;">Useful %</th>
+                            <th style="text-align:right;">DoD OOS</th>
+                            <th style="text-align:right;">DoD Change</th>
                         </tr>
                     </thead>
-                    <tbody id="report-table-body"></tbody>
+                    <tbody id="summary-table-body"></tbody>
                 </table>
             </div>
         </div>
@@ -558,6 +553,7 @@
             let resourceRawAOA = [];
             let oosRawAOA = [];
             let usefulRawAOA = [];
+            let dodRawAOA = [];
 
             workbook.SheetNames.forEach(sheetName => {
                 try {
@@ -570,7 +566,9 @@
 
                     const sheetNameLower = sheetName.toLowerCase();
 
-                    if (sheetNameLower.includes('useful')) {
+                    if (sheetNameLower.includes('dod') || sheetNameLower.includes('day over day')) {
+                        dodRawAOA = aoa;
+                    } else if (sheetNameLower.includes('useful')) {
                         usefulRawAOA = aoa;
                     } else if (sheetNameLower.includes('resource') || sheetNameLower.includes('team')) {
                         resourceRawAOA = aoa;
@@ -627,7 +625,7 @@
                 );
             }
 
-            processExcelData(vroRaw, resourceRawAOA, oosRawAOA, usefulRawAOA);
+            processExcelData(vroRaw, resourceRawAOA, oosRawAOA, usefulRawAOA, dodRawAOA);
             setTimeout(initFirebaseSync, 500);
         }
 
@@ -777,8 +775,12 @@
         let ersOwners = [];
 
         let branchUsefulMap = {}; 
+        let branchMetricsMap = {}; // Maps code to { maxRoutes, dodOos }
         let masterUnits = {}; 
         let ownerNameToTeam = {};
+        
+        let summaryTree = {};
+        let expandedSummaryState = {};
 
         const excludedStatuses = [
             'COMPLETED', 
@@ -874,11 +876,25 @@
             if (targetData.length === 0) { alert("No data available to export."); return; }
 
             const excelRows = targetData.map(ro => {
+                let usefulText = "N/A";
+                let typePct = null;
+                if (ro.unitType === 'LTS') typePct = ro.usefulPctObj ? ro.usefulPctObj.LTS : null;
+                else if (ro.unitType === 'ST') typePct = ro.usefulPctObj ? ro.usefulPctObj.ST : null;
+                else if (ro.unitType === 'SHUTTLE') typePct = ro.usefulPctObj ? ro.usefulPctObj.SHUTTLE : null;
+
+                if (typePct !== null && !isNaN(typePct)) {
+                    usefulText = Math.round(typePct * 100) + '%';
+                } else if(ro.usefulPct !== null) {
+                    usefulText = Math.round(ro.usefulPct * 100) + '% (Total)';
+                }
+
                 return {
                     "AFS RO #": ro.roNum.startsWith('NO RO') ? "NO ACTIVE RO" : ro.roNum, 
                     "Unit No": ro.unitNo, 
                     "OOS Status": ro.isOOS ? "OOS" : "",
-                    "Useful %": ro.usefulPct !== null ? Math.round(ro.usefulPct * 100) + '%' : "N/A",
+                    "LTS Useful %": (ro.usefulPctObj && ro.usefulPctObj.LTS !== null) ? Math.round(ro.usefulPctObj.LTS * 100) + '%' : "N/A",
+                    "ST Useful %": (ro.usefulPctObj && ro.usefulPctObj.ST !== null) ? Math.round(ro.usefulPctObj.ST * 100) + '%' : "N/A",
+                    "Shuttle Useful %": (ro.usefulPctObj && ro.usefulPctObj.SHUTTLE !== null) ? Math.round(ro.usefulPctObj.SHUTTLE * 100) + '%' : "N/A",
                     "Opened Date": ro.openedFormatted,
                     "Status": ro.status, "ECD": ro.ecdFormatted,
                     "Customer Group": ro.drillTopLevel, "Subregion": ro.subregion, "Branch": ro.branch
@@ -904,6 +920,9 @@
                     "Unit No": ro.unitNo, 
                     "Priority Status": isPriority(ro) ? "Priority" : "Normal",
                     "OOS Status": ro.isOOS ? "OOS" : "",
+                    "LTS Useful %": (ro.usefulPctObj && ro.usefulPctObj.LTS !== null) ? Math.round(ro.usefulPctObj.LTS * 100) + '%' : "N/A",
+                    "ST Useful %": (ro.usefulPctObj && ro.usefulPctObj.ST !== null) ? Math.round(ro.usefulPctObj.ST * 100) + '%' : "N/A",
+                    "Shuttle Useful %": (ro.usefulPctObj && ro.usefulPctObj.SHUTTLE !== null) ? Math.round(ro.usefulPctObj.SHUTTLE * 100) + '%' : "N/A",
                     "Opened Date": ro.openedFormatted,
                     "Owner": ro.owner, "Status": ro.status, "ECD": ro.ecdFormatted
                 };
@@ -937,38 +956,56 @@
             else if(activeView === 'vended-view') renderKPITiles(vendedOwners, 'vended-kpi-container', 'vended-view');
             else if(activeView === 'ers-view') renderKPITiles(ersOwners, 'ers-kpi-container', 'ers-view');
             else if(activeView === 'person-view') { if(currentOwnerView) loadPersonDrilldown(currentOwnerView, currentParentView); }
+            else if(activeView === 'summary-view') renderSummary();
         }
 
-        function processExcelData(vroRaw, resourceRawAOA, oosRawAOA, usefulRawAOA) {
+        function processExcelData(vroRaw, resourceRawAOA, oosRawAOA, usefulRawAOA, dodRawAOA) {
             const today = new Date(); today.setHours(0, 0, 0, 0);
             
             branchUsefulMap = {};
+            branchMetricsMap = {};
+
+            // Parse DoD Tab
+            for (let i = 2; i < dodRawAOA.length; i++) {
+                let row = dodRawAOA[i];
+                if (!row || row.length < 3) continue;
+                let branch = row[2];
+                if (branch && String(branch).trim() !== '') {
+                    let bCode = extractGardaCode(branch) || normalizeBranchStr(branch);
+                    let dodOos = parseFloat(row[24]);
+                    if (isNaN(dodOos)) dodOos = 0;
+                    if (!branchMetricsMap[bCode]) branchMetricsMap[bCode] = { maxRoutes:0, dodOos:0 };
+                    branchMetricsMap[bCode].dodOos = dodOos;
+                }
+            }
             
             for (let i = 2; i < usefulRawAOA.length; i++) {
                 let row = usefulRawAOA[i];
                 if (!row || row.length < 3) continue;
                 let branch = row[2]; 
                 if (branch && String(branch).trim() !== '') {
-                    let bCode = extractGardaCode(branch);
-                    let bNorm = normalizeBranchStr(branch);
+                    let bCode = extractGardaCode(branch) || normalizeBranchStr(branch);
+                    let maxRoutes = parseFloat(row[22]);
+                    if (isNaN(maxRoutes)) maxRoutes = 0;
                     
-                    let val = row[27]; // TOTAL
-                    let pct = null;
-                    if (val !== undefined && val !== null && val !== '') {
+                    if (!branchMetricsMap[bCode]) branchMetricsMap[bCode] = { maxRoutes:0, dodOos:0 };
+                    branchMetricsMap[bCode].maxRoutes = maxRoutes;
+
+                    let parsePct = (val) => {
+                        if (val === undefined || val === null || val === '') return null;
                         let v = parseFloat(String(val).trim());
-                        if (!isNaN(v)) {
-                            pct = String(val).includes('%') ? v / 100 : v;
-                        }
-                    }
+                        if (isNaN(v)) return null;
+                        return String(val).includes('%') ? v / 100 : v;
+                    };
                     
-                    if (pct !== null) {
-                        if (bCode) {
-                            branchUsefulMap[bCode] = pct;
-                            if (bCode === '18055') branchUsefulMap['14095'] = pct;
-                            if (bCode === '14095') branchUsefulMap['18055'] = pct;
-                        }
-                        if (bNorm) branchUsefulMap[bNorm] = pct;
-                    }
+                    let pcts = {
+                        LTS: parsePct(row[9]),     
+                        ST: parsePct(row[15]),     
+                        SHUTTLE: parsePct(row[21]),
+                        TOTAL: parsePct(row[27])   
+                    };
+                    
+                    branchUsefulMap[bCode] = pcts;
                 }
             }
 
@@ -1045,7 +1082,6 @@
             let activeERS = new Set();
             
             let allCustSet = new Set();
-            let allRegionsSet = new Set();
             let openROsInUnits = new Set();
 
             processedData = vroRaw.map(row => {
@@ -1075,7 +1111,6 @@
                 let drillTopLevel = custKey + (mUnit.region !== '' && mUnit.region !== 'Unknown Region' ? ' ' + mUnit.region : '');
 
                 allCustSet.add(custKey);
-                if(mUnit.region) allRegionsSet.add(mUnit.region);
 
                 let tileOwners = new Set();
                 let unitOwner = mUnit.owner;
@@ -1094,20 +1129,8 @@
                     tileOwners.add('Kevin Anguzza');
                 }
 
-                let bCode = extractGardaCode(mUnit.branch);
-                let bNorm = normalizeBranchStr(mUnit.branch);
-                let usefulPct = null;
-                
-                if (branchUsefulMap[bCode] !== undefined) usefulPct = branchUsefulMap[bCode];
-                else if (branchUsefulMap[bNorm] !== undefined) usefulPct = branchUsefulMap[bNorm];
-                else {
-                    let cNameOnly = mUnit.branch.replace(/\d{3}[- ]?\d{2}/g, '').replace(/[^A-Z0-9]/ig, '');
-                    for (let bKey in branchUsefulMap) {
-                        if (bKey.length > 4 && cNameOnly.includes(bKey)) {
-                            usefulPct = branchUsefulMap[bKey]; break;
-                        }
-                    }
-                }
+                let bCode = extractGardaCode(mUnit.branch) || normalizeBranchStr(mUnit.branch);
+                let pcts = branchUsefulMap[bCode] || { LTS: null, ST: null, SHUTTLE: null, TOTAL: null };
 
                 let ecdState = 'missing'; let ecdFormatted = 'NO ECD, UPDATE';
                 let ecdDate = new Date(dueRaw);
@@ -1138,7 +1161,7 @@
                     isOOS: mUnit.isOOS, isOpen, isCompletedKPI, isOnTimeKPI, isLateKPI, 
                     subregion: mUnit.subregion, branch: mUnit.branch, 
                     ecdState, ecdFormatted, openedDT, openedFormatted, 
-                    usefulPct: usefulPct, region: mUnit.region,
+                    usefulPct: pcts.TOTAL, usefulPctObj: pcts, region: mUnit.region,
                     possibleDuplicate: false
                 };
 
@@ -1191,19 +1214,8 @@
                         tileOwners.add(unitOwner);
                     }
 
-                    let bCode = extractGardaCode(mUnit.branch);
-                    let bNorm = normalizeBranchStr(mUnit.branch);
-                    let usefulPct = null;
-                    if (branchUsefulMap[bCode] !== undefined) usefulPct = branchUsefulMap[bCode];
-                    else if (branchUsefulMap[bNorm] !== undefined) usefulPct = branchUsefulMap[bNorm];
-                    else {
-                        let cNameOnly = mUnit.branch.replace(/\d{3}[- ]?\d{2}/g, '').replace(/[^A-Z0-9]/ig, '');
-                        for (let bKey in branchUsefulMap) {
-                            if (bKey.length > 4 && cNameOnly.includes(bKey)) {
-                                usefulPct = branchUsefulMap[bKey]; break;
-                            }
-                        }
-                    }
+                    let bCode = extractGardaCode(mUnit.branch) || normalizeBranchStr(mUnit.branch);
+                    let pcts = branchUsefulMap[bCode] || { LTS: null, ST: null, SHUTTLE: null, TOTAL: null };
 
                     let roObj = {
                         roNum: 'NO RO - ' + unit,
@@ -1227,7 +1239,8 @@
                         ecdFormatted: 'N/A',
                         openedDT: null,
                         openedFormatted: 'N/A',
-                        usefulPct: usefulPct,
+                        usefulPct: pcts.TOTAL,
+                        usefulPctObj: pcts,
                         region: mUnit.region,
                         possibleDuplicate: false
                     };
@@ -1243,7 +1256,44 @@
                     });
                     
                     allCustSet.add(custKey);
-                    if(mUnit.region) allRegionsSet.add(mUnit.region);
+                }
+            }
+
+            // Summary Hierarchy Engine Build
+            summaryTree = {};
+            for (let unit in masterUnits) {
+                let m = masterUnits[unit];
+                let reg = m.region || 'Unknown Region';
+                let sub = m.subregion || 'Unknown Subregion';
+                let bra = m.branch || 'Unknown Branch';
+
+                if (!summaryTree[reg]) summaryTree[reg] = { maxRoutes:0, totalUnits:0, oos:0, dodOos:0, subs: {} };
+                if (!summaryTree[reg].subs[sub]) summaryTree[reg].subs[sub] = { maxRoutes:0, totalUnits:0, oos:0, dodOos:0, branches: {} };
+                if (!summaryTree[reg].subs[sub].branches[bra]) {
+                    let code = extractGardaCode(bra) || normalizeBranchStr(bra);
+                    let bMetrics = branchMetricsMap[code] || { maxRoutes:0, dodOos:0 };
+                    
+                    summaryTree[reg].subs[sub].branches[bra] = { 
+                        maxRoutes: bMetrics.maxRoutes, 
+                        totalUnits: 0, 
+                        oos: 0, 
+                        dodOos: bMetrics.dodOos 
+                    };
+                    
+                    summaryTree[reg].maxRoutes += bMetrics.maxRoutes;
+                    summaryTree[reg].dodOos += bMetrics.dodOos;
+                    summaryTree[reg].subs[sub].maxRoutes += bMetrics.maxRoutes;
+                    summaryTree[reg].subs[sub].dodOos += bMetrics.dodOos;
+                }
+
+                summaryTree[reg].totalUnits++;
+                summaryTree[reg].subs[sub].totalUnits++;
+                summaryTree[reg].subs[sub].branches[bra].totalUnits++;
+
+                if (m.isOOS) {
+                    summaryTree[reg].oos++;
+                    summaryTree[reg].subs[sub].oos++;
+                    summaryTree[reg].subs[sub].branches[bra].oos++;
                 }
             }
 
@@ -1262,18 +1312,6 @@
                 });
             });
 
-            let sortedRegions = Array.from(allRegionsSet).sort();
-            let repRegionSelect = document.getElementById('report-region-select');
-            repRegionSelect.innerHTML = '<option value="">Select Region...</option>';
-            sortedRegions.forEach(r => {
-                if (r && r !== 'Unknown Region' && r !== 'Unspecified Region') {
-                    let opt = document.createElement('option');
-                    opt.value = r;
-                    opt.innerText = r;
-                    repRegionSelect.appendChild(opt);
-                }
-            });
-
             document.getElementById('upload-box').style.display = 'none';
             document.getElementById('home-dashboard').style.display = 'block';
             
@@ -1281,127 +1319,160 @@
             updateAllNoteButtons(); 
         }
 
-        let currentReportData = [];
+        // --- CONSOLIDATION SUMMARY ENGINE ---
 
-        window.generateReport = function() {
-            const region = document.getElementById('report-region-select').value;
-            const notesOnly = document.getElementById('report-notes-only').checked;
-            
-            if (!region) {
-                alert("Please select a Region to generate the report.");
-                return;
+        function getSummaryUsefulHtml(active, maxRoutes) {
+            if (maxRoutes <= 0) return `<span style="color:#888; font-weight:bold;">0%</span>`;
+            let pct = (active / maxRoutes) * 100;
+            let formatted = pct.toFixed(1) + '%';
+            if (pct < 95) return `<span style="color:var(--urgent-red); font-weight:bold;">${formatted}</span>`;
+            if (pct >= 95 && pct < 100) return `<span style="color:#854d0e; background:#fef08a; padding:2px 4px; border-radius:4px; font-weight:800;">${formatted}</span>`;
+            if (pct === 100) return `<span style="color:#065f46; background:#bbf7d0; padding:2px 4px; border-radius:4px; font-weight:800;">${formatted}</span>`;
+            return `<span style="color:var(--low-green); font-weight:bold;">${formatted}</span>`;
+        }
+
+        function getDoDChangeHtml(currentOos, dodOos) {
+            let diff = currentOos - dodOos;
+            if (diff > 0) return `<span style="color:var(--urgent-red); font-weight:bold;">+${diff}</span>`;
+            if (diff < 0) return `<span style="color:var(--low-green); font-weight:bold;">${diff}</span>`;
+            return `<span style="color:#888; font-weight:bold;">0</span>`;
+        }
+
+        window.toggleSummary = function(id) { 
+            expandedSummaryState[id] = !expandedSummaryState[id]; 
+            renderSummary(); 
+        }
+        
+        window.toggleAllSummary = function(expand) { 
+            Object.keys(expandedSummaryState).forEach(k => expandedSummaryState[k] = expand); 
+            // Also initialize everything if expanding for first time
+            if (expand) {
+                for (let reg in summaryTree) {
+                    expandedSummaryState[reg] = true;
+                    for (let sub in summaryTree[reg].subs) {
+                        expandedSummaryState[reg+'|'+sub] = true;
+                    }
+                }
             }
+            renderSummary(); 
+        }
 
-            let baseData = processedData.filter(ro => ro.isOpen && ro.region === region);
-            currentReportData = [];
-
-            const tbody = document.getElementById('report-table-body');
+        function renderSummary() {
             let html = '';
-
-            baseData.forEach(ro => {
-                let safeRo = ro.roNum.replace(/[.#$\[\]]/g, '_');
-                let note = globalRoNotesState[safeRo] || '';
-                let hasNote = note.trim() !== '';
-
-                if (notesOnly && !hasNote) return;
-
-                currentReportData.push(ro);
-
-                let oosBadge = ro.isOOS ? '<span class="badge badge-oos">OOS</span>' : '<span class="badge badge-active">ACTIVE</span>';
-                html += `<tr>
-                    <td>${ro.region}</td>
-                    <td>${ro.subregion}</td>
-                    <td>${ro.branch}</td>
-                    <td><strong>${ro.unitNo}</strong></td>
-                    <td>${oosBadge}</td>
-                    <td>${ro.ecdFormatted}</td>
-                    <td style="white-space: pre-wrap;">${note}</td>
+            for (let reg of Object.keys(summaryTree).sort()) {
+                let rData = summaryTree[reg];
+                let rActive = Math.max(0, rData.totalUnits - rData.oos);
+                let rIcon = expandedSummaryState[reg] ? '▼' : '▶';
+                
+                html += `<tr style="background:#f1f5f9; cursor:pointer;" onclick="toggleSummary('${reg}')">
+                    <td style="font-weight:800; color:#334155;"><span style="color:#94a3b8; width:15px; display:inline-block;">${rIcon}</span> ${reg}</td>
+                    <td style="text-align:right; font-weight:700;">${rData.maxRoutes}</td>
+                    <td style="text-align:right; font-weight:700;">${rData.totalUnits}</td>
+                    <td style="text-align:right; font-weight:800; font-size:14px;">${rData.oos}</td>
+                    <td style="text-align:right;">${getSummaryUsefulHtml(rActive, rData.maxRoutes)}</td>
+                    <td style="text-align:right; color:#64748b;">${rData.dodOos}</td>
+                    <td style="text-align:right;">${getDoDChangeHtml(rData.oos, rData.dodOos)}</td>
                 </tr>`;
-            });
 
-            if (currentReportData.length === 0) {
-                html = '<tr><td colspan="7" style="text-align: center; padding: 20px;">No matching orders found.</td></tr>';
+                if (expandedSummaryState[reg]) {
+                    for (let sub of Object.keys(rData.subs).sort()) {
+                        let sData = rData.subs[sub];
+                        let sActive = Math.max(0, sData.totalUnits - sData.oos);
+                        let subId = reg + '|' + sub;
+                        let sIcon = expandedSummaryState[subId] ? '▼' : '▶';
+                        
+                        html += `<tr style="background:#f8fafc; cursor:pointer;" onclick="toggleSummary('${subId}')">
+                            <td style="padding-left:30px; font-weight:700; color:#475569;"><span style="color:#cbd5e1; width:15px; display:inline-block;">${sIcon}</span> ${sub}</td>
+                            <td style="text-align:right; font-weight:600;">${sData.maxRoutes}</td>
+                            <td style="text-align:right; font-weight:600;">${sData.totalUnits}</td>
+                            <td style="text-align:right; font-weight:800; font-size:13px;">${sData.oos}</td>
+                            <td style="text-align:right;">${getSummaryUsefulHtml(sActive, sData.maxRoutes)}</td>
+                            <td style="text-align:right; color:#64748b;">${sData.dodOos}</td>
+                            <td style="text-align:right;">${getDoDChangeHtml(sData.oos, sData.dodOos)}</td>
+                        </tr>`;
+
+                        if (expandedSummaryState[subId]) {
+                            for (let bra of Object.keys(sData.branches).sort()) {
+                                let bData = sData.branches[bra];
+                                let bActive = Math.max(0, bData.totalUnits - bData.oos);
+                                
+                                html += `<tr style="background:#ffffff;">
+                                    <td style="padding-left:55px; font-weight:600; color:#64748b;">${bra}</td>
+                                    <td style="text-align:right; color:#475569;">${bData.maxRoutes}</td>
+                                    <td style="text-align:right; color:#475569;">${bData.totalUnits}</td>
+                                    <td style="text-align:right; font-weight:800; color:#334155;">${bData.oos}</td>
+                                    <td style="text-align:right;">${getSummaryUsefulHtml(bActive, bData.maxRoutes)}</td>
+                                    <td style="text-align:right; color:#94a3b8;">${bData.dodOos}</td>
+                                    <td style="text-align:right;">${getDoDChangeHtml(bData.oos, bData.dodOos)}</td>
+                                </tr>`;
+                            }
+                        }
+                    }
+                }
             }
-
-            tbody.innerHTML = html;
-            document.getElementById('report-table-container').style.display = 'block';
-            document.getElementById('btn-email-report').style.display = currentReportData.length > 0 ? 'inline-block' : 'none';
+            document.getElementById('summary-table-body').innerHTML = html || '<tr><td colspan="7" style="text-align:center; padding: 20px;">No data available</td></tr>';
         }
 
-        let reportSortCol = -1, reportSortAsc = true;
-        window.sortReport = function(idx, type) {
-            const tbody = document.getElementById("report-table-body");
-            const rows = Array.from(tbody.rows);
-            if(rows.length <= 1 || rows[0].cells.length === 1) return; 
-            
-            reportSortAsc = (reportSortCol === idx) ? !reportSortAsc : true;
-            reportSortCol = idx;
-
-            rows.sort((a, b) => {
-                let va = a.cells[idx].innerText.trim(), vb = b.cells[idx].innerText.trim();
-                if (type === 'number') {
-                    va = parseFloat(va) || 0; vb = parseFloat(vb) || 0;
-                    return reportSortAsc ? va - vb : vb - va;
-                }
-                return reportSortAsc ? va.localeCompare(vb) : vb.localeCompare(va);
-            });
-            rows.forEach(r => tbody.appendChild(r));
-        }
-
-        window.emailReport = function() {
-            if (currentReportData.length === 0) return;
-
-            const region = document.getElementById('report-region-select').value;
-            let subject = encodeURIComponent(`Open RO Report - ${region}`);
-            
-            let bodyText = `Report for Region: ${region}\n\n`;
-            bodyText += `Sub Region\tBranch\tTruck #\tOOS Status\tECD\tNotes\n`;
-            bodyText += `--------------------------------------------------------------------------------\n`;
-
-            const tbody = document.getElementById("report-table-body");
-            const rows = Array.from(tbody.rows);
-            
-            rows.forEach(row => {
-                if(row.cells.length > 1) {
-                    let subRegion = row.cells[1].innerText.trim();
-                    let branch = row.cells[2].innerText.trim();
-                    let unitNo = row.cells[3].innerText.trim();
-                    let oosStatus = row.cells[4].innerText.trim();
-                    let ecd = row.cells[5].innerText.trim();
-                    let note = row.cells[6].innerText.trim().replace(/\n/g, ' / ') || 'N/A';
-                    
-                    bodyText += `${subRegion}\t${branch}\t${unitNo}\t${oosStatus}\t${ecd}\t${note}\n`;
-                }
-            });
-
-            let encodedBody = encodeURIComponent(bodyText);
-            
-            if (encodedBody.length > 1800) {
-                let clipboardText = bodyText;
-                navigator.clipboard.writeText(clipboardText).then(() => {
-                    alert("The report is too long for an automatic email draft, so the data has been copied to your clipboard!\n\nYou can now Paste (Ctrl+V) it directly into a new email.");
-                    window.location.href = `mailto:?subject=${subject}`;
-                }).catch(err => {
-                    alert("Report too large to email directly and clipboard access failed.");
+        window.exportSummaryToExcel = function() {
+            let rows = [];
+            for (let reg of Object.keys(summaryTree).sort()) {
+                let rData = summaryTree[reg];
+                let rActive = Math.max(0, rData.totalUnits - rData.oos);
+                let rPct = rData.maxRoutes > 0 ? (rActive / rData.maxRoutes) : 0;
+                
+                rows.push({
+                    "Level": "Region", "Name": reg, "Max Routes": rData.maxRoutes, 
+                    "Total Units": rData.totalUnits, "OOS": rData.oos, 
+                    "Useful %": rData.maxRoutes > 0 ? Math.round(rPct * 100) + '%' : '0%', 
+                    "DoD OOS": rData.dodOos, 
+                    "DoD Change": rData.oos - rData.dodOos
                 });
-            } else {
-                window.location.href = `mailto:?subject=${subject}&body=${encodedBody}`;
+                
+                for (let sub of Object.keys(rData.subs).sort()) {
+                    let sData = rData.subs[sub];
+                    let sActive = Math.max(0, sData.totalUnits - sData.oos);
+                    let sPct = sData.maxRoutes > 0 ? (sActive / sData.maxRoutes) : 0;
+                    
+                    rows.push({
+                        "Level": "Sub Region", "Name": sub, "Max Routes": sData.maxRoutes, 
+                        "Total Units": sData.totalUnits, "OOS": sData.oos, 
+                        "Useful %": sData.maxRoutes > 0 ? Math.round(sPct * 100) + '%' : '0%', 
+                        "DoD OOS": sData.dodOos, 
+                        "DoD Change": sData.oos - sData.dodOos
+                    });
+                    
+                    for (let bra of Object.keys(sData.branches).sort()) {
+                        let bData = sData.branches[bra];
+                        let bActive = Math.max(0, bData.totalUnits - bData.oos);
+                        let bPct = bData.maxRoutes > 0 ? (bActive / bData.maxRoutes) : 0;
+                        
+                        rows.push({
+                            "Level": "Branch", "Name": bra, "Max Routes": bData.maxRoutes, 
+                            "Total Units": bData.totalUnits, "OOS": bData.oos, 
+                            "Useful %": bData.maxRoutes > 0 ? Math.round(bPct * 100) + '%' : '0%', 
+                            "DoD OOS": bData.dodOos, 
+                            "DoD Change": bData.oos - bData.dodOos
+                        });
+                    }
+                }
             }
+            const worksheet = XLSX.utils.json_to_sheet(rows);
+            const workbook = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(workbook, worksheet, "Consolidation Summary");
+            XLSX.writeFile(workbook, "VDR_Consolidation_Summary.xlsx");
         }
 
-        function getUsefulBadge(usefulArray) {
-            let valid = usefulArray.filter(v => v !== null && v !== undefined && !isNaN(v));
-            if (valid.length === 0) return '';
-            let avg = valid.reduce((a,b) => a+b, 0) / valid.length;
-            let val = Math.round(avg * 100);
-            let bg = '#00ff00'; // bright green default
+        function formatUsefulBadge(label, val) {
+            if(val === null || val === undefined || isNaN(val) || val === '') return '';
+            let pct = Math.round(val * 100);
+            let bg = '#90ee90'; 
             let tc = 'black';
             
-            if (val < 95) { bg = '#d9534f'; tc = 'white'; } 
-            else if (val >= 95 && val < 100) { bg = '#FFC600'; tc = 'black'; } 
-            else if (val === 100) { bg = '#90ee90'; tc = 'black'; } // light green
+            if (pct < 95) { bg = '#d9534f'; tc = 'white'; } 
+            else if (pct >= 95 && pct < 100) { bg = '#FFC600'; tc = 'black'; } 
+            else if (pct === 100) { bg = '#bbf7d0'; tc = 'black'; } 
 
-            return `<span class="badge" style="background-color: ${bg}; color: ${tc}; margin-left: 10px; font-size: 11px;">Useful: ${val}%</span>`;
+            return `<span class="badge" style="background-color: ${bg}; color: ${tc}; margin-right: 20px; font-size: 11px;">${label}: ${pct}%</span>`;
         }
 
         function generateTileHTML(name, dataSet, chartId = null, isPM = false) {
@@ -1560,28 +1631,6 @@
         function generateRoDrilldownHtml(ownerDataAll, isPM) {
             let baseOpenData = ownerDataAll.filter(ro => ro.isOpen);
 
-            let branchUsefulVals = {};
-            let subUsefulMap = {};
-            let topUsefulMap = {};
-
-            baseOpenData.forEach(ro => {
-                if (ro.usefulPct !== null && ro.usefulPct !== undefined) {
-                    let branchKey = ro.drillTopLevel + '|||' + ro.subregion + '|||' + ro.branch;
-                    let subKey = ro.drillTopLevel + '|||' + ro.subregion;
-                    let topKey = ro.drillTopLevel;
-
-                    if (branchUsefulVals[branchKey] === undefined) {
-                        branchUsefulVals[branchKey] = ro.usefulPct;
-                        
-                        if (!subUsefulMap[subKey]) subUsefulMap[subKey] = [];
-                        subUsefulMap[subKey].push(ro.usefulPct);
-                        
-                        if (!topUsefulMap[topKey]) topUsefulMap[topKey] = [];
-                        topUsefulMap[topKey].push(ro.usefulPct);
-                    }
-                }
-            });
-
             // Apply Filters
             let targetData = baseOpenData;
             
@@ -1605,18 +1654,23 @@
             
             let htmlStr = '';
             for(let topLvl in hierarchy) {
-                let topBadges = getUsefulBadge(topUsefulMap[topLvl] || []);
                 let subHtml = '';
                 for(let sub in hierarchy[topLvl]) {
                     let subKey = topLvl + '|||' + sub;
-                    let subBadges = getUsefulBadge(subUsefulMap[subKey] || []);
                     let branchHtml = '';
                     for(let branch in hierarchy[topLvl][sub]) {
-                        let branchKey = subKey + '|||' + branch;
                         let branchROs = hierarchy[topLvl][sub][branch];
                         
-                        let bPct = branchUsefulVals[branchKey];
-                        let branchBadge = getUsefulBadge(bPct !== undefined && bPct !== null ? [bPct] : []);
+                        let badgesHtml = '';
+                        if (branchROs.length > 0) {
+                            let ro = branchROs[0]; // grab useful pct from the first RO object
+                            let u = ro.usefulPctObj;
+                            if (u) {
+                                if (u.LTS !== null) badgesHtml += formatUsefulBadge('LTS Useful', u.LTS);
+                                if (u.ST !== null) badgesHtml += formatUsefulBadge('ST Useful', u.ST);
+                                if (u.SHUTTLE !== null) badgesHtml += formatUsefulBadge('Shuttle Useful', u.SHUTTLE);
+                            }
+                        }
 
                         let unitsMap = {};
                         branchROs.forEach(ro => {
@@ -1632,6 +1686,7 @@
                                     dupFlags: [],
                                     isOOS: ro.isOOS,
                                     usefulPct: ro.usefulPct,
+                                    usefulPctObj: ro.usefulPctObj,
                                     custKey: ro.custKey
                                 };
                             }
@@ -1662,16 +1717,13 @@
                             return (b.isOOS === true ? 1 : 0) - (a.isOOS === true ? 1 : 0);
                         });
                         
-                        let isBranchDedicated = branchROs.some(ro => ro.isDedicated);
-                        let dedicatedBadge = isBranchDedicated ? `<span style="background-color: white; color: black; border: 1px solid black; border-radius: 12px; padding: 2px 6px; margin-left: 5px; font-size: 10px; font-weight: bold;">(DEDICATED)</span>` : '';
-
-                        branchHtml += `<details class="ro-detail-node"><summary><div style="flex-grow:1; display:flex; align-items:center;">${branch} (${branchROs.length} ROs) ${dedicatedBadge}</div><div>${branchBadge}</div></summary>`;
+                        branchHtml += `<details class="ro-detail-node"><summary><div style="flex-grow:1; display:flex; align-items:center;">${branch} (${branchROs.length} ROs)</div><div>${badgesHtml}</div></summary>`;
                         let tableHTML = `<div class="table-wrapper"><table><colgroup><col style="width:23%;"><col style="width:11%;">${isPM ? '' : '<col style="width:11%;">'}<col style="width:9%;"><col style="width:11%;"><col style="width:21%;"><col style="width:14%;"></colgroup><thead><tr><th>AFS RO # & Dispatch</th><th>Unit No</th>${isPM ? '' : '<th>Priority Status</th>'}<th>OOS Status</th><th>Opened Date</th><th>Status</th><th>ECD</th></tr></thead><tbody>`;
                         
                         groupedUnits.forEach(u => {
                             let oosBadge = u.isOOS ? `<span class="badge badge-oos">OOS</span>` : `<span class="badge badge-active">ACTIVE</span>`;
                             
-                            let isPri = (u.isOOS && isPriority({isOOS: u.isOOS, usefulPct: u.usefulPct}));
+                            let isPri = (u.isOOS && isPriority({isOOS: u.isOOS, usefulPct: u.usefulPctObj, unitType: u.unitType}));
                             let priorityStatusBadge = isPri ? `<span class="badge badge-urgent">Priority</span>` : `<span class="badge badge-low">Normal</span>`;
 
                             let rowCount = u.roNums.length;
@@ -1716,9 +1768,9 @@
                         tableHTML += `</tbody></table></div>`; 
                         branchHtml += tableHTML + `</details>`;
                     }
-                    subHtml += `<details class="ro-detail-node"><summary><div style="flex-grow:1; display:flex; align-items:center;">${sub}</div><div>${subBadges}</div></summary>${branchHtml}</details>`;
+                    subHtml += `<details class="ro-detail-node"><summary><div style="flex-grow:1; display:flex; align-items:center;">${sub}</div></summary>${branchHtml}</details>`;
                 }
-                htmlStr += `<details class="ro-detail-node"><summary><div style="flex-grow:1; display:flex; align-items:center;">${topLvl}</div><div>${topBadges}</div></summary>${subHtml}</details>`;
+                htmlStr += `<details class="ro-detail-node"><summary><div style="flex-grow:1; display:flex; align-items:center;">${topLvl}</div></summary>${subHtml}</details>`;
             }
             return htmlStr;
         }
@@ -1792,6 +1844,7 @@
                                 owners: [],
                                 isOOS: ro.isOOS,
                                 usefulPct: ro.usefulPct,
+                                usefulPctObj: ro.usefulPctObj,
                                 custKey: ro.custKey
                             };
                         }
@@ -1820,7 +1873,7 @@
 
                     Object.values(searchUnitsMap).forEach(u => {
                         let oosBadge = u.isOOS ? `<span class="badge badge-oos">OOS</span>` : `<span class="badge badge-active">ACTIVE</span>`;
-                        let isPri = (u.isOOS && isPriority({isOOS: u.isOOS, usefulPct: u.usefulPct}));
+                        let isPri = (u.isOOS && isPriority({isOOS: u.isOOS, usefulPct: u.usefulPctObj, unitType: u.unitType}));
                         let priorityStatusBadge = isPri ? `<span class="badge badge-urgent">Priority</span>` : `<span class="badge badge-low">Normal</span>`;
 
                         let joinedOwnersHtml = [...new Set(u.owners)].map(ow => `<div class="grouped-ro-item">${ow}</div>`).join('');
@@ -1888,7 +1941,7 @@
             else if (viewId === 'vended-view') renderKPITiles(vendedOwners, 'vended-kpi-container', 'vended-view');
             else if (viewId === 'ers-view') renderKPITiles(ersOwners, 'ers-kpi-container', 'ers-view');
             else if (viewId === 'home-view') renderHomeDashboard();
-            else if (viewId === 'reports-view') { /* nothing specific to refresh on load */ }
+            else if (viewId === 'summary-view') renderSummary();
         }
     </script>
 </body>
