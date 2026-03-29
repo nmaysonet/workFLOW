@@ -405,7 +405,7 @@
                 <select id="sum-branch" class="filter-select" style="margin-right: 15px;" onchange="updateSummaryFilters()"><option value="ALL">All Branches</option></select>
                 
                 <label style="margin-right: 15px; font-weight: bold; font-size: 13px; display: flex; align-items: center; gap: 5px; cursor: pointer;">
-                    <input type="checkbox" id="sum-notes-only" style="cursor: pointer;" onchange="updateSummaryFilters()"> Has Notes Only
+                    <input type="checkbox" id="report-notes-only" style="cursor: pointer;" onchange="updateSummaryFilters()"> Has Notes Only
                 </label>
             </div>
 
@@ -1024,6 +1024,23 @@
             bSel.value = branches.has(bVal) ? bVal : 'ALL';
         }
 
+        // --- EXPORT HELPERS WITH AUTO-FIT ---
+        function autoFitColumns(ws, data) {
+            if (!data || data.length === 0) return;
+            const keys = Object.keys(data[0]);
+            ws['!cols'] = keys.map(key => {
+                let maxLen = key.length;
+                data.forEach(row => {
+                    if (row[key] !== null && row[key] !== undefined) {
+                        const valStr = String(row[key]);
+                        maxLen = Math.max(maxLen, Math.min(valStr.length, 60)); // Cap width at 60 chars
+                    }
+                });
+                return { wch: maxLen + 2 };
+            });
+            ws['!autofilter'] = { ref: XLSX.utils.encode_range(XLSX.utils.decode_range(ws['!ref'])) };
+        }
+
         function exportDrilldownToExcel() {
             if (!currentOwnerView || processedData.length === 0) return;
             
@@ -1085,6 +1102,8 @@
             });
 
             const worksheet = XLSX.utils.json_to_sheet(excelRows);
+            autoFitColumns(worksheet, excelRows);
+            
             const workbook = XLSX.utils.book_new();
             XLSX.utils.book_append_sheet(workbook, worksheet, "Filtered ROs");
             XLSX.writeFile(workbook, `workflow_export_${String(currentOwnerView).replace(/\s+/g, '_')}_${currentFilter.toLowerCase()}.xlsx`);
@@ -1112,9 +1131,94 @@
             });
             
             const worksheet = XLSX.utils.json_to_sheet(excelRows);
+            autoFitColumns(worksheet, excelRows);
+
             const workbook = XLSX.utils.book_new();
             XLSX.utils.book_append_sheet(workbook, worksheet, "Search Results");
             XLSX.writeFile(workbook, `workflow_search_${searchTerm}.xlsx`);
+        }
+
+        window.exportSummaryToExcel = function() {
+            let rVal = document.getElementById('sum-region').value;
+            let sVal = document.getElementById('sum-subregion').value;
+            let bVal = document.getElementById('sum-branch').value;
+
+            // Tab 1: Consolidation Summary
+            let sumRows = [];
+            for (let reg of Object.keys(summaryTree).sort()) {
+                if (rVal !== 'ALL' && reg !== rVal) continue;
+
+                let rData = summaryTree[reg];
+                let rActive = Math.max(0, rData.totalUnits - rData.oos);
+                let rPct = rData.maxRoutes > 0 ? (rActive / rData.maxRoutes) : 0;
+                
+                sumRows.push({
+                    "Level": "Region", "Name": reg, "Max Routes": rData.maxRoutes, 
+                    "Total Units": rData.totalUnits, "OOS": rData.oos, 
+                    "Useful %": rData.maxRoutes > 0 ? Math.round(rPct * 100) + '%' : '0%', 
+                    "DoD OOS": rData.dodOos, 
+                    "DoD Change": rData.oos - rData.dodOos
+                });
+                
+                for (let sub of Object.keys(rData.subs).sort()) {
+                    if (sVal !== 'ALL' && sub !== sVal) continue;
+
+                    let sData = rData.subs[sub];
+                    let sActive = Math.max(0, sData.totalUnits - sData.oos);
+                    let sPct = sData.maxRoutes > 0 ? (sActive / sData.maxRoutes) : 0;
+                    
+                    sumRows.push({
+                        "Level": "Sub Region", "Name": sub, "Max Routes": sData.maxRoutes, 
+                        "Total Units": sData.totalUnits, "OOS": sData.oos, 
+                        "Useful %": sData.maxRoutes > 0 ? Math.round(sPct * 100) + '%' : '0%', 
+                        "DoD OOS": sData.dodOos, 
+                        "DoD Change": sData.oos - sData.dodOos
+                    });
+                    
+                    for (let bra of Object.keys(sData.branches).sort()) {
+                        if (bVal !== 'ALL' && bra !== bVal) continue;
+
+                        let bData = sData.branches[bra];
+                        let bActive = Math.max(0, bData.totalUnits - bData.oos);
+                        let bPct = bData.maxRoutes > 0 ? (bActive / bData.maxRoutes) : 0;
+                        
+                        sumRows.push({
+                            "Level": "Branch", "Name": bra, "Max Routes": bData.maxRoutes, 
+                            "Total Units": bData.totalUnits, "OOS": bData.oos, 
+                            "Useful %": bData.maxRoutes > 0 ? Math.round(bPct * 100) + '%' : '0%', 
+                            "DoD OOS": bData.dodOos, 
+                            "DoD Change": bData.oos - bData.dodOos
+                        });
+                    }
+                }
+            }
+            
+            const wsConsolidation = XLSX.utils.json_to_sheet(sumRows);
+            autoFitColumns(wsConsolidation, sumRows);
+
+            // Tab 2: Amerit OOS Units
+            let oosRows = [];
+            const tbody = document.getElementById("amerit-oos-table-body");
+            Array.from(tbody.rows).forEach(row => {
+                if (row.cells.length > 1) {
+                    oosRows.push({
+                        "Region": row.cells[0].innerText.trim(),
+                        "Sub Region": row.cells[1].innerText.trim(),
+                        "Branch": row.cells[2].innerText.trim(),
+                        "Truck #": row.cells[3].innerText.trim(),
+                        "Max ECD": row.cells[4].innerText.trim(),
+                        "Notes": row.cells[5].innerText.trim()
+                    });
+                }
+            });
+            
+            const wsAmerit = XLSX.utils.json_to_sheet(oosRows);
+            autoFitColumns(wsAmerit, oosRows);
+
+            const workbook = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(workbook, wsConsolidation, "Consolidation Summary");
+            XLSX.utils.book_append_sheet(workbook, wsAmerit, "Amerit OOS Units");
+            XLSX.writeFile(workbook, "VDR_Consolidation_Summary.xlsx");
         }
 
         function setFilter(val) {
@@ -1298,34 +1402,21 @@
 
                 allCustSet.add(custKey);
 
-                let kpiOwners = new Set();
-                let drilldownOwners = new Set();
-                
+                let tileOwners = new Set();
                 let unitOwner = mUnit.owner;
-                let validBranchOwner = (unitOwner && unitOwner.toUpperCase() !== 'UNASSIGNED') ? unitOwner : null;
 
-                let creatorInfo = resourceMap[ownerEmail];
-                let isCreatorSpecial = false;
-
-                if (creatorInfo && (creatorInfo.team === 'ERS' || creatorInfo.team === 'PM')) {
-                    isCreatorSpecial = true;
-                    if (creatorInfo.name) {
-                        kpiOwners.add(creatorInfo.name);
-                        drilldownOwners.add(creatorInfo.name);
-                    }
-                } else if (ownerEmail === 'kanguzza@ameritfleet.com') {
-                    isCreatorSpecial = true;
-                    kpiOwners.add('Kevin Anguzza');
-                    drilldownOwners.add('Kevin Anguzza');
+                if (unitOwner && unitOwner.toUpperCase() !== 'UNASSIGNED') {
+                    tileOwners.add(unitOwner);
                 }
 
-                if (isCreatorSpecial) {
-                    if (validBranchOwner) drilldownOwners.add(validBranchOwner);
-                } else {
-                    if (validBranchOwner) {
-                        kpiOwners.add(validBranchOwner);
-                        drilldownOwners.add(validBranchOwner);
+                let creatorInfo = resourceMap[ownerEmail];
+                if (creatorInfo) {
+                    let t = creatorInfo.team;
+                    if (t === 'ERS' || t === 'PM' || (t === 'VENDED REPAIR' && !creatorInfo.hasBranch)) {
+                        if (creatorInfo.name) tileOwners.add(creatorInfo.name);
                     }
+                } else if (ownerEmail === 'kanguzza@ameritfleet.com') {
+                    tileOwners.add('Kevin Anguzza');
                 }
 
                 let bCode = extractGardaCode(mUnit.branch) || normalizeBranchStr(mUnit.branch);
@@ -1356,10 +1447,8 @@
                 
                 let roObj = {
                     roNum, customer: mUnit.branch, custKey, drillTopLevel, 
-                    owner: Array.from(drilldownOwners).join(', '), 
-                    kpiOwners: Array.from(kpiOwners),
-                    drilldownOwners: Array.from(drilldownOwners),
-                    tileOwners: Array.from(drilldownOwners), 
+                    owner: Array.from(tileOwners).join(', '), 
+                    tileOwners: Array.from(tileOwners),
                     unitNo: unit, unitType: mUnit.type, status: statusStr, vmrs, 
                     isOOS: mUnit.isOOS, isOpen, isCompletedKPI, isOnTimeKPI, isLateKPI, 
                     subregion: mUnit.subregion, branch: mUnit.branch, 
@@ -1369,7 +1458,7 @@
                 };
 
                 if (isOpen) {
-                    roObj.kpiOwners.forEach(o => {
+                    roObj.tileOwners.forEach(o => {
                         let t = ownerNameToTeam[o] || 'VENDED REPAIR';
                         if (o === 'Kevin Anguzza') t = 'PM';
                         if (t === 'PM') activePM.add(o);
@@ -1409,12 +1498,10 @@
                     let custKey = getCustKey(mUnit.branch);
                     let drillTopLevel = custKey + (mUnit.region !== '' && mUnit.region !== 'Unknown Region' ? ' ' + mUnit.region : '');
 
-                    let kpiOwners = new Set();
-                    let drilldownOwners = new Set();
+                    let tileOwners = new Set();
                     let unitOwner = mUnit.owner;
                     if (unitOwner && unitOwner.toUpperCase() !== 'UNASSIGNED') {
-                        kpiOwners.add(unitOwner);
-                        drilldownOwners.add(unitOwner);
+                        tileOwners.add(unitOwner);
                     }
 
                     let bCode = extractGardaCode(mUnit.branch) || normalizeBranchStr(mUnit.branch);
@@ -1425,10 +1512,8 @@
                         customer: mUnit.branch,
                         custKey: custKey,
                         drillTopLevel: drillTopLevel,
-                        owner: Array.from(drilldownOwners).join(', '),
-                        kpiOwners: Array.from(kpiOwners),
-                        drilldownOwners: Array.from(drilldownOwners),
-                        tileOwners: Array.from(drilldownOwners),
+                        owner: Array.from(tileOwners).join(', '),
+                        tileOwners: Array.from(tileOwners),
                         unitNo: unit,
                         unitType: mUnit.type,
                         status: 'NO ACTIVE RO',
@@ -1453,7 +1538,7 @@
 
                     processedData.push(roObj);
 
-                    roObj.kpiOwners.forEach(o => {
+                    roObj.tileOwners.forEach(o => {
                         let t = ownerNameToTeam[o] || 'VENDED REPAIR';
                         if (o === 'Kevin Anguzza') t = 'PM';
                         if (t === 'PM') activePM.add(o);
@@ -1526,12 +1611,11 @@
             updateAllNoteButtons(); 
         }
 
-        // --- AMERIT OOS ENGINE ---
         function renderAmeritOos() {
             let rVal = document.getElementById('sum-region').value;
             let sVal = document.getElementById('sum-subregion').value;
             let bVal = document.getElementById('sum-branch').value;
-            let notesOnly = document.getElementById('sum-notes-only').checked;
+            let notesOnly = document.getElementById('report-notes-only').checked;
 
             let unitRoGroups = {};
             processedData.forEach(ro => {
@@ -1542,6 +1626,9 @@
             let tbody = document.getElementById('amerit-oos-table-body');
             let html = '';
             let hasRecords = false;
+
+            let today = new Date();
+            let todayDay = new Date(today.getFullYear(), today.getMonth(), today.getDate());
 
             for (let unit in masterUnits) {
                 let mUnit = masterUnits[unit];
@@ -1583,12 +1670,25 @@
                     let notesHtml = notes.join(' <br><hr style="border-top:1px dashed #ccc; margin:4px 0;"> ');
                     if (!notesHtml) notesHtml = '<i style="color:#aaa;">No Notes</i>';
 
+                    let ecdBadgeHtml = `<span class="badge-ecd-missing">N/A</span>`;
+                    if (maxEcdFormatted !== 'N/A' && maxEcdFormatted !== 'NO ECD, UPDATE') {
+                        let maxDate = new Date(maxEcdMs);
+                        let maxDay = new Date(maxDate.getFullYear(), maxDate.getMonth(), maxDate.getDate());
+                        if (maxDay < todayDay) {
+                            ecdBadgeHtml = `<span class="ecd-red">${maxEcdFormatted}</span>`;
+                        } else {
+                            ecdBadgeHtml = `<span class="ecd-green">${maxEcdFormatted}</span>`;
+                        }
+                    } else if (maxEcdFormatted === 'NO ECD, UPDATE') {
+                        ecdBadgeHtml = `<span class="badge-ecd-missing">NO ECD, UPDATE</span>`;
+                    }
+
                     html += `<tr>
                         <td>${mUnit.region || 'Unknown'}</td>
                         <td>${mUnit.subregion || 'Unknown'}</td>
                         <td>${mUnit.branch || 'Unknown'}</td>
                         <td><strong>${unit}</strong></td>
-                        <td>${maxEcdFormatted}</td>
+                        <td>${ecdBadgeHtml}</td>
                         <td style="white-space: pre-wrap; font-size:12px;">${notesHtml}</td>
                     </tr>`;
                     hasRecords = true;
@@ -1622,8 +1722,6 @@
             });
             rows.forEach(r => tbody.appendChild(r));
         }
-
-        // --- CONSOLIDATION SUMMARY ENGINE ---
 
         function getSummaryUsefulHtml(active, maxRoutes) {
             if (maxRoutes <= 0) return `<span style="color:#888; font-weight:bold;">0%</span>`;
@@ -1726,86 +1824,47 @@
             document.getElementById('summary-table-body').innerHTML = html || '<tr><td colspan="7" style="text-align:center; padding: 20px;">No data available</td></tr>';
         }
 
-        window.exportSummaryToExcel = function() {
-            let rVal = document.getElementById('sum-region').value;
-            let sVal = document.getElementById('sum-subregion').value;
-            let bVal = document.getElementById('sum-branch').value;
+        window.emailReport = function() {
+            const region = document.getElementById('report-region-select').value;
+            let subject = encodeURIComponent(`Open RO Report - ${region}`);
+            let bodyText = `Report for Region: ${region}\n\n`;
+            bodyText += `Sub Region\tBranch\tTruck #\tMax ECD\tNotes\n`;
+            bodyText += `--------------------------------------------------------------------------------\n`;
 
-            // Tab 1: Consolidation Summary
-            let sumRows = [];
-            for (let reg of Object.keys(summaryTree).sort()) {
-                if (rVal !== 'ALL' && reg !== rVal) continue;
-
-                let rData = summaryTree[reg];
-                let rActive = Math.max(0, rData.totalUnits - rData.oos);
-                let rPct = rData.maxRoutes > 0 ? (rActive / rData.maxRoutes) : 0;
-                
-                sumRows.push({
-                    "Level": "Region", "Name": reg, "Max Routes": rData.maxRoutes, 
-                    "Total Units": rData.totalUnits, "OOS": rData.oos, 
-                    "Useful %": rData.maxRoutes > 0 ? Math.round(rPct * 100) + '%' : '0%', 
-                    "DoD OOS": rData.dodOos, 
-                    "DoD Change": rData.oos - rData.dodOos
-                });
-                
-                for (let sub of Object.keys(rData.subs).sort()) {
-                    if (sVal !== 'ALL' && sub !== sVal) continue;
-
-                    let sData = rData.subs[sub];
-                    let sActive = Math.max(0, sData.totalUnits - sData.oos);
-                    let sPct = sData.maxRoutes > 0 ? (sActive / sData.maxRoutes) : 0;
-                    
-                    sumRows.push({
-                        "Level": "Sub Region", "Name": sub, "Max Routes": sData.maxRoutes, 
-                        "Total Units": sData.totalUnits, "OOS": sData.oos, 
-                        "Useful %": sData.maxRoutes > 0 ? Math.round(sPct * 100) + '%' : '0%', 
-                        "DoD OOS": sData.dodOos, 
-                        "DoD Change": sData.oos - sData.dodOos
-                    });
-                    
-                    for (let bra of Object.keys(sData.branches).sort()) {
-                        if (bVal !== 'ALL' && bra !== bVal) continue;
-
-                        let bData = sData.branches[bra];
-                        let bActive = Math.max(0, bData.totalUnits - bData.oos);
-                        let bPct = bData.maxRoutes > 0 ? (bActive / bData.maxRoutes) : 0;
-                        
-                        sumRows.push({
-                            "Level": "Branch", "Name": bra, "Max Routes": bData.maxRoutes, 
-                            "Total Units": bData.totalUnits, "OOS": bData.oos, 
-                            "Useful %": bData.maxRoutes > 0 ? Math.round(bPct * 100) + '%' : '0%', 
-                            "DoD OOS": bData.dodOos, 
-                            "DoD Change": bData.oos - bData.dodOos
-                        });
-                    }
-                }
-            }
-            const wsConsolidation = XLSX.utils.json_to_sheet(sumRows);
-
-            // Tab 2: Amerit OOS Units
-            let oosRows = [];
             const tbody = document.getElementById("amerit-oos-table-body");
-            Array.from(tbody.rows).forEach(row => {
-                if (row.cells.length > 1) {
-                    oosRows.push({
-                        "Region": row.cells[0].innerText.trim(),
-                        "Sub Region": row.cells[1].innerText.trim(),
-                        "Branch": row.cells[2].innerText.trim(),
-                        "Truck #": row.cells[3].innerText.trim(),
-                        "Max ECD": row.cells[4].innerText.trim(),
-                        "Notes": row.cells[5].innerText.trim()
-                    });
+            const rows = Array.from(tbody.rows);
+            
+            if (rows.length === 0 || (rows.length === 1 && rows[0].cells.length === 1)) {
+                alert("No data available to email.");
+                return;
+            }
+
+            rows.forEach(row => {
+                if(row.cells.length > 1) {
+                    let subRegion = row.cells[1].innerText.trim();
+                    let branch = row.cells[2].innerText.trim();
+                    let unitNo = row.cells[3].innerText.trim();
+                    let ecd = row.cells[4].innerText.trim();
+                    let note = row.cells[5].innerText.trim().replace(/\n/g, ' / ') || 'N/A';
+                    
+                    bodyText += `${subRegion}\t${branch}\t${unitNo}\t${ecd}\t${note}\n`;
                 }
             });
-            const wsAmerit = XLSX.utils.json_to_sheet(oosRows);
 
-            const workbook = XLSX.utils.book_new();
-            XLSX.utils.book_append_sheet(workbook, wsConsolidation, "Consolidation Summary");
-            XLSX.utils.book_append_sheet(workbook, wsAmerit, "Amerit OOS Units");
-            XLSX.writeFile(workbook, "VDR_Consolidation_Summary.xlsx");
+            let encodedBody = encodeURIComponent(bodyText);
+            
+            if (encodedBody.length > 1800) {
+                let clipboardText = bodyText;
+                navigator.clipboard.writeText(clipboardText).then(() => {
+                    alert("The report is too long for an automatic email draft, so the data has been copied to your clipboard!\n\nYou can now Paste (Ctrl+V) it directly into a new email.");
+                    window.location.href = `mailto:?subject=${subject}`;
+                }).catch(err => {
+                    alert("Report too large to email directly and clipboard access failed.");
+                });
+            } else {
+                window.location.href = `mailto:?subject=${subject}&body=${encodedBody}`;
+            }
         }
-
-        // --------------------------------------------------
 
         function formatUsefulBadge(label, val) {
             if(val === null || val === undefined || isNaN(val) || val === '') return '';
@@ -1942,9 +2001,9 @@
                 aggData = aggData.filter(ro => ro.custKey === currentCustomerFilter);
             }
 
-            let pmData = aggData.filter(ro => ro.kpiOwners.some(o => pmOwners.includes(o)));
-            let vendedData = aggData.filter(ro => ro.kpiOwners.some(o => vendedOwners.includes(o)));
-            let ersRoData = aggData.filter(ro => ro.kpiOwners.some(o => ersOwners.includes(o)));
+            let pmData = aggData.filter(ro => ro.tileOwners.some(o => pmOwners.includes(o)));
+            let vendedData = aggData.filter(ro => ro.tileOwners.some(o => vendedOwners.includes(o)));
+            let ersRoData = aggData.filter(ro => ro.tileOwners.some(o => ersOwners.includes(o)));
 
             const pmTile = document.createElement('div'); pmTile.className = 'kpi-tile home-master-tile'; pmTile.innerHTML = generateTileHTML('PM Dashboard', pmData, 'chart-pm', true);
             pmTile.onclick = () => loadPersonDrilldown('ALL_PM', 'home-view');
@@ -1969,7 +2028,7 @@
             let isPM = containerId === 'pm-kpi-container';
 
             ownersList.forEach(owner => {
-                let ownerDataAll = processedData.filter(ro => ro.kpiOwners.includes(owner));
+                let ownerDataAll = processedData.filter(ro => ro.tileOwners.includes(owner));
                 
                 if (currentCustomerFilter !== 'ALL') {
                     ownerDataAll = ownerDataAll.filter(ro => ro.custKey === currentCustomerFilter);
@@ -1997,28 +2056,6 @@
         function generateRoDrilldownHtml(ownerDataAll, isPM) {
             let baseOpenData = ownerDataAll.filter(ro => ro.isOpen);
 
-            let branchUsefulVals = {};
-            let subUsefulMap = {};
-            let topUsefulMap = {};
-
-            baseOpenData.forEach(ro => {
-                if (ro.usefulPctObj) {
-                    let branchKey = ro.drillTopLevel + '|||' + ro.subregion + '|||' + ro.branch;
-                    let subKey = ro.drillTopLevel + '|||' + ro.subregion;
-                    let topKey = ro.drillTopLevel;
-
-                    if (branchUsefulVals[branchKey] === undefined) {
-                        branchUsefulVals[branchKey] = ro.usefulPctObj;
-                        
-                        if (!subUsefulMap[subKey]) subUsefulMap[subKey] = [];
-                        subUsefulMap[subKey].push(ro.usefulPctObj);
-                        
-                        if (!topUsefulMap[topKey]) topUsefulMap[topKey] = [];
-                        topUsefulMap[topKey].push(ro.usefulPctObj);
-                    }
-                }
-            });
-
             // Apply Filters
             let targetData = baseOpenData;
             
@@ -2042,22 +2079,22 @@
             
             let htmlStr = '';
             for(let topLvl in hierarchy) {
-                let topBadges = getAggregatedBadges(topUsefulMap[topLvl] || []);
                 let subHtml = '';
                 for(let sub in hierarchy[topLvl]) {
                     let subKey = topLvl + '|||' + sub;
-                    let subBadges = getAggregatedBadges(subUsefulMap[subKey] || []);
                     let branchHtml = '';
                     for(let branch in hierarchy[topLvl][sub]) {
-                        let branchKey = subKey + '|||' + branch;
                         let branchROs = hierarchy[topLvl][sub][branch];
                         
-                        let u = branchUsefulVals[branchKey] || {};
                         let badgesHtml = '';
-                        if (u) {
-                            if (u.LTS !== null) badgesHtml += formatUsefulBadge('LTS Useful', u.LTS);
-                            if (u.ST !== null) badgesHtml += formatUsefulBadge('ST Useful', u.ST);
-                            if (u.SHUTTLE !== null) badgesHtml += formatUsefulBadge('Shuttle Useful', u.SHUTTLE);
+                        if (branchROs.length > 0) {
+                            let ro = branchROs[0]; 
+                            let u = ro.usefulPctObj;
+                            if (u) {
+                                if (u.LTS !== null) badgesHtml += formatUsefulBadge('LTS Useful', u.LTS);
+                                if (u.ST !== null) badgesHtml += formatUsefulBadge('ST Useful', u.ST);
+                                if (u.SHUTTLE !== null) badgesHtml += formatUsefulBadge('Shuttle Useful', u.SHUTTLE);
+                            }
                         }
 
                         let unitsMap = {};
@@ -2104,14 +2141,14 @@
                         groupedUnits.sort((a,b) => { 
                             return (b.isOOS === true ? 1 : 0) - (a.isOOS === true ? 1 : 0);
                         });
-                        
+
                         branchHtml += `<details class="ro-detail-node"><summary><div style="flex-grow:1; display:flex; align-items:center;">${branch} (${branchROs.length} ROs)</div><div>${badgesHtml}</div></summary>`;
                         let tableHTML = `<div class="table-wrapper"><table><colgroup><col style="width:23%;"><col style="width:11%;">${isPM ? '' : '<col style="width:11%;">'}<col style="width:9%;"><col style="width:11%;"><col style="width:21%;"><col style="width:14%;"></colgroup><thead><tr><th>AFS RO # & Dispatch</th><th>Unit No</th>${isPM ? '' : '<th>Priority Status</th>'}<th>OOS Status</th><th>Opened Date</th><th>Status</th><th>ECD</th></tr></thead><tbody>`;
                         
                         groupedUnits.forEach(u => {
                             let oosBadge = u.isOOS ? `<span class="badge badge-oos">OOS</span>` : `<span class="badge badge-active">ACTIVE</span>`;
                             
-                            let isPri = (u.isOOS && isPriority({isOOS: u.isOOS, usefulPct: u.usefulPctObj, unitType: u.unitType}));
+                            let isPri = (u.isOOS && isPriority({isOOS: u.isOOS, usefulPctObj: u.usefulPctObj, unitType: u.unitType}));
                             let priorityStatusBadge = isPri ? `<span class="badge badge-urgent">Priority</span>` : `<span class="badge badge-low">Normal</span>`;
 
                             let rowCount = u.roNums.length;
@@ -2156,9 +2193,9 @@
                         tableHTML += `</tbody></table></div>`; 
                         branchHtml += tableHTML + `</details>`;
                     }
-                    subHtml += `<details class="ro-detail-node"><summary><div style="flex-grow:1; display:flex; align-items:center;">${sub}</div><div>${subBadges}</div></summary>${branchHtml}</details>`;
+                    subHtml += `<details class="ro-detail-node"><summary><div style="flex-grow:1; display:flex; align-items:center;">${sub}</div></summary>${branchHtml}</details>`;
                 }
-                htmlStr += `<details class="ro-detail-node"><summary><div style="flex-grow:1; display:flex; align-items:center;">${topLvl}</div><div>${topBadges}</div></summary>${subHtml}</details>`;
+                htmlStr += `<details class="ro-detail-node"><summary><div style="flex-grow:1; display:flex; align-items:center;">${topLvl}</div></summary>${subHtml}</details>`;
             }
             return htmlStr;
         }
