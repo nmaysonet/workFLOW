@@ -594,25 +594,13 @@
         let ersOwners = [];
 
         let branchUsefulMap = {}; 
-        let branchMasterInfo = {}; 
-        let oosMap = {};
-        let dedicatedBranches = new Set();
+        let masterUnits = {};
 
         const excludedStatuses = [
             'COMPLETED', 
             'FINAL CHARGES SUBMITTED'
         ];
 
-        const specificCreators = [
-            "aarmes@ameritfleet.com", "ccaylor@ameritfleet.com", "cchristianson@ameritfleet.com",
-            "cdecker@ameritfleet.com", "dnicholson@ameritfleet.com", "fbeardslee@ameritfleet.com",
-            "fmendozacruz@ameritfleet.com", "jkennedy2@ameritfleet.com", "jmccormick@ameritfleet.com",
-            "kanguzza@ameritfleet.com", "khulbert@ameritfleet.com", "ljohnson@ameritfleet.com",
-            "mmcclain2@ameritfleet.com", "pgallagher@ameritfleet.com", "rcastillo@ameritfleet.com",
-            "sgerdes@ameritfleet.com", "swooton@ameritfleet.com", "tblake@ameritfleet.com",
-            "tforrester@ameritfleet.com", "ttodd@ameritfleet.com", "wvaught@ameritfleet.com"
-        ];
-        
         let lastActiveView = 'home-view';
 
         function normalizeName(str) {
@@ -736,12 +724,18 @@
                                 if (!row || !Array.isArray(row)) continue;
 
                                 let branch = row[2]; // Col C
-                                let usefulPct = row[27]; // Col AB
+                                let ltsPct = row[9]; // Col J
+                                let stPct = row[15]; // Col P
+                                let shuttlePct = row[21]; // Col V
+                                let totalPct = row[27]; // Col AB
 
                                 if (branch && String(branch).trim() !== '') {
                                     usefulRaw.push({
-                                        'Branch': branch,
-                                        'Useful %': usefulPct
+                                        'BRANCH': branch,
+                                        'LTS': ltsPct,
+                                        'ST': stPct,
+                                        'SHUTTLE': shuttlePct,
+                                        'TOTAL': totalPct
                                     });
                                 }
                             }
@@ -762,7 +756,7 @@
 
                             if (rowStr.includes('createdby') || (rowStr.includes('unitnumber') && rowStr.includes('team'))) {
                                 headerIdx = i; tabType = 'RESOURCE'; break;
-                            } else if (rowStr.includes('gardaregion') && rowStr.includes('oosflag')) {
+                            } else if (rowStr.includes('gardaregion') && rowStr.includes('oosflag') && rowStr.includes('make')) {
                                 headerIdx = i; tabType = 'OOS'; break;
                             } else if (rowStr.includes('ronumber') || rowStr.includes('order') || rowStr.includes('estimaterequesteddate') || rowStr.includes('customer')) {
                                 headerIdx = i; tabType = 'VRO'; break;
@@ -812,6 +806,7 @@
                 await new Promise(resolve => requestAnimationFrame(resolve));
                 processExcelData(vroRaw, resourceRaw, oosRaw, usefulRaw);
 
+                // Safely Init Firebase after everything is done
                 setTimeout(initFirebaseSync, 500);
 
             } catch (error) {
@@ -849,12 +844,18 @@
                                     if (!row || !Array.isArray(row)) continue;
 
                                     let branch = row[2]; // Col C
-                                    let usefulPct = row[27]; // Col AB
+                                    let ltsPct = row[9]; // Col J
+                                    let stPct = row[15]; // Col P
+                                    let shuttlePct = row[21]; // Col V
+                                    let totalPct = row[27]; // Col AB
 
                                     if (branch && String(branch).trim() !== '') {
                                         usefulRaw.push({
-                                            'Branch': branch,
-                                            'Useful %': usefulPct
+                                            'BRANCH': branch,
+                                            'LTS': ltsPct,
+                                            'ST': stPct,
+                                            'SHUTTLE': shuttlePct,
+                                            'TOTAL': totalPct
                                         });
                                     }
                                 }
@@ -871,7 +872,7 @@
 
                                 if (rowStr.includes('createdby') || (rowStr.includes('unitnumber') && rowStr.includes('team'))) {
                                     headerIdx = i; tabType = 'RESOURCE'; break;
-                                } else if (rowStr.includes('gardaregion') && rowStr.includes('oosflag')) {
+                                } else if (rowStr.includes('gardaregion') && rowStr.includes('oosflag') && rowStr.includes('make')) {
                                     headerIdx = i; tabType = 'OOS'; break;
                                 } else if (rowStr.includes('ronumber') || rowStr.includes('order') || rowStr.includes('estimaterequesteddate') || rowStr.includes('customer')) {
                                     headerIdx = i; tabType = 'VRO'; break;
@@ -940,6 +941,17 @@
             return rawStr.split('-')[0].trim() || 'Unknown Customer';
         }
 
+        function isPriority(ro) {
+            if (!ro.isOOS) return false;
+            let u = ro.usefulPct;
+            if (!u) return false;
+            
+            let vals = [u.LTS, u.ST, u.SHUTTLE, u.TOTAL].filter(v => v !== null && !isNaN(v));
+            if(vals.length === 0) return false;
+            let minPct = Math.min(...vals);
+            return Math.round(minPct * 100) < 100;
+        }
+
         function exportDrilldownToExcel() {
             if (!currentOwnerView || processedData.length === 0) return;
             
@@ -958,20 +970,27 @@
             if(currentFilter === 'OOS' && !isPM) {
                 targetData = targetData.filter(ro => ro.isOOS);
             } else if(currentFilter === 'PRIORITY' && !isPM) {
-                targetData = targetData.filter(ro => ro.isOOS && ro.usefulPct !== null && Math.round(ro.usefulPct * 100) < 100);
+                targetData = targetData.filter(ro => isPriority(ro));
             }
 
             if (targetData.length === 0) { alert("No data available to export."); return; }
 
-            const excelRows = targetData.map(ro => ({
-                "AFS RO #": ro.roNum.startsWith('NO RO') ? "NO ACTIVE RO" : ro.roNum, 
-                "Unit No": ro.unitNo, 
-                "OOS Status": ro.isOOS ? "OOS" : "",
-                "Useful %": ro.usefulPct !== null ? Math.round(ro.usefulPct * 100) + '%' : "N/A",
-                "Opened Date": ro.openedFormatted,
-                "Status": ro.status, "ECD": ro.ecdFormatted,
-                "Customer Group": ro.drillTopLevel, "Subregion": ro.subregion, "Branch": ro.branch
-            }));
+            const excelRows = targetData.map(ro => {
+                let usefulText = "N/A";
+                if(ro.usefulPct && ro.usefulPct.TOTAL !== null) {
+                    usefulText = Math.round(ro.usefulPct.TOTAL * 100) + '%';
+                }
+
+                return {
+                    "AFS RO #": ro.roNum.startsWith('NO RO') ? "NO ACTIVE RO" : ro.roNum, 
+                    "Unit No": ro.unitNo, 
+                    "OOS Status": ro.isOOS ? "OOS" : "",
+                    "Useful %": usefulText,
+                    "Opened Date": ro.openedFormatted,
+                    "Status": ro.status, "ECD": ro.ecdFormatted,
+                    "Customer Group": ro.drillTopLevel, "Subregion": ro.subregion, "Branch": ro.branch
+                };
+            });
 
             const worksheet = XLSX.utils.json_to_sheet(excelRows);
             const workbook = XLSX.utils.book_new();
@@ -989,7 +1008,7 @@
             const excelRows = results.map(ro => ({
                 "AFS RO #": ro.roNum.startsWith('NO RO') ? "NO ACTIVE RO" : ro.roNum, 
                 "Unit No": ro.unitNo, 
-                "Priority Status": (ro.isOOS && ro.usefulPct !== null && Math.round(ro.usefulPct * 100) < 100) ? "Priority" : "Normal",
+                "Priority Status": isPriority(ro) ? "Priority" : "Normal",
                 "OOS Status": ro.isOOS ? "OOS" : "",
                 "Opened Date": ro.openedFormatted,
                 "Owner": ro.owner, "Status": ro.status, "ECD": ro.ecdFormatted
@@ -1027,316 +1046,125 @@
         function processExcelData(vroRaw, resourceRaw, oosRaw, usefulRaw) {
             const today = new Date(); today.setHours(0, 0, 0, 0);
             
-            branchMasterInfo = {}; 
             branchUsefulMap = {};
             
-            oosRaw.forEach(row => {
-                let region = getCol(row, ['GARDA REGION']);
-                let subregion = getCol(row, ['GARDA SUBREGION']);
-                let branch = getCol(row, ['Branch', 'GARDA SHOPNAME']);
-                if (branch) {
-                    let bCode = extractGardaCode(branch);
-                    let info = {
-                        region: String(region || 'Unspecified Region').trim(),
-                        subregion: String(subregion || 'Unspecified Subregion').trim(),
-                        branch: String(branch).trim()
-                    };
-                    if (bCode) branchMasterInfo[bCode] = info;
-                    let bNorm = normalizeBranchStr(branch);
-                    if (bNorm) branchMasterInfo[bNorm] = info;
-                }
-            });
-
-            // STRICT Coordinate-Based Mapping for Useful %
             if (usefulRaw && usefulRaw.length > 0) {
-                usefulRaw.forEach(row => {
-                    let b = row['Branch'];
-                    let rawPct = row['Useful %'];
-
+                usefulRaw.forEach(item => {
+                    let b = item['BRANCH'];
                     if (b && String(b).trim() !== '') {
                         let bCode = extractGardaCode(b);
                         let bNorm = normalizeBranchStr(b);
 
-                        let pct = NaN;
-                        if (rawPct !== undefined && rawPct !== null && rawPct !== '') {
-                            let valStr = String(rawPct).trim();
-                            let val = parseFloat(valStr);
-                            if (!isNaN(val)) {
-                                pct = valStr.includes('%') ? val / 100 : val;
+                        let pcts = { LTS: null, ST: null, SHUTTLE: null, TOTAL: null };
+                        
+                        ['LTS', 'ST', 'SHUTTLE', 'TOTAL'].forEach(key => {
+                            if (item[key] !== undefined && item[key] !== null && item[key] !== '') {
+                                let valStr = String(item[key]).trim();
+                                let val = parseFloat(valStr);
+                                if (!isNaN(val)) {
+                                    pcts[key] = valStr.includes('%') ? val / 100 : val;
+                                }
                             }
-                        }
+                        });
 
-                        if (!isNaN(pct)) {
-                            if (bCode) {
-                                branchUsefulMap[bCode] = pct;
-                                if (bCode === '18055') branchUsefulMap['14095'] = pct;
-                                if (bCode === '14095') branchUsefulMap['18055'] = pct;
-                            }
-                            if (bNorm) branchUsefulMap[bNorm] = pct;
+                        if (bCode) {
+                            branchUsefulMap[bCode] = pcts;
+                            if (bCode === '18055') branchUsefulMap['14095'] = pcts;
+                            if (bCode === '14095') branchUsefulMap['18055'] = pcts;
                         }
+                        if (bNorm) branchUsefulMap[bNorm] = pcts;
                     }
                 });
             }
 
-            let unitToLocation = {};
-            oosMap = {};
-            
-            oosRaw.forEach(row => {
-                let unit = getCol(row, ['UNITNUMBER', 'Unit No', 'Vehicle', 'UNIT #']);
-                let oosFlag = getCol(row, ['OOS Flag', 'Open RO Category', 'OOS FLAG']);
-                let region = getCol(row, ['GARDA REGION']);
-                let subregion = getCol(row, ['GARDA SUBREGION']);
-                let branch = getCol(row, ['Branch', 'GARDA SHOPNAME']);
+            masterUnits = {};
+            oosRaw.forEach((row, i) => {
+                if (i === 0) return; // Skip header 
                 
-                if(unit) {
-                    let u = unit.toUpperCase().trim();
-                    let isOOS = (String(oosFlag).toUpperCase().trim() === 'OOS');
-                    oosMap[u] = isOOS;
+                let region = String(row[0] || 'Unknown Region').trim();
+                let subregion = String(row[1] || 'Unknown Subregion').trim();
+                let branch = String(row[2] || 'Unknown Branch').trim();
+                let unit = String(row[3] || '').toUpperCase().trim();
+                let unitType = String(row[4] || '').trim();
+                let oosFlag = String(row[8] || '').toUpperCase().trim();
+                let owner = String(row[13] || '').trim();
+                
+                if (!unit) return;
+                
+                // Scrub Dedicated
+                if (owner.toUpperCase() === 'DEDICATED') return;
+                if (!owner) owner = 'Unassigned';
 
-                    unitToLocation[u] = { 
-                        region: String(region || 'Unspecified Region').trim(), 
-                        subregion: String(subregion || 'Unspecified Subregion').trim(), 
-                        branch: String(branch || 'Unspecified Branch').trim() 
-                    };
-                }
+                masterUnits[unit] = { 
+                    region: region, 
+                    subregion: subregion, 
+                    branch: branch, 
+                    type: unitType,
+                    isOOS: (oosFlag === 'OOS'),
+                    owner: owner
+                };
             });
 
-            let unitOwnerMap = {};
-            let creatorMap = {};
-            let globalOwnerMap = {}; 
-            
             let activePM = new Set();
             let activeVended = new Set();
             let activeERS = new Set();
-            let pmKeywords = [];
-            
-            dedicatedBranches = new Set();
-
-            resourceRaw.forEach(row => {
-                let keys = Object.keys(row);
-                
-                let bVal = getCol(row, ['Branch']);
-                let oVal = getCol(row, ['Owner']);
-                if (bVal && String(oVal).toUpperCase().trim() === 'DEDICATED') {
-                    let bCode = extractGardaCode(bVal);
-                    if (bCode) dedicatedBranches.add(bCode);
-                    let bNorm = normalizeBranchStr(bVal);
-                    if (bNorm) dedicatedBranches.add(bNorm);
-                }
-
-                let unitKey = keys.find(k => k.toLowerCase().replace(/[^a-z0-9]/g, '') === 'unitnumber');
-                let teamKeys = keys.filter(k => k.toLowerCase().replace(/[^a-z0-9]/g, '').includes('team'));
-                let unitTeamKey = teamKeys[0]; 
-                
-                if (unitKey && row[unitKey]) {
-                    let u = String(row[unitKey]).toUpperCase().trim();
-                    let o = oVal ? String(oVal).trim() : '';
-                    let t = row[unitTeamKey] ? String(row[unitTeamKey]).toUpperCase().trim() : 'VENDED REPAIR';
-                    unitOwnerMap[u] = { owner: o, team: t };
-                }
-
-                let creatorKey = keys.find(k => k.toLowerCase().replace(/[^a-z0-9]/g, '') === 'createdby');
-                let nameKey = keys.find(k => k.toLowerCase().replace(/[^a-z0-9]/g, '') === 'name');
-                let statusKey = keys.find(k => k.toLowerCase().replace(/[^a-z0-9]/g, '') === 'status');
-                let creatorTeamKey = teamKeys.length > 1 ? teamKeys[1] : teamKeys[0];
-                let pmComp = getCol(row, ['PM Comp:']);
-
-                if (creatorKey && row[creatorKey]) {
-                    let cEmail = String(row[creatorKey]).toLowerCase().trim();
-                    let cName = row[nameKey] ? String(row[nameKey]).trim() : cEmail;
-                    let cTeam = row[creatorTeamKey] ? String(row[creatorTeamKey]).toUpperCase().trim() : 'ERS';
-                    let cStatus = row[statusKey] ? String(row[statusKey]).toUpperCase().trim() : 'INACTIVE';
-                    
-                    creatorMap[cEmail] = { name: cName, team: cTeam };
-                    globalOwnerMap[cEmail] = { name: cName, status: cStatus, team: cTeam };
-                }
-                
-                if (pmComp && pmComp.toUpperCase() !== 'PM COMP:' && pmComp.trim() !== '') {
-                    pmKeywords.push(pmComp.toLowerCase().trim());
-                }
-            });
-
-            pmKeywords = [...new Set(pmKeywords)]; 
 
             let allCustSet = new Set();
             let allRegionsSet = new Set();
+            let openROsInUnits = new Set();
 
             processedData = vroRaw.map(row => {
                 let roNum = getCol(row, ['Order', 'RO Number', 'RONum', 'AFS RO #']).toUpperCase().trim();
-                let customerRaw = getCol(row, ['Customer', 'CUSTOMERNAME', 'Customer Name']); 
-                let rawOwnerEmail = getCol(row, ['Owner', 'Created By', 'Email']); 
+                if (!roNum) return null;
+                
                 let unit = getCol(row, ['Unit No', 'UNITNUMBER', 'Vehicle']).toUpperCase().trim();
+                
+                let mUnit = masterUnits[unit];
+                if (!mUnit) return null; // Drop anything not in OOS GARDA (or if it was scrubbed as Dedicated)
+
+                let rawOwnerEmail = getCol(row, ['Owner', 'Created By', 'Email']).toLowerCase().trim(); 
                 let status = getCol(row, ['Status']);
                 let vmrs = getCol(row, ['Task', 'DESCRIP', 'VMRS Description']);
                 let openedRaw = getCol(row, ['Opened', 'ROOpenedDate']);
                 let dueRaw = getCol(row, ['Unit Due Date', 'Estimate Due Date', 'Due Date', 'L']);
                 let compRaw = getCol(row, ['Completed Date', 'Completed', 'P']);
 
+                let statusStr = String(status || '').toUpperCase().trim();
+                let isOpen = !excludedStatuses.includes(statusStr);
+                if (isOpen) openROsInUnits.add(unit);
+
                 let openedDate = new Date(openedRaw);
                 let openedDT = isNaN(openedDate.getTime()) ? null : openedDate;
                 let openedFormatted = openedDT ? `${openedDT.getMonth()+1}/${openedDT.getDate()}/${openedDT.getFullYear()}` : 'N/A';
 
-                let customerFixed = String(customerRaw || '').toUpperCase().replace('MRTLE', 'MYRTLE');
-                if (customerFixed.includes('HANVER') || customerFixed.includes('HANOVER') || customerFixed.includes('18055') || customerFixed.includes('180-55')) {
-                    customerFixed = 'GARDA - WILKES BARRE, PA 140-95';
-                }
-                if (customerFixed.includes('FONTANA') && !customerFixed.includes('120')) {
-                    customerFixed = 'GARDA - FONTANA, CA 120-14';
-                }
+                let custKey = getCustKey(mUnit.branch);
+                let drillTopLevel = custKey + (mUnit.region !== 'Unknown Region' && mUnit.region !== '' ? ' ' + mUnit.region : '');
 
-                let customer = customerFixed;
-                let loc = unitToLocation[unit] || { region: 'Unknown Region', subregion: 'Unknown Subregion', branch: 'Unknown Branch' };
-                let custKey = getCustKey(customer);
-                
-                let cStrNorm = customerFixed.replace(/[^A-Z0-9]/ig, '');
-                let cNameOnly = customerFixed.replace(/\d{3}[- ]?\d{2}/g, '').replace(/[^A-Z0-9]/ig, '');
-                let branchCode = extractGardaCode(customer); 
-                if (!branchCode && loc.branch) branchCode = extractGardaCode(loc.branch);
-                
-                if (custKey === 'Garda') {
-                    if (branchCode && branchMasterInfo[branchCode]) {
-                        loc = Object.assign({}, loc, branchMasterInfo[branchCode]);
-                    } else {
-                        for (let bKey in branchMasterInfo) {
-                            if (bKey.length > 4 && cNameOnly.includes(bKey)) {
-                                loc = Object.assign({}, loc, branchMasterInfo[bKey]);
-                                break;
-                            }
-                        }
-                    }
-                }
-
-                if (loc.region === 'Unknown Region' || loc.region === 'Unspecified Region') {
-                    let locPart = customer;
-                    if(String(customer).includes('-')) locPart = customer.substring(customer.indexOf('-') + 1).trim(); 
-                    
-                    let stateName = 'Unknown State';
-                    let cityName = 'Unknown City';
-
-                    if (locPart.includes(',')) {
-                        let splitComma = locPart.split(','); 
-                        cityName = splitComma[0].trim();
-                        let afterComma = splitComma[1].trim().split(' ').filter(s => s.trim() !== ''); 
-                        if(afterComma.length > 0) stateName = afterComma[0].trim();
-                    } else {
-                        let spaceSplit = locPart.split(' ').filter(s => s.trim() !== '');
-                        if (spaceSplit.length === 1 && spaceSplit[0].length === 2) {
-                            stateName = spaceSplit[0].toUpperCase();
-                            cityName = 'Unknown City';
-                        } else if (spaceSplit.length >= 2) {
-                            let last = spaceSplit[spaceSplit.length - 1].trim();
-                            let secLast = spaceSplit[spaceSplit.length - 2].trim();
-                            if (last.length === 2 && !/\d/.test(last)) {
-                                stateName = last.toUpperCase();
-                                cityName = spaceSplit.slice(0, spaceSplit.length - 1).join(' ');
-                            } else if (secLast.length === 2 && !/\d/.test(secLast)) {
-                                stateName = secLast.toUpperCase();
-                                cityName = spaceSplit.slice(0, spaceSplit.length - 2).join(' ');
-                            } else {
-                                cityName = locPart;
-                            }
-                        } else {
-                            cityName = locPart;
-                        }
-                    }
-                    
-                    loc.region = stateName;
-                    loc.subregion = cityName;
-                    if (loc.branch === 'Unknown Branch' || loc.branch === 'Unspecified Branch') {
-                        loc.branch = String(customerRaw).trim(); 
-                    }
-                }
-                
-                if (custKey === 'Garda') {
-                    if (loc.region === 'PA' || customerFixed.includes(', PA') || customerFixed.includes(' PA ')) {
-                        loc.region = 'East';
-                        loc.subregion = 'Midatlantic';
-                    }
-                }
-                
-                let ownerEmailLower = String(rawOwnerEmail || '').toLowerCase().trim();
-                let finalOwner = '';
+                // Owner Override Logic
+                let finalOwner = mUnit.owner;
                 let finalTeam = 'VENDED REPAIR';
-                let isDedicatedFlag = false;
 
-                if (unitOwnerMap[unit] && unitOwnerMap[unit].owner.toUpperCase() === 'DEDICATED') {
-                    isDedicatedFlag = true;
+                if (rawOwnerEmail === 'kanguzza@ameritfleet.com') {
+                    finalOwner = 'Kevin Anguzza';
+                    finalTeam = 'PM';
                 }
 
-                if (specificCreators.includes(ownerEmailLower) && creatorMap[ownerEmailLower]) {
-                    finalOwner = creatorMap[ownerEmailLower].name;
-                    finalTeam = creatorMap[ownerEmailLower].team;
-                } 
-                else if (unitOwnerMap[unit] && !isDedicatedFlag && unitOwnerMap[unit].owner) {
-                    finalOwner = unitOwnerMap[unit].owner;
-                    finalTeam = unitOwnerMap[unit].team;
-                }
-                else {
-                    if (globalOwnerMap[ownerEmailLower]) {
-                        finalOwner = globalOwnerMap[ownerEmailLower].name;
-                        finalTeam = globalOwnerMap[ownerEmailLower].team;
-                    } else if (rawOwnerEmail) {
-                        finalOwner = String(rawOwnerEmail).split('@')[0];
-                        finalOwner = finalOwner.charAt(0).toUpperCase() + finalOwner.slice(1);
-                        finalTeam = 'VENDED REPAIR';
-                    } else {
-                        finalOwner = 'Unassigned';
-                        finalTeam = 'VENDED REPAIR';
-                    }
+                if (finalOwner.toLowerCase().includes('ers')) {
+                    finalTeam = 'ERS';
                 }
 
-                let taskStr = vmrs.toLowerCase();
-                let isPMOrder = false;
-                for (let kw of pmKeywords) {
-                    if (kw && taskStr.includes(kw)) {
-                        isPMOrder = true;
-                        break;
-                    }
-                }
-
-                let drillTopLevel = custKey + (loc.region !== 'Unknown State' && loc.region !== 'Unknown Region' ? ' ' + loc.region : '');
                 allCustSet.add(custKey);
-                allRegionsSet.add(loc.region);
+                allRegionsSet.add(mUnit.region);
 
-                let statusStr = String(status || '').toUpperCase().trim();
-                let isOOS = oosMap[unit] === true; 
-                let isOpen = !excludedStatuses.includes(statusStr);
-                
-                let addTile = false;
-                if (specificCreators.includes(ownerEmailLower)) addTile = true;
-                else if (unitOwnerMap[unit] && !isDedicatedFlag && unitOwnerMap[unit].owner) addTile = true;
-                else if (globalOwnerMap[ownerEmailLower] && globalOwnerMap[ownerEmailLower].status === 'ACTIVE') addTile = true;
-
-                let isUnassigned = finalOwner.toLowerCase().includes('unassigned');
-                if (addTile && isOpen && !isUnassigned && finalOwner.trim() !== '') {
+                if (isOpen) {
                     if (finalTeam === 'PM') activePM.add(finalOwner);
                     else if (finalTeam === 'ERS') activeERS.add(finalOwner);
                     else activeVended.add(finalOwner);
                 }
-                
-                let usefulPct = null;
-                if (branchCode && branchUsefulMap[branchCode] !== undefined) {
-                    usefulPct = branchUsefulMap[branchCode];
-                } else {
-                    for (let bKey in branchUsefulMap) {
-                        if (bKey.length > 4 && cNameOnly.includes(bKey)) {
-                            usefulPct = branchUsefulMap[bKey];
-                            break;
-                        }
-                    }
-                }
 
-                if (!isDedicatedFlag) {
-                    if (branchCode && dedicatedBranches.has(branchCode)) isDedicatedFlag = true;
-                    else {
-                        for (let bKey of dedicatedBranches) {
-                            if (bKey.length > 4 && cNameOnly.includes(bKey)) {
-                                isDedicatedFlag = true;
-                                break;
-                            }
-                        }
-                    }
-                }
+                let bCode = extractGardaCode(mUnit.branch);
+                let bNorm = normalizeBranchStr(mUnit.branch);
+                let usefulPcts = branchUsefulMap[bCode] || branchUsefulMap[bNorm] || { LTS: null, ST: null, SHUTTLE: null, TOTAL: null };
 
                 let ecdState = 'missing'; let ecdFormatted = 'NO ECD, UPDATE';
                 let ecdDate = new Date(dueRaw);
@@ -1349,7 +1177,7 @@
                 }
 
                 let isCompletedKPI = false; let isOnTimeKPI = false; let isLateKPI = false;
-                if (excludedStatuses.includes(statusStr) && compRaw !== '') {
+                if (!isOpen && compRaw !== '') {
                     isCompletedKPI = true; let cDate = new Date(compRaw);
                     if (!isNaN(cDate.getTime())) {
                         let dDate = new Date(dueRaw);
@@ -1359,72 +1187,30 @@
                     } else isCompletedKPI = false;
                 }
                 
-                return { roNum, customer, custKey, drillTopLevel, owner: finalOwner, unitNo: unit, status, vmrs, isOOS, isOpen, isCompletedKPI, isOnTimeKPI, isLateKPI, subregion: loc.subregion, branch: loc.branch, ecdState, ecdFormatted, openedDT, openedFormatted, usefulPct, isDedicated: isDedicatedFlag, region: loc.region };
-            }).filter(ro => ro && ro.roNum !== '' && !ro.isDedicated);
+                return { roNum, customer: mUnit.branch, custKey, drillTopLevel, owner: finalOwner, unitNo: unit, status: statusStr, vmrs, isOOS: mUnit.isOOS, isOpen, isCompletedKPI, isOnTimeKPI, isLateKPI, subregion: mUnit.subregion, branch: mUnit.branch, ecdState, ecdFormatted, openedDT, openedFormatted, usefulPct: usefulPcts, isDedicated: false, region: mUnit.region };
+            }).filter(ro => ro !== null);
 
             // GHOST RO INJECTION: Add trucks that are OOS but have NO Active RO
-            let unitsWithOpenROs = new Set();
-            processedData.forEach(ro => {
-                if (ro.isOpen) unitsWithOpenROs.add(ro.unitNo);
-            });
+            for (let unit in masterUnits) {
+                let mUnit = masterUnits[unit];
+                if (mUnit.isOOS && !openROsInUnits.has(unit)) {
+                    let custKey = getCustKey(mUnit.branch);
+                    let drillTopLevel = custKey + (mUnit.region !== '' && mUnit.region !== 'Unknown Region' ? ' ' + mUnit.region : '');
 
-            for (let unit in oosMap) {
-                if (oosMap[unit] === true && !unitsWithOpenROs.has(unit)) {
-                    let loc = unitToLocation[unit] || { region: 'Unknown Region', subregion: 'Unknown Subregion', branch: 'Unknown Branch' };
-                    let custKey = 'Garda';
-
-                    if (loc.region === 'PA' || loc.branch.includes(', PA') || loc.branch.includes(' PA ')) {
-                        loc.region = 'East';
-                        loc.subregion = 'Midatlantic';
-                    }
-
-                    let drillTopLevel = custKey + (loc.region !== 'Unknown State' && loc.region !== 'Unknown Region' ? ' ' + loc.region : '');
-
-                    let finalOwner = 'Unassigned';
+                    let finalOwner = mUnit.owner;
                     let finalTeam = 'VENDED REPAIR';
-                    let isDedicatedFlag = false;
 
-                    if (unitOwnerMap[unit]) {
-                        if (unitOwnerMap[unit].owner.toUpperCase() === 'DEDICATED') {
-                            isDedicatedFlag = true;
-                        } else if (unitOwnerMap[unit].owner) {
-                            finalOwner = unitOwnerMap[unit].owner;
-                            finalTeam = unitOwnerMap[unit].team;
-                        }
+                    if (finalOwner.toLowerCase().includes('ers')) {
+                        finalTeam = 'ERS';
                     }
 
-                    let branchCode = extractGardaCode(loc.branch);
-                    let cNameOnly = loc.branch.replace(/\d{3}[- ]?\d{2}/g, '').replace(/[^A-Z0-9]/ig, '');
-
-                    if (!isDedicatedFlag) {
-                        if (branchCode && dedicatedBranches.has(branchCode)) isDedicatedFlag = true;
-                        else {
-                            for (let bKey of dedicatedBranches) {
-                                if (bKey.length > 4 && cNameOnly.includes(bKey)) {
-                                    isDedicatedFlag = true;
-                                    break;
-                                }
-                            }
-                        }
-                    }
-
-                    if (isDedicatedFlag) continue; // scrub dedicated completely
-
-                    let usefulPct = null;
-                    if (branchCode && branchUsefulMap[branchCode] !== undefined) {
-                        usefulPct = branchUsefulMap[branchCode];
-                    } else {
-                        for (let bKey in branchUsefulMap) {
-                            if (bKey.length > 4 && cNameOnly.includes(bKey)) {
-                                usefulPct = branchUsefulMap[bKey];
-                                break;
-                            }
-                        }
-                    }
+                    let bCode = extractGardaCode(mUnit.branch);
+                    let bNorm = normalizeBranchStr(mUnit.branch);
+                    let usefulPcts = branchUsefulMap[bCode] || branchUsefulMap[bNorm] || { LTS: null, ST: null, SHUTTLE: null, TOTAL: null };
 
                     processedData.push({
                         roNum: 'NO RO - ' + unit,
-                        customer: loc.branch,
+                        customer: mUnit.branch,
                         custKey: custKey,
                         drillTopLevel: drillTopLevel,
                         owner: finalOwner,
@@ -1436,26 +1222,23 @@
                         isCompletedKPI: false,
                         isOnTimeKPI: false,
                         isLateKPI: false,
-                        subregion: loc.subregion,
-                        branch: loc.branch,
+                        subregion: mUnit.subregion,
+                        branch: mUnit.branch,
                         ecdState: 'missing',
                         ecdFormatted: 'N/A',
                         openedDT: null,
                         openedFormatted: 'N/A',
-                        usefulPct: usefulPct,
-                        isDedicated: isDedicatedFlag,
-                        region: loc.region
+                        usefulPct: usefulPcts,
+                        isDedicated: false,
+                        region: mUnit.region
                     });
 
-                    let isUnassigned = finalOwner.toLowerCase().includes('unassigned');
-                    if (!isUnassigned && finalOwner.trim() !== '') {
-                        if (finalTeam === 'PM') activePM.add(finalOwner);
-                        else if (finalTeam === 'ERS') activeERS.add(finalOwner);
-                        else activeVended.add(finalOwner);
-                    }
+                    if (finalTeam === 'PM') activePM.add(finalOwner);
+                    else if (finalTeam === 'ERS') activeERS.add(finalOwner);
+                    else activeVended.add(finalOwner);
                     
                     allCustSet.add(custKey);
-                    allRegionsSet.add(loc.region);
+                    allRegionsSet.add(mUnit.region);
                 }
             }
 
@@ -1602,15 +1385,16 @@
             }
         }
 
-        function getUsefulBadge(usefulArray) {
-            let valid = usefulArray.filter(v => v !== null && v !== undefined && !isNaN(v));
-            if (valid.length === 0) return '';
-            let avg = valid.reduce((a,b) => a+b, 0) / valid.length;
-            let val = Math.round(avg * 100);
-            let bg = 'var(--low-green)';
-            if (val < 100) bg = 'var(--urgent-red)';
-            else if (val === 100) bg = 'var(--medium-yellow)';
-            return `<span class="badge" style="background-color: ${bg}; color: white; margin-left: 10px; font-size: 11px;">Useful: ${val}%</span>`;
+        function formatUsefulBadge(label, val) {
+            if(val === null || val === undefined || isNaN(val)) return '';
+            let pct = Math.round(val * 100);
+            let bg = '#5cb85c'; 
+            let tc = 'white';
+            if (pct < 95) bg = '#d9534f'; 
+            else if (pct >= 95 && pct <= 99) { bg = '#f0ad4e'; tc = 'black'; } 
+            else if (pct === 100) { bg = '#a3e4a3'; tc = 'black'; } 
+
+            return `<span class="badge" style="background-color: ${bg}; color: ${tc}; margin-right: 15px; font-size: 11px;">${label} ${pct}%</span>`;
         }
 
         function generateTileHTML(name, dataSet, chartId = null, isPM = false) {
@@ -1631,7 +1415,7 @@
             let oosAndPriorityHtml = '';
             if (!isPM) {
                 let oosCount = dataSet.filter(ro => ro.isOpen && ro.isOOS).length;
-                let priorityCount = dataSet.filter(ro => ro.isOpen && ro.isOOS && ro.usefulPct !== null && Math.round(ro.usefulPct * 100) < 100).length;
+                let priorityCount = dataSet.filter(ro => ro.isOpen && isPriority(ro)).length;
                 oosAndPriorityHtml = `
                     <div class="highlight-box oos-box">
                         <div class="title">OOS ROs</div>
@@ -1753,7 +1537,7 @@
                     if (currentFilter === 'OOS') {
                         targetData = targetData.filter(ro => ro.isOOS);
                     } else if (currentFilter === 'PRIORITY') {
-                        targetData = targetData.filter(ro => ro.isOOS && ro.usefulPct !== null && Math.round(ro.usefulPct * 100) < 100);
+                        targetData = targetData.filter(ro => isPriority(ro));
                     }
                 }
                 
@@ -1769,39 +1553,24 @@
         function generateRoDrilldownHtml(ownerDataAll, isPM) {
             let baseOpenData = ownerDataAll.filter(ro => ro.isOpen);
 
-            // PASS 1: Build unfiltered static Useful % values
             let branchUsefulVals = {};
-            let subUsefulMap = {};
-            let topUsefulMap = {};
-
             baseOpenData.forEach(ro => {
-                if (ro.usefulPct !== null && ro.usefulPct !== undefined) {
-                    let topLvl = ro.drillTopLevel;
-                    let sub = ro.subregion;
-                    let branch = ro.branch;
-                    let branchKey = topLvl + '|||' + sub + '|||' + branch;
-                    let subKey = topLvl + '|||' + sub;
-
+                if (ro.usefulPct) {
+                    let branchKey = ro.drillTopLevel + '|||' + ro.subregion + '|||' + ro.branch;
                     if (branchUsefulVals[branchKey] === undefined) {
                         branchUsefulVals[branchKey] = ro.usefulPct;
-                        
-                        if (!subUsefulMap[subKey]) subUsefulMap[subKey] = [];
-                        subUsefulMap[subKey].push(ro.usefulPct);
-                        
-                        if (!topUsefulMap[topLvl]) topUsefulMap[topLvl] = [];
-                        topUsefulMap[topLvl].push(ro.usefulPct);
                     }
                 }
             });
 
-            // PASS 2: Apply Filters
+            // Apply Filters
             let targetData = baseOpenData;
             
             if (!isPM) {
                 if (currentFilter === 'OOS') {
                     targetData = targetData.filter(ro => ro.isOOS);
                 } else if(currentFilter === 'PRIORITY') {
-                    targetData = targetData.filter(ro => ro.isOOS && ro.usefulPct !== null && Math.round(ro.usefulPct * 100) < 100);
+                    targetData = targetData.filter(ro => isPriority(ro));
                 }
             }
 
@@ -1817,18 +1586,21 @@
             
             let htmlStr = '';
             for(let topLvl in hierarchy) {
-                let topBadge = getUsefulBadge(topUsefulMap[topLvl] || []);
                 let subHtml = '';
                 for(let sub in hierarchy[topLvl]) {
                     let subKey = topLvl + '|||' + sub;
-                    let subBadge = getUsefulBadge(subUsefulMap[subKey] || []);
                     let branchHtml = '';
                     for(let branch in hierarchy[topLvl][sub]) {
                         let branchKey = subKey + '|||' + branch;
                         let branchROs = hierarchy[topLvl][sub][branch];
                         
-                        let bPct = branchUsefulVals[branchKey];
-                        let branchBadge = getUsefulBadge(bPct !== undefined && bPct !== null ? [bPct] : []);
+                        let u = branchUsefulVals[branchKey] || {};
+                        let badgesHtml = '';
+                        if (u) {
+                            if (u.LTS !== null) badgesHtml += formatUsefulBadge('LTS Useful %', u.LTS);
+                            if (u.ST !== null) badgesHtml += formatUsefulBadge('ST Useful %', u.ST);
+                            if (u.SHUTTLE !== null) badgesHtml += formatUsefulBadge('Shuttle Useful %', u.SHUTTLE);
+                        }
 
                         let unitsMap = {};
                         branchROs.forEach(ro => {
@@ -1842,7 +1614,6 @@
                                     ecdCells: [],
                                     isOOS: ro.isOOS,
                                     usefulPct: ro.usefulPct,
-                                    isDedicated: ro.isDedicated,
                                     custKey: ro.custKey
                                 };
                             }
@@ -1869,19 +1640,16 @@
                         groupedUnits.sort((a,b) => { 
                             return (b.isOOS === true ? 1 : 0) - (a.isOOS === true ? 1 : 0);
                         });
-                        
-                        let isBranchDedicated = branchROs.some(ro => ro.isDedicated);
-                        let dedicatedBadge = isBranchDedicated ? `<span style="background-color: white; color: black; border: 1px solid black; border-radius: 12px; padding: 2px 6px; margin-left: 5px; font-size: 10px; font-weight: bold;">(DEDICATED)</span>` : '';
 
-                        branchHtml += `<details class="ro-detail-node"><summary>${branch} (${branchROs.length} ROs)${branchBadge}${dedicatedBadge}</summary>`;
+                        branchHtml += `<details class="ro-detail-node"><summary><div style="flex-grow:1; display:flex; align-items:center;">${branch} (${branchROs.length} ROs)</div><div>${badgesHtml}</div></summary>`;
                         let tableHTML = `<div class="table-wrapper"><table><colgroup><col style="width:23%;"><col style="width:11%;">${isPM ? '' : '<col style="width:11%;">'}<col style="width:9%;"><col style="width:11%;"><col style="width:21%;"><col style="width:14%;"></colgroup><thead><tr><th>AFS RO # & Dispatch</th><th>Unit No</th>${isPM ? '' : '<th>Priority Status</th>'}<th>OOS Status</th><th>Opened Date</th><th>Status</th><th>ECD</th></tr></thead><tbody>`;
                         
                         groupedUnits.forEach(u => {
                             let isGarda = u.custKey === 'Garda';
                             let oosBadge = isGarda ? (u.isOOS ? `<span class="badge badge-oos">OOS</span>` : `<span class="badge badge-active">ACTIVE</span>`) : '';
                             
-                            let isPriority = u.isOOS && u.usefulPct !== null && Math.round(u.usefulPct * 100) < 100;
-                            let priorityStatusBadge = isPriority ? `<span class="badge badge-urgent">Priority</span>` : `<span class="badge badge-low">Normal</span>`;
+                            let priorityStatusBadge = (u.isOOS && u.usefulPct !== null && isPriority({isOOS: u.isOOS, usefulPct: u.usefulPct})) 
+                                ? `<span class="badge badge-urgent">Priority</span>` : `<span class="badge badge-low">Normal</span>`;
 
                             let rowCount = u.roNums.length;
 
@@ -1925,9 +1693,9 @@
                         tableHTML += `</tbody></table></div>`; 
                         branchHtml += tableHTML + `</details>`;
                     }
-                    subHtml += `<details class="ro-detail-node"><summary>${sub}${subBadge}</summary>${branchHtml}</details>`;
+                    subHtml += `<details class="ro-detail-node"><summary>${sub}</summary>${branchHtml}</details>`;
                 }
-                htmlStr += `<details class="ro-detail-node"><summary>${topLvl}${topBadge}</summary>${subHtml}</details>`;
+                htmlStr += `<details class="ro-detail-node"><summary>${topLvl}</summary>${subHtml}</details>`;
             }
             return htmlStr;
         }
@@ -2024,7 +1792,7 @@
                     Object.values(searchUnitsMap).forEach(u => {
                         let isGarda = u.custKey === 'Garda';
                         let oosBadge = isGarda ? (u.isOOS ? `<span class="badge badge-oos">OOS</span>` : `<span class="badge badge-active">ACTIVE</span>`) : '';
-                        let isPriority = u.isOOS && u.usefulPct !== null && Math.round(u.usefulPct * 100) < 100;
+                        let isPriority = (u.isOOS && u.usefulPct !== null && isPriority({isOOS: u.isOOS, usefulPct: u.usefulPct}));
                         let priorityStatusBadge = isPriority ? `<span class="badge badge-urgent">Priority</span>` : `<span class="badge badge-low">Normal</span>`;
 
                         let joinedOwnersHtml = [...new Set(u.owners)].map(ow => `<div class="grouped-ro-item">${ow}</div>`).join('');
