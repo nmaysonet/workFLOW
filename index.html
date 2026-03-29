@@ -826,21 +826,8 @@
         function isPriority(ro) {
             if (!ro.isOOS) return false;
             let u = ro.usefulPct;
-            if (!u) return false;
-            
-            let typePct = null;
-            if (ro.unitType === 'LTS') typePct = u.LTS;
-            else if (ro.unitType === 'ST') typePct = u.ST;
-            else if (ro.unitType === 'SHUTTLE') typePct = u.SHUTTLE;
-            
-            if (typePct !== null && !isNaN(typePct)) {
-                return Math.round(typePct * 100) < 100;
-            }
-            
-            if (u.TOTAL !== null && !isNaN(u.TOTAL)) {
-                return Math.round(u.TOTAL * 100) < 100;
-            }
-            return false;
+            if (u === null || u === undefined || isNaN(u)) return false;
+            return Math.round(u * 100) < 100;
         }
 
         function areTasksSimilar(task1, task2) {
@@ -887,23 +874,11 @@
             if (targetData.length === 0) { alert("No data available to export."); return; }
 
             const excelRows = targetData.map(ro => {
-                let usefulText = "N/A";
-                let typePct = null;
-                if (ro.unitType === 'LTS') typePct = ro.usefulPct.LTS;
-                else if (ro.unitType === 'ST') typePct = ro.usefulPct.ST;
-                else if (ro.unitType === 'SHUTTLE') typePct = ro.usefulPct.SHUTTLE;
-
-                if (typePct !== null && !isNaN(typePct)) {
-                    usefulText = Math.round(typePct * 100) + '%';
-                } else if(ro.usefulPct && ro.usefulPct.TOTAL !== null) {
-                    usefulText = Math.round(ro.usefulPct.TOTAL * 100) + '% (Total)';
-                }
-
                 return {
                     "AFS RO #": ro.roNum.startsWith('NO RO') ? "NO ACTIVE RO" : ro.roNum, 
                     "Unit No": ro.unitNo, 
                     "OOS Status": ro.isOOS ? "OOS" : "",
-                    "Type Useful %": usefulText,
+                    "Useful %": ro.usefulPct !== null ? Math.round(ro.usefulPct * 100) + '%' : "N/A",
                     "Opened Date": ro.openedFormatted,
                     "Status": ro.status, "ECD": ro.ecdFormatted,
                     "Customer Group": ro.drillTopLevel, "Subregion": ro.subregion, "Branch": ro.branch
@@ -924,19 +899,11 @@
             if(results.length === 0) { alert("No data to export."); return; }
             
             const excelRows = results.map(ro => {
-                let u = ro.usefulPct || {};
-                let ltsStr = (u.LTS !== null && u.LTS !== undefined) ? Math.round(u.LTS * 100) + '%' : 'N/A';
-                let stStr = (u.ST !== null && u.ST !== undefined) ? Math.round(u.ST * 100) + '%' : 'N/A';
-                let shutStr = (u.SHUTTLE !== null && u.SHUTTLE !== undefined) ? Math.round(u.SHUTTLE * 100) + '%' : 'N/A';
-
                 return {
                     "AFS RO #": ro.roNum.startsWith('NO RO') ? "NO ACTIVE RO" : ro.roNum, 
                     "Unit No": ro.unitNo, 
                     "Priority Status": isPriority(ro) ? "Priority" : "Normal",
                     "OOS Status": ro.isOOS ? "OOS" : "",
-                    "LTS Useful %": ltsStr,
-                    "ST Useful %": stStr,
-                    "Shuttle Useful %": shutStr,
                     "Opened Date": ro.openedFormatted,
                     "Owner": ro.owner, "Status": ro.status, "ECD": ro.ecdFormatted
                 };
@@ -985,22 +952,23 @@
                     let bCode = extractGardaCode(branch);
                     let bNorm = normalizeBranchStr(branch);
                     
-                    let parsePct = (val) => {
-                        if (val === undefined || val === null || val === '') return null;
+                    let val = row[27]; // TOTAL
+                    let pct = null;
+                    if (val !== undefined && val !== null && val !== '') {
                         let v = parseFloat(String(val).trim());
-                        if (isNaN(v)) return null;
-                        return String(val).includes('%') ? v / 100 : v;
-                    };
+                        if (!isNaN(v)) {
+                            pct = String(val).includes('%') ? v / 100 : v;
+                        }
+                    }
                     
-                    let pcts = {
-                        LTS: parsePct(row[9]),     
-                        ST: parsePct(row[15]),     
-                        SHUTTLE: parsePct(row[21]),
-                        TOTAL: parsePct(row[27])   
-                    };
-                    
-                    if (bCode) branchUsefulMap[bCode] = pcts;
-                    if (bNorm) branchUsefulMap[bNorm] = pcts;
+                    if (pct !== null) {
+                        if (bCode) {
+                            branchUsefulMap[bCode] = pct;
+                            if (bCode === '18055') branchUsefulMap['14095'] = pct;
+                            if (bCode === '14095') branchUsefulMap['18055'] = pct;
+                        }
+                        if (bNorm) branchUsefulMap[bNorm] = pct;
+                    }
                 }
             }
 
@@ -1128,7 +1096,18 @@
 
                 let bCode = extractGardaCode(mUnit.branch);
                 let bNorm = normalizeBranchStr(mUnit.branch);
-                let usefulPcts = branchUsefulMap[bCode] || branchUsefulMap[bNorm] || { LTS: null, ST: null, SHUTTLE: null, TOTAL: null };
+                let usefulPct = null;
+                
+                if (branchUsefulMap[bCode] !== undefined) usefulPct = branchUsefulMap[bCode];
+                else if (branchUsefulMap[bNorm] !== undefined) usefulPct = branchUsefulMap[bNorm];
+                else {
+                    let cNameOnly = mUnit.branch.replace(/\d{3}[- ]?\d{2}/g, '').replace(/[^A-Z0-9]/ig, '');
+                    for (let bKey in branchUsefulMap) {
+                        if (bKey.length > 4 && cNameOnly.includes(bKey)) {
+                            usefulPct = branchUsefulMap[bKey]; break;
+                        }
+                    }
+                }
 
                 let ecdState = 'missing'; let ecdFormatted = 'NO ECD, UPDATE';
                 let ecdDate = new Date(dueRaw);
@@ -1159,7 +1138,7 @@
                     isOOS: mUnit.isOOS, isOpen, isCompletedKPI, isOnTimeKPI, isLateKPI, 
                     subregion: mUnit.subregion, branch: mUnit.branch, 
                     ecdState, ecdFormatted, openedDT, openedFormatted, 
-                    usefulPct: usefulPcts, region: mUnit.region,
+                    usefulPct: usefulPct, region: mUnit.region,
                     possibleDuplicate: false
                 };
 
@@ -1214,7 +1193,17 @@
 
                     let bCode = extractGardaCode(mUnit.branch);
                     let bNorm = normalizeBranchStr(mUnit.branch);
-                    let usefulPcts = branchUsefulMap[bCode] || branchUsefulMap[bNorm] || { LTS: null, ST: null, SHUTTLE: null, TOTAL: null };
+                    let usefulPct = null;
+                    if (branchUsefulMap[bCode] !== undefined) usefulPct = branchUsefulMap[bCode];
+                    else if (branchUsefulMap[bNorm] !== undefined) usefulPct = branchUsefulMap[bNorm];
+                    else {
+                        let cNameOnly = mUnit.branch.replace(/\d{3}[- ]?\d{2}/g, '').replace(/[^A-Z0-9]/ig, '');
+                        for (let bKey in branchUsefulMap) {
+                            if (bKey.length > 4 && cNameOnly.includes(bKey)) {
+                                usefulPct = branchUsefulMap[bKey]; break;
+                            }
+                        }
+                    }
 
                     let roObj = {
                         roNum: 'NO RO - ' + unit,
@@ -1238,7 +1227,7 @@
                         ecdFormatted: 'N/A',
                         openedDT: null,
                         openedFormatted: 'N/A',
-                        usefulPct: usefulPcts,
+                        usefulPct: usefulPct,
                         region: mUnit.region,
                         possibleDuplicate: false
                     };
@@ -1400,38 +1389,19 @@
             }
         }
 
-        function formatUsefulBadge(label, val) {
-            if(val === null || val === undefined || isNaN(val) || val === '') return '';
-            let pct = Math.round(val * 100);
+        function getUsefulBadge(usefulArray) {
+            let valid = usefulArray.filter(v => v !== null && v !== undefined && !isNaN(v));
+            if (valid.length === 0) return '';
+            let avg = valid.reduce((a,b) => a+b, 0) / valid.length;
+            let val = Math.round(avg * 100);
             let bg = '#00ff00'; // bright green default
             let tc = 'black';
             
-            if (pct < 95) { bg = '#d9534f'; tc = 'white'; } 
-            else if (pct >= 95 && pct < 100) { bg = '#FFC600'; tc = 'black'; } 
-            else if (pct === 100) { bg = '#90ee90'; tc = 'black'; } // light green
+            if (val < 95) { bg = '#d9534f'; tc = 'white'; } 
+            else if (val >= 95 && val < 100) { bg = '#FFC600'; tc = 'black'; } 
+            else if (val === 100) { bg = '#90ee90'; tc = 'black'; } // light green
 
-            return `<span class="badge" style="background-color: ${bg}; color: ${tc}; font-size: 11px; margin-left: 10px;">${label}: ${pct}%</span>`;
-        }
-
-        function getAggregatedBadges(pctArray) {
-            if (!pctArray || pctArray.length === 0) return '';
-            
-            let ltsSum = 0, ltsCount = 0;
-            let stSum = 0, stCount = 0;
-            let shutSum = 0, shutCount = 0;
-
-            pctArray.forEach(p => {
-                if (p.LTS !== null && p.LTS !== undefined && !isNaN(p.LTS)) { ltsSum += p.LTS; ltsCount++; }
-                if (p.ST !== null && p.ST !== undefined && !isNaN(p.ST)) { stSum += p.ST; stCount++; }
-                if (p.SHUTTLE !== null && p.SHUTTLE !== undefined && !isNaN(p.SHUTTLE)) { shutSum += p.SHUTTLE; shutCount++; }
-            });
-
-            let badges = '';
-            if (ltsCount > 0) badges += formatUsefulBadge('LTS Useful', ltsSum / ltsCount);
-            if (stCount > 0) badges += formatUsefulBadge('ST Useful', stSum / stCount);
-            if (shutCount > 0) badges += formatUsefulBadge('Shuttle Useful', shutSum / shutCount);
-
-            return badges;
+            return `<span class="badge" style="background-color: ${bg}; color: ${tc}; margin-left: 10px; font-size: 11px;">Useful: ${val}%</span>`;
         }
 
         function generateTileHTML(name, dataSet, chartId = null, isPM = false) {
@@ -1595,7 +1565,7 @@
             let topUsefulMap = {};
 
             baseOpenData.forEach(ro => {
-                if (ro.usefulPct) {
+                if (ro.usefulPct !== null && ro.usefulPct !== undefined) {
                     let branchKey = ro.drillTopLevel + '|||' + ro.subregion + '|||' + ro.branch;
                     let subKey = ro.drillTopLevel + '|||' + ro.subregion;
                     let topKey = ro.drillTopLevel;
@@ -1635,23 +1605,18 @@
             
             let htmlStr = '';
             for(let topLvl in hierarchy) {
-                let topBadges = getAggregatedBadges(topUsefulMap[topLvl] || []);
+                let topBadges = getUsefulBadge(topUsefulMap[topLvl] || []);
                 let subHtml = '';
                 for(let sub in hierarchy[topLvl]) {
                     let subKey = topLvl + '|||' + sub;
-                    let subBadges = getAggregatedBadges(subUsefulMap[subKey] || []);
+                    let subBadges = getUsefulBadge(subUsefulMap[subKey] || []);
                     let branchHtml = '';
                     for(let branch in hierarchy[topLvl][sub]) {
                         let branchKey = subKey + '|||' + branch;
                         let branchROs = hierarchy[topLvl][sub][branch];
                         
-                        let u = branchUsefulVals[branchKey] || {};
-                        let badgesHtml = '';
-                        if (u) {
-                            if (u.LTS !== null) badgesHtml += formatUsefulBadge('LTS Useful', u.LTS);
-                            if (u.ST !== null) badgesHtml += formatUsefulBadge('ST Useful', u.ST);
-                            if (u.SHUTTLE !== null) badgesHtml += formatUsefulBadge('Shuttle Useful', u.SHUTTLE);
-                        }
+                        let bPct = branchUsefulVals[branchKey];
+                        let branchBadge = getUsefulBadge(bPct !== undefined && bPct !== null ? [bPct] : []);
 
                         let unitsMap = {};
                         branchROs.forEach(ro => {
@@ -1700,13 +1665,13 @@
                         let isBranchDedicated = branchROs.some(ro => ro.isDedicated);
                         let dedicatedBadge = isBranchDedicated ? `<span style="background-color: white; color: black; border: 1px solid black; border-radius: 12px; padding: 2px 6px; margin-left: 5px; font-size: 10px; font-weight: bold;">(DEDICATED)</span>` : '';
 
-                        branchHtml += `<details class="ro-detail-node"><summary><div style="flex-grow:1; display:flex; align-items:center;">${branch} (${branchROs.length} ROs) ${dedicatedBadge}</div><div>${badgesHtml}</div></summary>`;
+                        branchHtml += `<details class="ro-detail-node"><summary><div style="flex-grow:1; display:flex; align-items:center;">${branch} (${branchROs.length} ROs) ${dedicatedBadge}</div><div>${branchBadge}</div></summary>`;
                         let tableHTML = `<div class="table-wrapper"><table><colgroup><col style="width:23%;"><col style="width:11%;">${isPM ? '' : '<col style="width:11%;">'}<col style="width:9%;"><col style="width:11%;"><col style="width:21%;"><col style="width:14%;"></colgroup><thead><tr><th>AFS RO # & Dispatch</th><th>Unit No</th>${isPM ? '' : '<th>Priority Status</th>'}<th>OOS Status</th><th>Opened Date</th><th>Status</th><th>ECD</th></tr></thead><tbody>`;
                         
                         groupedUnits.forEach(u => {
                             let oosBadge = u.isOOS ? `<span class="badge badge-oos">OOS</span>` : `<span class="badge badge-active">ACTIVE</span>`;
                             
-                            let isPri = (u.isOOS && isPriority({isOOS: u.isOOS, usefulPct: u.usefulPct, unitType: u.unitType}));
+                            let isPri = (u.isOOS && isPriority({isOOS: u.isOOS, usefulPct: u.usefulPct}));
                             let priorityStatusBadge = isPri ? `<span class="badge badge-urgent">Priority</span>` : `<span class="badge badge-low">Normal</span>`;
 
                             let rowCount = u.roNums.length;
@@ -1855,7 +1820,7 @@
 
                     Object.values(searchUnitsMap).forEach(u => {
                         let oosBadge = u.isOOS ? `<span class="badge badge-oos">OOS</span>` : `<span class="badge badge-active">ACTIVE</span>`;
-                        let isPri = (u.isOOS && isPriority({isOOS: u.isOOS, usefulPct: u.usefulPct, unitType: u.unitType}));
+                        let isPri = (u.isOOS && isPriority({isOOS: u.isOOS, usefulPct: u.usefulPct}));
                         let priorityStatusBadge = isPri ? `<span class="badge badge-urgent">Priority</span>` : `<span class="badge badge-low">Normal</span>`;
 
                         let joinedOwnersHtml = [...new Set(u.owners)].map(ow => `<div class="grouped-ro-item">${ow}</div>`).join('');
