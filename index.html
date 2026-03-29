@@ -21,7 +21,7 @@
         :root {
             --sidebar-bg: #3a3b40;
             --sidebar-hover: #4a4b50;
-            --gold: #FFC600; /* Standard Amerit Yellow */
+            --gold: #FFC600; 
             --gold-hover: #e5b200;
             --urgent-red: #d9534f;
             --medium-yellow: #f0ad4e;
@@ -42,7 +42,6 @@
         /* Sidebar Truck Graphic */
         .sidebar-truck { margin-top: auto; padding: 30px; text-align: center; border-top: 1px solid #4a4b50; background: #2a2b30; }
 
-        /* Animations CSS */
         @keyframes spin { 100% { transform: rotate(360deg); } }
         @keyframes bump { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-1.5px); } }
         @keyframes moveRoad { from { stroke-dashoffset: 0; } to { stroke-dashoffset: 15; } }
@@ -66,7 +65,6 @@
         .btn-green { background-color: #5cb85c; color: #fff; padding: 8px 15px; border-radius: 4px; font-weight: bold; transition: 0.2s; border: none; cursor: pointer; font-size: 13px; display: inline-flex; align-items: center; gap: 5px;}
         .btn-green:hover { background-color: #4cae4c; color: white;}
 
-        /* Vendor Maps Dropdown Styling */
         .dropdown { position: relative; display: inline-block; }
         .dropdown-content { 
             display: none; position: absolute; right: 0; top: 100%; background-color: #fff; 
@@ -77,7 +75,6 @@
         .dropdown-content a:hover { background-color: #f9f9f9; color: var(--gold); }
         .dropdown:hover .dropdown-content { display: block; margin-top: -2px; padding-top: 2px; }
 
-        /* Views */
         .view-section { padding: 30px; display: none; }
         .view-section.active { display: block; }
 
@@ -93,7 +90,6 @@
         .upload-btn:hover { background-color: #222; }
         #upload-status { margin-top: 15px; font-size: 14px; font-weight: bold; color: #2e7d32; }
 
-        /* Filter Tabs */
         .filter-bar { display: flex; gap: 10px; margin-bottom: 20px; padding-bottom: 15px; border-bottom: 1px solid var(--border); flex-wrap: wrap; align-items: center; }
         .filter-btn { padding: 10px 20px; border: none; background-color: #e0e0e0; color: #333; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 13px; transition: 0.2s; }
         .filter-btn:hover { background-color: #d0d0d0; }
@@ -116,7 +112,6 @@
         }
         .kpi-name { font-size: 20px; font-weight: 800; margin-bottom: 15px; color: #333; }
         
-        /* Master Dashboard Container & Layout */
         .home-dashboard-header { display: flex; justify-content: space-between; align-items: center; margin-top: 40px; margin-bottom: 10px; padding-bottom: 10px; border-bottom: 2px solid var(--border); flex-wrap: wrap; gap: 15px;}
         .filter-select { padding: 8px 15px; border-radius: 4px; border: 1px solid #ccc; font-weight: 700; font-size: 14px; background: #fff;}
         
@@ -135,7 +130,6 @@
         }
         .home-master-tile .kpi-name { font-size: 18px; margin-bottom: 15px; }
 
-        /* KPI Layout - Master Highlight Boxes */
         .kpi-top-metrics { display: flex; gap: 10px; margin-bottom: 15px; align-items: stretch; }
         .highlight-box { flex: 1; background: #fffaf0; border: 1px solid var(--gold); border-radius: 6px; padding: 10px; display: flex; flex-direction: column; justify-content: center;}
         .highlight-box.urgent-box { background: #fff0f0; border-color: var(--urgent-red); }
@@ -147,7 +141,6 @@
 
         .chart-box { width: 50px; height: 50px; flex-shrink: 0; position: relative; display: flex; align-items: center; justify-content: center; margin: auto 5px; }
 
-        /* KPI Layout - Bottom Row */
         .kpi-stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; border-top: 1px solid #eee; padding-top: 15px; width: 100%;}
         .stat-box { background: #f9f9f9; padding: 10px 5px; border-radius: 4px; text-align: center; }
         .stat-box .title { font-size: 10px; color: #666; text-transform: uppercase; font-weight: 700; margin-bottom: 5px; }
@@ -834,19 +827,6 @@
             return '';
         }
 
-        function getCustKey(rawStr) {
-            let c = (rawStr || '').toUpperCase();
-            if (c.includes('FERGUSON')) return 'Ferguson';
-            if (c.includes('AMERIT FLEET SOLUTIONS')) return 'Amerit Fleet Solutions';
-            if (c.includes('BRINKS')) return 'Brinks';
-            if (c.includes('US FOODS')) return 'US Foods';
-            if (c.includes('FRONTIER') || c.includes('CUSTOM TRUCK')) return 'Frontier';
-            if (c.includes('COLONY HARDWARE')) return 'Colony Hardware';
-            if (c.includes('SUKUT CONSTRUCTION')) return 'Sukut Construction';
-            if (c.includes('GARDA')) return 'Garda';
-            return rawStr.split('-')[0].trim() || 'Unknown Customer';
-        }
-
         function isPriority(ro) {
             if (!ro.isOOS) return false;
             let u = ro.usefulPct;
@@ -1083,16 +1063,15 @@
                 let unit = getCol(row, ['Unit No', 'UNITNUMBER', 'Vehicle']).toUpperCase().trim();
                 
                 let mUnit = masterUnits[unit];
-                if (!mUnit) return null; // Drop anything not in OOS GARDA (or if it was scrubbed as Dedicated)
+                if (!mUnit) return null; 
 
-                let rawOwnerEmail = getCol(row, ['Owner', 'Created By', 'Email']).toLowerCase().trim(); 
-                let status = getCol(row, ['Status']);
+                let ownerEmail = getCol(row, ['Owner', 'Created By', 'Email']).toLowerCase().trim(); 
+                let statusStr = getCol(row, ['Status']).toUpperCase().trim();
                 let vmrs = getCol(row, ['Task', 'DESCRIP', 'VMRS Description']);
                 let openedRaw = getCol(row, ['Opened', 'ROOpenedDate']);
                 let dueRaw = getCol(row, ['Unit Due Date', 'Estimate Due Date', 'Due Date', 'L']);
                 let compRaw = getCol(row, ['Completed Date', 'Completed', 'P']);
-
-                let statusStr = String(status || '').toUpperCase().trim();
+                
                 let isOpen = !excludedStatuses.includes(statusStr);
                 if (isOpen) openROsInUnits.add(unit);
 
@@ -1101,28 +1080,27 @@
                 let openedFormatted = openedDT ? `${openedDT.getMonth()+1}/${openedDT.getDate()}/${openedDT.getFullYear()}` : 'N/A';
 
                 let custKey = getCustKey(mUnit.branch);
-                let drillTopLevel = custKey + (mUnit.region !== 'Unknown Region' && mUnit.region !== '' ? ' ' + mUnit.region : '');
-
-                // Owner Override Logic
-                let finalOwner = mUnit.owner;
-                let finalTeam = 'VENDED REPAIR';
-
-                if (rawOwnerEmail === 'kanguzza@ameritfleet.com') {
-                    finalOwner = 'Kevin Anguzza';
-                    finalTeam = 'PM';
-                }
-
-                if (finalOwner.toLowerCase().includes('ers')) {
-                    finalTeam = 'ERS';
-                }
+                let drillTopLevel = custKey + (mUnit.region !== '' && mUnit.region !== 'Unknown Region' ? ' ' + mUnit.region : '');
 
                 allCustSet.add(custKey);
-                allRegionsSet.add(mUnit.region);
+                if(mUnit.region) allRegionsSet.add(mUnit.region);
 
-                if (isOpen) {
-                    if (finalTeam === 'PM') activePM.add(finalOwner);
-                    else if (finalTeam === 'ERS') activeERS.add(finalOwner);
-                    else activeVended.add(finalOwner);
+                // Multi-Ownership Array Generation
+                let tileOwners = new Set();
+                let unitOwner = mUnit.owner;
+
+                if (unitOwner && unitOwner.toUpperCase() !== 'UNASSIGNED') {
+                    tileOwners.add(unitOwner);
+                }
+
+                let creatorInfo = resourceMap[ownerEmail];
+                if (creatorInfo) {
+                    let t = creatorInfo.team;
+                    if (t === 'ERS' || t === 'PM' || (t === 'VENDED REPAIR' && !creatorInfo.hasBranch)) {
+                        if (creatorInfo.name) tileOwners.add(creatorInfo.name);
+                    }
+                } else if (ownerEmail === 'kanguzza@ameritfleet.com') {
+                    tileOwners.add('Kevin Anguzza');
                 }
 
                 let bCode = extractGardaCode(mUnit.branch);
@@ -1632,11 +1610,8 @@
                         groupedUnits.sort((a,b) => { 
                             return (b.isOOS === true ? 1 : 0) - (a.isOOS === true ? 1 : 0);
                         });
-                        
-                        let isBranchDedicated = branchROs.some(ro => ro.isDedicated);
-                        let dedicatedBadge = isBranchDedicated ? `<span style="background-color: white; color: black; border: 1px solid black; border-radius: 12px; padding: 2px 6px; margin-left: 5px; font-size: 10px; font-weight: bold;">(DEDICATED)</span>` : '';
 
-                        branchHtml += `<details class="ro-detail-node"><summary><div style="flex-grow:1; display:flex; align-items:center;">${branch} (${branchROs.length} ROs) ${dedicatedBadge}</div><div>${badgesHtml}</div></summary>`;
+                        branchHtml += `<details class="ro-detail-node"><summary><div style="flex-grow:1; display:flex; align-items:center;">${branch} (${branchROs.length} ROs)</div><div>${badgesHtml}</div></summary>`;
                         let tableHTML = `<div class="table-wrapper"><table><colgroup><col style="width:23%;"><col style="width:11%;">${isPM ? '' : '<col style="width:11%;">'}<col style="width:9%;"><col style="width:11%;"><col style="width:21%;"><col style="width:14%;"></colgroup><thead><tr><th>AFS RO # & Dispatch</th><th>Unit No</th>${isPM ? '' : '<th>Priority Status</th>'}<th>OOS Status</th><th>Opened Date</th><th>Status</th><th>ECD</th></tr></thead><tbody>`;
                         
                         groupedUnits.forEach(u => {
@@ -1786,8 +1761,7 @@
                     });
 
                     Object.values(searchUnitsMap).forEach(u => {
-                        let isGarda = u.custKey === 'Garda';
-                        let oosBadge = isGarda ? (u.isOOS ? `<span class="badge badge-oos">OOS</span>` : `<span class="badge badge-active">ACTIVE</span>`) : '';
+                        let oosBadge = u.isOOS ? `<span class="badge badge-oos">OOS</span>` : `<span class="badge badge-active">ACTIVE</span>`;
                         let isPri = (u.isOOS && isPriority({isOOS: u.isOOS, usefulPct: u.usefulPct, unitType: u.unitType}));
                         let priorityStatusBadge = isPri ? `<span class="badge badge-urgent">Priority</span>` : `<span class="badge badge-low">Normal</span>`;
 
