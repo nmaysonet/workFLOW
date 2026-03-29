@@ -379,6 +379,12 @@
                 <button class="filter-btn active" data-filter="ALL" onclick="setFilter('ALL')">All Units</button>
                 <button class="filter-btn" data-filter="OOS" onclick="setFilter('OOS')">Only OOS</button>
                 <button class="filter-btn" data-filter="PRIORITY" onclick="setFilter('PRIORITY')">Priority</button>
+                
+                <span style="color:#aaa; margin:0 5px;">|</span>
+                
+                <select id="dd-region" class="filter-select" onchange="triggerDrilldownFilter()"><option value="ALL">All Regions</option></select>
+                <select id="dd-subregion" class="filter-select" onchange="triggerDrilldownFilter()"><option value="ALL">All Subregions</option></select>
+                <select id="dd-branch" class="filter-select" onchange="triggerDrilldownFilter()"><option value="ALL">All Branches</option></select>
             </div>
             <div class="drilldown-container" id="drilldown-body"></div>
         </div>
@@ -393,6 +399,16 @@
                 </div>
             </div>
             
+            <div class="filter-bar" style="align-items: center;">
+                <select id="sum-region" class="filter-select" style="margin-right: 10px;" onchange="updateSummaryFilters()"><option value="ALL">All Regions</option></select>
+                <select id="sum-subregion" class="filter-select" style="margin-right: 10px;" onchange="updateSummaryFilters()"><option value="ALL">All Subregions</option></select>
+                <select id="sum-branch" class="filter-select" style="margin-right: 15px;" onchange="updateSummaryFilters()"><option value="ALL">All Branches</option></select>
+                
+                <label style="margin-right: 15px; font-weight: bold; font-size: 13px; display: flex; align-items: center; gap: 5px; cursor: pointer;">
+                    <input type="checkbox" id="sum-notes-only" style="cursor: pointer;" onchange="updateSummaryFilters()"> Has Notes Only
+                </label>
+            </div>
+
             <div class="sub-tabs-container">
                 <button class="sub-tab active" onclick="switchSummaryTab('sub-summary', this)">VDR Consolidation Summary</button>
                 <button class="sub-tab" onclick="switchSummaryTab('sub-amerit-oos', this)">Amerit OOS Trucks</button>
@@ -843,6 +859,8 @@
             let controls = document.getElementById('summary-tree-controls');
             if (subId === 'sub-summary') controls.style.display = 'flex';
             else controls.style.display = 'none';
+            
+            updateSummaryFilters();
         }
 
         function normalizeBranchStr(str) {
@@ -921,18 +939,114 @@
             return false;
         }
 
+        window.triggerDrilldownFilter = function() {
+            if(currentOwnerView) loadPersonDrilldown(currentOwnerView, currentParentView, true);
+        }
+        
+        window.updateSummaryFilters = function() {
+            renderSummary();
+            renderAmeritOos();
+        }
+
+        function populateDrilldownDropdowns(dataToScan) {
+            let rSel = document.getElementById('dd-region');
+            let sSel = document.getElementById('dd-subregion');
+            let bSel = document.getElementById('dd-branch');
+            
+            let rVal = rSel.value;
+            let sVal = sSel.value;
+            let bVal = bSel.value;
+
+            let regions = new Set();
+            let subs = new Set();
+            let branches = new Set();
+
+            dataToScan.forEach(ro => {
+                regions.add(ro.region);
+                if (rVal === 'ALL' || ro.region === rVal) {
+                    subs.add(ro.subregion);
+                    if (sVal === 'ALL' || ro.subregion === sVal) {
+                        branches.add(ro.branch);
+                    }
+                }
+            });
+
+            rSel.innerHTML = '<option value="ALL">All Regions</option>';
+            Array.from(regions).sort().forEach(r => rSel.innerHTML += `<option value="${r}">${r}</option>`);
+            rSel.value = regions.has(rVal) ? rVal : 'ALL';
+
+            sSel.innerHTML = '<option value="ALL">All Subregions</option>';
+            Array.from(subs).sort().forEach(s => sSel.innerHTML += `<option value="${s}">${s}</option>`);
+            sSel.value = subs.has(sVal) ? sVal : 'ALL';
+
+            bSel.innerHTML = '<option value="ALL">All Branches</option>';
+            Array.from(branches).sort().forEach(b => bSel.innerHTML += `<option value="${b}">${b}</option>`);
+            bSel.value = branches.has(bVal) ? bVal : 'ALL';
+        }
+
+        function populateSummaryDropdowns() {
+            let rSel = document.getElementById('sum-region');
+            let sSel = document.getElementById('sum-subregion');
+            let bSel = document.getElementById('sum-branch');
+            
+            let rVal = rSel.value;
+            let sVal = sSel.value;
+            let bVal = bSel.value;
+
+            let regions = new Set();
+            let subs = new Set();
+            let branches = new Set();
+
+            for (let reg in summaryTree) {
+                regions.add(reg);
+                if (rVal === 'ALL' || rVal === reg) {
+                    for (let sub in summaryTree[reg].subs) {
+                        subs.add(sub);
+                        if (sVal === 'ALL' || sVal === sub) {
+                            for (let bra in summaryTree[reg].subs[sub].branches) {
+                                branches.add(bra);
+                            }
+                        }
+                    }
+                }
+            }
+
+            rSel.innerHTML = '<option value="ALL">All Regions</option>';
+            Array.from(regions).sort().forEach(r => rSel.innerHTML += `<option value="${r}">${r}</option>`);
+            rSel.value = regions.has(rVal) ? rVal : 'ALL';
+
+            sSel.innerHTML = '<option value="ALL">All Subregions</option>';
+            Array.from(subs).sort().forEach(s => sSel.innerHTML += `<option value="${s}">${s}</option>`);
+            sSel.value = subs.has(sVal) ? sVal : 'ALL';
+
+            bSel.innerHTML = '<option value="ALL">All Branches</option>';
+            Array.from(branches).sort().forEach(b => bSel.innerHTML += `<option value="${b}">${b}</option>`);
+            bSel.value = branches.has(bVal) ? bVal : 'ALL';
+        }
+
         function exportDrilldownToExcel() {
             if (!currentOwnerView || processedData.length === 0) return;
             
             let ownerDataAll = processedData;
-            if (currentOwnerView === 'ALL_PM') ownerDataAll = processedData.filter(ro => ro.tileOwners.some(o => pmOwners.includes(o)));
-            else if (currentOwnerView === 'ALL_VENDED') ownerDataAll = processedData.filter(ro => ro.tileOwners.some(o => vendedOwners.includes(o)));
-            else if (currentOwnerView === 'ALL_ERS') ownerDataAll = processedData.filter(ro => ro.tileOwners.some(o => ersOwners.includes(o)));
-            else ownerDataAll = processedData.filter(ro => ro.tileOwners.includes(String(currentOwnerView)));
+            if (currentOwnerView === 'ALL_PM') ownerDataAll = processedData.filter(ro => ro.kpiOwners.some(o => pmOwners.includes(o)) || ro.drilldownOwners.some(o => pmOwners.includes(o)));
+            else if (currentOwnerView === 'ALL_VENDED') ownerDataAll = processedData.filter(ro => ro.drilldownOwners.some(o => vendedOwners.includes(o)));
+            else if (currentOwnerView === 'ALL_ERS') ownerDataAll = processedData.filter(ro => ro.drilldownOwners.some(o => ersOwners.includes(o)));
+            else ownerDataAll = processedData.filter(ro => ro.drilldownOwners.includes(String(currentOwnerView)));
             
             if (currentCustomerFilter !== 'ALL') {
                 ownerDataAll = ownerDataAll.filter(ro => ro.custKey === currentCustomerFilter);
             }
+
+            let rVal = document.getElementById('dd-region').value;
+            let sVal = document.getElementById('dd-subregion').value;
+            let bVal = document.getElementById('dd-branch').value;
+
+            ownerDataAll = ownerDataAll.filter(ro => {
+                if (rVal !== 'ALL' && ro.region !== rVal) return false;
+                if (sVal !== 'ALL' && ro.subregion !== sVal) return false;
+                if (bVal !== 'ALL' && ro.branch !== bVal) return false;
+                return true;
+            });
 
             let isPM = currentOwnerView === 'ALL_PM' || pmOwners.includes(currentOwnerView);
             let targetData = ownerDataAll.filter(ro => ro.isOpen);
@@ -1024,7 +1138,7 @@
             else if(activeView === 'pm-view') renderKPITiles(pmOwners, 'pm-kpi-container', 'pm-view');
             else if(activeView === 'vended-view') renderKPITiles(vendedOwners, 'vended-kpi-container', 'vended-view');
             else if(activeView === 'ers-view') renderKPITiles(ersOwners, 'ers-kpi-container', 'ers-view');
-            else if(activeView === 'person-view') { if(currentOwnerView) loadPersonDrilldown(currentOwnerView, currentParentView); }
+            else if(activeView === 'person-view') { if(currentOwnerView) loadPersonDrilldown(currentOwnerView, currentParentView, true); }
             else if(activeView === 'summary-view') {
                 renderSummary();
                 renderAmeritOos();
@@ -1184,21 +1298,34 @@
 
                 allCustSet.add(custKey);
 
-                let tileOwners = new Set();
+                let kpiOwners = new Set();
+                let drilldownOwners = new Set();
+                
                 let unitOwner = mUnit.owner;
-
-                if (unitOwner && unitOwner.toUpperCase() !== 'UNASSIGNED') {
-                    tileOwners.add(unitOwner);
-                }
+                let validBranchOwner = (unitOwner && unitOwner.toUpperCase() !== 'UNASSIGNED') ? unitOwner : null;
 
                 let creatorInfo = resourceMap[ownerEmail];
-                if (creatorInfo) {
-                    let t = creatorInfo.team;
-                    if (t === 'ERS' || t === 'PM' || (t === 'VENDED REPAIR' && !creatorInfo.hasBranch)) {
-                        if (creatorInfo.name) tileOwners.add(creatorInfo.name);
+                let isCreatorSpecial = false;
+
+                if (creatorInfo && (creatorInfo.team === 'ERS' || creatorInfo.team === 'PM')) {
+                    isCreatorSpecial = true;
+                    if (creatorInfo.name) {
+                        kpiOwners.add(creatorInfo.name);
+                        drilldownOwners.add(creatorInfo.name);
                     }
                 } else if (ownerEmail === 'kanguzza@ameritfleet.com') {
-                    tileOwners.add('Kevin Anguzza');
+                    isCreatorSpecial = true;
+                    kpiOwners.add('Kevin Anguzza');
+                    drilldownOwners.add('Kevin Anguzza');
+                }
+
+                if (isCreatorSpecial) {
+                    if (validBranchOwner) drilldownOwners.add(validBranchOwner);
+                } else {
+                    if (validBranchOwner) {
+                        kpiOwners.add(validBranchOwner);
+                        drilldownOwners.add(validBranchOwner);
+                    }
                 }
 
                 let bCode = extractGardaCode(mUnit.branch) || normalizeBranchStr(mUnit.branch);
@@ -1229,8 +1356,10 @@
                 
                 let roObj = {
                     roNum, customer: mUnit.branch, custKey, drillTopLevel, 
-                    owner: Array.from(tileOwners).join(', '), 
-                    tileOwners: Array.from(tileOwners),
+                    owner: Array.from(drilldownOwners).join(', '), 
+                    kpiOwners: Array.from(kpiOwners),
+                    drilldownOwners: Array.from(drilldownOwners),
+                    tileOwners: Array.from(drilldownOwners), 
                     unitNo: unit, unitType: mUnit.type, status: statusStr, vmrs, 
                     isOOS: mUnit.isOOS, isOpen, isCompletedKPI, isOnTimeKPI, isLateKPI, 
                     subregion: mUnit.subregion, branch: mUnit.branch, 
@@ -1240,7 +1369,7 @@
                 };
 
                 if (isOpen) {
-                    roObj.tileOwners.forEach(o => {
+                    roObj.kpiOwners.forEach(o => {
                         let t = ownerNameToTeam[o] || 'VENDED REPAIR';
                         if (o === 'Kevin Anguzza') t = 'PM';
                         if (t === 'PM') activePM.add(o);
@@ -1252,7 +1381,6 @@
                 return roObj;
             }).filter(ro => ro !== null);
 
-            // Duplicate Order Detection Engine
             let unitRoGroups = {};
             processedData.forEach(ro => {
                 if (ro.isOpen && ro.roNum && !ro.roNum.startsWith('NO RO')) {
@@ -1275,17 +1403,18 @@
                 }
             }
 
-            // GHOST RO INJECTION
             for (let unit in masterUnits) {
                 let mUnit = masterUnits[unit];
                 if (mUnit.isOOS && !openROsInUnits.has(unit)) {
                     let custKey = getCustKey(mUnit.branch);
                     let drillTopLevel = custKey + (mUnit.region !== '' && mUnit.region !== 'Unknown Region' ? ' ' + mUnit.region : '');
 
-                    let tileOwners = new Set();
+                    let kpiOwners = new Set();
+                    let drilldownOwners = new Set();
                     let unitOwner = mUnit.owner;
                     if (unitOwner && unitOwner.toUpperCase() !== 'UNASSIGNED') {
-                        tileOwners.add(unitOwner);
+                        kpiOwners.add(unitOwner);
+                        drilldownOwners.add(unitOwner);
                     }
 
                     let bCode = extractGardaCode(mUnit.branch) || normalizeBranchStr(mUnit.branch);
@@ -1296,8 +1425,10 @@
                         customer: mUnit.branch,
                         custKey: custKey,
                         drillTopLevel: drillTopLevel,
-                        owner: Array.from(tileOwners).join(', '),
-                        tileOwners: Array.from(tileOwners),
+                        owner: Array.from(drilldownOwners).join(', '),
+                        kpiOwners: Array.from(kpiOwners),
+                        drilldownOwners: Array.from(drilldownOwners),
+                        tileOwners: Array.from(drilldownOwners),
                         unitNo: unit,
                         unitType: mUnit.type,
                         status: 'NO ACTIVE RO',
@@ -1322,7 +1453,7 @@
 
                     processedData.push(roObj);
 
-                    roObj.tileOwners.forEach(o => {
+                    roObj.kpiOwners.forEach(o => {
                         let t = ownerNameToTeam[o] || 'VENDED REPAIR';
                         if (o === 'Kevin Anguzza') t = 'PM';
                         if (t === 'PM') activePM.add(o);
@@ -1334,7 +1465,6 @@
                 }
             }
 
-            // Summary Hierarchy Engine Build
             summaryTree = {};
             for (let unit in masterUnits) {
                 let m = masterUnits[unit];
@@ -1387,6 +1517,8 @@
                 });
             });
 
+            populateSummaryDropdowns();
+
             document.getElementById('upload-box').style.display = 'none';
             document.getElementById('home-dashboard').style.display = 'block';
             
@@ -1396,6 +1528,11 @@
 
         // --- AMERIT OOS ENGINE ---
         function renderAmeritOos() {
+            let rVal = document.getElementById('sum-region').value;
+            let sVal = document.getElementById('sum-subregion').value;
+            let bVal = document.getElementById('sum-branch').value;
+            let notesOnly = document.getElementById('sum-notes-only').checked;
+
             let unitRoGroups = {};
             processedData.forEach(ro => {
                 if (!unitRoGroups[ro.unitNo]) unitRoGroups[ro.unitNo] = [];
@@ -1408,6 +1545,10 @@
 
             for (let unit in masterUnits) {
                 let mUnit = masterUnits[unit];
+                if (rVal !== 'ALL' && mUnit.region !== rVal) continue;
+                if (sVal !== 'ALL' && mUnit.subregion !== sVal) continue;
+                if (bVal !== 'ALL' && mUnit.branch !== bVal) continue;
+
                 if (mUnit.isOOS) { 
                     let ros = unitRoGroups[unit] || [];
                     
@@ -1437,6 +1578,8 @@
                         }
                     });
                     
+                    if (notesOnly && notes.length === 0) continue;
+
                     let notesHtml = notes.join(' <br><hr style="border-top:1px dashed #ccc; margin:4px 0;"> ');
                     if (!notesHtml) notesHtml = '<i style="color:#aaa;">No Notes</i>';
 
@@ -1518,8 +1661,14 @@
         }
 
         function renderSummary() {
+            let rVal = document.getElementById('sum-region').value;
+            let sVal = document.getElementById('sum-subregion').value;
+            let bVal = document.getElementById('sum-branch').value;
+
             let html = '';
             for (let reg of Object.keys(summaryTree).sort()) {
+                if (rVal !== 'ALL' && reg !== rVal) continue;
+                
                 let rData = summaryTree[reg];
                 let rActive = Math.max(0, rData.totalUnits - rData.oos);
                 let rIcon = expandedSummaryState[reg] ? '▼' : '▶';
@@ -1536,6 +1685,8 @@
 
                 if (expandedSummaryState[reg]) {
                     for (let sub of Object.keys(rData.subs).sort()) {
+                        if (sVal !== 'ALL' && sub !== sVal) continue;
+
                         let sData = rData.subs[sub];
                         let sActive = Math.max(0, sData.totalUnits - sData.oos);
                         let subId = reg + '|' + sub;
@@ -1553,6 +1704,8 @@
 
                         if (expandedSummaryState[subId]) {
                             for (let bra of Object.keys(sData.branches).sort()) {
+                                if (bVal !== 'ALL' && bra !== bVal) continue;
+
                                 let bData = sData.branches[bra];
                                 let bActive = Math.max(0, bData.totalUnits - bData.oos);
                                 
@@ -1574,9 +1727,15 @@
         }
 
         window.exportSummaryToExcel = function() {
+            let rVal = document.getElementById('sum-region').value;
+            let sVal = document.getElementById('sum-subregion').value;
+            let bVal = document.getElementById('sum-branch').value;
+
             // Tab 1: Consolidation Summary
             let sumRows = [];
             for (let reg of Object.keys(summaryTree).sort()) {
+                if (rVal !== 'ALL' && reg !== rVal) continue;
+
                 let rData = summaryTree[reg];
                 let rActive = Math.max(0, rData.totalUnits - rData.oos);
                 let rPct = rData.maxRoutes > 0 ? (rActive / rData.maxRoutes) : 0;
@@ -1590,6 +1749,8 @@
                 });
                 
                 for (let sub of Object.keys(rData.subs).sort()) {
+                    if (sVal !== 'ALL' && sub !== sVal) continue;
+
                     let sData = rData.subs[sub];
                     let sActive = Math.max(0, sData.totalUnits - sData.oos);
                     let sPct = sData.maxRoutes > 0 ? (sActive / sData.maxRoutes) : 0;
@@ -1603,6 +1764,8 @@
                     });
                     
                     for (let bra of Object.keys(sData.branches).sort()) {
+                        if (bVal !== 'ALL' && bra !== bVal) continue;
+
                         let bData = sData.branches[bra];
                         let bActive = Math.max(0, bData.totalUnits - bData.oos);
                         let bPct = bData.maxRoutes > 0 ? (bActive / bData.maxRoutes) : 0;
@@ -1779,9 +1942,9 @@
                 aggData = aggData.filter(ro => ro.custKey === currentCustomerFilter);
             }
 
-            let pmData = aggData.filter(ro => ro.tileOwners.some(o => pmOwners.includes(o)));
-            let vendedData = aggData.filter(ro => ro.tileOwners.some(o => vendedOwners.includes(o)));
-            let ersRoData = aggData.filter(ro => ro.tileOwners.some(o => ersOwners.includes(o)));
+            let pmData = aggData.filter(ro => ro.kpiOwners.some(o => pmOwners.includes(o)));
+            let vendedData = aggData.filter(ro => ro.kpiOwners.some(o => vendedOwners.includes(o)));
+            let ersRoData = aggData.filter(ro => ro.kpiOwners.some(o => ersOwners.includes(o)));
 
             const pmTile = document.createElement('div'); pmTile.className = 'kpi-tile home-master-tile'; pmTile.innerHTML = generateTileHTML('PM Dashboard', pmData, 'chart-pm', true);
             pmTile.onclick = () => loadPersonDrilldown('ALL_PM', 'home-view');
@@ -1806,7 +1969,7 @@
             let isPM = containerId === 'pm-kpi-container';
 
             ownersList.forEach(owner => {
-                let ownerDataAll = processedData.filter(ro => ro.tileOwners.includes(owner));
+                let ownerDataAll = processedData.filter(ro => ro.kpiOwners.includes(owner));
                 
                 if (currentCustomerFilter !== 'ALL') {
                     ownerDataAll = ownerDataAll.filter(ro => ro.custKey === currentCustomerFilter);
@@ -1942,10 +2105,7 @@
                             return (b.isOOS === true ? 1 : 0) - (a.isOOS === true ? 1 : 0);
                         });
                         
-                        let isBranchDedicated = branchROs.some(ro => ro.isDedicated);
-                        let dedicatedBadge = isBranchDedicated ? `<span style="background-color: white; color: black; border: 1px solid black; border-radius: 12px; padding: 2px 6px; margin-left: 5px; font-size: 10px; font-weight: bold;">(DEDICATED)</span>` : '';
-
-                        branchHtml += `<details class="ro-detail-node"><summary><div style="flex-grow:1; display:flex; align-items:center;">${branch} (${branchROs.length} ROs) ${dedicatedBadge}</div><div>${badgesHtml}</div></summary>`;
+                        branchHtml += `<details class="ro-detail-node"><summary><div style="flex-grow:1; display:flex; align-items:center;">${branch} (${branchROs.length} ROs)</div><div>${badgesHtml}</div></summary>`;
                         let tableHTML = `<div class="table-wrapper"><table><colgroup><col style="width:23%;"><col style="width:11%;">${isPM ? '' : '<col style="width:11%;">'}<col style="width:9%;"><col style="width:11%;"><col style="width:21%;"><col style="width:14%;"></colgroup><thead><tr><th>AFS RO # & Dispatch</th><th>Unit No</th>${isPM ? '' : '<th>Priority Status</th>'}<th>OOS Status</th><th>Opened Date</th><th>Status</th><th>ECD</th></tr></thead><tbody>`;
                         
                         groupedUnits.forEach(u => {
@@ -2003,7 +2163,7 @@
             return htmlStr;
         }
 
-        function loadPersonDrilldown(owner, parentViewId) {
+        function loadPersonDrilldown(owner, parentViewId, preserveFilters = false) {
             navigate('person-view', null, true); 
             currentOwnerView = owner; currentParentView = parentViewId;
             
@@ -2024,19 +2184,36 @@
                 document.getElementById('standard-drilldown-filters').style.display = 'flex';
             }
 
-            const container = document.getElementById('drilldown-body'); 
-            
             let ownerDataAll = processedData;
-            if (owner === 'ALL_PM') ownerDataAll = processedData.filter(ro => ro.tileOwners.some(o => pmOwners.includes(o)));
-            else if (owner === 'ALL_VENDED') ownerDataAll = processedData.filter(ro => ro.tileOwners.some(o => vendedOwners.includes(o)));
-            else if (owner === 'ALL_ERS') ownerDataAll = processedData.filter(ro => ro.tileOwners.some(o => ersOwners.includes(o)));
-            else ownerDataAll = processedData.filter(ro => ro.tileOwners.includes(String(owner)));
+            if (owner === 'ALL_PM') ownerDataAll = processedData.filter(ro => ro.drilldownOwners.some(o => pmOwners.includes(o)));
+            else if (owner === 'ALL_VENDED') ownerDataAll = processedData.filter(ro => ro.drilldownOwners.some(o => vendedOwners.includes(o)));
+            else if (owner === 'ALL_ERS') ownerDataAll = processedData.filter(ro => ro.drilldownOwners.some(o => ersOwners.includes(o)));
+            else ownerDataAll = processedData.filter(ro => ro.drilldownOwners.includes(String(owner)));
             
             if (currentCustomerFilter !== 'ALL') {
                 ownerDataAll = ownerDataAll.filter(ro => ro.custKey === currentCustomerFilter);
             }
 
-            container.innerHTML = generateRoDrilldownHtml(ownerDataAll, isPM);
+            if (!preserveFilters) {
+                document.getElementById('dd-region').value = 'ALL';
+                document.getElementById('dd-subregion').value = 'ALL';
+                document.getElementById('dd-branch').value = 'ALL';
+            }
+
+            populateDrilldownDropdowns(ownerDataAll);
+
+            let rVal = document.getElementById('dd-region').value;
+            let sVal = document.getElementById('dd-subregion').value;
+            let bVal = document.getElementById('dd-branch').value;
+
+            ownerDataAll = ownerDataAll.filter(ro => {
+                if (rVal !== 'ALL' && ro.region !== rVal) return false;
+                if (sVal !== 'ALL' && ro.subregion !== sVal) return false;
+                if (bVal !== 'ALL' && ro.branch !== bVal) return false;
+                return true;
+            });
+
+            document.getElementById('drilldown-body').innerHTML = generateRoDrilldownHtml(ownerDataAll, isPM);
             updateAllNoteButtons(); 
         }
 
@@ -2096,12 +2273,12 @@
                         searchUnitsMap[ro.unitNo].statuses.push(ro.status);
                         searchUnitsMap[ro.unitNo].ecdCells.push(ecdCell);
                         
-                        ro.tileOwners.forEach(o => searchUnitsMap[ro.unitNo].owners.push(o));
+                        ro.drilldownOwners.forEach(o => searchUnitsMap[ro.unitNo].owners.push(o));
                     });
 
                     Object.values(searchUnitsMap).forEach(u => {
                         let oosBadge = u.isOOS ? `<span class="badge badge-oos">OOS</span>` : `<span class="badge badge-active">ACTIVE</span>`;
-                        let isPri = (u.isOOS && isPriority({isOOS: u.isOOS, usefulPct: u.usefulPctObj, unitType: u.unitType}));
+                        let isPri = (u.isOOS && isPriority({isOOS: u.isOOS, usefulPctObj: u.usefulPctObj, unitType: u.unitType}));
                         let priorityStatusBadge = isPri ? `<span class="badge badge-urgent">Priority</span>` : `<span class="badge badge-low">Normal</span>`;
 
                         let joinedOwnersHtml = [...new Set(u.owners)].map(ow => `<div class="grouped-ro-item">${ow}</div>`).join('');
