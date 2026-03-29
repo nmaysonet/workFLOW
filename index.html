@@ -78,6 +78,14 @@
         .view-section { padding: 30px; display: none; }
         .view-section.active { display: block; }
 
+        /* Sub-Tabs */
+        .sub-tabs-container { display: flex; gap: 8px; margin-bottom: 20px; border-bottom: 2px solid var(--border); padding-bottom: 0px; }
+        .sub-tab { padding: 12px 20px; background: transparent; border: none; font-size: 14px; font-weight: 700; color: #64748b; cursor: pointer; border-bottom: 3px solid transparent; transition: all 0.2s ease; text-transform: uppercase; letter-spacing: 0.5px; }
+        .sub-tab:hover { color: #333; }
+        .sub-tab.active { color: var(--gold-hover); border-bottom: 3px solid var(--gold); }
+        .sub-section { display: none; }
+        .sub-section.active { display: block; }
+
         /* Home View & File Upload */
         .home-title { font-size: 36px; font-weight: 300; margin-bottom: 5px; color: #444; }
         .home-subtitle { font-size: 16px; color: #777; margin-bottom: 30px; }
@@ -378,36 +386,70 @@
         <div id="summary-view" class="view-section">
             <div class="view-title">
                 <span style="font-weight: 700;">Consolidation Summary</span>
-                <div class="controls-group" style="display: flex; align-items: center;">
+                <div class="controls-group" style="display: flex; align-items: center;" id="summary-tree-controls">
                     <button class="btn-green" onclick="exportSummaryToExcel()">&#11139; Export to XLSX</button>
                     <button onclick="toggleAllSummary(true)">Expand All</button>
                     <button onclick="toggleAllSummary(false)">Collapse All</button>
                 </div>
             </div>
-            <div class="drilldown-container table-wrapper">
-                <table id="summaryTable">
-                    <colgroup>
-                        <col style="width: 35%;">
-                        <col style="width: 10%;">
-                        <col style="width: 10%;">
-                        <col style="width: 10%;">
-                        <col style="width: 10%;">
-                        <col style="width: 10%;">
-                        <col style="width: 15%;">
-                    </colgroup>
-                    <thead>
-                        <tr>
-                            <th>Region / Subregion / Branch</th>
-                            <th style="text-align:right;">Max Routes</th>
-                            <th style="text-align:right;">Total Units</th>
-                            <th style="text-align:right;">OOS</th>
-                            <th style="text-align:right;">Useful %</th>
-                            <th style="text-align:right;">DoD OOS</th>
-                            <th style="text-align:right;">DoD Change</th>
-                        </tr>
-                    </thead>
-                    <tbody id="summary-table-body"></tbody>
-                </table>
+            
+            <div class="sub-tabs-container">
+                <button class="sub-tab active" onclick="switchSummaryTab('sub-summary', this)">VDR Consolidation Summary</button>
+                <button class="sub-tab" onclick="switchSummaryTab('sub-amerit-oos', this)">Amerit OOS Trucks</button>
+            </div>
+
+            <div id="sub-summary" class="sub-section active">
+                <div class="drilldown-container table-wrapper">
+                    <table id="summaryTable">
+                        <colgroup>
+                            <col style="width: 35%;">
+                            <col style="width: 10%;">
+                            <col style="width: 10%;">
+                            <col style="width: 10%;">
+                            <col style="width: 10%;">
+                            <col style="width: 10%;">
+                            <col style="width: 15%;">
+                        </colgroup>
+                        <thead>
+                            <tr>
+                                <th>Region / Subregion / Branch</th>
+                                <th style="text-align:right;">Max Routes</th>
+                                <th style="text-align:right;">Total Units</th>
+                                <th style="text-align:right;">OOS</th>
+                                <th style="text-align:right;">Useful %</th>
+                                <th style="text-align:right;">DoD OOS</th>
+                                <th style="text-align:right;">DoD Change</th>
+                            </tr>
+                        </thead>
+                        <tbody id="summary-table-body"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div id="sub-amerit-oos" class="sub-section">
+                <div class="drilldown-container table-wrapper">
+                    <table id="ameritOosTable">
+                        <colgroup>
+                            <col style="width: 12%;">
+                            <col style="width: 15%;">
+                            <col style="width: 23%;">
+                            <col style="width: 10%;">
+                            <col style="width: 10%;">
+                            <col style="width: 30%;">
+                        </colgroup>
+                        <thead>
+                            <tr>
+                                <th onclick="sortAmeritOos(0, 'string')">Region ↕</th>
+                                <th onclick="sortAmeritOos(1, 'string')">Sub Region ↕</th>
+                                <th onclick="sortAmeritOos(2, 'string')">Branch ↕</th>
+                                <th onclick="sortAmeritOos(3, 'string')">Truck # ↕</th>
+                                <th onclick="sortAmeritOos(4, 'date')">Max ECD ↕</th>
+                                <th>Notes</th>
+                            </tr>
+                        </thead>
+                        <tbody id="amerit-oos-table-body"></tbody>
+                    </table>
+                </div>
             </div>
         </div>
 
@@ -734,6 +776,9 @@
                     btn.title = 'Add Note';
                 }
             });
+            if (document.getElementById('summary-view').classList.contains('active')) {
+                renderAmeritOos();
+            }
         }
 
         window.openNoteModal = function(safeRo, roNum) {
@@ -775,7 +820,7 @@
         let ersOwners = [];
 
         let branchUsefulMap = {}; 
-        let branchMetricsMap = {}; // Maps code to { maxRoutes, dodOos }
+        let branchMetricsMap = {}; 
         let masterUnits = {}; 
         let ownerNameToTeam = {};
         
@@ -788,6 +833,17 @@
         ];
 
         let lastActiveView = 'home-view';
+
+        function switchSummaryTab(subId, btn) {
+            document.querySelectorAll('#summary-view .sub-section').forEach(b => b.classList.remove('active'));
+            document.getElementById(subId).classList.add('active');
+            document.querySelectorAll('#summary-view .sub-tab').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            
+            let controls = document.getElementById('summary-tree-controls');
+            if (subId === 'sub-summary') controls.style.display = 'flex';
+            else controls.style.display = 'none';
+        }
 
         function normalizeBranchStr(str) {
             if (!str) return null;
@@ -827,9 +883,22 @@
 
         function isPriority(ro) {
             if (!ro.isOOS) return false;
-            let u = ro.usefulPct;
-            if (u === null || u === undefined || isNaN(u)) return false;
-            return Math.round(u * 100) < 100;
+            let u = ro.usefulPctObj;
+            if (!u) return false;
+            
+            let typePct = null;
+            if (ro.unitType === 'LTS') typePct = u.LTS;
+            else if (ro.unitType === 'ST') typePct = u.ST;
+            else if (ro.unitType === 'SHUTTLE') typePct = u.SHUTTLE;
+            
+            if (typePct !== null && !isNaN(typePct)) {
+                return Math.round(typePct * 100) < 100;
+            }
+            
+            if (u.TOTAL !== null && !isNaN(u.TOTAL)) {
+                return Math.round(u.TOTAL * 100) < 100;
+            }
+            return false;
         }
 
         function areTasksSimilar(task1, task2) {
@@ -956,7 +1025,10 @@
             else if(activeView === 'vended-view') renderKPITiles(vendedOwners, 'vended-kpi-container', 'vended-view');
             else if(activeView === 'ers-view') renderKPITiles(ersOwners, 'ers-kpi-container', 'ers-view');
             else if(activeView === 'person-view') { if(currentOwnerView) loadPersonDrilldown(currentOwnerView, currentParentView); }
-            else if(activeView === 'summary-view') renderSummary();
+            else if(activeView === 'summary-view') {
+                renderSummary();
+                renderAmeritOos();
+            }
         }
 
         function processExcelData(vroRaw, resourceRawAOA, oosRawAOA, usefulRawAOA, dodRawAOA) {
@@ -1134,7 +1206,9 @@
 
                 let ecdState = 'missing'; let ecdFormatted = 'NO ECD, UPDATE';
                 let ecdDate = new Date(dueRaw);
+                let ecdMs = 0;
                 if (dueRaw && !isNaN(ecdDate.getTime())) {
+                    ecdMs = ecdDate.getTime();
                     let ecdDay = new Date(ecdDate.getFullYear(), ecdDate.getMonth(), ecdDate.getDate());
                     let todayDay = new Date(today.getFullYear(), today.getMonth(), today.getDate());
                     ecdFormatted = `${ecdDate.getMonth()+1}/${ecdDate.getDate()}/${ecdDate.getFullYear()}`;
@@ -1160,7 +1234,7 @@
                     unitNo: unit, unitType: mUnit.type, status: statusStr, vmrs, 
                     isOOS: mUnit.isOOS, isOpen, isCompletedKPI, isOnTimeKPI, isLateKPI, 
                     subregion: mUnit.subregion, branch: mUnit.branch, 
-                    ecdState, ecdFormatted, openedDT, openedFormatted, 
+                    ecdState, ecdFormatted, ecdMs, openedDT, openedFormatted, 
                     usefulPct: pcts.TOTAL, usefulPctObj: pcts, region: mUnit.region,
                     possibleDuplicate: false
                 };
@@ -1237,6 +1311,7 @@
                         branch: mUnit.branch,
                         ecdState: 'missing',
                         ecdFormatted: 'N/A',
+                        ecdMs: 0,
                         openedDT: null,
                         openedFormatted: 'N/A',
                         usefulPct: pcts.TOTAL,
@@ -1319,6 +1394,92 @@
             updateAllNoteButtons(); 
         }
 
+        // --- AMERIT OOS ENGINE ---
+        function renderAmeritOos() {
+            let unitRoGroups = {};
+            processedData.forEach(ro => {
+                if (!unitRoGroups[ro.unitNo]) unitRoGroups[ro.unitNo] = [];
+                unitRoGroups[ro.unitNo].push(ro);
+            });
+
+            let tbody = document.getElementById('amerit-oos-table-body');
+            let html = '';
+            let hasRecords = false;
+
+            for (let unit in masterUnits) {
+                let mUnit = masterUnits[unit];
+                if (mUnit.isOOS) { 
+                    let ros = unitRoGroups[unit] || [];
+                    
+                    let maxEcdMs = 0;
+                    let maxEcdFormatted = 'N/A';
+                    ros.forEach(ro => {
+                        if (ro.ecdMs > maxEcdMs) {
+                            maxEcdMs = ro.ecdMs;
+                            maxEcdFormatted = ro.ecdFormatted;
+                        }
+                    });
+
+                    let notes = [];
+                    ros.forEach(ro => {
+                        if (ro.roNum && !ro.roNum.startsWith('NO RO')) {
+                            let safeRo = ro.roNum.replace(/[.#$\[\]]/g, '_');
+                            let n = globalRoNotesState[safeRo];
+                            if (n && n.trim() !== '') {
+                                notes.push(`<b>[${ro.roNum}]</b> ${n.trim()}`);
+                            }
+                        } else if (ro.roNum && ro.roNum.startsWith('NO RO')) {
+                            let safeRo = ro.roNum.replace(/[.#$\[\]]/g, '_');
+                            let n = globalRoNotesState[safeRo];
+                            if (n && n.trim() !== '') {
+                                notes.push(`<b>[NO ACTIVE RO]</b> ${n.trim()}`);
+                            }
+                        }
+                    });
+                    
+                    let notesHtml = notes.join(' <br><hr style="border-top:1px dashed #ccc; margin:4px 0;"> ');
+                    if (!notesHtml) notesHtml = '<i style="color:#aaa;">No Notes</i>';
+
+                    html += `<tr>
+                        <td>${mUnit.region || 'Unknown'}</td>
+                        <td>${mUnit.subregion || 'Unknown'}</td>
+                        <td>${mUnit.branch || 'Unknown'}</td>
+                        <td><strong>${unit}</strong></td>
+                        <td>${maxEcdFormatted}</td>
+                        <td style="white-space: pre-wrap; font-size:12px;">${notesHtml}</td>
+                    </tr>`;
+                    hasRecords = true;
+                }
+            }
+
+            if (!hasRecords) {
+                html = '<tr><td colspan="6" style="text-align: center; padding: 20px;">No OOS Units found.</td></tr>';
+            }
+
+            tbody.innerHTML = html;
+        }
+
+        let oosSortCol = -1, oosSortAsc = true;
+        window.sortAmeritOos = function(idx, type) {
+            const tbody = document.getElementById("amerit-oos-table-body");
+            const rows = Array.from(tbody.rows);
+            if(rows.length <= 1 || rows[0].cells.length === 1) return; 
+            
+            oosSortAsc = (oosSortCol === idx) ? !oosSortAsc : true;
+            oosSortCol = idx;
+
+            rows.sort((a, b) => {
+                let va = a.cells[idx].innerText.trim(), vb = b.cells[idx].innerText.trim();
+                if (type === 'date') {
+                    let da = new Date(va).getTime() || 0;
+                    let db = new Date(vb).getTime() || 0;
+                    return oosSortAsc ? da - db : db - da;
+                }
+                return oosSortAsc ? va.localeCompare(vb) : vb.localeCompare(va);
+            });
+            rows.forEach(r => tbody.appendChild(r));
+        }
+
         // --- CONSOLIDATION SUMMARY ENGINE ---
 
         function getSummaryUsefulHtml(active, maxRoutes) {
@@ -1345,7 +1506,6 @@
         
         window.toggleAllSummary = function(expand) { 
             Object.keys(expandedSummaryState).forEach(k => expandedSummaryState[k] = expand); 
-            // Also initialize everything if expanding for first time
             if (expand) {
                 for (let reg in summaryTree) {
                     expandedSummaryState[reg] = true;
@@ -1414,13 +1574,14 @@
         }
 
         window.exportSummaryToExcel = function() {
-            let rows = [];
+            // Tab 1: Consolidation Summary
+            let sumRows = [];
             for (let reg of Object.keys(summaryTree).sort()) {
                 let rData = summaryTree[reg];
                 let rActive = Math.max(0, rData.totalUnits - rData.oos);
                 let rPct = rData.maxRoutes > 0 ? (rActive / rData.maxRoutes) : 0;
                 
-                rows.push({
+                sumRows.push({
                     "Level": "Region", "Name": reg, "Max Routes": rData.maxRoutes, 
                     "Total Units": rData.totalUnits, "OOS": rData.oos, 
                     "Useful %": rData.maxRoutes > 0 ? Math.round(rPct * 100) + '%' : '0%', 
@@ -1433,7 +1594,7 @@
                     let sActive = Math.max(0, sData.totalUnits - sData.oos);
                     let sPct = sData.maxRoutes > 0 ? (sActive / sData.maxRoutes) : 0;
                     
-                    rows.push({
+                    sumRows.push({
                         "Level": "Sub Region", "Name": sub, "Max Routes": sData.maxRoutes, 
                         "Total Units": sData.totalUnits, "OOS": sData.oos, 
                         "Useful %": sData.maxRoutes > 0 ? Math.round(sPct * 100) + '%' : '0%', 
@@ -1446,7 +1607,7 @@
                         let bActive = Math.max(0, bData.totalUnits - bData.oos);
                         let bPct = bData.maxRoutes > 0 ? (bActive / bData.maxRoutes) : 0;
                         
-                        rows.push({
+                        sumRows.push({
                             "Level": "Branch", "Name": bra, "Max Routes": bData.maxRoutes, 
                             "Total Units": bData.totalUnits, "OOS": bData.oos, 
                             "Useful %": bData.maxRoutes > 0 ? Math.round(bPct * 100) + '%' : '0%', 
@@ -1456,23 +1617,65 @@
                     }
                 }
             }
-            const worksheet = XLSX.utils.json_to_sheet(rows);
+            const wsConsolidation = XLSX.utils.json_to_sheet(sumRows);
+
+            // Tab 2: Amerit OOS Units
+            let oosRows = [];
+            const tbody = document.getElementById("amerit-oos-table-body");
+            Array.from(tbody.rows).forEach(row => {
+                if (row.cells.length > 1) {
+                    oosRows.push({
+                        "Region": row.cells[0].innerText.trim(),
+                        "Sub Region": row.cells[1].innerText.trim(),
+                        "Branch": row.cells[2].innerText.trim(),
+                        "Truck #": row.cells[3].innerText.trim(),
+                        "Max ECD": row.cells[4].innerText.trim(),
+                        "Notes": row.cells[5].innerText.trim()
+                    });
+                }
+            });
+            const wsAmerit = XLSX.utils.json_to_sheet(oosRows);
+
             const workbook = XLSX.utils.book_new();
-            XLSX.utils.book_append_sheet(workbook, worksheet, "Consolidation Summary");
+            XLSX.utils.book_append_sheet(workbook, wsConsolidation, "Consolidation Summary");
+            XLSX.utils.book_append_sheet(workbook, wsAmerit, "Amerit OOS Units");
             XLSX.writeFile(workbook, "VDR_Consolidation_Summary.xlsx");
         }
+
+        // --------------------------------------------------
 
         function formatUsefulBadge(label, val) {
             if(val === null || val === undefined || isNaN(val) || val === '') return '';
             let pct = Math.round(val * 100);
-            let bg = '#90ee90'; 
+            let bg = '#00ff00'; // bright green default
             let tc = 'black';
             
             if (pct < 95) { bg = '#d9534f'; tc = 'white'; } 
             else if (pct >= 95 && pct < 100) { bg = '#FFC600'; tc = 'black'; } 
-            else if (pct === 100) { bg = '#bbf7d0'; tc = 'black'; } 
+            else if (pct === 100) { bg = '#bbf7d0'; tc = 'black'; } // light green
 
-            return `<span class="badge" style="background-color: ${bg}; color: ${tc}; margin-right: 20px; font-size: 11px;">${label}: ${pct}%</span>`;
+            return `<span class="badge" style="background-color: ${bg}; color: ${tc}; font-size: 11px; margin-left: 10px;">${label}: ${pct}%</span>`;
+        }
+
+        function getAggregatedBadges(pctArray) {
+            if (!pctArray || pctArray.length === 0) return '';
+            
+            let ltsSum = 0, ltsCount = 0;
+            let stSum = 0, stCount = 0;
+            let shutSum = 0, shutCount = 0;
+
+            pctArray.forEach(p => {
+                if (p.LTS !== null && p.LTS !== undefined && !isNaN(p.LTS)) { ltsSum += p.LTS; ltsCount++; }
+                if (p.ST !== null && p.ST !== undefined && !isNaN(p.ST)) { stSum += p.ST; stCount++; }
+                if (p.SHUTTLE !== null && p.SHUTTLE !== undefined && !isNaN(p.SHUTTLE)) { shutSum += p.SHUTTLE; shutCount++; }
+            });
+
+            let badges = '';
+            if (ltsCount > 0) badges += formatUsefulBadge('LTS Useful', ltsSum / ltsCount);
+            if (stCount > 0) badges += formatUsefulBadge('ST Useful', stSum / stCount);
+            if (shutCount > 0) badges += formatUsefulBadge('Shuttle Useful', shutSum / shutCount);
+
+            return badges;
         }
 
         function generateTileHTML(name, dataSet, chartId = null, isPM = false) {
@@ -1631,6 +1834,28 @@
         function generateRoDrilldownHtml(ownerDataAll, isPM) {
             let baseOpenData = ownerDataAll.filter(ro => ro.isOpen);
 
+            let branchUsefulVals = {};
+            let subUsefulMap = {};
+            let topUsefulMap = {};
+
+            baseOpenData.forEach(ro => {
+                if (ro.usefulPctObj) {
+                    let branchKey = ro.drillTopLevel + '|||' + ro.subregion + '|||' + ro.branch;
+                    let subKey = ro.drillTopLevel + '|||' + ro.subregion;
+                    let topKey = ro.drillTopLevel;
+
+                    if (branchUsefulVals[branchKey] === undefined) {
+                        branchUsefulVals[branchKey] = ro.usefulPctObj;
+                        
+                        if (!subUsefulMap[subKey]) subUsefulMap[subKey] = [];
+                        subUsefulMap[subKey].push(ro.usefulPctObj);
+                        
+                        if (!topUsefulMap[topKey]) topUsefulMap[topKey] = [];
+                        topUsefulMap[topKey].push(ro.usefulPctObj);
+                    }
+                }
+            });
+
             // Apply Filters
             let targetData = baseOpenData;
             
@@ -1654,22 +1879,22 @@
             
             let htmlStr = '';
             for(let topLvl in hierarchy) {
+                let topBadges = getAggregatedBadges(topUsefulMap[topLvl] || []);
                 let subHtml = '';
                 for(let sub in hierarchy[topLvl]) {
                     let subKey = topLvl + '|||' + sub;
+                    let subBadges = getAggregatedBadges(subUsefulMap[subKey] || []);
                     let branchHtml = '';
                     for(let branch in hierarchy[topLvl][sub]) {
+                        let branchKey = subKey + '|||' + branch;
                         let branchROs = hierarchy[topLvl][sub][branch];
                         
+                        let u = branchUsefulVals[branchKey] || {};
                         let badgesHtml = '';
-                        if (branchROs.length > 0) {
-                            let ro = branchROs[0]; // grab useful pct from the first RO object
-                            let u = ro.usefulPctObj;
-                            if (u) {
-                                if (u.LTS !== null) badgesHtml += formatUsefulBadge('LTS Useful', u.LTS);
-                                if (u.ST !== null) badgesHtml += formatUsefulBadge('ST Useful', u.ST);
-                                if (u.SHUTTLE !== null) badgesHtml += formatUsefulBadge('Shuttle Useful', u.SHUTTLE);
-                            }
+                        if (u) {
+                            if (u.LTS !== null) badgesHtml += formatUsefulBadge('LTS Useful', u.LTS);
+                            if (u.ST !== null) badgesHtml += formatUsefulBadge('ST Useful', u.ST);
+                            if (u.SHUTTLE !== null) badgesHtml += formatUsefulBadge('Shuttle Useful', u.SHUTTLE);
                         }
 
                         let unitsMap = {};
@@ -1717,7 +1942,10 @@
                             return (b.isOOS === true ? 1 : 0) - (a.isOOS === true ? 1 : 0);
                         });
                         
-                        branchHtml += `<details class="ro-detail-node"><summary><div style="flex-grow:1; display:flex; align-items:center;">${branch} (${branchROs.length} ROs)</div><div>${badgesHtml}</div></summary>`;
+                        let isBranchDedicated = branchROs.some(ro => ro.isDedicated);
+                        let dedicatedBadge = isBranchDedicated ? `<span style="background-color: white; color: black; border: 1px solid black; border-radius: 12px; padding: 2px 6px; margin-left: 5px; font-size: 10px; font-weight: bold;">(DEDICATED)</span>` : '';
+
+                        branchHtml += `<details class="ro-detail-node"><summary><div style="flex-grow:1; display:flex; align-items:center;">${branch} (${branchROs.length} ROs) ${dedicatedBadge}</div><div>${badgesHtml}</div></summary>`;
                         let tableHTML = `<div class="table-wrapper"><table><colgroup><col style="width:23%;"><col style="width:11%;">${isPM ? '' : '<col style="width:11%;">'}<col style="width:9%;"><col style="width:11%;"><col style="width:21%;"><col style="width:14%;"></colgroup><thead><tr><th>AFS RO # & Dispatch</th><th>Unit No</th>${isPM ? '' : '<th>Priority Status</th>'}<th>OOS Status</th><th>Opened Date</th><th>Status</th><th>ECD</th></tr></thead><tbody>`;
                         
                         groupedUnits.forEach(u => {
@@ -1768,9 +1996,9 @@
                         tableHTML += `</tbody></table></div>`; 
                         branchHtml += tableHTML + `</details>`;
                     }
-                    subHtml += `<details class="ro-detail-node"><summary><div style="flex-grow:1; display:flex; align-items:center;">${sub}</div></summary>${branchHtml}</details>`;
+                    subHtml += `<details class="ro-detail-node"><summary><div style="flex-grow:1; display:flex; align-items:center;">${sub}</div><div>${subBadges}</div></summary>${branchHtml}</details>`;
                 }
-                htmlStr += `<details class="ro-detail-node"><summary><div style="flex-grow:1; display:flex; align-items:center;">${topLvl}</div></summary>${subHtml}</details>`;
+                htmlStr += `<details class="ro-detail-node"><summary><div style="flex-grow:1; display:flex; align-items:center;">${topLvl}</div><div>${topBadges}</div></summary>${subHtml}</details>`;
             }
             return htmlStr;
         }
@@ -1941,7 +2169,10 @@
             else if (viewId === 'vended-view') renderKPITiles(vendedOwners, 'vended-kpi-container', 'vended-view');
             else if (viewId === 'ers-view') renderKPITiles(ersOwners, 'ers-kpi-container', 'ers-view');
             else if (viewId === 'home-view') renderHomeDashboard();
-            else if (viewId === 'summary-view') renderSummary();
+            else if (viewId === 'summary-view') {
+                renderSummary();
+                renderAmeritOos();
+            }
         }
     </script>
 </body>
