@@ -461,7 +461,7 @@
     </div>
 
     <script>
-        // --- SAFE FIREBASE SYNC ENGINE ---
+        // --- SECURE FIREBASE SYNC ENGINE ---
         let db = null;
         let globalRoCheckState = {};
         let globalRoNotesState = {};
@@ -625,6 +625,7 @@
         async function fetchWorkbookBuffer() {
             const candidates = [
                 new URL('./master_workFLOW.xlsx', window.location.href).href,
+                `${window.location.origin}${window.location.pathname.replace(/\/[^/]*$/, '/') }master_workFLOW.xlsx`,
                 `${window.location.origin}/master_workFLOW.xlsx`,
                 'master_workFLOW.xlsx'
             ];
@@ -687,64 +688,13 @@
             try {
                 const data = await fetchWorkbookBuffer();
 
-                statusEl.innerText = 'File found! Processing data...';
-
-                await new Promise(resolve => requestAnimationFrame(resolve));
+                statusEl.innerText = 'File found. Processing data...';
 
                 const workbook = XLSX.read(data, { type: 'array' });
+                loadWorkbookIntoDashboard(workbook);
 
-                let vroRaw = [], resourceRawAOA = [], oosRawAOA = [], usefulRawAOA = [];
-
-                workbook.SheetNames.forEach(sheetName => {
-                    try {
-                        const aoa = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], { header: 1, defval: '' });
-                        if (!aoa || aoa.length === 0) return;
-
-                        let sheetNameLower = sheetName.toLowerCase();
-                        
-                        if (sheetNameLower.includes('useful')) {
-                            usefulRawAOA = aoa;
-                        } else if (sheetNameLower.includes('resource') || sheetNameLower.includes('team')) {
-                            resourceRawAOA = aoa;
-                        } else if (sheetNameLower.includes('oos garda') || sheetNameLower.includes('national')) {
-                            oosRawAOA = aoa;
-                        } else if (sheetNameLower.includes('vro export') || sheetNameLower.includes('ro detail') || sheetNameLower.includes('rodetail')) {
-                            let headerIdx = -1;
-                            for (let i = 0; i < Math.min(20, aoa.length); i++) {
-                                let rowStr = aoa[i].join('').toLowerCase().replace(/[^a-z0-9]/g, '');
-                                if (rowStr.includes('ronumber') || rowStr.includes('order') || rowStr.includes('customer')) {
-                                    headerIdx = i; break;
-                                }
-                            }
-                            if (headerIdx !== -1) {
-                                const headers = aoa[headerIdx];
-                                for (let i = headerIdx + 1; i < aoa.length; i++) {
-                                    if (!aoa[i] || !Array.isArray(aoa[i])) continue;
-                                    const obj = {};
-                                    let hasData = false;
-                                    headers.forEach((h, j) => {
-                                        let key = h ? String(h).trim() : '';
-                                        if (key) {
-                                            obj[key] = aoa[i][j];
-                                            if (aoa[i][j] !== '') hasData = true;
-                                        }
-                                    });
-                                    if (hasData) vroRaw.push(obj);
-                                }
-                            }
-                        }
-                    } catch (err) {
-                        console.warn('Skipped sheet due to parsing error:', sheetName, err);
-                    }
-                });
-
-                statusEl.innerText = 'Building dashboards...';
-                await new Promise(resolve => requestAnimationFrame(resolve));
-                processExcelData(vroRaw, resourceRawAOA, oosRawAOA, usefulRawAOA);
-
-                // Safely Init Firebase after everything is done
-                setTimeout(initFirebaseSync, 500);
-
+                statusEl.innerText = 'Dashboard loaded.';
+                statusEl.style.color = '#2e7d32';
             } catch (error) {
                 console.error('Fetch failed:', error);
                 statusEl.innerText = `Failed to load live data. ${error.message}`;
@@ -753,67 +703,102 @@
             }
         }
 
-        document.getElementById('excelFileInput').addEventListener('change', async function(e) {
-            const files = Array.from(e.target.files);
-            if (files.length === 0) return;
-            const statusEl = document.getElementById('upload-status');
-            statusEl.innerText = "Reading manual upload...";
-            
-            let vroRaw = [], resourceRawAOA = [], oosRawAOA = [], usefulRawAOA = [];
-            
-            try {
-                for(let file of files) {
-                    const data = await file.arrayBuffer();
-                    const workbook = XLSX.read(data, {type: 'array'});
-                    
-                    workbook.SheetNames.forEach(sheetName => {
-                        try {
-                            const aoa = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], {header: 1, defval: ''});
-                            if (!aoa || aoa.length === 0) return;
-                            
-                            let sheetNameLower = sheetName.toLowerCase();
-                            
-                            if (sheetNameLower.includes('useful')) {
-                                usefulRawAOA = aoa;
-                            } else if (sheetNameLower.includes('resource') || sheetNameLower.includes('team')) {
-                                resourceRawAOA = aoa;
-                            } else if (sheetNameLower.includes('oos garda') || sheetNameLower.includes('national')) {
-                                oosRawAOA = aoa;
-                            } else if (sheetNameLower.includes('vro export') || sheetNameLower.includes('ro detail') || sheetNameLower.includes('rodetail')) {
-                                let headerIdx = -1;
-                                for (let i = 0; i < Math.min(20, aoa.length); i++) {
-                                    let rowStr = aoa[i].join('').toLowerCase().replace(/[^a-z0-9]/g, '');
-                                    if (rowStr.includes('ronumber') || rowStr.includes('order') || rowStr.includes('customer')) {
-                                        headerIdx = i; break;
-                                    }
-                                }
-                                if (headerIdx !== -1) {
-                                    const headers = aoa[headerIdx];
-                                    for (let i = headerIdx + 1; i < aoa.length; i++) {
-                                        if (!aoa[i] || !Array.isArray(aoa[i])) continue;
-                                        const obj = {};
-                                        let hasData = false;
-                                        headers.forEach((h, j) => {
-                                            let key = h ? String(h).trim() : '';
-                                            if (key) {
-                                                obj[key] = aoa[i][j];
-                                                if (aoa[i][j] !== '') hasData = true;
-                                            }
-                                        });
-                                        if (hasData) vroRaw.push(obj);
-                                    }
-                                }
-                            }
-                        } catch(err) {
-                            console.warn("Skipped sheet", sheetName, err);
-                        }
+        function loadWorkbookIntoDashboard(workbook) {
+            let vroRaw = [];
+            let resourceRawAOA = [];
+            let oosRawAOA = [];
+            let usefulRawAOA = [];
+
+            workbook.SheetNames.forEach(sheetName => {
+                try {
+                    const aoa = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], {
+                        header: 1,
+                        defval: ''
                     });
+
+                    if (!aoa || aoa.length === 0) return;
+
+                    const sheetNameLower = sheetName.toLowerCase();
+
+                    if (sheetNameLower.includes('useful')) {
+                        usefulRawAOA = aoa;
+                    } else if (sheetNameLower.includes('resource') || sheetNameLower.includes('team')) {
+                        resourceRawAOA = aoa;
+                    } else if (sheetNameLower.includes('oos garda') || sheetNameLower.includes('national')) {
+                        oosRawAOA = aoa;
+                    } else if (
+                        sheetNameLower.includes('vro export') ||
+                        sheetNameLower.includes('ro detail') ||
+                        sheetNameLower.includes('rodetail')
+                    ) {
+                        let headerIdx = -1;
+
+                        for (let i = 0; i < Math.min(20, aoa.length); i++) {
+                            const rowStr = aoa[i].join('').toLowerCase().replace(/[^a-z0-9]/g, '');
+                            if (
+                                rowStr.includes('ronumber') ||
+                                rowStr.includes('order') ||
+                                rowStr.includes('customer')
+                            ) {
+                                headerIdx = i;
+                                break;
+                            }
+                        }
+
+                        if (headerIdx !== -1) {
+                            const headers = aoa[headerIdx];
+
+                            for (let i = headerIdx + 1; i < aoa.length; i++) {
+                                if (!aoa[i] || !Array.isArray(aoa[i])) continue;
+
+                                const obj = {};
+                                let hasData = false;
+
+                                headers.forEach((h, j) => {
+                                    const key = h ? String(h).trim() : '';
+                                    if (key) {
+                                        obj[key] = aoa[i][j];
+                                        if (aoa[i][j] !== '') hasData = true;
+                                    }
+                                });
+
+                                if (hasData) vroRaw.push(obj);
+                            }
+                        }
+                    }
+                } catch (err) {
+                    console.warn('Skipped sheet due to parsing error:', sheetName, err);
                 }
-                processExcelData(vroRaw, resourceRawAOA, oosRawAOA, usefulRawAOA);
-                setTimeout(initFirebaseSync, 500); 
-            } catch (error) { 
-                console.error(error); 
-                statusEl.innerText = "Error parsing files."; 
+            });
+
+            if (!usefulRawAOA.length && !resourceRawAOA.length && !oosRawAOA.length && !vroRaw.length) {
+                throw new Error('Workbook loaded, but no expected sheets were recognized. Check tab names in master_workFLOW.xlsx.');
+            }
+
+            processExcelData(vroRaw, resourceRawAOA, oosRawAOA, usefulRawAOA);
+            setTimeout(initFirebaseSync, 500);
+        }
+
+        document.getElementById('excelFileInput').addEventListener('change', async function (e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const statusEl = document.getElementById('upload-status');
+            statusEl.innerText = 'Reading manual upload...';
+            statusEl.style.color = '#888';
+
+            try {
+                const data = await file.arrayBuffer();
+                const workbook = XLSX.read(data, { type: 'array' });
+
+                loadWorkbookIntoDashboard(workbook);
+
+                statusEl.innerText = `Loaded ${file.name}`;
+                statusEl.style.color = '#2e7d32';
+            } catch (error) {
+                console.error('Manual upload parse error:', error);
+                statusEl.innerText = `Error parsing file: ${error.message}`;
+                statusEl.style.color = 'red';
             }
         });
 
@@ -1610,6 +1595,9 @@
                         groupedUnits.sort((a,b) => { 
                             return (b.isOOS === true ? 1 : 0) - (a.isOOS === true ? 1 : 0);
                         });
+                        
+                        let isBranchDedicated = branchROs.some(ro => ro.isDedicated);
+                        let dedicatedBadge = isBranchDedicated ? `<span style="background-color: white; color: black; border: 1px solid black; border-radius: 12px; padding: 2px 6px; margin-left: 5px; font-size: 10px; font-weight: bold;">(DEDICATED)</span>` : '';
 
                         branchHtml += `<details class="ro-detail-node"><summary><div style="flex-grow:1; display:flex; align-items:center;">${branch} (${branchROs.length} ROs)</div><div>${badgesHtml}</div></summary>`;
                         let tableHTML = `<div class="table-wrapper"><table><colgroup><col style="width:23%;"><col style="width:11%;">${isPM ? '' : '<col style="width:11%;">'}<col style="width:9%;"><col style="width:11%;"><col style="width:21%;"><col style="width:14%;"></colgroup><thead><tr><th>AFS RO # & Dispatch</th><th>Unit No</th>${isPM ? '' : '<th>Priority Status</th>'}<th>OOS Status</th><th>Opened Date</th><th>Status</th><th>ECD</th></tr></thead><tbody>`;
@@ -1761,7 +1749,8 @@
                     });
 
                     Object.values(searchUnitsMap).forEach(u => {
-                        let oosBadge = u.isOOS ? `<span class="badge badge-oos">OOS</span>` : `<span class="badge badge-active">ACTIVE</span>`;
+                        let isGarda = u.custKey === 'Garda';
+                        let oosBadge = isGarda ? (u.isOOS ? `<span class="badge badge-oos">OOS</span>` : `<span class="badge badge-active">ACTIVE</span>`) : '';
                         let isPri = (u.isOOS && isPriority({isOOS: u.isOOS, usefulPct: u.usefulPct, unitType: u.unitType}));
                         let priorityStatusBadge = isPri ? `<span class="badge badge-urgent">Priority</span>` : `<span class="badge badge-low">Normal</span>`;
 
