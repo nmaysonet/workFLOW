@@ -932,10 +932,50 @@
             }
             return false;
         }
+
+        window.triggerDrilldownFilter = function() {
+            if(currentOwnerView) loadPersonDrilldown(currentOwnerView, currentParentView, true);
+        }
         
         window.updateSummaryFilters = function() {
             renderSummary();
             renderAmeritOos();
+        }
+
+        function populateDrilldownDropdowns(dataToScan) {
+            let rSel = document.getElementById('dd-region');
+            let sSel = document.getElementById('dd-subregion');
+            let bSel = document.getElementById('dd-branch');
+            
+            let rVal = rSel.value;
+            let sVal = sSel.value;
+            let bVal = bSel.value;
+
+            let regions = new Set();
+            let subs = new Set();
+            let branches = new Set();
+
+            dataToScan.forEach(ro => {
+                regions.add(ro.region);
+                if (rVal === 'ALL' || ro.region === rVal) {
+                    subs.add(ro.subregion);
+                    if (sVal === 'ALL' || ro.subregion === sVal) {
+                        branches.add(ro.branch);
+                    }
+                }
+            });
+
+            rSel.innerHTML = '<option value="ALL">All Regions</option>';
+            Array.from(regions).sort().forEach(r => rSel.innerHTML += `<option value="${r}">${r}</option>`);
+            rSel.value = regions.has(rVal) ? rVal : 'ALL';
+
+            sSel.innerHTML = '<option value="ALL">All Subregions</option>';
+            Array.from(subs).sort().forEach(s => sSel.innerHTML += `<option value="${s}">${s}</option>`);
+            sSel.value = subs.has(sVal) ? sVal : 'ALL';
+
+            bSel.innerHTML = '<option value="ALL">All Branches</option>';
+            Array.from(branches).sort().forEach(b => bSel.innerHTML += `<option value="${b}">${b}</option>`);
+            bSel.value = branches.has(bVal) ? bVal : 'ALL';
         }
 
         function populateSummaryDropdowns() {
@@ -999,6 +1039,7 @@
             if (!currentOwnerView || processedData.length === 0) return;
             
             let ownerDataAll = processedData;
+            // FIXED: Using drilldownOwners for export so it correctly matches what's visible on screen
             if (currentOwnerView === 'ALL_PM') ownerDataAll = processedData.filter(ro => ro.drilldownOwners.some(o => pmOwners.includes(o)));
             else if (currentOwnerView === 'ALL_VENDED') ownerDataAll = processedData.filter(ro => ro.drilldownOwners.some(o => vendedOwners.includes(o)));
             else if (currentOwnerView === 'ALL_ERS') ownerDataAll = processedData.filter(ro => ro.drilldownOwners.some(o => ersOwners.includes(o)));
@@ -1007,6 +1048,17 @@
             if (currentCustomerFilter !== 'ALL') {
                 ownerDataAll = ownerDataAll.filter(ro => ro.custKey === currentCustomerFilter);
             }
+
+            let rVal = document.getElementById('dd-region').value;
+            let sVal = document.getElementById('dd-subregion').value;
+            let bVal = document.getElementById('dd-branch').value;
+
+            ownerDataAll = ownerDataAll.filter(ro => {
+                if (rVal !== 'ALL' && ro.region !== rVal) return false;
+                if (sVal !== 'ALL' && ro.subregion !== sVal) return false;
+                if (bVal !== 'ALL' && ro.branch !== bVal) return false;
+                return true;
+            });
 
             let isPM = currentOwnerView === 'ALL_PM' || pmOwners.includes(currentOwnerView);
             let targetData = ownerDataAll.filter(ro => ro.isOpen);
@@ -1158,65 +1210,13 @@
             XLSX.writeFile(workbook, "VDR_Consolidation_Summary.xlsx");
         }
 
-        // --- CSS HIDING FILTER ENGINE FOR DRILLDOWNS ---
-        function applyDrilldownFilters() {
-            const container = document.getElementById('drilldown-body');
-            if (!container) return;
-
-            let isPM = currentOwnerView === 'ALL_PM' || pmOwners.includes(currentOwnerView);
-
-            // Hide/Show Rows
-            const rows = container.querySelectorAll('.ro-row');
-            rows.forEach(row => {
-                let show = true;
-                if (!isPM) {
-                    if (currentFilter === 'OOS' && row.dataset.oos !== 'true') show = false;
-                    if (currentFilter === 'PRIORITY' && row.dataset.priority !== 'true') show = false;
-                }
-                row.style.display = show ? '' : 'none';
-            });
-
-            // Update Counts and Hide Empty Branches
-            const branchNodes = container.querySelectorAll('.branch-details');
-            branchNodes.forEach(branch => {
-                const visibleRows = Array.from(branch.querySelectorAll('.ro-row')).filter(r => r.style.display !== 'none');
-                branch.style.display = visibleRows.length === 0 ? 'none' : '';
-                
-                const titleEl = branch.querySelector('.branch-title-text');
-                if (titleEl) {
-                    const originalName = branch.dataset.branchName;
-                    titleEl.innerHTML = `${originalName} (${visibleRows.length} ROs)`;
-                }
-            });
-
-            // Hide Empty Subregions
-            const subNodes = container.querySelectorAll('.subregion-details');
-            subNodes.forEach(sub => {
-                const visibleRows = Array.from(sub.querySelectorAll('.ro-row')).filter(r => r.style.display !== 'none');
-                sub.style.display = visibleRows.length === 0 ? 'none' : '';
-            });
-
-            // Hide Empty Regions
-            const regNodes = container.querySelectorAll('.region-details');
-            regNodes.forEach(reg => {
-                const visibleRows = Array.from(reg.querySelectorAll('.ro-row')).filter(r => r.style.display !== 'none');
-                reg.style.display = visibleRows.length === 0 ? 'none' : '';
-            });
-        }
-
         function setFilter(val) {
             currentFilter = val;
             document.querySelectorAll('.filter-btn').forEach(btn => {
                 if(btn.dataset.filter === val) { btn.classList.add('active'); btn.style.background = 'var(--gold)'; } 
                 else { btn.classList.remove('active'); btn.style.background = '#e0e0e0'; }
             });
-            
-            let activeView = document.querySelector('.view-section.active').id;
-            if (activeView === 'person-view') {
-                applyDrilldownFilters(); // Hide/Show without rebuilding HTML
-            } else {
-                triggerViewUpdate();
-            }
+            triggerViewUpdate();
         }
 
         function setCustomerFilter(val) {
@@ -1401,7 +1401,7 @@
                 let creatorInfo = resourceMap[ownerEmail];
                 let isCreatorSpecial = false;
 
-                if (creatorInfo && (creatorInfo.team === 'ERS' || creatorInfo.team === 'PM')) {
+                if (creatorInfo && (creatorInfo.team === 'ERS' || creatorInfo.team === 'PM' || (creatorInfo.team === 'VENDED REPAIR' && !creatorInfo.hasBranch))) {
                     isCreatorSpecial = true;
                     if (creatorInfo.name) {
                         kpiOwners.add(creatorInfo.name);
@@ -1769,8 +1769,7 @@
             let pct = (active / maxRoutes) * 100;
             let formatted = pct.toFixed(1) + '%';
             if (pct < 95) return `<span style="color:var(--urgent-red); font-weight:bold;">${formatted}</span>`;
-            if (pct >= 95 && pct < 100) return `<span style="color:#854d0e; background:#fef08a; padding:2px 4px; border-radius:4px; font-weight:800;">${formatted}</span>`;
-            if (pct === 100) return `<span style="color:#065f46; background:#bbf7d0; padding:2px 4px; border-radius:4px; font-weight:800;">${formatted}</span>`;
+            if (pct >= 95 && pct < 100) return `<span style="color:var(--medium-yellow); font-weight:bold;">${formatted}</span>`;
             return `<span style="color:var(--low-green); font-weight:bold;">${formatted}</span>`;
         }
 
@@ -2022,35 +2021,42 @@
             let baseOpenData = ownerDataAll.filter(ro => ro.isOpen);
 
             let branchUsefulVals = {};
+            let subUsefulMap = {};
+            let topUsefulMap = {};
 
             baseOpenData.forEach(ro => {
                 if (ro.usefulPctObj) {
                     let branchKey = ro.drillTopLevel + '|||' + ro.subregion + '|||' + ro.branch;
+                    let subKey = ro.drillTopLevel + '|||' + ro.subregion;
+                    let topKey = ro.drillTopLevel;
+
                     if (branchUsefulVals[branchKey] === undefined) {
                         branchUsefulVals[branchKey] = ro.usefulPctObj;
+                        
+                        if (!subUsefulMap[subKey]) subUsefulMap[subKey] = [];
+                        subUsefulMap[subKey].push(ro.usefulPctObj);
+                        
+                        if (!topUsefulMap[topKey]) topUsefulMap[topKey] = [];
+                        topUsefulMap[topKey].push(ro.usefulPctObj);
                     }
                 }
             });
 
-            let topUsefulMap = {};
-            let subUsefulMap = {};
+            // Apply Filters
+            let targetData = baseOpenData;
             
-            for (let branchKey in branchUsefulVals) {
-                let parts = branchKey.split('|||');
-                let topKey = parts[0];
-                let subKey = parts[0] + '|||' + parts[1];
-                
-                if (!topUsefulMap[topKey]) topUsefulMap[topKey] = [];
-                topUsefulMap[topKey].push(branchUsefulVals[branchKey]);
-                
-                if (!subUsefulMap[subKey]) subUsefulMap[subKey] = [];
-                subUsefulMap[subKey].push(branchUsefulVals[branchKey]);
+            if (!isPM) {
+                if (currentFilter === 'OOS') {
+                    targetData = targetData.filter(ro => ro.isOOS);
+                } else if(currentFilter === 'PRIORITY') {
+                    targetData = targetData.filter(ro => isPriority(ro));
+                }
             }
 
-            if(baseOpenData.length === 0) return `<p style="margin-top:15px; color:#666;">No active Repair Orders to display under the current filters.</p>`;
+            if(targetData.length === 0) return `<p style="margin-top:15px; color:#666;">No active Repair Orders to display under the current filters.</p>`;
             
             let hierarchy = {};
-            baseOpenData.forEach(ro => {
+            targetData.forEach(ro => {
                 if(!hierarchy[ro.drillTopLevel]) hierarchy[ro.drillTopLevel] = {};
                 if(!hierarchy[ro.drillTopLevel][ro.subregion]) hierarchy[ro.drillTopLevel][ro.subregion] = {};
                 if(!hierarchy[ro.drillTopLevel][ro.subregion][ro.branch]) hierarchy[ro.drillTopLevel][ro.subregion][ro.branch] = [];
@@ -2109,6 +2115,7 @@
                                 : `<a href="https://afshub.azurewebsites.net/Vendors/VendedRepairOrder/Estimate/${ro.roNum}" target="_blank" class="ro-link">${ro.roNum}</a>${dupBadge}`;
                             
                             unitsMap[ro.unitNo].roLinks.push(roLinkHtml);
+                            
                             unitsMap[ro.unitNo].openedDates.push(ro.openedFormatted);
                             unitsMap[ro.unitNo].statuses.push(ro.status);
                             unitsMap[ro.unitNo].ecdCells.push(ecdCell);
@@ -2119,13 +2126,15 @@
                             return (b.isOOS === true ? 1 : 0) - (a.isOOS === true ? 1 : 0);
                         });
 
-                        branchHtml += `<details class="ro-detail-node branch-details" data-branch-name="${branch}"><summary><div style="flex-grow:1; display:flex; align-items:center;"><span class="branch-title-text">${branch} (${branchROs.length} ROs)</span></div><div>${badgesHtml}</div></summary>`;
+                        branchHtml += `<details class="ro-detail-node"><summary><div style="flex-grow:1; display:flex; align-items:center;">${branch} (${branchROs.length} ROs)</div><div>${badgesHtml}</div></summary>`;
                         let tableHTML = `<div class="table-wrapper"><table><colgroup><col style="width:23%;"><col style="width:11%;">${isPM ? '' : '<col style="width:11%;">'}<col style="width:9%;"><col style="width:11%;"><col style="width:21%;"><col style="width:14%;"></colgroup><thead><tr><th>AFS RO # & Dispatch</th><th>Unit No</th>${isPM ? '' : '<th>Priority Status</th>'}<th>OOS Status</th><th>Opened Date</th><th>Status</th><th>ECD</th></tr></thead><tbody>`;
                         
                         groupedUnits.forEach(u => {
                             let oosBadge = u.isOOS ? `<span class="badge badge-oos">OOS</span>` : `<span class="badge badge-active">ACTIVE</span>`;
+                            
                             let isPri = (u.isOOS && isPriority({isOOS: u.isOOS, usefulPctObj: u.usefulPctObj, unitType: u.unitType}));
                             let priorityStatusBadge = isPri ? `<span class="badge badge-urgent">Priority</span>` : `<span class="badge badge-low">Normal</span>`;
+
                             let rowCount = u.roNums.length;
 
                             u.roNums.forEach((roNum, idx) => {
@@ -2143,7 +2152,7 @@
 
                                 let roHtml = `<div style="display:flex; align-items:center; gap: 4px;">${statusToggleHtml} ${u.roLinks[idx]} ${noteBtnHtml}</div>`;
 
-                                tableHTML += `<tr class="ro-row" data-oos="${u.isOOS}" data-priority="${isPri}">`;
+                                tableHTML += `<tr>`;
                                 tableHTML += `<td style="vertical-align:top; padding-top:15px; border-bottom: ${idx === rowCount - 1 ? '1px solid var(--border)' : '1px dashed #eee'};">${roHtml}</td>`;
                                 
                                 if (idx === 0) {
@@ -2168,59 +2177,14 @@
                         tableHTML += `</tbody></table></div>`; 
                         branchHtml += tableHTML + `</details>`;
                     }
-                    subHtml += `<details class="ro-detail-node subregion-details"><summary><div style="flex-grow:1; display:flex; align-items:center;">${sub}</div><div>${subBadges}</div></summary>${branchHtml}</details>`;
+                    subHtml += `<details class="ro-detail-node"><summary><div style="flex-grow:1; display:flex; align-items:center;">${sub}</div><div>${subBadges}</div></summary>${branchHtml}</details>`;
                 }
-                htmlStr += `<details class="ro-detail-node region-details"><summary><div style="flex-grow:1; display:flex; align-items:center;">${topLvl}</div><div>${topBadges}</div></summary>${subHtml}</details>`;
+                htmlStr += `<details class="ro-detail-node"><summary><div style="flex-grow:1; display:flex; align-items:center;">${topLvl}</div><div>${topBadges}</div></summary>${subHtml}</details>`;
             }
             return htmlStr;
         }
 
-        function applyDrilldownFilters() {
-            const container = document.getElementById('drilldown-body');
-            if (!container) return;
-
-            let isPM = currentOwnerView === 'ALL_PM' || pmOwners.includes(currentOwnerView);
-
-            // Hide/Show Rows based on filter
-            const rows = container.querySelectorAll('.ro-row');
-            rows.forEach(row => {
-                let show = true;
-                if (!isPM) {
-                    if (currentFilter === 'OOS' && row.dataset.oos !== 'true') show = false;
-                    if (currentFilter === 'PRIORITY' && row.dataset.priority !== 'true') show = false;
-                }
-                row.style.display = show ? '' : 'none';
-            });
-
-            // Re-calculate Branch Headers and hide empty ones
-            const branchNodes = container.querySelectorAll('.branch-details');
-            branchNodes.forEach(branch => {
-                const visibleRows = Array.from(branch.querySelectorAll('.ro-row')).filter(r => r.style.display !== 'none');
-                branch.style.display = visibleRows.length === 0 ? 'none' : '';
-                
-                const titleEl = branch.querySelector('.branch-title-text');
-                if (titleEl) {
-                    const originalName = branch.dataset.branchName;
-                    titleEl.innerHTML = `${originalName} (${visibleRows.length} ROs)`;
-                }
-            });
-
-            // Hide empty Subregions
-            const subNodes = container.querySelectorAll('.subregion-details');
-            subNodes.forEach(sub => {
-                const visibleRows = Array.from(sub.querySelectorAll('.ro-row')).filter(r => r.style.display !== 'none');
-                sub.style.display = visibleRows.length === 0 ? 'none' : '';
-            });
-
-            // Hide empty Regions
-            const regNodes = container.querySelectorAll('.region-details');
-            regNodes.forEach(reg => {
-                const visibleRows = Array.from(reg.querySelectorAll('.ro-row')).filter(r => r.style.display !== 'none');
-                reg.style.display = visibleRows.length === 0 ? 'none' : '';
-            });
-        }
-
-        function loadPersonDrilldown(owner, parentViewId) {
+        function loadPersonDrilldown(owner, parentViewId, preserveFilters = false) {
             navigate('person-view', null, true); 
             currentOwnerView = owner; currentParentView = parentViewId;
             
@@ -2242,7 +2206,6 @@
             }
 
             let ownerDataAll = processedData;
-            
             if (owner === 'ALL_PM') ownerDataAll = processedData.filter(ro => ro.drilldownOwners.some(o => pmOwners.includes(o)));
             else if (owner === 'ALL_VENDED') ownerDataAll = processedData.filter(ro => ro.drilldownOwners.some(o => vendedOwners.includes(o)));
             else if (owner === 'ALL_ERS') ownerDataAll = processedData.filter(ro => ro.drilldownOwners.some(o => ersOwners.includes(o)));
@@ -2252,10 +2215,8 @@
                 ownerDataAll = ownerDataAll.filter(ro => ro.custKey === currentCustomerFilter);
             }
 
-            // Generate HTML once with ALL data, then filter via CSS
             document.getElementById('drilldown-body').innerHTML = generateRoDrilldownHtml(ownerDataAll, isPM);
             updateAllNoteButtons(); 
-            applyDrilldownFilters(); 
         }
 
         function toggleAllDetails(expand) { 
@@ -2383,7 +2344,6 @@
                 document.querySelectorAll('.menu-item').forEach(item => item.classList.remove('active'));
                 menuElement.classList.add('active');
             }
-            
             if(viewId === 'pm-view') renderKPITiles(pmOwners, 'pm-kpi-container', 'pm-view');
             else if (viewId === 'vended-view') renderKPITiles(vendedOwners, 'vended-kpi-container', 'vended-view');
             else if (viewId === 'ers-view') renderKPITiles(ersOwners, 'ers-kpi-container', 'ers-view');
