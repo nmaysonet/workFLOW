@@ -622,9 +622,7 @@
             });
 
             if (!usefulRawAOA.length && !resourceRawAOA.length && !oosRawAOA.length && !vroRaw.length) {
-                throw new Error(
-                    'Workbook loaded, but no expected sheets were recognized. Check tab names in master_workFLOW.xlsx.'
-                );
+                throw new Error('Workbook loaded, but no expected sheets were recognized. Check tab names in master_workFLOW.xlsx.');
             }
 
             processExcelData(vroRaw, resourceRawAOA, oosRawAOA, usefulRawAOA);
@@ -828,19 +826,44 @@
             let u = ro.usefulPct;
             if (!u) return false;
             
-            let typePct = null;
-            if (ro.unitType === 'LTS') typePct = u.LTS;
-            else if (ro.unitType === 'ST') typePct = u.ST;
-            else if (ro.unitType === 'SHUTTLE') typePct = u.SHUTTLE;
+            let ltsLow = (u.LTS !== null && u.LTS !== undefined && !isNaN(u.LTS) && Math.round(u.LTS * 100) < 100);
+            let stLow = (u.ST !== null && u.ST !== undefined && !isNaN(u.ST) && Math.round(u.ST * 100) < 100);
             
-            if (typePct !== null && !isNaN(typePct)) {
-                return Math.round(typePct * 100) < 100;
-            }
+            return ltsLow || stLow;
+        }
+
+        function formatUsefulBadge(label, val) {
+            if(val === null || val === undefined || isNaN(val) || val === '') return '';
+            let pct = Math.round(val * 100);
+            let bg = '#00ff00'; // bright green default
+            let tc = 'black';
             
-            if (u.TOTAL !== null && !isNaN(u.TOTAL)) {
-                return Math.round(u.TOTAL * 100) < 100;
-            }
-            return false;
+            if (pct < 95) { bg = '#d9534f'; tc = 'white'; } 
+            else if (pct >= 95 && pct < 100) { bg = '#FFC600'; tc = 'black'; } 
+            else if (pct === 100) { bg = '#90ee90'; tc = 'black'; } // light green
+
+            return `<span class="badge" style="background-color: ${bg}; color: ${tc}; font-size: 11px; margin-left: 10px;">${label}: ${pct}%</span>`;
+        }
+
+        function getAggregatedBadges(pctArray) {
+            if (!pctArray || pctArray.length === 0) return '';
+            
+            let ltsSum = 0, ltsCount = 0;
+            let stSum = 0, stCount = 0;
+            let shutSum = 0, shutCount = 0;
+
+            pctArray.forEach(p => {
+                if (p.LTS !== null && p.LTS !== undefined && !isNaN(p.LTS)) { ltsSum += p.LTS; ltsCount++; }
+                if (p.ST !== null && p.ST !== undefined && !isNaN(p.ST)) { stSum += p.ST; stCount++; }
+                if (p.SHUTTLE !== null && p.SHUTTLE !== undefined && !isNaN(p.SHUTTLE)) { shutSum += p.SHUTTLE; shutCount++; }
+            });
+
+            let badges = '';
+            if (ltsCount > 0) badges += formatUsefulBadge('LTS Useful', ltsSum / ltsCount);
+            if (stCount > 0) badges += formatUsefulBadge('ST Useful', stSum / stCount);
+            if (shutCount > 0) badges += formatUsefulBadge('Shuttle Useful', shutSum / shutCount);
+
+            return badges;
         }
 
         function exportDrilldownToExcel() {
@@ -867,23 +890,18 @@
             if (targetData.length === 0) { alert("No data available to export."); return; }
 
             const excelRows = targetData.map(ro => {
-                let usefulText = "N/A";
-                let typePct = null;
-                if (ro.unitType === 'LTS') typePct = ro.usefulPct.LTS;
-                else if (ro.unitType === 'ST') typePct = ro.usefulPct.ST;
-                else if (ro.unitType === 'SHUTTLE') typePct = ro.usefulPct.SHUTTLE;
-
-                if (typePct !== null && !isNaN(typePct)) {
-                    usefulText = Math.round(typePct * 100) + '%';
-                } else if(ro.usefulPct && ro.usefulPct.TOTAL !== null) {
-                    usefulText = Math.round(ro.usefulPct.TOTAL * 100) + '% (Total)';
-                }
+                let u = ro.usefulPct || {};
+                let ltsStr = (u.LTS !== null && u.LTS !== undefined) ? Math.round(u.LTS * 100) + '%' : 'N/A';
+                let stStr = (u.ST !== null && u.ST !== undefined) ? Math.round(u.ST * 100) + '%' : 'N/A';
+                let shutStr = (u.SHUTTLE !== null && u.SHUTTLE !== undefined) ? Math.round(u.SHUTTLE * 100) + '%' : 'N/A';
 
                 return {
                     "AFS RO #": ro.roNum.startsWith('NO RO') ? "NO ACTIVE RO" : ro.roNum, 
                     "Unit No": ro.unitNo, 
                     "OOS Status": ro.isOOS ? "OOS" : "",
-                    "Type Useful %": usefulText,
+                    "LTS Useful %": ltsStr,
+                    "ST Useful %": stStr,
+                    "Shuttle Useful %": shutStr,
                     "Opened Date": ro.openedFormatted,
                     "Status": ro.status, "ECD": ro.ecdFormatted,
                     "Customer Group": ro.drillTopLevel, "Subregion": ro.subregion, "Branch": ro.branch
@@ -903,14 +921,25 @@
             const results = processedData.filter(ro => ro.unitNo.toLowerCase().includes(searchTerm));
             if(results.length === 0) { alert("No data to export."); return; }
             
-            const excelRows = results.map(ro => ({
-                "AFS RO #": ro.roNum.startsWith('NO RO') ? "NO ACTIVE RO" : ro.roNum, 
-                "Unit No": ro.unitNo, 
-                "Priority Status": isPriority(ro) ? "Priority" : "Normal",
-                "OOS Status": ro.isOOS ? "OOS" : "",
-                "Opened Date": ro.openedFormatted,
-                "Owner": ro.owner, "Status": ro.status, "ECD": ro.ecdFormatted
-            }));
+            const excelRows = results.map(ro => {
+                let u = ro.usefulPct || {};
+                let ltsStr = (u.LTS !== null && u.LTS !== undefined) ? Math.round(u.LTS * 100) + '%' : 'N/A';
+                let stStr = (u.ST !== null && u.ST !== undefined) ? Math.round(u.ST * 100) + '%' : 'N/A';
+                let shutStr = (u.SHUTTLE !== null && u.SHUTTLE !== undefined) ? Math.round(u.SHUTTLE * 100) + '%' : 'N/A';
+
+                return {
+                    "AFS RO #": ro.roNum.startsWith('NO RO') ? "NO ACTIVE RO" : ro.roNum, 
+                    "Unit No": ro.unitNo, 
+                    "Priority Status": isPriority(ro) ? "Priority" : "Normal",
+                    "OOS Status": ro.isOOS ? "OOS" : "",
+                    "LTS Useful %": ltsStr,
+                    "ST Useful %": stStr,
+                    "Shuttle Useful %": shutStr,
+                    "Opened Date": ro.openedFormatted,
+                    "Owner": ro.owner, "Status": ro.status, "ECD": ro.ecdFormatted
+                };
+            });
+            
             const worksheet = XLSX.utils.json_to_sheet(excelRows);
             const workbook = XLSX.utils.book_new();
             XLSX.utils.book_append_sheet(workbook, worksheet, "Search Results");
@@ -1346,14 +1375,35 @@
         function formatUsefulBadge(label, val) {
             if(val === null || val === undefined || isNaN(val) || val === '') return '';
             let pct = Math.round(val * 100);
-            let bg = '#90ee90'; 
+            let bg = '#00ff00'; // bright green default
             let tc = 'black';
             
             if (pct < 95) { bg = '#d9534f'; tc = 'white'; } 
             else if (pct >= 95 && pct < 100) { bg = '#FFC600'; tc = 'black'; } 
-            else if (pct > 100) { bg = '#00ff00'; tc = 'black'; } 
+            else if (pct === 100) { bg = '#90ee90'; tc = 'black'; } // light green
 
-            return `<span class="badge" style="background-color: ${bg}; color: ${tc}; margin-right: 20px; font-size: 11px;">${label}: ${pct}%</span>`;
+            return `<span class="badge" style="background-color: ${bg}; color: ${tc}; font-size: 11px; margin-left: 10px;">${label}: ${pct}%</span>`;
+        }
+
+        function getAggregatedBadges(pctArray) {
+            if (!pctArray || pctArray.length === 0) return '';
+            
+            let ltsSum = 0, ltsCount = 0;
+            let stSum = 0, stCount = 0;
+            let shutSum = 0, shutCount = 0;
+
+            pctArray.forEach(p => {
+                if (p.LTS !== null && p.LTS !== undefined && !isNaN(p.LTS)) { ltsSum += p.LTS; ltsCount++; }
+                if (p.ST !== null && p.ST !== undefined && !isNaN(p.ST)) { stSum += p.ST; stCount++; }
+                if (p.SHUTTLE !== null && p.SHUTTLE !== undefined && !isNaN(p.SHUTTLE)) { shutSum += p.SHUTTLE; shutCount++; }
+            });
+
+            let badges = '';
+            if (ltsCount > 0) badges += formatUsefulBadge('LTS Useful', ltsSum / ltsCount);
+            if (stCount > 0) badges += formatUsefulBadge('ST Useful', stSum / stCount);
+            if (shutCount > 0) badges += formatUsefulBadge('Shuttle Useful', shutSum / shutCount);
+
+            return badges;
         }
 
         function generateTileHTML(name, dataSet, chartId = null, isPM = false) {
@@ -1513,11 +1563,23 @@
             let baseOpenData = ownerDataAll.filter(ro => ro.isOpen);
 
             let branchUsefulVals = {};
+            let subUsefulMap = {};
+            let topUsefulMap = {};
+
             baseOpenData.forEach(ro => {
                 if (ro.usefulPct) {
                     let branchKey = ro.drillTopLevel + '|||' + ro.subregion + '|||' + ro.branch;
+                    let subKey = ro.drillTopLevel + '|||' + ro.subregion;
+                    let topKey = ro.drillTopLevel;
+
                     if (branchUsefulVals[branchKey] === undefined) {
                         branchUsefulVals[branchKey] = ro.usefulPct;
+                        
+                        if (!subUsefulMap[subKey]) subUsefulMap[subKey] = [];
+                        subUsefulMap[subKey].push(ro.usefulPct);
+                        
+                        if (!topUsefulMap[topKey]) topUsefulMap[topKey] = [];
+                        topUsefulMap[topKey].push(ro.usefulPct);
                     }
                 }
             });
@@ -1545,9 +1607,11 @@
             
             let htmlStr = '';
             for(let topLvl in hierarchy) {
+                let topBadges = getAggregatedBadges(topUsefulMap[topLvl] || []);
                 let subHtml = '';
                 for(let sub in hierarchy[topLvl]) {
                     let subKey = topLvl + '|||' + sub;
+                    let subBadges = getAggregatedBadges(subUsefulMap[subKey] || []);
                     let branchHtml = '';
                     for(let branch in hierarchy[topLvl][sub]) {
                         let branchKey = subKey + '|||' + branch;
@@ -1600,8 +1664,11 @@
                         groupedUnits.sort((a,b) => { 
                             return (b.isOOS === true ? 1 : 0) - (a.isOOS === true ? 1 : 0);
                         });
+                        
+                        let isBranchDedicated = branchROs.some(ro => ro.isDedicated);
+                        let dedicatedBadge = isBranchDedicated ? `<span style="background-color: white; color: black; border: 1px solid black; border-radius: 12px; padding: 2px 6px; margin-left: 5px; font-size: 10px; font-weight: bold;">(DEDICATED)</span>` : '';
 
-                        branchHtml += `<details class="ro-detail-node"><summary><div style="flex-grow:1; display:flex; align-items:center;">${branch} (${branchROs.length} ROs)</div><div>${badgesHtml}</div></summary>`;
+                        branchHtml += `<details class="ro-detail-node"><summary><div style="flex-grow:1; display:flex; align-items:center;">${branch} (${branchROs.length} ROs) ${dedicatedBadge}</div><div>${badgesHtml}</div></summary>`;
                         let tableHTML = `<div class="table-wrapper"><table><colgroup><col style="width:23%;"><col style="width:11%;">${isPM ? '' : '<col style="width:11%;">'}<col style="width:9%;"><col style="width:11%;"><col style="width:21%;"><col style="width:14%;"></colgroup><thead><tr><th>AFS RO # & Dispatch</th><th>Unit No</th>${isPM ? '' : '<th>Priority Status</th>'}<th>OOS Status</th><th>Opened Date</th><th>Status</th><th>ECD</th></tr></thead><tbody>`;
                         
                         groupedUnits.forEach(u => {
@@ -1652,9 +1719,9 @@
                         tableHTML += `</tbody></table></div>`; 
                         branchHtml += tableHTML + `</details>`;
                     }
-                    subHtml += `<details class="ro-detail-node"><summary>${sub}</summary>${branchHtml}</details>`;
+                    subHtml += `<details class="ro-detail-node"><summary><div style="flex-grow:1; display:flex; align-items:center;">${sub}</div><div>${subBadges}</div></summary>${branchHtml}</details>`;
                 }
-                htmlStr += `<details class="ro-detail-node"><summary>${topLvl}</summary>${subHtml}</details>`;
+                htmlStr += `<details class="ro-detail-node"><summary><div style="flex-grow:1; display:flex; align-items:center;">${topLvl}</div><div>${topBadges}</div></summary>${subHtml}</details>`;
             }
             return htmlStr;
         }
