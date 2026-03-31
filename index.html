@@ -239,6 +239,7 @@
         <div class="menu-item" id="menu-vended" onclick="navigate('vended-view', this)">Vended Repair Queue</div>
         <div class="menu-item" id="menu-ers" onclick="navigate('ers-view', this)">ERS Queue</div>
         <div class="menu-item" id="menu-summary" onclick="navigate('summary-view', this)">Consolidation Summary</div>
+        <div class="menu-item" onclick="window.location.href='vendor.html'">Vendor Search</div>
         
         <div class="sidebar-truck">
             <svg width="140" height="70" viewBox="0 0 120 60" xmlns="http://www.w3.org/2000/svg" class="moving-truck-svg">
@@ -279,12 +280,6 @@
                 <input type="text" id="global-search" placeholder="Search by Unit No..." onkeyup="handleSearch()">
             </div>
             <div class="top-actions">
-                <div class="dropdown">
-                    <button class="btn-action dropbtn">VENDOR MAPS ▼</button>
-                    <div class="dropdown-content">
-                        <a href="https://app.mapline.com/map/map_282c81fe/TWZ2TzJHRGcrd3BjaG1QMDNPekVGYUhxNThJd080SUZTK2MwZG" target="_blank">Armored</a>
-                    </div>
-                </div>
                 <a href="https://afshub.azurewebsites.net/Vendors/VendedRepairOrder/CreateVRO" target="_blank" class="btn-action">CREATE A VRO</a>
             </div>
         </div>
@@ -1047,7 +1042,6 @@
             if (!currentOwnerView || processedData.length === 0) return;
             
             let ownerDataAll = processedData;
-            // FIXED: Using drilldownOwners for export so it correctly matches what's visible on screen
             if (currentOwnerView === 'ALL_PM') ownerDataAll = processedData.filter(ro => ro.drilldownOwners.some(o => pmOwners.includes(o)));
             else if (currentOwnerView === 'ALL_VENDED') ownerDataAll = processedData.filter(ro => ro.drilldownOwners.some(o => vendedOwners.includes(o)));
             else if (currentOwnerView === 'ALL_ERS') ownerDataAll = processedData.filter(ro => ro.drilldownOwners.some(o => ersOwners.includes(o)));
@@ -1408,7 +1402,6 @@
 
                 allCustSet.add(custKey);
 
-                // --- KPI VS VISIBILITY LOGIC ---
                 let kpiOwners = new Set();
                 let drilldownOwners = new Set();
                 
@@ -1418,7 +1411,7 @@
                 let creatorInfo = resourceMap[ownerEmail];
                 let isCreatorSpecial = false;
 
-                if (creatorInfo && (creatorInfo.team === 'ERS' || creatorInfo.team === 'PM' || (creatorInfo.team === 'VENDED REPAIR' && !creatorInfo.hasBranch))) {
+                if (creatorInfo && (creatorInfo.team === 'ERS' || creatorInfo.team === 'PM')) {
                     isCreatorSpecial = true;
                     if (creatorInfo.name) {
                         kpiOwners.add(creatorInfo.name);
@@ -1438,7 +1431,6 @@
                         drilldownOwners.add(validBranchOwner);
                     }
                 }
-                // ------------------------------------------------
 
                 let bCode = extractGardaCode(mUnit.branch) || normalizeBranchStr(mUnit.branch);
                 let pcts = branchUsefulMap[bCode] || { LTS: null, ST: null, SHUTTLE: null, TOTAL: null };
@@ -1524,6 +1516,7 @@
                     let kpiOwners = new Set();
                     let drilldownOwners = new Set();
                     let unitOwner = mUnit.owner;
+                    
                     if (unitOwner && unitOwner.toUpperCase() !== 'UNASSIGNED') {
                         kpiOwners.add(unitOwner);
                         drilldownOwners.add(unitOwner);
@@ -1638,7 +1631,6 @@
             updateAllNoteButtons(); 
         }
 
-        // --- AMERIT OOS ENGINE ---
         function renderAmeritOos() {
             let rVal = document.getElementById('sum-region').value;
             let sVal = document.getElementById('sum-subregion').value;
@@ -1754,36 +1746,11 @@
         function formatUsefulBadge(label, val) {
             if(val === null || val === undefined || isNaN(val) || val === '') return '';
             let pct = Math.round(val * 100);
-            let bg = '#00ff00'; // bright green default
-            let tc = 'black';
-            
-            if (pct < 95) { bg = '#d9534f'; tc = 'white'; } 
-            else if (pct >= 95 && pct < 100) { bg = '#FFC600'; tc = 'black'; } 
-            else if (pct === 100) { bg = 'transparent'; tc = '#5cb85c'; } // Text only for 100%
-            
-            // Only add background styling if it's below 100%
-            if (pct >= 95) {
-                return `<span style="color: ${tc}; font-size: 11px; margin-left: 10px; font-weight: bold;">${label}: ${pct}%</span>`;
-            }
-            return `<span class="badge" style="background-color: ${bg}; color: ${tc}; font-size: 11px; margin-left: 10px;">${label}: ${pct}%</span>`;
-        }
+            let tc = '#5cb85c'; 
+            if (pct < 95) { tc = '#d9534f'; } 
+            else if (pct >= 95 && pct < 100) { tc = '#f0ad4e'; } 
 
-        function getAggregatedBadges(pctArray) {
-            if (!pctArray || pctArray.length === 0) return '';
-            
-            let totalSum = 0, totalCount = 0;
-
-            pctArray.forEach(p => {
-                if (p && p.TOTAL !== null && p.TOTAL !== undefined && !isNaN(p.TOTAL)) { 
-                    totalSum += p.TOTAL; 
-                    totalCount++; 
-                }
-            });
-
-            if (totalCount > 0) {
-                return formatUsefulBadge('Useful', totalSum / totalCount);
-            }
-            return '';
+            return `<span style="color: ${tc}; font-size: 11px; margin-left: 10px; font-weight: bold;">${label}: ${pct}%</span>`;
         }
 
         function getSummaryUsefulHtml(active, maxRoutes) {
@@ -2064,21 +2031,10 @@
                 }
             });
 
-            // Apply Filters
-            let targetData = baseOpenData;
-            
-            if (!isPM) {
-                if (currentFilter === 'OOS') {
-                    targetData = targetData.filter(ro => ro.isOOS);
-                } else if(currentFilter === 'PRIORITY') {
-                    targetData = targetData.filter(ro => isPriority(ro));
-                }
-            }
-
-            if(targetData.length === 0) return `<p style="margin-top:15px; color:#666;">No active Repair Orders to display under the current filters.</p>`;
+            if(baseOpenData.length === 0) return `<p style="margin-top:15px; color:#666;">No active Repair Orders to display under the current filters.</p>`;
             
             let hierarchy = {};
-            targetData.forEach(ro => {
+            baseOpenData.forEach(ro => {
                 if(!hierarchy[ro.drillTopLevel]) hierarchy[ro.drillTopLevel] = {};
                 if(!hierarchy[ro.drillTopLevel][ro.subregion]) hierarchy[ro.drillTopLevel][ro.subregion] = {};
                 if(!hierarchy[ro.drillTopLevel][ro.subregion][ro.branch]) hierarchy[ro.drillTopLevel][ro.subregion][ro.branch] = [];
@@ -2087,11 +2043,33 @@
             
             let htmlStr = '';
             for(let topLvl in hierarchy) {
-                let topBadges = getAggregatedBadges(topUsefulMap[topLvl] || []);
+                let topBadges = '';
+                let tArray = topUsefulMap[topLvl];
+                if (tArray && tArray.length > 0) {
+                    let totalSum = 0, totalCount = 0;
+                    tArray.forEach(p => {
+                        if (p && p.TOTAL !== null && p.TOTAL !== undefined && !isNaN(p.TOTAL)) { 
+                            totalSum += p.TOTAL; totalCount++; 
+                        }
+                    });
+                    if (totalCount > 0) topBadges = formatUsefulBadge('Useful', totalSum / totalCount);
+                }
+
                 let subHtml = '';
                 for(let sub in hierarchy[topLvl]) {
                     let subKey = topLvl + '|||' + sub;
-                    let subBadges = getAggregatedBadges(subUsefulMap[subKey] || []);
+                    let subBadges = '';
+                    let sArray = subUsefulMap[subKey];
+                    if (sArray && sArray.length > 0) {
+                        let totalSum = 0, totalCount = 0;
+                        sArray.forEach(p => {
+                            if (p && p.TOTAL !== null && p.TOTAL !== undefined && !isNaN(p.TOTAL)) { 
+                                totalSum += p.TOTAL; totalCount++; 
+                            }
+                        });
+                        if (totalCount > 0) subBadges = formatUsefulBadge('Useful', totalSum / totalCount);
+                    }
+
                     let branchHtml = '';
                     for(let branch in hierarchy[topLvl][sub]) {
                         let branchKey = subKey + '|||' + branch;
@@ -2099,7 +2077,7 @@
                         
                         let u = branchUsefulVals[branchKey] || {};
                         let badgesHtml = '';
-                        if (u && u.TOTAL !== null) {
+                        if (u && u.TOTAL !== null && u.TOTAL !== undefined && !isNaN(u.TOTAL)) {
                             badgesHtml += formatUsefulBadge('Useful', u.TOTAL);
                         }
 
