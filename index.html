@@ -947,9 +947,9 @@
             let sSel = document.getElementById('dd-subregion');
             let bSel = document.getElementById('dd-branch');
             
-            let rVal = rSel.value;
-            let sVal = sSel.value;
-            let bVal = bSel.value;
+            let rVal = rSel ? rSel.value : 'ALL';
+            let sVal = sSel ? sSel.value : 'ALL';
+            let bVal = bSel ? bSel.value : 'ALL';
 
             let regions = new Set();
             let subs = new Set();
@@ -965,17 +965,23 @@
                 }
             });
 
-            rSel.innerHTML = '<option value="ALL">All Regions</option>';
-            Array.from(regions).sort().forEach(r => rSel.innerHTML += `<option value="${r}">${r}</option>`);
-            rSel.value = regions.has(rVal) ? rVal : 'ALL';
+            if(rSel) {
+                rSel.innerHTML = '<option value="ALL">All Regions</option>';
+                Array.from(regions).sort().forEach(r => rSel.innerHTML += `<option value="${r}">${r}</option>`);
+                rSel.value = regions.has(rVal) ? rVal : 'ALL';
+            }
 
-            sSel.innerHTML = '<option value="ALL">All Subregions</option>';
-            Array.from(subs).sort().forEach(s => sSel.innerHTML += `<option value="${s}">${s}</option>`);
-            sSel.value = subs.has(sVal) ? sVal : 'ALL';
+            if(sSel) {
+                sSel.innerHTML = '<option value="ALL">All Subregions</option>';
+                Array.from(subs).sort().forEach(s => sSel.innerHTML += `<option value="${s}">${s}</option>`);
+                sSel.value = subs.has(sVal) ? sVal : 'ALL';
+            }
 
-            bSel.innerHTML = '<option value="ALL">All Branches</option>';
-            Array.from(branches).sort().forEach(b => bSel.innerHTML += `<option value="${b}">${b}</option>`);
-            bSel.value = branches.has(bVal) ? bVal : 'ALL';
+            if(bSel) {
+                bSel.innerHTML = '<option value="ALL">All Branches</option>';
+                Array.from(branches).sort().forEach(b => bSel.innerHTML += `<option value="${b}">${b}</option>`);
+                bSel.value = branches.has(bVal) ? bVal : 'ALL';
+            }
         }
 
         function populateSummaryDropdowns() {
@@ -1032,7 +1038,9 @@
                 });
                 return { wch: maxLen + 2 };
             });
-            ws['!autofilter'] = { ref: XLSX.utils.encode_range(XLSX.utils.decode_range(ws['!ref'])) };
+            if (ws['!ref']) {
+                ws['!autofilter'] = { ref: XLSX.utils.encode_range(XLSX.utils.decode_range(ws['!ref'])) };
+            }
         }
 
         function exportDrilldownToExcel() {
@@ -1049,9 +1057,12 @@
                 ownerDataAll = ownerDataAll.filter(ro => ro.custKey === currentCustomerFilter);
             }
 
-            let rVal = document.getElementById('dd-region').value;
-            let sVal = document.getElementById('dd-subregion').value;
-            let bVal = document.getElementById('dd-branch').value;
+            let rSel = document.getElementById('dd-region');
+            let sSel = document.getElementById('dd-subregion');
+            let bSel = document.getElementById('dd-branch');
+            let rVal = rSel ? rSel.value : 'ALL';
+            let sVal = sSel ? sSel.value : 'ALL';
+            let bVal = bSel ? bSel.value : 'ALL';
 
             ownerDataAll = ownerDataAll.filter(ro => {
                 if (rVal !== 'ALL' && ro.region !== rVal) return false;
@@ -1216,7 +1227,13 @@
                 if(btn.dataset.filter === val) { btn.classList.add('active'); btn.style.background = 'var(--gold)'; } 
                 else { btn.classList.remove('active'); btn.style.background = '#e0e0e0'; }
             });
-            triggerViewUpdate();
+            
+            let activeView = document.querySelector('.view-section.active').id;
+            if (activeView === 'person-view') {
+                applyDrilldownFilters(); 
+            } else {
+                triggerViewUpdate();
+            }
         }
 
         function setCustomerFilter(val) {
@@ -1621,6 +1638,7 @@
             updateAllNoteButtons(); 
         }
 
+        // --- AMERIT OOS ENGINE ---
         function renderAmeritOos() {
             let rVal = document.getElementById('sum-region').value;
             let sVal = document.getElementById('sum-subregion').value;
@@ -1741,8 +1759,12 @@
             
             if (pct < 95) { bg = '#d9534f'; tc = 'white'; } 
             else if (pct >= 95 && pct < 100) { bg = '#FFC600'; tc = 'black'; } 
-            else if (pct === 100) { bg = '#bbf7d0'; tc = 'black'; } // light green
-
+            else if (pct === 100) { bg = 'transparent'; tc = '#5cb85c'; } // Text only for 100%
+            
+            // Only add background styling if it's below 100%
+            if (pct >= 95) {
+                return `<span style="color: ${tc}; font-size: 11px; margin-left: 10px; font-weight: bold;">${label}: ${pct}%</span>`;
+            }
             return `<span class="badge" style="background-color: ${bg}; color: ${tc}; font-size: 11px; margin-left: 10px;">${label}: ${pct}%</span>`;
         }
 
@@ -2126,7 +2148,7 @@
                             return (b.isOOS === true ? 1 : 0) - (a.isOOS === true ? 1 : 0);
                         });
 
-                        branchHtml += `<details class="ro-detail-node"><summary><div style="flex-grow:1; display:flex; align-items:center;">${branch} (${branchROs.length} ROs)</div><div>${badgesHtml}</div></summary>`;
+                        branchHtml += `<details class="ro-detail-node branch-details" data-branch-name="${branch}"><summary><div style="flex-grow:1; display:flex; align-items:center;"><span class="branch-title-text">${branch} (${branchROs.length} ROs)</span></div><div>${badgesHtml}</div></summary>`;
                         let tableHTML = `<div class="table-wrapper"><table><colgroup><col style="width:23%;"><col style="width:11%;">${isPM ? '' : '<col style="width:11%;">'}<col style="width:9%;"><col style="width:11%;"><col style="width:21%;"><col style="width:14%;"></colgroup><thead><tr><th>AFS RO # & Dispatch</th><th>Unit No</th>${isPM ? '' : '<th>Priority Status</th>'}<th>OOS Status</th><th>Opened Date</th><th>Status</th><th>ECD</th></tr></thead><tbody>`;
                         
                         groupedUnits.forEach(u => {
@@ -2152,7 +2174,7 @@
 
                                 let roHtml = `<div style="display:flex; align-items:center; gap: 4px;">${statusToggleHtml} ${u.roLinks[idx]} ${noteBtnHtml}</div>`;
 
-                                tableHTML += `<tr>`;
+                                tableHTML += `<tr class="ro-row" data-oos="${u.isOOS}" data-priority="${isPri}">`;
                                 tableHTML += `<td style="vertical-align:top; padding-top:15px; border-bottom: ${idx === rowCount - 1 ? '1px solid var(--border)' : '1px dashed #eee'};">${roHtml}</td>`;
                                 
                                 if (idx === 0) {
@@ -2177,14 +2199,59 @@
                         tableHTML += `</tbody></table></div>`; 
                         branchHtml += tableHTML + `</details>`;
                     }
-                    subHtml += `<details class="ro-detail-node"><summary><div style="flex-grow:1; display:flex; align-items:center;">${sub}</div><div>${subBadges}</div></summary>${branchHtml}</details>`;
+                    subHtml += `<details class="ro-detail-node subregion-details"><summary><div style="flex-grow:1; display:flex; align-items:center;">${sub}</div><div>${subBadges}</div></summary>${branchHtml}</details>`;
                 }
-                htmlStr += `<details class="ro-detail-node"><summary><div style="flex-grow:1; display:flex; align-items:center;">${topLvl}</div><div>${topBadges}</div></summary>${subHtml}</details>`;
+                htmlStr += `<details class="ro-detail-node region-details"><summary><div style="flex-grow:1; display:flex; align-items:center;">${topLvl}</div><div>${topBadges}</div></summary>${subHtml}</details>`;
             }
             return htmlStr;
         }
 
-        function loadPersonDrilldown(owner, parentViewId, preserveFilters = false) {
+        function applyDrilldownFilters() {
+            const container = document.getElementById('drilldown-body');
+            if (!container) return;
+
+            let isPM = currentOwnerView === 'ALL_PM' || pmOwners.includes(currentOwnerView);
+
+            // Hide/Show Rows based on filter
+            const rows = container.querySelectorAll('.ro-row');
+            rows.forEach(row => {
+                let show = true;
+                if (!isPM) {
+                    if (currentFilter === 'OOS' && row.dataset.oos !== 'true') show = false;
+                    if (currentFilter === 'PRIORITY' && row.dataset.priority !== 'true') show = false;
+                }
+                row.style.display = show ? '' : 'none';
+            });
+
+            // Re-calculate Branch Headers and hide empty ones
+            const branchNodes = container.querySelectorAll('.branch-details');
+            branchNodes.forEach(branch => {
+                const visibleRows = Array.from(branch.querySelectorAll('.ro-row')).filter(r => r.style.display !== 'none');
+                branch.style.display = visibleRows.length === 0 ? 'none' : '';
+                
+                const titleEl = branch.querySelector('.branch-title-text');
+                if (titleEl) {
+                    const originalName = branch.dataset.branchName;
+                    titleEl.innerHTML = `${originalName} (${visibleRows.length} ROs)`;
+                }
+            });
+
+            // Hide empty Subregions
+            const subNodes = container.querySelectorAll('.subregion-details');
+            subNodes.forEach(sub => {
+                const visibleRows = Array.from(sub.querySelectorAll('.ro-row')).filter(r => r.style.display !== 'none');
+                sub.style.display = visibleRows.length === 0 ? 'none' : '';
+            });
+
+            // Hide empty Regions
+            const regNodes = container.querySelectorAll('.region-details');
+            regNodes.forEach(reg => {
+                const visibleRows = Array.from(reg.querySelectorAll('.ro-row')).filter(r => r.style.display !== 'none');
+                reg.style.display = visibleRows.length === 0 ? 'none' : '';
+            });
+        }
+
+        function loadPersonDrilldown(owner, parentViewId) {
             navigate('person-view', null, true); 
             currentOwnerView = owner; currentParentView = parentViewId;
             
@@ -2206,6 +2273,7 @@
             }
 
             let ownerDataAll = processedData;
+            
             if (owner === 'ALL_PM') ownerDataAll = processedData.filter(ro => ro.drilldownOwners.some(o => pmOwners.includes(o)));
             else if (owner === 'ALL_VENDED') ownerDataAll = processedData.filter(ro => ro.drilldownOwners.some(o => vendedOwners.includes(o)));
             else if (owner === 'ALL_ERS') ownerDataAll = processedData.filter(ro => ro.drilldownOwners.some(o => ersOwners.includes(o)));
@@ -2215,8 +2283,10 @@
                 ownerDataAll = ownerDataAll.filter(ro => ro.custKey === currentCustomerFilter);
             }
 
+            // Generate HTML once with ALL data, then filter via CSS
             document.getElementById('drilldown-body').innerHTML = generateRoDrilldownHtml(ownerDataAll, isPM);
             updateAllNoteButtons(); 
+            applyDrilldownFilters(); 
         }
 
         function toggleAllDetails(expand) { 
@@ -2249,6 +2319,7 @@
                                 ecdCells: [],
                                 dupFlags: [],
                                 owners: [],
+                                isOpenFlags: [],
                                 isOOS: ro.isOOS,
                                 usefulPct: ro.usefulPct,
                                 usefulPctObj: ro.usefulPctObj,
@@ -2263,6 +2334,7 @@
 
                         searchUnitsMap[ro.unitNo].roNums.push(ro.roNum);
                         searchUnitsMap[ro.unitNo].dupFlags.push(ro.possibleDuplicate);
+                        searchUnitsMap[ro.unitNo].isOpenFlags.push(ro.isOpen);
                         
                         let dupBadge = ro.possibleDuplicate ? ' <span class="badge" style="background-color:#ffe082; color:#854d0e; font-size:9px; padding:2px 4px; border:1px solid #f59e0b; margin-left:5px; white-space:nowrap;" title="Multiple open orders share similar tasks for this unit.">⚠️ DUP?</span>' : '';
 
@@ -2288,11 +2360,18 @@
 
                         u.roNums.forEach((roNum, idx) => {
                             let safeRo = roNum.replace(/[.#$\[\]]/g, '_');
-                            let isDispatched = !!globalRoCheckState[safeRo];
-                            let toggleClass = isDispatched ? 'status-dispatched' : 'status-pending';
-                            let toggleText = isDispatched ? '✓ DISPATCHED' : 'PENDING';
-                            let toggleState = isDispatched ? 'false' : 'true'; 
-                            let statusToggleHtml = `<span class="badge status-toggle ${toggleClass}" data-ro="${safeRo}" onclick="toggleRoCheck('${safeRo}', ${toggleState})">${toggleText}</span>`;
+                            let isOpen = u.isOpenFlags[idx];
+                            
+                            let statusToggleHtml = '';
+                            if (isOpen) {
+                                let isDispatched = !!globalRoCheckState[safeRo];
+                                let toggleClass = isDispatched ? 'status-dispatched' : 'status-pending';
+                                let toggleText = isDispatched ? '✓ DISPATCHED' : 'PENDING';
+                                let toggleState = isDispatched ? 'false' : 'true'; 
+                                statusToggleHtml = `<span class="badge status-toggle ${toggleClass}" data-ro="${safeRo}" onclick="toggleRoCheck('${safeRo}', ${toggleState})">${toggleText}</span>`;
+                            } else {
+                                statusToggleHtml = `<span class="badge" style="background-color: #888; color: white; min-width: 85px; text-align: center; display: inline-block;">CLOSED</span>`;
+                            }
 
                             let hasNote = globalRoNotesState[safeRo] && globalRoNotesState[safeRo].trim() !== '';
                             let noteClass = hasNote ? 'note-btn has-note' : 'note-btn';
@@ -2344,6 +2423,7 @@
                 document.querySelectorAll('.menu-item').forEach(item => item.classList.remove('active'));
                 menuElement.classList.add('active');
             }
+            
             if(viewId === 'pm-view') renderKPITiles(pmOwners, 'pm-kpi-container', 'pm-view');
             else if (viewId === 'vended-view') renderKPITiles(vendedOwners, 'vended-kpi-container', 'vended-view');
             else if (viewId === 'ers-view') renderKPITiles(ersOwners, 'ers-kpi-container', 'ers-view');
