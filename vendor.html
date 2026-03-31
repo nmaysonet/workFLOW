@@ -1,0 +1,535 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>workFLOW + | Vendor Locator</title>
+    
+    <link href="https://fonts.googleapis.com/css2?family=Raleway:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    
+    <style>
+        /* Global Styles & Reset */
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Raleway', sans-serif; }
+        body { display: flex; height: 100vh; background-color: #f4f6f9; color: #333; overflow: hidden; }
+        a { text-decoration: none; }
+        
+        /* Variables from workFLOW+ */
+        :root {
+            --sidebar-bg: #3a3b40;
+            --sidebar-hover: #4a4b50;
+            --gold: #FFC600; 
+            --gold-hover: #e5b200;
+            --low-green: #5cb85c;
+            --text-light: #f1f1f1;
+            --border: #e0e0e0;
+        }
+
+        /* Sidebar */
+        .sidebar { width: 280px; background-color: var(--sidebar-bg); color: var(--text-light); display: flex; flex-direction: column; flex-shrink: 0; }
+        .sidebar-header { padding: 20px; font-size: 24px; font-weight: bold; display: flex; align-items: center; border-bottom: 1px solid #2a2b30; color: var(--gold); }
+        .sidebar-header .logo-text { color: white; margin-left: 8px; font-weight: 800; letter-spacing: 0.5px; }
+        .sidebar-header .logo-plus { color: var(--gold); font-size: 34px; font-weight: 800; margin-left: 3px; line-height: 1; }
+        
+        .menu-item { padding: 15px 20px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #4a4b50; font-size: 14px; font-weight: 600; transition: 0.2s; }
+        .menu-item.active { background-color: var(--sidebar-hover); color: var(--gold); border-left: 4px solid var(--gold); }
+        
+        /* Sidebar Truck Graphic & Animations */
+        .sidebar-truck { margin-top: auto; padding: 30px; text-align: center; border-top: 1px solid #4a4b50; background: #2a2b30; }
+        
+        @keyframes spin { 100% { transform: rotate(360deg); } }
+        @keyframes bump { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-1.5px); } }
+        @keyframes moveRoad { from { stroke-dashoffset: 0; } to { stroke-dashoffset: 15; } }
+        
+        .logo-spin { animation: spin 4s linear infinite; transform-origin: center; display: inline-block; }
+        .moving-truck-svg { overflow: visible; }
+        .truck-body { animation: bump 0.4s ease-in-out infinite; }
+        .wheel { animation: spin 0.8s linear infinite; }
+        .road-line { animation: moveRoad 0.4s linear infinite; }
+
+        /* Main Content Area */
+        .main-content { flex-grow: 1; display: flex; flex-direction: column; overflow-y: auto; overflow-x: hidden; }
+        
+        /* Top Navigation Bar */
+        .top-bar { background: #fff; padding: 15px 30px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 5px rgba(0,0,0,0.05); z-index: 10; flex-shrink: 0; }
+        .top-title { font-size: 1.2rem; font-weight: 700; color: #2c3e50; }
+        
+        /* Filter Controls Section */
+        .view-section { padding: 30px; }
+        .filter-card { background: #fff; border-radius: 6px; box-shadow: 0 2px 6px rgba(0,0,0,0.08); padding: 20px; margin-bottom: 20px; display: flex; gap: 20px; align-items: flex-end; flex-wrap: wrap; border-top: 4px solid var(--gold); }
+        
+        .input-group { display: flex; flex-direction: column; flex-grow: 1; min-width: 250px; }
+        .input-group label { font-size: 12px; font-weight: 700; color: #555; text-transform: uppercase; margin-bottom: 8px; letter-spacing: 0.5px; }
+        
+        .filter-select, .filter-input { padding: 10px 15px; border: 1px solid #ccc; border-radius: 4px; font-size: 14px; font-weight: 600; color: #333; outline: none; transition: border-color 0.2s; width: 100%; background: #f9fafc; }
+        .filter-select:focus, .filter-input:focus { border-color: var(--gold); background: #fff; box-shadow: 0 0 0 2px rgba(255, 198, 0, 0.2); }
+        
+        /* Tile Grid Layout */
+        .tile-grid { 
+            display: grid; 
+            grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); 
+            gap: 20px; 
+            padding-top: 10px;
+            padding-bottom: 30px;
+        }
+
+        .vendor-tile {
+            background: #fff;
+            padding: 25px 20px;
+            border-radius: 8px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            border-top: 4px solid var(--gold);
+            display: flex;
+            flex-direction: column;
+            transition: transform 0.2s ease, box-shadow 0.2s ease, border-top-color 0.2s ease;
+        }
+
+        .vendor-tile:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 12px 20px rgba(0,0,0,0.12);
+            border-top-color: #000000;
+        }
+
+        .tile-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px; }
+        
+        .customer-badge { 
+            display: inline-block; padding: 4px 8px; border-radius: 4px; font-size: 10px; font-weight: 800; text-transform: uppercase; background: #e2e8f0; color: #475569; 
+        }
+
+        .vendor-name { font-size: 18px; font-weight: 800; color: #333; margin-bottom: 6px; line-height: 1.3; }
+        .vendor-location { font-size: 12px; font-weight: 600; color: #64748b; margin-bottom: 15px; display: flex; align-items: center; gap: 5px; }
+        .divider { border: 0; border-top: 1px dashed #e2e8f0; margin: auto 0 15px 0; }
+
+        /* VENDOR Tile Action Buttons */
+        .tile-actions { display: flex; flex-direction: column; gap: 10px; margin-top: auto; }
+        .action-row { display: flex; gap: 10px; width: 100%; }
+
+        .btn-dispatch, .btn-view, .btn-call, .btn-disabled {
+            padding: 12px 10px; border: none; border-radius: 4px; font-weight: 800; font-size: 12px; text-transform: uppercase; cursor: pointer; text-align: center; transition: all 0.2s; display: inline-flex; justify-content: center; align-items: center; gap: 8px; letter-spacing: 0.5px;
+        }
+
+        .btn-dispatch { background-color: var(--low-green); color: white; flex: 2; }
+        .btn-dispatch:hover { background-color: #4cae4c; transform: translateY(-1px); box-shadow: 0 2px 5px rgba(0,0,0,0.15); }
+
+        .btn-view { background-color: #e2e8f0; color: #475569; flex: 1; }
+        .btn-view:hover { background-color: #cbd5e1; transform: translateY(-1px); box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+
+        .btn-call { background-color: var(--sidebar-bg); color: white; flex: 1; }
+        .btn-call:hover { background-color: #2a2b30; transform: translateY(-1px); box-shadow: 0 2px 5px rgba(0,0,0,0.15); }
+        
+        .btn-revealed {
+            flex: 1; padding: 12px 10px; background-color: #f1f5f9; color: #334155; border: 1px solid #cbd5e1; border-radius: 4px; font-size: 13px; font-weight: 700; text-align: center; cursor: text; user-select: all; display: flex; justify-content: center; align-items: center; gap: 8px; width: 100%;
+        }
+
+        .btn-disabled { flex: 1; width: 100%; background-color: #f1f5f9; color: #cbd5e1; cursor: not-allowed; }
+
+        /* CONTACT Tile Specific Styling */
+        .contact-tile { border-top-color: #ef4444; background-color: #fef2f2; }
+        .contact-tile:hover { border-top-color: #b91c1c; box-shadow: 0 12px 20px rgba(239, 68, 68, 0.15); }
+        
+        .contact-section { margin-bottom: 12px; }
+        .contact-section:last-child { margin-bottom: 0; }
+        .contact-label { font-size: 10px; font-weight: 800; color: #991b1b; text-transform: uppercase; margin-bottom: 6px; letter-spacing: 0.5px; }
+        
+        .tile-actions.compressed { display: flex; gap: 6px; flex-direction: row; width: 100%; margin-top: 0; }
+        
+        .btn-dispatch-sm, .btn-call-sm, .btn-disabled-sm, .btn-revealed-sm {
+            flex: 1; padding: 8px 6px; border: none; border-radius: 4px; font-weight: 800; font-size: 10px; text-transform: uppercase; cursor: pointer; text-align: center; transition: all 0.2s; display: inline-flex; justify-content: center; align-items: center; gap: 4px; letter-spacing: 0.5px;
+        }
+        
+        .btn-dispatch-sm { background-color: var(--low-green); color: white; }
+        .btn-dispatch-sm:hover { background-color: #4cae4c; transform: translateY(-1px); }
+
+        .btn-call-sm { background-color: #e2e8f0; color: #475569; }
+        .btn-call-sm:hover { background-color: #cbd5e1; transform: translateY(-1px); }
+        
+        .btn-revealed-sm { background-color: #fff; color: #334155; border: 1px solid #cbd5e1; cursor: text; user-select: all; flex: 2; font-size: 11px; }
+        .btn-disabled-sm { background-color: #fff; color: #cbd5e1; cursor: not-allowed; border: 1px dashed #e2e8f0; }
+
+        .no-data-msg { grid-column: 1 / -1; text-align: center; padding: 3rem; color: #888; font-style: italic; font-size: 15px; background: #fff; border-radius: 6px; border: 1px dashed #ccc; }
+    </style>
+</head>
+<body>
+
+    <div class="sidebar">
+        <div class="sidebar-header">
+            <svg class="logo-spin" width="30" height="30" viewBox="0 0 100 100">
+                <circle cx="50" cy="50" r="40" fill="none" stroke="var(--gold)" stroke-width="10"/>
+                <circle cx="50" cy="50" r="10" fill="var(--gold)"/>
+                <g stroke="var(--gold)" stroke-width="10" stroke-linecap="round">
+                    <line x1="50" y1="50" x2="50" y2="15" />
+                    <line x1="50" y1="50" x2="83" y2="39" />
+                    <line x1="50" y1="50" x2="70" y2="78" />
+                    <line x1="50" y1="50" x2="30" y2="78" />
+                    <line x1="50" y1="50" x2="17" y2="39" />
+                </g>
+            </svg>
+            <span class="logo-text">workFLOW</span>
+            <span class="logo-plus">+</span>
+        </div>
+
+        <div class="menu-item active">
+            Vendor Search
+        </div>
+        
+        <div class="sidebar-truck">
+            <svg width="140" height="70" viewBox="0 0 120 60" xmlns="http://www.w3.org/2000/svg" class="moving-truck-svg">
+                <line class="road-line" x1="0" y1="57" x2="120" y2="57" stroke="#4a4b50" stroke-width="2" stroke-dasharray="10 5"/>
+                <g class="truck-body">
+                    <rect x="5" y="15" width="70" height="35" fill="var(--gold)" rx="3"/>
+                    <path d="M78 25 H 92 L 105 35 V 50 H 78 Z" fill="var(--gold)"/>
+                    <path d="M78 50 H 105" stroke="var(--gold)" stroke-width="2"/>
+                    <path d="M82 28 H 90 L 98 35 H 82 Z" fill="#2a2b30"/>
+                    <rect x="75" y="42" width="3" height="4" fill="#888"/>
+                    <line x1="15" y1="25" x2="65" y2="25" stroke="#c49a1d" stroke-width="1.5"/>
+                </g>
+                <g class="wheel" style="transform-origin: 25px 50px;">
+                    <circle cx="25" cy="50" r="7" fill="#111" stroke="#888" stroke-width="1.5"/>
+                    <circle cx="25" cy="50" r="2" fill="#888"/>
+                    <line x1="25" y1="43" x2="25" y2="57" stroke="#888" stroke-width="1"/>
+                    <line x1="18" y1="50" x2="32" y2="50" stroke="#888" stroke-width="1"/>
+                </g>
+                <g class="wheel" style="transform-origin: 60px 50px;">
+                    <circle cx="60" cy="50" r="7" fill="#111" stroke="#888" stroke-width="1.5"/>
+                    <circle cx="60" cy="50" r="2" fill="#888"/>
+                    <line x1="60" y1="43" x2="60" y2="57" stroke="#888" stroke-width="1"/>
+                    <line x1="53" y1="50" x2="67" y2="50" stroke="#888" stroke-width="1"/>
+                </g>
+                <g class="wheel" style="transform-origin: 92px 50px;">
+                    <circle cx="92" cy="50" r="7" fill="#111" stroke="#888" stroke-width="1.5"/>
+                    <circle cx="92" cy="50" r="2" fill="#888"/>
+                    <line x1="92" y1="43" x2="92" y2="57" stroke="#888" stroke-width="1"/>
+                    <line x1="85" y1="50" x2="99" y2="50" stroke="#888" stroke-width="1"/>
+                </g>
+            </svg>
+        </div>
+    </div>
+
+    <div class="main-content">
+        <div class="top-bar">
+            <div class="top-title">National Vendor Network</div>
+        </div>
+
+        <div class="view-section">
+            <div class="filter-card">
+                <div class="input-group" style="flex: 0.5;">
+                    <label for="customer-select">Customer Group</label>
+                    <select id="customer-select" class="filter-select" onchange="handleCustomerChange()">
+                        <option value="ALL">All Customers</option>
+                    </select>
+                </div>
+
+                <div class="input-group" style="flex: 1.5;">
+                    <label for="location-search">Branch / Location Search</label>
+                    <input type="text" id="location-search" class="filter-input" list="locations" placeholder="Type or select a location..." oninput="renderTiles()">
+                    <datalist id="locations"></datalist>
+                </div>
+            </div>
+            
+            <div id="vendor-grid" class="tile-grid">
+                <div class="no-data-msg">Initializing Data Fetch...</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- APP LOGIC --- //
+        let allVendors = []; 
+        let allContacts = {}; // Maps Branch Code -> Contact Info
+        let uniqueCustomers = new Set();
+
+        const customerSelect = document.getElementById('customer-select');
+        const searchInput = document.getElementById('location-search');
+        const dataList = document.getElementById('locations');
+        const gridContainer = document.getElementById('vendor-grid');
+
+        // Replaces the parent row with revealed text (Used for Vendors)
+        window.revealRowInfo = function(btnElement, text, icon) {
+            const parent = btnElement.parentElement;
+            parent.innerHTML = `<div class="btn-revealed">${icon} ${text}</div>`;
+        };
+
+        // Replaces ONLY the button clicked (Used for Compressed Contact Tiles)
+        window.revealSelfInfo = function(btnElement, text, icon) {
+            btnElement.outerHTML = `<div class="btn-revealed-sm">${icon} ${text}</div>`;
+        };
+
+        async function loadExcelFile() {
+            try {
+                gridContainer.innerHTML = '<div class="no-data-msg">Loading vendor and branch network...</div>';
+                
+                // Cache Buster
+                const fileUrl = './vendor_locator.xlsx?v=' + new Date().getTime();
+                const response = await fetch(fileUrl, { cache: 'no-store' });
+                
+                if (!response.ok) throw new Error('File not found or access denied');
+                
+                const arrayBuffer = await response.arrayBuffer();
+                const workbook = XLSX.read(arrayBuffer, { type: 'array' });
+                
+                workbook.SheetNames.forEach(sheetName => {
+                    // Separate routing: Contacts Tab vs Vendor Tabs
+                    if (sheetName.toLowerCase().includes('contact')) {
+                        formatContactData(XLSX.utils.sheet_to_json(workbook.Sheets[sheetName]));
+                    } else {
+                        const sheetData = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName]);
+                        if (sheetData.length > 0) {
+                            uniqueCustomers.add(sheetName);
+                            const formattedData = formatVendorData(sheetData, sheetName);
+                            allVendors = allVendors.concat(formattedData);
+                        }
+                    }
+                });
+
+                populateCustomerDropdown();
+                updateLocationDropdown(); 
+                renderTiles(); 
+
+            } catch (error) {
+                console.error("Error loading Excel file:", error);
+                gridContainer.innerHTML = `<div class="no-data-msg" style="color: #d9534f;"><b>Error:</b> Could not load vendor_locator.xlsx.</div>`;
+            }
+        }
+
+        // Parses and Normalizes Contact Info
+        function formatContactData(jsonArray) {
+            jsonArray.forEach(row => {
+                const keys = Object.keys(row);
+                
+                // Fuzzy matcher to bypass accidental spaces in Excel headers
+                const getCol = (possibleHeaders) => {
+                    for (let header of possibleHeaders) {
+                        const foundKey = keys.find(k => k.trim().toLowerCase() === header.toLowerCase());
+                        if (foundKey) return (row[foundKey] || '').toString().trim();
+                    }
+                    return '';
+                };
+
+                // Extract branch number and strip trailing ".0" if Excel parsed it as float
+                let rawBranch = getCol(['Branch Number', 'Branch', 'BranchNum']).replace(/\.0$/, '');
+                // Strip all non-digits to get the normalized code (e.g. "120-38" becomes "12038")
+                let normBranch = rawBranch.replace(/\D/g, '');
+                
+                if (!normBranch) return;
+
+                allContacts[normBranch] = {
+                    address: getCol(['Address']),
+                    city: getCol(['City']),
+                    st: getCol(['ST', 'State']),
+                    zip: getCol(['Zip', 'Zip Code']).replace(/\.0$/, ''),
+                    branchPhone: getCol(['Branch Phone']),
+                    branchEmail: getCol(['Branch Email Address', 'Branch Email']),
+                    bmName: getCol(['Branch Manager/Operations Manager', 'Branch Manager', 'BM Name']),
+                    bmEmail: getCol(['BM Email Address', 'BM Email']),
+                    bmPhone: getCol(['BM Cell Number', 'BM Cell', 'BM Phone']),
+                    gmEmail: getCol(['GM Email Address', 'GM Email']),
+                    gmPhone: getCol(['Cell Number', 'GM Cell Number', 'GM Phone'])
+                };
+            });
+        }
+
+        // Parses Vendor Info
+        function formatVendorData(jsonArray, customerName) {
+            return jsonArray.map(row => {
+                const keys = Object.keys(row);
+                const getCol = (possibleHeaders) => {
+                    for (let header of possibleHeaders) {
+                        const foundKey = keys.find(k => k.trim().toLowerCase() === header.toLowerCase());
+                        if (foundKey) return (row[foundKey] || '').toString().trim();
+                    }
+                    return '';
+                };
+
+                let emailRaw = getCol(['Contact Email', 'Email']);
+                let phoneRaw = getCol(['Contact Phone#', 'Contact Phone', 'Phone']);
+
+                if (emailRaw.toUpperCase() === 'N/A') emailRaw = '';
+                if (phoneRaw.toUpperCase() === 'N/A') phoneRaw = '';
+
+                return {
+                    customer: customerName,
+                    group: getCol(['Group', 'Location']),
+                    vendor: getCol(['Vendor', 'Vendor Name']),
+                    email: emailRaw,
+                    phone: phoneRaw
+                };
+            }).filter(item => item.group !== ''); 
+        }
+
+        function populateCustomerDropdown() {
+            Array.from(uniqueCustomers).sort().forEach(cust => {
+                const option = document.createElement('option');
+                option.value = cust;
+                option.innerText = cust;
+                customerSelect.appendChild(option);
+            });
+        }
+
+        function handleCustomerChange() {
+            searchInput.value = ''; 
+            updateLocationDropdown();
+            renderTiles();
+        }
+
+        function updateLocationDropdown() {
+            const selectedCustomer = customerSelect.value;
+            let filteredLocations = allVendors;
+
+            if (selectedCustomer !== 'ALL') {
+                filteredLocations = allVendors.filter(v => v.customer === selectedCustomer);
+            }
+
+            const uniqueLocations = [...new Set(filteredLocations.map(item => item.group))].sort();
+            
+            dataList.innerHTML = '';
+            uniqueLocations.forEach(loc => {
+                const option = document.createElement('option');
+                option.value = loc;
+                dataList.appendChild(option);
+            });
+        }
+
+        // HELPER: Generates the HTML for the compressed Contact Action buttons
+        function generateMiniAction(val, icon, type) {
+            if (!val) return `<div class="btn-disabled-sm">${icon} N/A</div>`;
+            
+            const safeVal = val.replace(/'/g, "\\'");
+            if (type === 'mailto') {
+                return `<a href="mailto:${val}" class="btn-dispatch-sm" title="Email ${val}">${icon} MAIL</a>`;
+            } else {
+                return `<button class="btn-call-sm" onclick="revealSelfInfo(this, '${safeVal}', '${icon}')" title="Call ${val}">${icon} CALL</button>`;
+            }
+        }
+
+        // HELPER: Builds the Red Contact Tile
+        function buildContactTile(contact, groupStr) {
+            return `
+                <div class="vendor-tile contact-tile">
+                    <div class="tile-header">
+                        <span class="customer-badge" style="background: #fca5a5; color: #7f1d1d;">INTERNAL BRANCH CONTACT</span>
+                    </div>
+                    <div class="vendor-name" style="color: #991b1b; font-size: 16px;">${groupStr}</div>
+                    <div class="vendor-location" style="margin-bottom: 15px;">
+                        <span>📍</span> ${contact.address}, ${contact.city}, ${contact.st} ${contact.zip}
+                    </div>
+                    
+                    <hr class="divider" style="margin-bottom: 12px; border-top-color: #fca5a5;">
+                    
+                    <div class="contact-section">
+                        <div class="contact-label">Branch Direct</div>
+                        <div class="tile-actions compressed">
+                            ${generateMiniAction(contact.branchEmail, '✉️', 'mailto')}
+                            ${generateMiniAction(contact.branchPhone, '📞', 'tel')}
+                        </div>
+                    </div>
+
+                    <div class="contact-section">
+                        <div class="contact-label">Branch Mgr: ${contact.bmName || 'Unlisted'}</div>
+                        <div class="tile-actions compressed">
+                            ${generateMiniAction(contact.bmEmail, '✉️', 'mailto')}
+                            ${generateMiniAction(contact.bmPhone, '📞', 'tel')}
+                        </div>
+                    </div>
+
+                    <div class="contact-section">
+                        <div class="contact-label">General Manager</div>
+                        <div class="tile-actions compressed">
+                            ${generateMiniAction(contact.gmEmail, '✉️', 'mailto')}
+                            ${generateMiniAction(contact.gmPhone, '📞', 'tel')}
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderTiles() {
+            const selectedCustomer = customerSelect.value;
+            const searchTerm = searchInput.value.toLowerCase();
+
+            let filteredData = allVendors;
+            
+            if (selectedCustomer !== 'ALL') {
+                filteredData = filteredData.filter(item => item.customer === selectedCustomer);
+            }
+            if (searchTerm !== '') {
+                filteredData = filteredData.filter(item => item.group.toLowerCase().includes(searchTerm));
+            }
+
+            if (filteredData.length === 0) {
+                if(searchTerm === '') {
+                    gridContainer.innerHTML = '<div class="no-data-msg">Select a location group to view available vendors and contacts.</div>';
+                } else {
+                    gridContainer.innerHTML = '<div class="no-data-msg">No vendors found matching your current filters.</div>';
+                }
+                return;
+            }
+
+            const dataToRender = filteredData.slice(0, 100);
+            let htmlOutput = '';
+
+            // 1. Identify unique branches in the filtered results & append matching Contact Tiles FIRST
+            const uniqueRenderedGroups = [...new Set(dataToRender.map(item => item.group))];
+            
+            uniqueRenderedGroups.forEach(groupStr => {
+                // Extracts the branch pattern (e.g. "120-38")
+                let match = groupStr.match(/(\d+-\d+)/);
+                if (match) {
+                    // Strips hyphens to match the contact list's "12038" format
+                    let normCode = match[1].replace(/\D/g, '');
+                    let contact = allContacts[normCode];
+                    
+                    if (contact) {
+                        htmlOutput += buildContactTile(contact, groupStr);
+                    }
+                }
+            });
+
+            // 2. Append the standard Vendor Tiles
+            htmlOutput += dataToRender.map(item => {
+                const safeEmail = item.email.replace(/'/g, "\\'");
+                const safePhone = item.phone.replace(/'/g, "\\'");
+
+                const emailActionHtml = item.email 
+                    ? `<div class="action-row">
+                           <a href="mailto:${item.email}" class="btn-dispatch" title="Open Email Draft">✉️ DISPATCH</a>
+                           <button class="btn-view" onclick="revealRowInfo(this, '${safeEmail}', '✉️')" title="View Email Address">👁️ VIEW</button>
+                       </div>` 
+                    : `<div class="action-row"><div class="btn-disabled">✉️ NO EMAIL</div></div>`;
+
+                const phoneActionHtml = item.phone 
+                    ? `<div class="action-row">
+                           <button class="btn-call" onclick="revealRowInfo(this, '${safePhone}', '📞')" title="View Phone Number">📞 CALL</button>
+                       </div>` 
+                    : `<div class="action-row"><div class="btn-disabled">📞 NO PHONE</div></div>`;
+
+                return `
+                    <div class="vendor-tile">
+                        <div class="tile-header">
+                            <span class="customer-badge">${item.customer}</span>
+                        </div>
+                        <div class="vendor-name">${item.vendor}</div>
+                        <div class="vendor-location">
+                            <span>📍</span> ${item.group}
+                        </div>
+                        <hr class="divider">
+                        <div class="tile-actions">
+                            ${emailActionHtml}
+                            ${phoneActionHtml}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            // Inject all HTML
+            gridContainer.innerHTML = htmlOutput;
+
+            if (filteredData.length > 100) {
+                gridContainer.innerHTML += `<div class="no-data-msg">Showing first 100 results. Please use the search bar to narrow down the list.</div>`;
+            }
+        }
+
+        window.addEventListener('DOMContentLoaded', loadExcelFile);
+    </script>
+</body>
+</html>
