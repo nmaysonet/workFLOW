@@ -6,7 +6,6 @@
     <title>workFLOW + | Vendor Locator</title>
     
     <link href="https://fonts.googleapis.com/css2?family=Raleway:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-    
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     
     <style>
@@ -15,7 +14,7 @@
         body { display: flex; height: 100vh; background-color: #f4f6f9; color: #333; overflow: hidden; }
         a { text-decoration: none; }
         
-        /* Variables from workFLOW+ */
+        /* Variables */
         :root {
             --sidebar-bg: #3a3b40;
             --sidebar-hover: #4a4b50;
@@ -33,9 +32,10 @@
         .sidebar-header .logo-plus { color: var(--gold); font-size: 34px; font-weight: 800; margin-left: 3px; line-height: 1; }
         
         .menu-item { padding: 15px 20px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #4a4b50; font-size: 14px; font-weight: 600; transition: 0.2s; }
+        .menu-item:hover { background-color: var(--sidebar-hover); color: var(--gold); }
         .menu-item.active { background-color: var(--sidebar-hover); color: var(--gold); border-left: 4px solid var(--gold); }
         
-        /* Sidebar Truck Graphic & Animations */
+        /* Sidebar Truck Graphic */
         .sidebar-truck { margin-top: auto; padding: 30px; text-align: center; border-top: 1px solid #4a4b50; background: #2a2b30; }
         
         @keyframes spin { 100% { transform: rotate(360deg); } }
@@ -147,7 +147,7 @@
         .btn-revealed-sm { background-color: #fff; color: #334155; border: 1px solid #cbd5e1; cursor: text; user-select: all; flex: 2; font-size: 11px; }
         .btn-disabled-sm { background-color: #fff; color: #cbd5e1; cursor: not-allowed; border: 1px dashed #e2e8f0; }
 
-        .no-data-msg { grid-column: 1 / -1; text-align: center; padding: 3rem; color: #888; font-style: italic; font-size: 15px; background: #fff; border-radius: 6px; border: 1px dashed #ccc; }
+        .no-data-msg { grid-column: 1 / -1; text-align: center; padding: 3rem; color: #888; font-size: 16px; font-weight: 600; background: #fff; border-radius: 6px; border: 1px dashed #ccc; }
     </style>
 </head>
 <body>
@@ -169,9 +169,12 @@
             <span class="logo-plus">+</span>
         </div>
 
-        <div class="menu-item active">
-            Vendor Search
-        </div>
+        <div class="menu-item" onclick="window.location.href='index.html'">Home Dashboard</div>
+        <div class="menu-item" onclick="window.location.href='index.html'">PM Queue</div>
+        <div class="menu-item" onclick="window.location.href='index.html'">Vended Repair Queue</div>
+        <div class="menu-item" onclick="window.location.href='index.html'">ERS Queue</div>
+        <div class="menu-item" onclick="window.location.href='index.html'">Consolidation Summary</div>
+        <div class="menu-item active">Vendor Search</div>
         
         <div class="sidebar-truck">
             <svg width="140" height="70" viewBox="0 0 120 60" xmlns="http://www.w3.org/2000/svg" class="moving-truck-svg">
@@ -211,7 +214,8 @@
             <div class="top-title">National Vendor Network</div>
         </div>
 
-        <div class="view-section">
+        <div class="view-section active">
+            
             <div class="filter-card">
                 <div class="input-group" style="flex: 0.5;">
                     <label for="customer-select">Customer Group</label>
@@ -230,13 +234,14 @@
             <div id="vendor-grid" class="tile-grid">
                 <div class="no-data-msg">Initializing Data Fetch...</div>
             </div>
+            
         </div>
     </div>
 
     <script>
         // --- APP LOGIC --- //
         let allVendors = []; 
-        let allContacts = {}; // Maps Branch Code -> Contact Info
+        let allContacts = {}; 
         let uniqueCustomers = new Set();
 
         const customerSelect = document.getElementById('customer-select');
@@ -244,13 +249,11 @@
         const dataList = document.getElementById('locations');
         const gridContainer = document.getElementById('vendor-grid');
 
-        // Replaces the parent row with revealed text (Used for Vendors)
         window.revealRowInfo = function(btnElement, text, icon) {
             const parent = btnElement.parentElement;
             parent.innerHTML = `<div class="btn-revealed">${icon} ${text}</div>`;
         };
 
-        // Replaces ONLY the button clicked (Used for Compressed Contact Tiles)
         window.revealSelfInfo = function(btnElement, text, icon) {
             btnElement.outerHTML = `<div class="btn-revealed-sm">${icon} ${text}</div>`;
         };
@@ -259,7 +262,6 @@
             try {
                 gridContainer.innerHTML = '<div class="no-data-msg">Loading vendor and branch network...</div>';
                 
-                // Cache Buster
                 const fileUrl = './vendor_locator.xlsx?v=' + new Date().getTime();
                 const response = await fetch(fileUrl, { cache: 'no-store' });
                 
@@ -269,7 +271,6 @@
                 const workbook = XLSX.read(arrayBuffer, { type: 'array' });
                 
                 workbook.SheetNames.forEach(sheetName => {
-                    // Separate routing: Contacts Tab vs Vendor Tabs
                     if (sheetName.toLowerCase().includes('contact')) {
                         formatContactData(XLSX.utils.sheet_to_json(workbook.Sheets[sheetName]));
                     } else {
@@ -292,12 +293,10 @@
             }
         }
 
-        // Parses and Normalizes Contact Info
         function formatContactData(jsonArray) {
             jsonArray.forEach(row => {
                 const keys = Object.keys(row);
                 
-                // Fuzzy matcher to bypass accidental spaces in Excel headers
                 const getCol = (possibleHeaders) => {
                     for (let header of possibleHeaders) {
                         const foundKey = keys.find(k => k.trim().toLowerCase() === header.toLowerCase());
@@ -306,9 +305,7 @@
                     return '';
                 };
 
-                // Extract branch number and strip trailing ".0" if Excel parsed it as float
                 let rawBranch = getCol(['Branch Number', 'Branch', 'BranchNum']).replace(/\.0$/, '');
-                // Strip all non-digits to get the normalized code (e.g. "120-38" becomes "12038")
                 let normBranch = rawBranch.replace(/\D/g, '');
                 
                 if (!normBranch) return;
@@ -329,7 +326,6 @@
             });
         }
 
-        // Parses Vendor Info
         function formatVendorData(jsonArray, customerName) {
             return jsonArray.map(row => {
                 const keys = Object.keys(row);
@@ -390,7 +386,6 @@
             });
         }
 
-        // HELPER: Generates the HTML for the compressed Contact Action buttons
         function generateMiniAction(val, icon, type) {
             if (!val) return `<div class="btn-disabled-sm">${icon} N/A</div>`;
             
@@ -402,7 +397,6 @@
             }
         }
 
-        // HELPER: Builds the Red Contact Tile
         function buildContactTile(contact, groupStr) {
             return `
                 <div class="vendor-tile contact-tile">
@@ -447,6 +441,12 @@
             const selectedCustomer = customerSelect.value;
             const searchTerm = searchInput.value.toLowerCase();
 
+            // PREVENT INITIAL DATA DUMP
+            if (selectedCustomer === 'ALL' && searchTerm.trim() === '') {
+                gridContainer.innerHTML = '<div class="no-data-msg">Please select a Customer Group or search for a Branch/Location to view vendors.</div>';
+                return;
+            }
+
             let filteredData = allVendors;
             
             if (selectedCustomer !== 'ALL') {
@@ -457,25 +457,18 @@
             }
 
             if (filteredData.length === 0) {
-                if(searchTerm === '') {
-                    gridContainer.innerHTML = '<div class="no-data-msg">Select a location group to view available vendors and contacts.</div>';
-                } else {
-                    gridContainer.innerHTML = '<div class="no-data-msg">No vendors found matching your current filters.</div>';
-                }
+                gridContainer.innerHTML = '<div class="no-data-msg">No vendors found matching your current filters.</div>';
                 return;
             }
 
             const dataToRender = filteredData.slice(0, 100);
             let htmlOutput = '';
 
-            // 1. Identify unique branches in the filtered results & append matching Contact Tiles FIRST
             const uniqueRenderedGroups = [...new Set(dataToRender.map(item => item.group))];
             
             uniqueRenderedGroups.forEach(groupStr => {
-                // Extracts the branch pattern (e.g. "120-38")
                 let match = groupStr.match(/(\d+-\d+)/);
                 if (match) {
-                    // Strips hyphens to match the contact list's "12038" format
                     let normCode = match[1].replace(/\D/g, '');
                     let contact = allContacts[normCode];
                     
@@ -485,7 +478,6 @@
                 }
             });
 
-            // 2. Append the standard Vendor Tiles
             htmlOutput += dataToRender.map(item => {
                 const safeEmail = item.email.replace(/'/g, "\\'");
                 const safePhone = item.phone.replace(/'/g, "\\'");
@@ -521,7 +513,6 @@
                 `;
             }).join('');
 
-            // Inject all HTML
             gridContainer.innerHTML = htmlOutput;
 
             if (filteredData.length > 100) {
