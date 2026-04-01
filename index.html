@@ -600,56 +600,37 @@
         }
 
         async function fetchWorkbookBuffer() {
-            const candidates = [
-                new URL('./master_workFLOW.xlsx', window.location.href).href,
-                `${window.location.origin}${window.location.pathname.replace(/\/[^/]*$/, '/') }master_workFLOW.xlsx`,
-                `${window.location.origin}/master_workFLOW.xlsx`,
-                'master_workFLOW.xlsx'
-            ];
+            const firebaseUrl = "https://firebasestorage.googleapis.com/v0/b/workflow-dashboard-e6134.firebasestorage.app/o/master_workFLOW.xlsx?alt=media&token=81ce64be-36a9-4f70-a5bf-397a8ae315e8";
 
-            let lastError = null;
+            const controller = new AbortController();
+            const timeout = setTimeout(() => controller.abort(), 15000);
 
-            for (const rawUrl of [...new Set(candidates)]) {
-                const controller = new AbortController();
-                const timeout = setTimeout(() => controller.abort(), 15000);
+            try {
+                // Add timestamp to bypass browser caching so you always get the latest sheet
+                const url = firebaseUrl + "&_=" + Date.now();
+                const response = await fetch(url, {
+                    cache: 'no-store',
+                    signal: controller.signal
+                });
 
-                try {
-                    const url = rawUrl + (rawUrl.includes('?') ? '&' : '?') + `_=${Date.now()}`;
-                    const response = await fetch(url, {
-                        cache: 'no-store',
-                        signal: controller.signal
-                    });
+                clearTimeout(timeout);
 
-                    clearTimeout(timeout);
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
 
-                    if (!response.ok) {
-                        throw new Error(`HTTP ${response.status}`);
-                    }
+                const data = await response.arrayBuffer();
 
-                    const data = await response.arrayBuffer();
+                if (!data || data.byteLength < 4) throw new Error('Empty or invalid file response.');
+                
+                const sig = new Uint8Array(data.slice(0, 2));
+                const isZip = sig[0] === 0x50 && sig[1] === 0x4B;
+                if (!isZip) throw new Error('Response is not a valid XLSX file.');
 
-                    if (!data || data.byteLength < 4) {
-                        throw new Error('Empty or invalid file response.');
-                    }
-
-                    const sig = new Uint8Array(data.slice(0, 2));
-                    const isZip = sig[0] === 0x50 && sig[1] === 0x4B;
-
-                    if (!isZip) {
-                        throw new Error('Response is not a valid XLSX file.');
-                    }
-
-                    return data;
-                } catch (err) {
-                    clearTimeout(timeout);
-                    lastError = new Error(
-                        `${rawUrl} -> ${err.name === 'AbortError' ? 'Request timed out' : err.message}`
-                    );
-                    console.warn('Workbook fetch failed:', lastError.message);
-                }
+                return data;
+            } catch (err) {
+                clearTimeout(timeout);
+                console.error('Workbook fetch failed:', err.message);
+                throw new Error('Unable to locate master_workFLOW.xlsx in Firebase Storage');
             }
-
-            throw lastError || new Error('Unable to locate master_workFLOW.xlsx');
         }
 
         async function fetchData() {
@@ -1120,7 +1101,7 @@
             if (!currentOwnerView || processedData.length === 0) return;
             
             let ownerDataAll = processedData;
-            if (currentOwnerView === 'ALL_PM') ownerDataAll = processedData.filter(ro => ro.drilldownOwners.some(o => pmOwners.includes(o)));
+            if (currentOwnerView === 'ALL_PM') ownerDataAll = processedData.filter(ro => ro.kpiOwners.some(o => pmOwners.includes(o)) || ro.drilldownOwners.some(o => pmOwners.includes(o)));
             else if (currentOwnerView === 'ALL_VENDED') ownerDataAll = processedData.filter(ro => ro.drilldownOwners.some(o => vendedOwners.includes(o)));
             else if (currentOwnerView === 'ALL_ERS') ownerDataAll = processedData.filter(ro => ro.drilldownOwners.some(o => ersOwners.includes(o)));
             else ownerDataAll = processedData.filter(ro => ro.drilldownOwners.includes(String(currentOwnerView)));
@@ -1155,15 +1136,24 @@
 
             const excelRows = targetData.map(ro => {
                 let usefulText = "N/A";
-                if (ro.usefulPct !== null && ro.usefulPct !== undefined && !isNaN(ro.usefulPct)) {
-                    usefulText = Math.round(ro.usefulPct * 100) + '%';
+                let typePct = null;
+                if (ro.unitType === 'LTS') typePct = ro.usefulPctObj ? ro.usefulPctObj.LTS : null;
+                else if (ro.unitType === 'ST') typePct = ro.usefulPctObj ? ro.usefulPctObj.ST : null;
+                else if (ro.unitType === 'SHUTTLE') typePct = ro.usefulPctObj ? ro.usefulPctObj.SHUTTLE : null;
+
+                if (typePct !== null && !isNaN(typePct)) {
+                    usefulText = Math.round(typePct * 100) + '%';
+                } else if(ro.usefulPct !== null) {
+                    usefulText = Math.round(ro.usefulPct * 100) + '% (Total)';
                 }
 
                 return {
                     "AFS RO #": ro.roNum.startsWith('NO RO') ? "NO ACTIVE RO" : ro.roNum, 
                     "Unit No": ro.unitNo, 
                     "OOS Status": ro.isOOS ? "OOS" : "",
-                    "Useful %": usefulText,
+                    "LTS Useful %": (ro.usefulPctObj && ro.usefulPctObj.LTS !== null) ? Math.round(ro.usefulPctObj.LTS * 100) + '%' : "N/A",
+                    "ST Useful %": (ro.usefulPctObj && ro.usefulPctObj.ST !== null) ? Math.round(ro.usefulPctObj.ST * 100) + '%' : "N/A",
+                    "Shuttle Useful %": (ro.usefulPctObj && ro.usefulPctObj.SHUTTLE !== null) ? Math.round(ro.usefulPctObj.SHUTTLE * 100) + '%' : "N/A",
                     "Opened Date": ro.openedFormatted,
                     "Status": ro.status, "ECD": ro.ecdFormatted,
                     "Customer Group": ro.drillTopLevel, "Subregion": ro.subregion, "Branch": ro.branch
@@ -1186,17 +1176,14 @@
             if(results.length === 0) { alert("No data to export."); return; }
             
             const excelRows = results.map(ro => {
-                let usefulText = "N/A";
-                if (ro.usefulPct !== null && ro.usefulPct !== undefined && !isNaN(ro.usefulPct)) {
-                    usefulText = Math.round(ro.usefulPct * 100) + '%';
-                }
-
                 return {
                     "AFS RO #": ro.roNum.startsWith('NO RO') ? "NO ACTIVE RO" : ro.roNum, 
                     "Unit No": ro.unitNo, 
                     "Priority Status": isPriority(ro) ? "Priority" : "Normal",
                     "OOS Status": ro.isOOS ? "OOS" : "",
-                    "Useful %": usefulText,
+                    "LTS Useful %": (ro.usefulPctObj && ro.usefulPctObj.LTS !== null) ? Math.round(ro.usefulPctObj.LTS * 100) + '%' : "N/A",
+                    "ST Useful %": (ro.usefulPctObj && ro.usefulPctObj.ST !== null) ? Math.round(ro.usefulPctObj.ST * 100) + '%' : "N/A",
+                    "Shuttle Useful %": (ro.usefulPctObj && ro.usefulPctObj.SHUTTLE !== null) ? Math.round(ro.usefulPctObj.SHUTTLE * 100) + '%' : "N/A",
                     "Opened Date": ro.openedFormatted,
                     "Owner": ro.owner, "Status": ro.status, "ECD": ro.ecdFormatted
                 };
@@ -1487,7 +1474,7 @@
                 let validBranchOwner = (unitOwner && unitOwner.toUpperCase() !== 'UNASSIGNED') ? unitOwner : null;
 
                 let creatorInfo = resourceMap[ownerEmail];
-                const isKevinCreated = ownerEmail === 'kanguzza@ameritfleet.com';
+                const isKevinCreated = ownerEmail.includes('kanguzza') || ownerEmail.includes('kevin anguzza');
 
                 // Kevin-created orders = Kevin only.
                 // They should show in Kevin's tile/queue and Kevin's drilldown only.
@@ -1496,7 +1483,7 @@
                     drilldownOwners.add('Kevin Anguzza');
                 } 
                 // Other PM / ERS creator logic stays shared as designed.
-                else if (creatorInfo && (creatorInfo.team === 'ERS' || creatorInfo.team === 'PM')) {
+                else if (creatorInfo && (creatorInfo.team === 'ERS' || creatorInfo.team === 'PM' || (creatorInfo.team === 'VENDED REPAIR' && !creatorInfo.hasBranch))) {
                     if (creatorInfo.name) {
                         kpiOwners.add(creatorInfo.name);
                         drilldownOwners.add(creatorInfo.name);
@@ -2217,7 +2204,7 @@
                             unitsMap[ro.unitNo].roNums.push(ro.roNum);
                             unitsMap[ro.unitNo].dupFlags.push(ro.possibleDuplicate);
                             
-                            let dupBadge = ro.possibleDuplicate ? ' <span class="badge badge-dup" title="Multiple open orders share similar tasks for this unit.">⚠️ DUP?</span>' : '';
+                            let dupBadge = ro.possibleDuplicate ? ' <span class="badge" style="background-color:#ffe082; color:#854d0e; font-size:9px; padding:2px 4px; border:1px solid #f59e0b; margin-left:5px; white-space:nowrap;" title="Multiple open orders share similar tasks for this unit.">⚠️ DUP?</span>' : '';
 
                             let roLinkHtml = ro.roNum.startsWith('NO RO') 
                                 ? `<span style="font-weight: 800; color: var(--urgent-red);">NO ACTIVE RO</span>` 
