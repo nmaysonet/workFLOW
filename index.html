@@ -11,9 +11,7 @@
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script> <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
-    
+
     <style>
         /* Global Styles & Reset */
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Raleway', sans-serif; }
@@ -544,9 +542,9 @@
     </div>
 
     <script>
-        // We no longer store the password in the code!
-        // We only store the dummy email we set up in Firebase Step 7.
-        const MASTER_EMAIL = "team@workflow.com";
+        // We DO NOT store the password in the code! 
+        // We only reference the dummy email account we created in Firebase.
+        const MASTER_EMAIL = "maintenance@ameritfleet.com";
 
         function checkLogin() {
             const passwordInput = document.getElementById('login-pass').value;
@@ -554,18 +552,22 @@
             
             errorText.style.display = 'none';
 
+            // Send the typed password to Firebase to check against their encrypted database
             firebase.auth().signInWithEmailAndPassword(MASTER_EMAIL, passwordInput)
                 .then((userCredential) => {
+                    // Success! Firebase verified the password and gave us a secure token.
                     document.getElementById('login-overlay').style.display = 'none';
                     startAppOnce(); 
                 })
                 .catch((error) => {
+                    // Failed! Wrong password or network error.
                     errorText.innerText = "Incorrect Password";
                     errorText.style.display = 'block';
                 });
         }
 
         window.addEventListener('DOMContentLoaded', () => {
+            // Initialize Firebase before doing anything else
             if (!firebase.apps.length) {
                 firebase.initializeApp({
                     apiKey: "AIzaSyCr3VAldI-pPCb7APx3rJAEZvf_nl0iz1g",
@@ -578,11 +580,14 @@
                 });
             }
 
+            // Check if Firebase already securely remembers this user from a previous session
             firebase.auth().onAuthStateChanged((user) => {
                 if (user) {
+                    // User is securely logged in, hide the login screen
                     document.getElementById('login-overlay').style.display = 'none';
                     startAppOnce();
                 } else {
+                    // User is NOT logged in, force them to see the login screen
                     document.getElementById('login-overlay').style.display = 'flex';
                 }
             });
@@ -1115,7 +1120,6 @@
             if (!currentOwnerView || processedData.length === 0) return;
             
             let ownerDataAll = processedData;
-            // FIXED: Using drilldownOwners for export so it correctly matches what's visible on screen
             if (currentOwnerView === 'ALL_PM') ownerDataAll = processedData.filter(ro => ro.drilldownOwners.some(o => pmOwners.includes(o)));
             else if (currentOwnerView === 'ALL_VENDED') ownerDataAll = processedData.filter(ro => ro.drilldownOwners.some(o => vendedOwners.includes(o)));
             else if (currentOwnerView === 'ALL_ERS') ownerDataAll = processedData.filter(ro => ro.drilldownOwners.some(o => ersOwners.includes(o)));
@@ -1476,7 +1480,6 @@
 
                 allCustSet.add(custKey);
 
-                // --- REPLACED KPI VS VISIBILITY LOGIC BLOCK ---
                 let kpiOwners = new Set();
                 let drilldownOwners = new Set();
 
@@ -1484,7 +1487,7 @@
                 let validBranchOwner = (unitOwner && unitOwner.toUpperCase() !== 'UNASSIGNED') ? unitOwner : null;
 
                 let creatorInfo = resourceMap[ownerEmail];
-                const isKevinCreated = ownerEmail.includes('kanguzza') || ownerEmail.includes('kevin anguzza');
+                const isKevinCreated = ownerEmail === 'kanguzza@ameritfleet.com';
 
                 // Kevin-created orders = Kevin only.
                 // They should show in Kevin's tile/queue and Kevin's drilldown only.
@@ -1499,7 +1502,7 @@
                         drilldownOwners.add(creatorInfo.name);
                     }
 
-                    // Keep branch owner in drilldown for non-Kevin PM/ERS creators for shared visibility
+                    // Keep branch owner in drilldown for non-Kevin PM/ERS creators if you still want shared visibility
                     if (validBranchOwner) {
                         drilldownOwners.add(validBranchOwner);
                     }
@@ -1511,7 +1514,6 @@
                         drilldownOwners.add(validBranchOwner);
                     }
                 }
-                // ----------------------------------------------
 
                 let bCode = extractGardaCode(mUnit.branch) || normalizeBranchStr(mUnit.branch);
                 let pcts = branchUsefulMap[bCode] || { LTS: null, ST: null, SHUTTLE: null, TOTAL: null };
@@ -2111,7 +2113,6 @@
                 }
             });
 
-            // Apply Filters
             let targetData = baseOpenData;
             
             if (!isPM) {
@@ -2298,7 +2299,7 @@
 
             let isPM = currentOwnerView === 'ALL_PM' || pmOwners.includes(currentOwnerView);
 
-            // Hide/Show Rows based on CSS logic rather than reloading HTML
+            // Hide/Show Rows based on filter
             const rows = container.querySelectorAll('.ro-row');
             rows.forEach(row => {
                 let show = true;
@@ -2309,7 +2310,7 @@
                 row.style.display = show ? '' : 'none';
             });
 
-            // Update Counts and Hide Empty Branches
+            // Re-calculate Branch Headers and hide empty ones
             const branchNodes = container.querySelectorAll('.branch-details');
             branchNodes.forEach(branch => {
                 const visibleRows = Array.from(branch.querySelectorAll('.ro-row')).filter(r => r.style.display !== 'none');
@@ -2322,14 +2323,14 @@
                 }
             });
 
-            // Hide Empty Subregions
+            // Hide empty Subregions
             const subNodes = container.querySelectorAll('.subregion-details');
             subNodes.forEach(sub => {
                 const visibleRows = Array.from(sub.querySelectorAll('.ro-row')).filter(r => r.style.display !== 'none');
                 sub.style.display = visibleRows.length === 0 ? 'none' : '';
             });
 
-            // Hide Empty Regions
+            // Hide empty Regions
             const regNodes = container.querySelectorAll('.region-details');
             regNodes.forEach(reg => {
                 const visibleRows = Array.from(reg.querySelectorAll('.ro-row')).filter(r => r.style.display !== 'none');
@@ -2518,62 +2519,6 @@
                 renderSummary();
                 renderAmeritOos();
             }
-        }
-    // We DO NOT store the password in the code! 
-        // We only reference the dummy email account we created in Firebase.
-        const MASTER_EMAIL = "maintenance@ameritfleet.com";
-
-        function checkLogin() {
-            const passwordInput = document.getElementById('login-pass').value;
-            const errorText = document.getElementById('login-error');
-            
-            errorText.style.display = 'none';
-
-            // Send the typed password to Firebase to check against their encrypted database
-            firebase.auth().signInWithEmailAndPassword(MASTER_EMAIL, passwordInput)
-                .then((userCredential) => {
-                    // Success! Firebase verified the password and gave us a secure token.
-                    document.getElementById('login-overlay').style.display = 'none';
-                    startAppOnce(); 
-                })
-                .catch((error) => {
-                    // Failed! Wrong password or network error.
-                    errorText.innerText = "Incorrect Password";
-                    errorText.style.display = 'block';
-                });
-        }
-
-        window.addEventListener('DOMContentLoaded', () => {
-            // Initialize Firebase before doing anything else
-            if (!firebase.apps.length) {
-                firebase.initializeApp({
-                    apiKey: "AIzaSyCr3VAldI-pPCb7APx3rJAEZvf_nl0iz1g",
-                    authDomain: "workflow-dashboard-e6134.firebaseapp.com",
-                    databaseURL: "https://workflow-dashboard-e6134-default-rtdb.firebaseio.com",
-                    projectId: "workflow-dashboard-e6134",
-                    storageBucket: "workflow-dashboard-e6134.firebasestorage.app",
-                    messagingSenderId: "641710248116",
-                    appId: "1:641710248116:web:1546701879d573041447e1"
-                });
-            }
-
-            // Check if Firebase already securely remembers this user from a previous session
-            firebase.auth().onAuthStateChanged((user) => {
-                if (user) {
-                    // User is securely logged in, hide the login screen
-                    document.getElementById('login-overlay').style.display = 'none';
-                    startAppOnce();
-                } else {
-                    // User is NOT logged in, force them to see the login screen
-                    document.getElementById('login-overlay').style.display = 'flex';
-                }
-            });
-        });
-
-        function startAppOnce() {
-            if (window.__workflowStarted) return;
-            window.__workflowStarted = true;
-            fetchData();
         }
     </script>
 </body>
