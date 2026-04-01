@@ -9,6 +9,7 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 
     <style>
@@ -29,6 +30,28 @@
             --text-light: #f1f1f1;
             --border: #e0e0e0;
         }
+
+        /* --- LOGIN OVERLAY --- */
+        #login-overlay { 
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
+            background: var(--sidebar-bg); z-index: 99999; 
+            display: flex; align-items: center; justify-content: center; flex-direction: column; 
+        }
+        .login-box { 
+            background: white; padding: 40px; border-radius: 8px; 
+            box-shadow: 0 10px 25px rgba(0,0,0,0.5); text-align: center; width: 350px; 
+        }
+        .login-box h2 { margin-bottom: 20px; color: #333; font-weight: 800; }
+        .login-box input { 
+            width: 100%; padding: 12px; margin-bottom: 15px; 
+            border: 1px solid #ccc; border-radius: 4px; font-size: 16px; font-family: 'Raleway', sans-serif;
+        }
+        .login-box button { 
+            width: 100%; padding: 12px; background: var(--gold); border: none; 
+            font-weight: 800; font-size: 14px; border-radius: 4px; cursor: pointer; transition: 0.2s; 
+        }
+        .login-box button:hover { background: var(--gold-hover); }
+        .login-error { color: var(--urgent-red); margin-bottom: 15px; font-size: 13px; font-weight: bold; display: none; }
 
         /* Sidebar */
         .sidebar { width: 280px; background-color: var(--sidebar-bg); color: var(--text-light); display: flex; flex-direction: column; flex-shrink: 0; }
@@ -218,6 +241,22 @@
 </head>
 <body>
 
+    <div id="login-overlay">
+        <div class="login-box">
+            <svg class="logo-spin" width="50" height="50" viewBox="0 0 100 100" style="margin-bottom:15px;">
+                <circle cx="50" cy="50" r="40" fill="none" stroke="var(--gold)" stroke-width="10"/>
+                <circle cx="50" cy="50" r="10" fill="var(--gold)"/>
+                <g stroke="var(--gold)" stroke-width="10" stroke-linecap="round">
+                    <line x1="50" y1="50" x2="50" y2="15" /><line x1="50" y1="50" x2="83" y2="39" /><line x1="50" y1="50" x2="70" y2="78" /><line x1="50" y1="50" x2="30" y2="78" /><line x1="50" y1="50" x2="17" y2="39" />
+                </g>
+            </svg>
+            <h2>workFLOW+ Login</h2>
+            <div id="login-error" class="login-error">Incorrect Password</div>
+            <input type="password" id="login-pass" placeholder="Enter Password" onkeypress="if(event.key === 'Enter') checkLogin()">
+            <button onclick="checkLogin()">ENTER</button>
+        </div>
+    </div>
+
     <div class="sidebar">
         <div class="sidebar-header">
             <svg class="logo-spin" width="30" height="30" viewBox="0 0 100 100">
@@ -280,12 +319,6 @@
                 <input type="text" id="global-search" placeholder="Search by Unit No..." onkeyup="handleSearch()">
             </div>
             <div class="top-actions">
-                <div class="dropdown">
-                    <button class="btn-action dropbtn">VENDOR MAPS ▼</button>
-                    <div class="dropdown-content">
-                        <a href="https://app.mapline.com/map/map_282c81fe/TWZ2TzJHRGcrd3BjaG1QMDNPekVGYUhxNThJd080SUZTK2MwZG" target="_blank">Armored</a>
-                    </div>
-                </div>
                 <a href="https://afshub.azurewebsites.net/Vendors/VendedRepairOrder/CreateVRO" target="_blank" class="btn-action">CREATE A VRO</a>
             </div>
         </div>
@@ -509,13 +542,55 @@
     </div>
 
     <script>
+        // We no longer store the password in the code!
+        // We only store the dummy email we set up in Firebase Step 7.
+        const MASTER_EMAIL = "team@workflow.com";
+
+        function checkLogin() {
+            const passwordInput = document.getElementById('login-pass').value;
+            const errorText = document.getElementById('login-error');
+            
+            errorText.style.display = 'none';
+
+            firebase.auth().signInWithEmailAndPassword(MASTER_EMAIL, passwordInput)
+                .then((userCredential) => {
+                    document.getElementById('login-overlay').style.display = 'none';
+                    startAppOnce(); 
+                })
+                .catch((error) => {
+                    errorText.innerText = "Incorrect Password";
+                    errorText.style.display = 'block';
+                });
+        }
+
+        window.addEventListener('DOMContentLoaded', () => {
+            if (!firebase.apps.length) {
+                firebase.initializeApp({
+                    apiKey: "AIzaSyCr3VAldI-pPCb7APx3rJAEZvf_nl0iz1g",
+                    authDomain: "workflow-dashboard-e6134.firebaseapp.com",
+                    databaseURL: "https://workflow-dashboard-e6134-default-rtdb.firebaseio.com",
+                    projectId: "workflow-dashboard-e6134",
+                    storageBucket: "workflow-dashboard-e6134.firebasestorage.app",
+                    messagingSenderId: "641710248116",
+                    appId: "1:641710248116:web:1546701879d573041447e1"
+                });
+            }
+
+            firebase.auth().onAuthStateChanged((user) => {
+                if (user) {
+                    document.getElementById('login-overlay').style.display = 'none';
+                    startAppOnce();
+                } else {
+                    document.getElementById('login-overlay').style.display = 'flex';
+                }
+            });
+        });
+
         function startAppOnce() {
             if (window.__workflowStarted) return;
             window.__workflowStarted = true;
             fetchData();
         }
-
-        window.addEventListener('DOMContentLoaded', startAppOnce, { once: true });
 
         async function fetchWorkbookBuffer() {
             const candidates = [
@@ -717,16 +792,6 @@
         function initFirebaseSync() {
             try {
                 if (typeof firebase !== 'undefined') {
-                    const firebaseConfig = {
-                        apiKey: "AIzaSyCr3VAldI-pPCb7APx3rJAEZvf_nl0iz1g",
-                        authDomain: "workflow-dashboard-e6134.firebaseapp.com",
-                        databaseURL: "https://workflow-dashboard-e6134-default-rtdb.firebaseio.com",
-                        projectId: "workflow-dashboard-e6134",
-                        storageBucket: "workflow-dashboard-e6134.firebasestorage.app",
-                        messagingSenderId: "641710248116",
-                        appId: "1:641710248116:web:1546701879d573041447e1"
-                    };
-                    if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
                     db = firebase.database();
 
                     db.ref('roChecks').on('value', (snapshot) => {
@@ -1409,38 +1474,42 @@
 
                 allCustSet.add(custKey);
 
-                // --- KPI VS VISIBILITY LOGIC (THE KEVIN FIX) ---
+                // --- REPLACED KPI VS VISIBILITY LOGIC BLOCK ---
                 let kpiOwners = new Set();
                 let drilldownOwners = new Set();
-                
+
                 let unitOwner = mUnit.owner;
                 let validBranchOwner = (unitOwner && unitOwner.toUpperCase() !== 'UNASSIGNED') ? unitOwner : null;
 
                 let creatorInfo = resourceMap[ownerEmail];
-                let isCreatorSpecial = false;
-                let isKevin = ownerEmail.includes('kanguzza') || ownerEmail.includes('kevin anguzza');
+                const isKevinCreated = ownerEmail.includes('kanguzza') || ownerEmail.includes('kevin anguzza');
 
-                if (creatorInfo) {
-                    let t = creatorInfo.team;
-                    if (t === 'ERS' || t === 'PM' || (t === 'VENDED REPAIR' && !creatorInfo.hasBranch)) {
-                        isCreatorSpecial = true;
-                        if (creatorInfo.name) {
-                            kpiOwners.add(creatorInfo.name);
-                            drilldownOwners.add(creatorInfo.name);
-                        }
-                    }
-                } else if (isKevin) {
-                    isCreatorSpecial = true;
+                // Kevin-created orders = Kevin only.
+                // They should show in Kevin's tile/queue and Kevin's drilldown only.
+                if (isKevinCreated) {
                     kpiOwners.add('Kevin Anguzza');
                     drilldownOwners.add('Kevin Anguzza');
-                }
+                } 
+                // Other PM / ERS creator logic stays shared as designed.
+                else if (creatorInfo && (creatorInfo.team === 'ERS' || creatorInfo.team === 'PM')) {
+                    if (creatorInfo.name) {
+                        kpiOwners.add(creatorInfo.name);
+                        drilldownOwners.add(creatorInfo.name);
+                    }
 
-                // ONLY add Branch Owner if it wasn't a special creator
-                if (!isCreatorSpecial && validBranchOwner) {
-                    kpiOwners.add(validBranchOwner);
-                    drilldownOwners.add(validBranchOwner);
+                    // Keep branch owner in drilldown for non-Kevin PM/ERS creators for shared visibility
+                    if (validBranchOwner) {
+                        drilldownOwners.add(validBranchOwner);
+                    }
+                } 
+                // Normal vended logic
+                else {
+                    if (validBranchOwner) {
+                        kpiOwners.add(validBranchOwner);
+                        drilldownOwners.add(validBranchOwner);
+                    }
                 }
-                // ------------------------------------------------
+                // ----------------------------------------------
 
                 let bCode = extractGardaCode(mUnit.branch) || normalizeBranchStr(mUnit.branch);
                 let pcts = branchUsefulMap[bCode] || { LTS: null, ST: null, SHUTTLE: null, TOTAL: null };
@@ -1526,7 +1595,6 @@
                     let kpiOwners = new Set();
                     let drilldownOwners = new Set();
                     let unitOwner = mUnit.owner;
-                    
                     if (unitOwner && unitOwner.toUpperCase() !== 'UNASSIGNED') {
                         kpiOwners.add(unitOwner);
                         drilldownOwners.add(unitOwner);
@@ -2073,7 +2141,13 @@
                             totalSum += p.TOTAL; totalCount++; 
                         }
                     });
-                    if (totalCount > 0) topBadges = formatUsefulBadge('Useful', totalSum / totalCount);
+                    if (totalCount > 0) {
+                        let pct = Math.round((totalSum / totalCount) * 100);
+                        let tc = '#5cb85c';
+                        if (pct < 95) tc = '#d9534f';
+                        else if (pct >= 95 && pct < 100) tc = '#f0ad4e';
+                        topBadges = `<span style="color: ${tc}; font-size: 11px; margin-left: 10px; font-weight: bold;">Useful: ${pct}%</span>`;
+                    }
                 }
 
                 let subHtml = '';
@@ -2088,7 +2162,13 @@
                                 totalSum += p.TOTAL; totalCount++; 
                             }
                         });
-                        if (totalCount > 0) subBadges = formatUsefulBadge('Useful', totalSum / totalCount);
+                        if (totalCount > 0) {
+                            let pct = Math.round((totalSum / totalCount) * 100);
+                            let tc = '#5cb85c';
+                            if (pct < 95) tc = '#d9534f';
+                            else if (pct >= 95 && pct < 100) tc = '#f0ad4e';
+                            subBadges = `<span style="color: ${tc}; font-size: 11px; margin-left: 10px; font-weight: bold;">Useful: ${pct}%</span>`;
+                        }
                     }
 
                     let branchHtml = '';
@@ -2099,7 +2179,12 @@
                         let u = branchUsefulVals[branchKey] || {};
                         let badgesHtml = '';
                         if (u && u.TOTAL !== null && u.TOTAL !== undefined && !isNaN(u.TOTAL)) {
-                            badgesHtml += formatUsefulBadge('Useful', u.TOTAL);
+                            let pct = Math.round(u.TOTAL * 100);
+                            let tc = '#5cb85c';
+                            if (pct < 95) tc = '#d9534f';
+                            else if (pct >= 95 && pct < 100) tc = '#f0ad4e';
+                            
+                            badgesHtml += `<span style="color: ${tc}; font-size: 11px; margin-left: 10px; font-weight: bold;">Useful: ${pct}%</span>`;
                         }
 
                         let unitsMap = {};
