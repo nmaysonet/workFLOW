@@ -1409,6 +1409,7 @@
 
                 allCustSet.add(custKey);
 
+                // --- KPI VS VISIBILITY LOGIC (THE KEVIN FIX) ---
                 let kpiOwners = new Set();
                 let drilldownOwners = new Set();
                 
@@ -1417,14 +1418,16 @@
 
                 let creatorInfo = resourceMap[ownerEmail];
                 let isCreatorSpecial = false;
-
                 let isKevin = ownerEmail.includes('kanguzza') || ownerEmail.includes('kevin anguzza');
 
-                if (creatorInfo && (creatorInfo.team === 'ERS' || creatorInfo.team === 'PM')) {
-                    isCreatorSpecial = true;
-                    if (creatorInfo.name) {
-                        kpiOwners.add(creatorInfo.name);
-                        drilldownOwners.add(creatorInfo.name);
+                if (creatorInfo) {
+                    let t = creatorInfo.team;
+                    if (t === 'ERS' || t === 'PM' || (t === 'VENDED REPAIR' && !creatorInfo.hasBranch)) {
+                        isCreatorSpecial = true;
+                        if (creatorInfo.name) {
+                            kpiOwners.add(creatorInfo.name);
+                            drilldownOwners.add(creatorInfo.name);
+                        }
                     }
                 } else if (isKevin) {
                     isCreatorSpecial = true;
@@ -1432,10 +1435,12 @@
                     drilldownOwners.add('Kevin Anguzza');
                 }
 
+                // ONLY add Branch Owner if it wasn't a special creator
                 if (!isCreatorSpecial && validBranchOwner) {
                     kpiOwners.add(validBranchOwner);
                     drilldownOwners.add(validBranchOwner);
                 }
+                // ------------------------------------------------
 
                 let bCode = extractGardaCode(mUnit.branch) || normalizeBranchStr(mUnit.branch);
                 let pcts = branchUsefulMap[bCode] || { LTS: null, ST: null, SHUTTLE: null, TOTAL: null };
@@ -1521,6 +1526,7 @@
                     let kpiOwners = new Set();
                     let drilldownOwners = new Set();
                     let unitOwner = mUnit.owner;
+                    
                     if (unitOwner && unitOwner.toUpperCase() !== 'UNASSIGNED') {
                         kpiOwners.add(unitOwner);
                         drilldownOwners.add(unitOwner);
@@ -2035,6 +2041,7 @@
                 }
             });
 
+            // Apply Filters
             let targetData = baseOpenData;
             
             if (!isPM) {
@@ -2204,6 +2211,7 @@
 
             let isPM = currentOwnerView === 'ALL_PM' || pmOwners.includes(currentOwnerView);
 
+            // Hide/Show Rows based on CSS logic rather than reloading HTML
             const rows = container.querySelectorAll('.ro-row');
             rows.forEach(row => {
                 let show = true;
@@ -2214,6 +2222,7 @@
                 row.style.display = show ? '' : 'none';
             });
 
+            // Update Counts and Hide Empty Branches
             const branchNodes = container.querySelectorAll('.branch-details');
             branchNodes.forEach(branch => {
                 const visibleRows = Array.from(branch.querySelectorAll('.ro-row')).filter(r => r.style.display !== 'none');
@@ -2226,12 +2235,14 @@
                 }
             });
 
+            // Hide Empty Subregions
             const subNodes = container.querySelectorAll('.subregion-details');
             subNodes.forEach(sub => {
                 const visibleRows = Array.from(sub.querySelectorAll('.ro-row')).filter(r => r.style.display !== 'none');
                 sub.style.display = visibleRows.length === 0 ? 'none' : '';
             });
 
+            // Hide Empty Regions
             const regNodes = container.querySelectorAll('.region-details');
             regNodes.forEach(reg => {
                 const visibleRows = Array.from(reg.querySelectorAll('.ro-row')).filter(r => r.style.display !== 'none');
@@ -2271,6 +2282,7 @@
                 ownerDataAll = ownerDataAll.filter(ro => ro.custKey === currentCustomerFilter);
             }
 
+            // Generate HTML once with ALL data, then filter via CSS
             document.getElementById('drilldown-body').innerHTML = generateRoDrilldownHtml(ownerDataAll, isPM);
             updateAllNoteButtons(); 
             applyDrilldownFilters(); 
