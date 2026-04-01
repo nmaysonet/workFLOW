@@ -280,6 +280,12 @@
                 <input type="text" id="global-search" placeholder="Search by Unit No..." onkeyup="handleSearch()">
             </div>
             <div class="top-actions">
+                <div class="dropdown">
+                    <button class="btn-action dropbtn">VENDOR MAPS ▼</button>
+                    <div class="dropdown-content">
+                        <a href="https://app.mapline.com/map/map_282c81fe/TWZ2TzJHRGcrd3BjaG1QMDNPekVGYUhxNThJd080SUZTK2MwZG" target="_blank">Armored</a>
+                    </div>
+                </div>
                 <a href="https://afshub.azurewebsites.net/Vendors/VendedRepairOrder/CreateVRO" target="_blank" class="btn-action">CREATE A VRO</a>
             </div>
         </div>
@@ -1042,6 +1048,7 @@
             if (!currentOwnerView || processedData.length === 0) return;
             
             let ownerDataAll = processedData;
+            // FIXED: Using drilldownOwners for export so it correctly matches what's visible on screen
             if (currentOwnerView === 'ALL_PM') ownerDataAll = processedData.filter(ro => ro.drilldownOwners.some(o => pmOwners.includes(o)));
             else if (currentOwnerView === 'ALL_VENDED') ownerDataAll = processedData.filter(ro => ro.drilldownOwners.some(o => vendedOwners.includes(o)));
             else if (currentOwnerView === 'ALL_ERS') ownerDataAll = processedData.filter(ro => ro.drilldownOwners.some(o => ersOwners.includes(o)));
@@ -1411,25 +1418,23 @@
                 let creatorInfo = resourceMap[ownerEmail];
                 let isCreatorSpecial = false;
 
+                let isKevin = ownerEmail.includes('kanguzza') || ownerEmail.includes('kevin anguzza');
+
                 if (creatorInfo && (creatorInfo.team === 'ERS' || creatorInfo.team === 'PM')) {
                     isCreatorSpecial = true;
                     if (creatorInfo.name) {
                         kpiOwners.add(creatorInfo.name);
                         drilldownOwners.add(creatorInfo.name);
                     }
-                } else if (ownerEmail === 'kanguzza@ameritfleet.com') {
+                } else if (isKevin) {
                     isCreatorSpecial = true;
                     kpiOwners.add('Kevin Anguzza');
                     drilldownOwners.add('Kevin Anguzza');
                 }
 
-                if (isCreatorSpecial) {
-                    if (validBranchOwner) drilldownOwners.add(validBranchOwner);
-                } else {
-                    if (validBranchOwner) {
-                        kpiOwners.add(validBranchOwner);
-                        drilldownOwners.add(validBranchOwner);
-                    }
+                if (!isCreatorSpecial && validBranchOwner) {
+                    kpiOwners.add(validBranchOwner);
+                    drilldownOwners.add(validBranchOwner);
                 }
 
                 let bCode = extractGardaCode(mUnit.branch) || normalizeBranchStr(mUnit.branch);
@@ -1516,7 +1521,6 @@
                     let kpiOwners = new Set();
                     let drilldownOwners = new Set();
                     let unitOwner = mUnit.owner;
-                    
                     if (unitOwner && unitOwner.toUpperCase() !== 'UNASSIGNED') {
                         kpiOwners.add(unitOwner);
                         drilldownOwners.add(unitOwner);
@@ -2031,10 +2035,20 @@
                 }
             });
 
-            if(baseOpenData.length === 0) return `<p style="margin-top:15px; color:#666;">No active Repair Orders to display under the current filters.</p>`;
+            let targetData = baseOpenData;
+            
+            if (!isPM) {
+                if (currentFilter === 'OOS') {
+                    targetData = targetData.filter(ro => ro.isOOS);
+                } else if(currentFilter === 'PRIORITY') {
+                    targetData = targetData.filter(ro => isPriority(ro));
+                }
+            }
+
+            if(targetData.length === 0) return `<p style="margin-top:15px; color:#666;">No active Repair Orders to display under the current filters.</p>`;
             
             let hierarchy = {};
-            baseOpenData.forEach(ro => {
+            targetData.forEach(ro => {
                 if(!hierarchy[ro.drillTopLevel]) hierarchy[ro.drillTopLevel] = {};
                 if(!hierarchy[ro.drillTopLevel][ro.subregion]) hierarchy[ro.drillTopLevel][ro.subregion] = {};
                 if(!hierarchy[ro.drillTopLevel][ro.subregion][ro.branch]) hierarchy[ro.drillTopLevel][ro.subregion][ro.branch] = [];
@@ -2108,7 +2122,7 @@
                             unitsMap[ro.unitNo].roNums.push(ro.roNum);
                             unitsMap[ro.unitNo].dupFlags.push(ro.possibleDuplicate);
                             
-                            let dupBadge = ro.possibleDuplicate ? ' <span class="badge" style="background-color:#ffe082; color:#854d0e; font-size:9px; padding:2px 4px; border:1px solid #f59e0b; margin-left:5px; white-space:nowrap;" title="Multiple open orders share similar tasks for this unit.">⚠️ DUP?</span>' : '';
+                            let dupBadge = ro.possibleDuplicate ? ' <span class="badge badge-dup" title="Multiple open orders share similar tasks for this unit.">⚠️ DUP?</span>' : '';
 
                             let roLinkHtml = ro.roNum.startsWith('NO RO') 
                                 ? `<span style="font-weight: 800; color: var(--urgent-red);">NO ACTIVE RO</span>` 
@@ -2190,7 +2204,6 @@
 
             let isPM = currentOwnerView === 'ALL_PM' || pmOwners.includes(currentOwnerView);
 
-            // Hide/Show Rows based on filter
             const rows = container.querySelectorAll('.ro-row');
             rows.forEach(row => {
                 let show = true;
@@ -2201,7 +2214,6 @@
                 row.style.display = show ? '' : 'none';
             });
 
-            // Re-calculate Branch Headers and hide empty ones
             const branchNodes = container.querySelectorAll('.branch-details');
             branchNodes.forEach(branch => {
                 const visibleRows = Array.from(branch.querySelectorAll('.ro-row')).filter(r => r.style.display !== 'none');
@@ -2214,14 +2226,12 @@
                 }
             });
 
-            // Hide empty Subregions
             const subNodes = container.querySelectorAll('.subregion-details');
             subNodes.forEach(sub => {
                 const visibleRows = Array.from(sub.querySelectorAll('.ro-row')).filter(r => r.style.display !== 'none');
                 sub.style.display = visibleRows.length === 0 ? 'none' : '';
             });
 
-            // Hide empty Regions
             const regNodes = container.querySelectorAll('.region-details');
             regNodes.forEach(reg => {
                 const visibleRows = Array.from(reg.querySelectorAll('.ro-row')).filter(r => r.style.display !== 'none');
@@ -2261,7 +2271,6 @@
                 ownerDataAll = ownerDataAll.filter(ro => ro.custKey === currentCustomerFilter);
             }
 
-            // Generate HTML once with ALL data, then filter via CSS
             document.getElementById('drilldown-body').innerHTML = generateRoDrilldownHtml(ownerDataAll, isPM);
             updateAllNoteButtons(); 
             applyDrilldownFilters(); 
