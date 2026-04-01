@@ -600,7 +600,7 @@
         }
 
         async function fetchWorkbookBuffer() {
-            const firebaseUrl = "https://firebasestorage.googleapis.com/v0/b/workflow-dashboard-e6134.firebasestorage.app/o/master_workFLOW.xlsx?alt=media&token=81ce64be-36a9-4f70-a5bf-397a8ae315e8";
+            const firebaseUrl = "gs://workflow-dashboard-e6134.firebasestorage.app/master_workFLOW.xlsx";
 
             const controller = new AbortController();
             const timeout = setTimeout(() => controller.abort(), 15000);
