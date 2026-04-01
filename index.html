@@ -2517,6 +2517,62 @@
                 renderAmeritOos();
             }
         }
+    // We DO NOT store the password in the code! 
+        // We only reference the dummy email account we created in Firebase.
+        const MASTER_EMAIL = "maintenance@ameritfleet.com";
+
+        function checkLogin() {
+            const passwordInput = document.getElementById('login-pass').value;
+            const errorText = document.getElementById('login-error');
+            
+            errorText.style.display = 'none';
+
+            // Send the typed password to Firebase to check against their encrypted database
+            firebase.auth().signInWithEmailAndPassword(MASTER_EMAIL, passwordInput)
+                .then((userCredential) => {
+                    // Success! Firebase verified the password and gave us a secure token.
+                    document.getElementById('login-overlay').style.display = 'none';
+                    startAppOnce(); 
+                })
+                .catch((error) => {
+                    // Failed! Wrong password or network error.
+                    errorText.innerText = "Incorrect Password";
+                    errorText.style.display = 'block';
+                });
+        }
+
+        window.addEventListener('DOMContentLoaded', () => {
+            // Initialize Firebase before doing anything else
+            if (!firebase.apps.length) {
+                firebase.initializeApp({
+                    apiKey: "AIzaSyCr3VAldI-pPCb7APx3rJAEZvf_nl0iz1g",
+                    authDomain: "workflow-dashboard-e6134.firebaseapp.com",
+                    databaseURL: "https://workflow-dashboard-e6134-default-rtdb.firebaseio.com",
+                    projectId: "workflow-dashboard-e6134",
+                    storageBucket: "workflow-dashboard-e6134.firebasestorage.app",
+                    messagingSenderId: "641710248116",
+                    appId: "1:641710248116:web:1546701879d573041447e1"
+                });
+            }
+
+            // Check if Firebase already securely remembers this user from a previous session
+            firebase.auth().onAuthStateChanged((user) => {
+                if (user) {
+                    // User is securely logged in, hide the login screen
+                    document.getElementById('login-overlay').style.display = 'none';
+                    startAppOnce();
+                } else {
+                    // User is NOT logged in, force them to see the login screen
+                    document.getElementById('login-overlay').style.display = 'flex';
+                }
+            });
+        });
+
+        function startAppOnce() {
+            if (window.__workflowStarted) return;
+            window.__workflowStarted = true;
+            fetchData();
+        }
     </script>
 </body>
 </html>
