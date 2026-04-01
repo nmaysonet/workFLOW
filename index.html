@@ -1408,7 +1408,7 @@
 
                 allCustSet.add(custKey);
 
-                // --- KPI VS VISIBILITY LOGIC ---
+                // --- KPI VS VISIBILITY LOGIC (THE KEVIN FIX) ---
                 let kpiOwners = new Set();
                 let drilldownOwners = new Set();
                 
@@ -1418,19 +1418,21 @@
                 let creatorInfo = resourceMap[ownerEmail];
                 let isCreatorSpecial = false;
 
+                // CHECK BOTH EMAIL AND NAME FOR KEVIN ANGUZZA
+                let isKevin = ownerEmail.includes('kanguzza') || ownerEmail.includes('kevin anguzza');
+
                 if (creatorInfo && (creatorInfo.team === 'ERS' || creatorInfo.team === 'PM')) {
                     isCreatorSpecial = true;
                     if (creatorInfo.name) {
                         kpiOwners.add(creatorInfo.name);
                         drilldownOwners.add(creatorInfo.name);
                     }
-                } else if (ownerEmail === 'kanguzza@ameritfleet.com') {
+                } else if (isKevin) {
                     isCreatorSpecial = true;
                     kpiOwners.add('Kevin Anguzza');
                     drilldownOwners.add('Kevin Anguzza');
                 }
 
-                // REMOVED THE LINE HERE that pushed validBranchOwner into drilldownOwners if isCreatorSpecial was true.
                 if (!isCreatorSpecial && validBranchOwner) {
                     kpiOwners.add(validBranchOwner);
                     drilldownOwners.add(validBranchOwner);
@@ -1521,6 +1523,7 @@
                     let kpiOwners = new Set();
                     let drilldownOwners = new Set();
                     let unitOwner = mUnit.owner;
+                    
                     if (unitOwner && unitOwner.toUpperCase() !== 'UNASSIGNED') {
                         kpiOwners.add(unitOwner);
                         drilldownOwners.add(unitOwner);
@@ -1755,24 +1758,6 @@
             else if (pct >= 95 && pct < 100) { tc = '#f0ad4e'; } 
 
             return `<span style="color: ${tc}; font-size: 11px; margin-left: 10px; font-weight: bold;">${label}: ${pct}%</span>`;
-        }
-
-        function getAggregatedBadges(pctArray) {
-            if (!pctArray || pctArray.length === 0) return '';
-            
-            let totalSum = 0, totalCount = 0;
-
-            pctArray.forEach(p => {
-                if (p && p.TOTAL !== null && p.TOTAL !== undefined && !isNaN(p.TOTAL)) { 
-                    totalSum += p.TOTAL; 
-                    totalCount++; 
-                }
-            });
-
-            if (totalCount > 0) {
-                return formatUsefulBadge('Useful', totalSum / totalCount);
-            }
-            return '';
         }
 
         function getSummaryUsefulHtml(active, maxRoutes) {
@@ -2053,6 +2038,7 @@
                 }
             });
 
+            // Apply Filters
             let targetData = baseOpenData;
             
             if (!isPM) {
@@ -2075,11 +2061,45 @@
             
             let htmlStr = '';
             for(let topLvl in hierarchy) {
-                let topBadges = getAggregatedBadges(topUsefulMap[topLvl] || []);
+                let topBadges = '';
+                let tArray = topUsefulMap[topLvl];
+                if (tArray && tArray.length > 0) {
+                    let totalSum = 0, totalCount = 0;
+                    tArray.forEach(p => {
+                        if (p && p.TOTAL !== null && p.TOTAL !== undefined && !isNaN(p.TOTAL)) { 
+                            totalSum += p.TOTAL; totalCount++; 
+                        }
+                    });
+                    if (totalCount > 0) {
+                        let pct = Math.round((totalSum / totalCount) * 100);
+                        let tc = '#5cb85c';
+                        if (pct < 95) tc = '#d9534f';
+                        else if (pct >= 95 && pct < 100) tc = '#f0ad4e';
+                        topBadges = `<span style="color: ${tc}; font-size: 11px; margin-left: 10px; font-weight: bold;">Useful: ${pct}%</span>`;
+                    }
+                }
+
                 let subHtml = '';
                 for(let sub in hierarchy[topLvl]) {
                     let subKey = topLvl + '|||' + sub;
-                    let subBadges = getAggregatedBadges(subUsefulMap[subKey] || []);
+                    let subBadges = '';
+                    let sArray = subUsefulMap[subKey];
+                    if (sArray && sArray.length > 0) {
+                        let totalSum = 0, totalCount = 0;
+                        sArray.forEach(p => {
+                            if (p && p.TOTAL !== null && p.TOTAL !== undefined && !isNaN(p.TOTAL)) { 
+                                totalSum += p.TOTAL; totalCount++; 
+                            }
+                        });
+                        if (totalCount > 0) {
+                            let pct = Math.round((totalSum / totalCount) * 100);
+                            let tc = '#5cb85c';
+                            if (pct < 95) tc = '#d9534f';
+                            else if (pct >= 95 && pct < 100) tc = '#f0ad4e';
+                            subBadges = `<span style="color: ${tc}; font-size: 11px; margin-left: 10px; font-weight: bold;">Useful: ${pct}%</span>`;
+                        }
+                    }
+
                     let branchHtml = '';
                     for(let branch in hierarchy[topLvl][sub]) {
                         let branchKey = subKey + '|||' + branch;
@@ -2087,7 +2107,7 @@
                         
                         let u = branchUsefulVals[branchKey] || {};
                         let badgesHtml = '';
-                        if (u && u.TOTAL !== null) {
+                        if (u && u.TOTAL !== null && u.TOTAL !== undefined && !isNaN(u.TOTAL)) {
                             let pct = Math.round(u.TOTAL * 100);
                             let tc = '#5cb85c';
                             if (pct < 95) tc = '#d9534f';
@@ -2123,7 +2143,7 @@
                             unitsMap[ro.unitNo].roNums.push(ro.roNum);
                             unitsMap[ro.unitNo].dupFlags.push(ro.possibleDuplicate);
                             
-                            let dupBadge = ro.possibleDuplicate ? ' <span class="badge badge-dup" title="Multiple open orders share similar tasks for this unit.">⚠️ DUP?</span>' : '';
+                            let dupBadge = ro.possibleDuplicate ? ' <span class="badge" style="background-color:#ffe082; color:#854d0e; font-size:9px; padding:2px 4px; border:1px solid #f59e0b; margin-left:5px; white-space:nowrap;" title="Multiple open orders share similar tasks for this unit.">⚠️ DUP?</span>' : '';
 
                             let roLinkHtml = ro.roNum.startsWith('NO RO') 
                                 ? `<span style="font-weight: 800; color: var(--urgent-red);">NO ACTIVE RO</span>` 
@@ -2192,49 +2212,9 @@
                         tableHTML += `</tbody></table></div>`; 
                         branchHtml += tableHTML + `</details>`;
                     }
-                    
-                    let sBadges = '';
-                    let sArray = subUsefulMap[subKey];
-                    if (sArray && sArray.length > 0) {
-                        let totalSum = 0, totalCount = 0;
-                        sArray.forEach(p => {
-                            if (p && p.TOTAL !== null && p.TOTAL !== undefined && !isNaN(p.TOTAL)) { 
-                                totalSum += p.TOTAL; 
-                                totalCount++; 
-                            }
-                        });
-                        if (totalCount > 0) {
-                            let pct = Math.round((totalSum / totalCount) * 100);
-                            let tc = '#5cb85c';
-                            if (pct < 95) tc = '#d9534f';
-                            else if (pct >= 95 && pct < 100) tc = '#f0ad4e';
-                            sBadges = `<span style="color: ${tc}; font-size: 11px; margin-left: 10px; font-weight: bold;">Useful: ${pct}%</span>`;
-                        }
-                    }
-                    
-                    subHtml += `<details class="ro-detail-node subregion-details"><summary><div style="flex-grow:1; display:flex; align-items:center;">${sub}</div><div>${sBadges}</div></summary>${branchHtml}</details>`;
+                    subHtml += `<details class="ro-detail-node subregion-details"><summary><div style="flex-grow:1; display:flex; align-items:center;">${sub}</div><div>${subBadges}</div></summary>${branchHtml}</details>`;
                 }
-                
-                let tBadges = '';
-                let tArray = topUsefulMap[topLvl];
-                if (tArray && tArray.length > 0) {
-                    let totalSum = 0, totalCount = 0;
-                    tArray.forEach(p => {
-                        if (p && p.TOTAL !== null && p.TOTAL !== undefined && !isNaN(p.TOTAL)) { 
-                            totalSum += p.TOTAL; 
-                            totalCount++; 
-                        }
-                    });
-                    if (totalCount > 0) {
-                        let pct = Math.round((totalSum / totalCount) * 100);
-                        let tc = '#5cb85c';
-                        if (pct < 95) tc = '#d9534f';
-                        else if (pct >= 95 && pct < 100) tc = '#f0ad4e';
-                        tBadges = `<span style="color: ${tc}; font-size: 11px; margin-left: 10px; font-weight: bold;">Useful: ${pct}%</span>`;
-                    }
-                }
-                
-                htmlStr += `<details class="ro-detail-node region-details"><summary><div style="flex-grow:1; display:flex; align-items:center;">${topLvl}</div><div>${tBadges}</div></summary>${subHtml}</details>`;
+                htmlStr += `<details class="ro-detail-node region-details"><summary><div style="flex-grow:1; display:flex; align-items:center;">${topLvl}</div><div>${topBadges}</div></summary>${subHtml}</details>`;
             }
             return htmlStr;
         }
@@ -2245,6 +2225,7 @@
 
             let isPM = currentOwnerView === 'ALL_PM' || pmOwners.includes(currentOwnerView);
 
+            // Hide/Show Rows based on filter
             const rows = container.querySelectorAll('.ro-row');
             rows.forEach(row => {
                 let show = true;
@@ -2255,6 +2236,7 @@
                 row.style.display = show ? '' : 'none';
             });
 
+            // Re-calculate Branch Headers and hide empty ones
             const branchNodes = container.querySelectorAll('.branch-details');
             branchNodes.forEach(branch => {
                 const visibleRows = Array.from(branch.querySelectorAll('.ro-row')).filter(r => r.style.display !== 'none');
@@ -2267,12 +2249,14 @@
                 }
             });
 
+            // Hide empty Subregions
             const subNodes = container.querySelectorAll('.subregion-details');
             subNodes.forEach(sub => {
                 const visibleRows = Array.from(sub.querySelectorAll('.ro-row')).filter(r => r.style.display !== 'none');
                 sub.style.display = visibleRows.length === 0 ? 'none' : '';
             });
 
+            // Hide empty Regions
             const regNodes = container.querySelectorAll('.region-details');
             regNodes.forEach(reg => {
                 const visibleRows = Array.from(reg.querySelectorAll('.ro-row')).filter(r => r.style.display !== 'none');
@@ -2312,6 +2296,7 @@
                 ownerDataAll = ownerDataAll.filter(ro => ro.custKey === currentCustomerFilter);
             }
 
+            // Generate HTML once with ALL data, then filter via CSS
             document.getElementById('drilldown-body').innerHTML = generateRoDrilldownHtml(ownerDataAll, isPM);
             updateAllNoteButtons(); 
             applyDrilldownFilters(); 
