@@ -11,7 +11,6 @@
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-storage.js"></script>
 
     <style>
         /* Global Styles & Reset */
@@ -320,12 +319,6 @@
                 <input type="text" id="global-search" placeholder="Search by Unit No..." onkeyup="handleSearch()">
             </div>
             <div class="top-actions">
-                <div class="dropdown">
-                    <button class="btn-action dropbtn">VENDOR MAPS ▼</button>
-                    <div class="dropdown-content">
-                        <a href="https://app.mapline.com/map/map_282c81fe/TWZ2TzJHRGcrd3BjaG1QMDNPekVGYUhxNThJd080SUZTK2MwZG" target="_blank">Armored</a>
-                    </div>
-                </div>
                 <a href="https://afshub.azurewebsites.net/Vendors/VendedRepairOrder/CreateVRO" target="_blank" class="btn-action">CREATE A VRO</a>
             </div>
         </div>
@@ -607,46 +600,56 @@
         }
 
         async function fetchWorkbookBuffer() {
-            const controller = new AbortController();
-            const timeout = setTimeout(() => controller.abort(), 15000);
+            const candidates = [
+                new URL('./master_workFLOW.xlsx', window.location.href).href,
+                `${window.location.origin}${window.location.pathname.replace(/\/[^/]*$/, '/') }master_workFLOW.xlsx`,
+                `${window.location.origin}/master_workFLOW.xlsx`,
+                'master_workFLOW.xlsx'
+            ];
 
-            try {
-                const storageRef = firebase.storage().ref().child('master_workFLOW.xlsx');
-                const downloadUrl = await storageRef.getDownloadURL();
+            let lastError = null;
 
-                const url = downloadUrl + (downloadUrl.includes('?') ? '&' : '?') + `_=${Date.now()}`;
-                const response = await fetch(url, {
-                    cache: 'no-store',
-                    signal: controller.signal
-                });
+            for (const rawUrl of [...new Set(candidates)]) {
+                const controller = new AbortController();
+                const timeout = setTimeout(() => controller.abort(), 15000);
 
-                if (!response.ok) {
-                    throw new Error(`HTTP ${response.status}`);
+                try {
+                    const url = rawUrl + (rawUrl.includes('?') ? '&' : '?') + `_=${Date.now()}`;
+                    const response = await fetch(url, {
+                        cache: 'no-store',
+                        signal: controller.signal
+                    });
+
+                    clearTimeout(timeout);
+
+                    if (!response.ok) {
+                        throw new Error(`HTTP ${response.status}`);
+                    }
+
+                    const data = await response.arrayBuffer();
+
+                    if (!data || data.byteLength < 4) {
+                        throw new Error('Empty or invalid file response.');
+                    }
+
+                    const sig = new Uint8Array(data.slice(0, 2));
+                    const isZip = sig[0] === 0x50 && sig[1] === 0x4B;
+
+                    if (!isZip) {
+                        throw new Error('Response is not a valid XLSX file.');
+                    }
+
+                    return data;
+                } catch (err) {
+                    clearTimeout(timeout);
+                    lastError = new Error(
+                        `${rawUrl} -> ${err.name === 'AbortError' ? 'Request timed out' : err.message}`
+                    );
+                    console.warn('Workbook fetch failed:', lastError.message);
                 }
-
-                const data = await response.arrayBuffer();
-
-                if (!data || data.byteLength < 4) {
-                    throw new Error('Empty or invalid file response.');
-                }
-
-                const sig = new Uint8Array(data.slice(0, 2));
-                const isZip = sig[0] === 0x50 && sig[1] === 0x4B;
-
-                if (!isZip) {
-                    throw new Error('Response is not a valid XLSX file.');
-                }
-
-                return data;
-            } catch (err) {
-                console.error('Workbook fetch failed:', err);
-                if (err.name === 'AbortError') {
-                    throw new Error('Firebase Storage request timed out');
-                }
-                throw new Error(`Firebase Storage fetch failed: ${err.message}`);
-            } finally {
-                clearTimeout(timeout);
             }
+
+            throw lastError || new Error('Unable to locate master_workFLOW.xlsx');
         }
 
         async function fetchData() {
@@ -659,7 +662,7 @@
             dashboard.style.display = 'none';
             manualUpload.style.display = 'none';
 
-            statusEl.innerText = 'Fetching workbook from Firebase Storage...';
+            statusEl.innerText = 'Fetching local database file...';
             statusEl.style.color = '#888';
 
             try {
@@ -1484,7 +1487,7 @@
                 let validBranchOwner = (unitOwner && unitOwner.toUpperCase() !== 'UNASSIGNED') ? unitOwner : null;
 
                 let creatorInfo = resourceMap[ownerEmail];
-                const isKevinCreated = ownerEmail.includes('kanguzza') || ownerEmail.includes('kevin anguzza');
+                const isKevinCreated = ownerEmail === 'kanguzza@ameritfleet.com';
 
                 // Kevin-created orders = Kevin only.
                 // They should show in Kevin's tile/queue and Kevin's drilldown only.
@@ -1930,6 +1933,566 @@
                 }
             }
             document.getElementById('summary-table-body').innerHTML = html || '<tr><td colspan="7" style="text-align:center; padding: 20px;">No data available</td></tr>';
+        }
+
+        function generateTileHTML(name, dataSet, chartId = null, isPM = false) {
+            let filteredOpen = dataSet.filter(ro => ro.isOpen);
+            
+            let completedOrders = dataSet.filter(ro => ro.isCompletedKPI);
+            let compCount = completedOrders.length;
+            let onTimeCount = completedOrders.filter(ro => ro.isOnTimeKPI).length;
+            let lateCount = completedOrders.filter(ro => ro.isLateKPI).length;
+            let compPct = compCount > 0 ? Math.round((onTimeCount / compCount) * 100) : 0;
+            let latePct = compCount > 0 ? Math.round((lateCount / compCount) * 100) : 0;
+
+            let chartHTML = '';
+            if (chartId) {
+                chartHTML = `<div class="chart-box"><canvas id="${chartId}" data-comp="${compPct}" data-late="${latePct}"></canvas></div>`;
+            }
+
+            let oosAndPriorityHtml = '';
+            if (!isPM) {
+                let oosCount = dataSet.filter(ro => ro.isOpen && ro.isOOS).length;
+                let priorityCount = dataSet.filter(ro => ro.isOpen && isPriority(ro)).length;
+                oosAndPriorityHtml = `
+                    <div class="highlight-box oos-box">
+                        <div class="title">OOS ROs</div>
+                        <div class="num">${oosCount}</div>
+                    </div>
+                    <div class="highlight-box urgent-box">
+                        <div class="title">Priority ROs</div>
+                        <div class="num">${priorityCount}</div>
+                    </div>
+                `;
+            }
+
+            let innerHtml = `
+                <div class="kpi-name">${name}</div>
+                <div class="kpi-top-metrics">
+                    <div class="highlight-box">
+                        <div class="title">Open ROs</div>
+                        <div class="num">${filteredOpen.length}</div>
+                    </div>
+                    ${oosAndPriorityHtml}
+                    ${chartHTML}
+                </div>
+                <div class="kpi-stats-grid">
+                    <div class="stat-box">
+                        <div class="title">Completed</div>
+                        <div class="num">${compCount}</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="title">On-Time</div>
+                        <div class="num">${onTimeCount}</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="title">% Compliance</div>
+                        <div class="num good">${compPct}%</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="title">% Late</div>
+                        <div class="num urgent">${latePct}%</div>
+                    </div>
+                </div>
+            `;
+            return innerHtml;
+        }
+
+        Chart.register({
+            id: 'centerText',
+            beforeDraw: function(chart) {
+                if (chart.config.options.elements.center) {
+                    var ctx = chart.ctx; var centerConfig = chart.config.options.elements.center;
+                    var txt = centerConfig.text;
+                    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+                    var centerX = ((chart.chartArea.left + chart.chartArea.right) / 2);
+                    var centerY = ((chart.chartArea.top + chart.chartArea.bottom) / 2);
+                    ctx.font = "bold 16px Raleway"; ctx.fillStyle = centerConfig.color || '#333';
+                    ctx.fillText(txt, centerX, centerY);
+                }
+            }
+        });
+
+        function initChart(chartId) {
+            const canvas = document.getElementById(chartId); if(!canvas) return;
+            const comp = parseInt(canvas.getAttribute('data-comp')) || 0;
+            const late = parseInt(canvas.getAttribute('data-late')) || 0;
+            let chartData = [comp, late]; let bgColors = ['#5cb85c', '#d9534f'];
+            if (comp === 0 && late === 0) { chartData = [1]; bgColors = ['#e0e0e0']; }
+            if(globalChartInstances[chartId]) globalChartInstances[chartId].destroy();
+            globalChartInstances[chartId] = new Chart(canvas.getContext('2d'), {
+                type: 'doughnut',
+                data: { labels: ['On-Time', 'Late'], datasets: [{ data: chartData, backgroundColor: bgColors, borderWidth: 0 }] },
+                options: { maintainAspectRatio: false, cutout: '70%', plugins: { legend: { display: false } }, elements: { center: { text: comp + '%' } } }
+            });
+        }
+
+        function renderHomeDashboard() {
+            const container = document.getElementById('home-kpi-container'); container.innerHTML = '';
+            
+            let aggData = processedData;
+
+            if (currentCustomerFilter !== 'ALL') {
+                aggData = aggData.filter(ro => ro.custKey === currentCustomerFilter);
+            }
+
+            let pmData = aggData.filter(ro => ro.kpiOwners.some(o => pmOwners.includes(o)));
+            let vendedData = aggData.filter(ro => ro.kpiOwners.some(o => vendedOwners.includes(o)));
+            let ersRoData = aggData.filter(ro => ro.kpiOwners.some(o => ersOwners.includes(o)));
+
+            const pmTile = document.createElement('div'); pmTile.className = 'kpi-tile home-master-tile'; pmTile.innerHTML = generateTileHTML('PM Dashboard', pmData, 'chart-pm', true);
+            pmTile.onclick = () => loadPersonDrilldown('ALL_PM', 'home-view');
+            container.appendChild(pmTile);
+            
+            const vendedTile = document.createElement('div'); vendedTile.className = 'kpi-tile home-master-tile'; vendedTile.innerHTML = generateTileHTML('Vended Repair Dashboard', vendedData, 'chart-vended');
+            vendedTile.onclick = () => loadPersonDrilldown('ALL_VENDED', 'home-view');
+            container.appendChild(vendedTile);
+            
+            const ersTile = document.createElement('div'); ersTile.className = 'kpi-tile home-master-tile'; 
+            ersTile.innerHTML = generateTileHTML('ERS Dashboard', ersRoData, 'chart-ers');
+            ersTile.onclick = () => loadPersonDrilldown('ALL_ERS', 'home-view');
+            container.appendChild(ersTile);
+
+            initChart('chart-pm'); initChart('chart-vended'); initChart('chart-ers');
+        }
+
+        function renderKPITiles(ownersList, containerId, parentViewId) {
+            const container = document.getElementById(containerId); container.innerHTML = ''; 
+            if(processedData.length === 0) return;
+
+            let isPM = containerId === 'pm-kpi-container';
+
+            ownersList.forEach(owner => {
+                let ownerDataAll = processedData.filter(ro => ro.kpiOwners.includes(owner));
+                
+                if (currentCustomerFilter !== 'ALL') {
+                    ownerDataAll = ownerDataAll.filter(ro => ro.custKey === currentCustomerFilter);
+                }
+
+                let targetData = ownerDataAll.filter(ro => ro.isOpen);
+                
+                if (!isPM) {
+                    if (currentFilter === 'OOS') {
+                        targetData = targetData.filter(ro => ro.isOOS);
+                    } else if (currentFilter === 'PRIORITY') {
+                        targetData = targetData.filter(ro => isPriority(ro));
+                    }
+                }
+                
+                if (targetData.length === 0) return; 
+
+                const tile = document.createElement('div'); tile.className = 'kpi-tile';
+                tile.onclick = () => loadPersonDrilldown(owner, parentViewId);
+                tile.innerHTML = generateTileHTML(owner, ownerDataAll, null, isPM);
+                container.appendChild(tile);
+            });
+        }
+
+        function generateRoDrilldownHtml(ownerDataAll, isPM) {
+            let baseOpenData = ownerDataAll.filter(ro => ro.isOpen);
+
+            let branchUsefulVals = {};
+            let subUsefulMap = {};
+            let topUsefulMap = {};
+
+            baseOpenData.forEach(ro => {
+                if (ro.usefulPctObj) {
+                    let branchKey = ro.drillTopLevel + '|||' + ro.subregion + '|||' + ro.branch;
+                    let subKey = ro.drillTopLevel + '|||' + ro.subregion;
+                    let topKey = ro.drillTopLevel;
+
+                    if (branchUsefulVals[branchKey] === undefined) {
+                        branchUsefulVals[branchKey] = ro.usefulPctObj;
+                        
+                        if (!subUsefulMap[subKey]) subUsefulMap[subKey] = [];
+                        subUsefulMap[subKey].push(ro.usefulPctObj);
+                        
+                        if (!topUsefulMap[topKey]) topUsefulMap[topKey] = [];
+                        topUsefulMap[topKey].push(ro.usefulPctObj);
+                    }
+                }
+            });
+
+            let targetData = baseOpenData;
+            
+            if (!isPM) {
+                if (currentFilter === 'OOS') {
+                    targetData = targetData.filter(ro => ro.isOOS);
+                } else if(currentFilter === 'PRIORITY') {
+                    targetData = targetData.filter(ro => isPriority(ro));
+                }
+            }
+
+            if(targetData.length === 0) return `<p style="margin-top:15px; color:#666;">No active Repair Orders to display under the current filters.</p>`;
+            
+            let hierarchy = {};
+            targetData.forEach(ro => {
+                if(!hierarchy[ro.drillTopLevel]) hierarchy[ro.drillTopLevel] = {};
+                if(!hierarchy[ro.drillTopLevel][ro.subregion]) hierarchy[ro.drillTopLevel][ro.subregion] = {};
+                if(!hierarchy[ro.drillTopLevel][ro.subregion][ro.branch]) hierarchy[ro.drillTopLevel][ro.subregion][ro.branch] = [];
+                hierarchy[ro.drillTopLevel][ro.subregion][ro.branch].push(ro);
+            });
+            
+            let htmlStr = '';
+            for(let topLvl in hierarchy) {
+                let topBadges = '';
+                let tArray = topUsefulMap[topLvl];
+                if (tArray && tArray.length > 0) {
+                    let totalSum = 0, totalCount = 0;
+                    tArray.forEach(p => {
+                        if (p && p.TOTAL !== null && p.TOTAL !== undefined && !isNaN(p.TOTAL)) { 
+                            totalSum += p.TOTAL; totalCount++; 
+                        }
+                    });
+                    if (totalCount > 0) {
+                        let pct = Math.round((totalSum / totalCount) * 100);
+                        let tc = '#5cb85c';
+                        if (pct < 95) tc = '#d9534f';
+                        else if (pct >= 95 && pct < 100) tc = '#f0ad4e';
+                        topBadges = `<span style="color: ${tc}; font-size: 11px; margin-left: 10px; font-weight: bold;">Useful: ${pct}%</span>`;
+                    }
+                }
+
+                let subHtml = '';
+                for(let sub in hierarchy[topLvl]) {
+                    let subKey = topLvl + '|||' + sub;
+                    let subBadges = '';
+                    let sArray = subUsefulMap[subKey];
+                    if (sArray && sArray.length > 0) {
+                        let totalSum = 0, totalCount = 0;
+                        sArray.forEach(p => {
+                            if (p && p.TOTAL !== null && p.TOTAL !== undefined && !isNaN(p.TOTAL)) { 
+                                totalSum += p.TOTAL; totalCount++; 
+                            }
+                        });
+                        if (totalCount > 0) {
+                            let pct = Math.round((totalSum / totalCount) * 100);
+                            let tc = '#5cb85c';
+                            if (pct < 95) tc = '#d9534f';
+                            else if (pct >= 95 && pct < 100) tc = '#f0ad4e';
+                            subBadges = `<span style="color: ${tc}; font-size: 11px; margin-left: 10px; font-weight: bold;">Useful: ${pct}%</span>`;
+                        }
+                    }
+
+                    let branchHtml = '';
+                    for(let branch in hierarchy[topLvl][sub]) {
+                        let branchKey = subKey + '|||' + branch;
+                        let branchROs = hierarchy[topLvl][sub][branch];
+                        
+                        let u = branchUsefulVals[branchKey] || {};
+                        let badgesHtml = '';
+                        if (u && u.TOTAL !== null && u.TOTAL !== undefined && !isNaN(u.TOTAL)) {
+                            let pct = Math.round(u.TOTAL * 100);
+                            let tc = '#5cb85c';
+                            if (pct < 95) tc = '#d9534f';
+                            else if (pct >= 95 && pct < 100) tc = '#f0ad4e';
+                            
+                            badgesHtml += `<span style="color: ${tc}; font-size: 11px; margin-left: 10px; font-weight: bold;">Useful: ${pct}%</span>`;
+                        }
+
+                        let unitsMap = {};
+                        branchROs.forEach(ro => {
+                            if(!unitsMap[ro.unitNo]) {
+                                unitsMap[ro.unitNo] = {
+                                    unitNo: ro.unitNo,
+                                    unitType: ro.unitType,
+                                    roNums: [],
+                                    roLinks: [],
+                                    openedDates: [],
+                                    statuses: [],
+                                    ecdCells: [],
+                                    dupFlags: [],
+                                    isOOS: ro.isOOS,
+                                    usefulPct: ro.usefulPct,
+                                    usefulPctObj: ro.usefulPctObj,
+                                    custKey: ro.custKey
+                                };
+                            }
+                            
+                            let ecdCell = '';
+                            if (ro.ecdState === 'missing') ecdCell = `<span class="badge-ecd-missing">${ro.ecdFormatted}</span>`;
+                            else if (ro.ecdState === 'red') ecdCell = `<span class="ecd-red">${ro.ecdFormatted}</span>`;
+                            else ecdCell = `<span class="ecd-green">${ro.ecdFormatted}</span>`;
+
+                            unitsMap[ro.unitNo].roNums.push(ro.roNum);
+                            unitsMap[ro.unitNo].dupFlags.push(ro.possibleDuplicate);
+                            
+                            let dupBadge = ro.possibleDuplicate ? ' <span class="badge badge-dup" title="Multiple open orders share similar tasks for this unit.">⚠️ DUP?</span>' : '';
+
+                            let roLinkHtml = ro.roNum.startsWith('NO RO') 
+                                ? `<span style="font-weight: 800; color: var(--urgent-red);">NO ACTIVE RO</span>` 
+                                : `<a href="https://afshub.azurewebsites.net/Vendors/VendedRepairOrder/Estimate/${ro.roNum}" target="_blank" class="ro-link">${ro.roNum}</a>${dupBadge}`;
+                            
+                            unitsMap[ro.unitNo].roLinks.push(roLinkHtml);
+                            
+                            unitsMap[ro.unitNo].openedDates.push(ro.openedFormatted);
+                            unitsMap[ro.unitNo].statuses.push(ro.status);
+                            unitsMap[ro.unitNo].ecdCells.push(ecdCell);
+                        });
+
+                        let groupedUnits = Object.values(unitsMap);
+                        groupedUnits.sort((a,b) => { 
+                            return (b.isOOS === true ? 1 : 0) - (a.isOOS === true ? 1 : 0);
+                        });
+
+                        branchHtml += `<details class="ro-detail-node branch-details" data-branch-name="${branch}"><summary><div style="flex-grow:1; display:flex; align-items:center;"><span class="branch-title-text">${branch} (${branchROs.length} ROs)</span></div><div>${badgesHtml}</div></summary>`;
+                        let tableHTML = `<div class="table-wrapper"><table><colgroup><col style="width:23%;"><col style="width:11%;">${isPM ? '' : '<col style="width:11%;">'}<col style="width:9%;"><col style="width:11%;"><col style="width:21%;"><col style="width:14%;"></colgroup><thead><tr><th>AFS RO # & Dispatch</th><th>Unit No</th>${isPM ? '' : '<th>Priority Status</th>'}<th>OOS Status</th><th>Opened Date</th><th>Status</th><th>ECD</th></tr></thead><tbody>`;
+                        
+                        groupedUnits.forEach(u => {
+                            let oosBadge = u.isOOS ? `<span class="badge badge-oos">OOS</span>` : `<span class="badge badge-active">ACTIVE</span>`;
+                            
+                            let isPri = (u.isOOS && isPriority({isOOS: u.isOOS, usefulPctObj: u.usefulPctObj, unitType: u.unitType}));
+                            let priorityStatusBadge = isPri ? `<span class="badge badge-urgent">Priority</span>` : `<span class="badge badge-low">Normal</span>`;
+
+                            let rowCount = u.roNums.length;
+
+                            u.roNums.forEach((roNum, idx) => {
+                                let safeRo = roNum.replace(/[.#$\[\]]/g, '_');
+                                let isDispatched = !!globalRoCheckState[safeRo];
+                                let toggleClass = isDispatched ? 'status-dispatched' : 'status-pending';
+                                let toggleText = isDispatched ? '✓ DISPATCHED' : 'PENDING';
+                                let toggleState = isDispatched ? 'false' : 'true'; 
+                                let statusToggleHtml = `<span class="badge status-toggle ${toggleClass}" data-ro="${safeRo}" onclick="toggleRoCheck('${safeRo}', ${toggleState})">${toggleText}</span>`;
+
+                                let hasNote = globalRoNotesState[safeRo] && globalRoNotesState[safeRo].trim() !== '';
+                                let noteClass = hasNote ? 'note-btn has-note' : 'note-btn';
+                                let noteTitle = hasNote ? globalRoNotesState[safeRo].replace(/"/g, '&quot;') : 'Add Note';
+                                let noteBtnHtml = `<button class="${noteClass}" data-ro="${safeRo}" title="${noteTitle}" onclick="openNoteModal('${safeRo}', '${roNum}')">📝</button>`;
+
+                                let roHtml = `<div style="display:flex; align-items:center; gap: 4px;">${statusToggleHtml} ${u.roLinks[idx]} ${noteBtnHtml}</div>`;
+
+                                tableHTML += `<tr class="ro-row" data-oos="${u.isOOS}" data-priority="${isPri}">`;
+                                tableHTML += `<td style="vertical-align:top; padding-top:15px; border-bottom: ${idx === rowCount - 1 ? '1px solid var(--border)' : '1px dashed #eee'};">${roHtml}</td>`;
+                                
+                                if (idx === 0) {
+                                    tableHTML += `<td rowspan="${rowCount}" style="vertical-align:top; padding-top:15px; border-bottom: 1px solid var(--border); border-left: 1px dashed #eee;"><strong>${u.unitNo}</strong> <span style="font-size:10px; color:#888;">(${u.unitType})</span></td>`;
+                                    if (!isPM) {
+                                        tableHTML += `<td rowspan="${rowCount}" style="vertical-align:top; padding-top:15px; border-bottom: 1px solid var(--border);">${priorityStatusBadge}</td>`;
+                                    }
+                                    tableHTML += `<td rowspan="${rowCount}" style="vertical-align:top; padding-top:15px; border-bottom: 1px solid var(--border); border-right: 1px dashed #eee;">${oosBadge}</td>`;
+                                }
+
+                                let od = u.openedDates[idx] || '';
+                                let st = u.statuses[idx] || '';
+                                let ec = u.ecdCells[idx] || '';
+
+                                tableHTML += `<td style="vertical-align:top; padding-top:15px; border-bottom: ${idx === rowCount - 1 ? '1px solid var(--border)' : '1px dashed #eee'}; font-size:12px; font-weight: 700; color: #555;">${od}</td>`;
+                                tableHTML += `<td style="vertical-align:top; padding-top:15px; border-bottom: ${idx === rowCount - 1 ? '1px solid var(--border)' : '1px dashed #eee'}; font-size:11px; line-height:1.2;">${st}</td>`;
+                                tableHTML += `<td style="vertical-align:top; padding-top:15px; border-bottom: ${idx === rowCount - 1 ? '1px solid var(--border)' : '1px dashed #eee'};">${ec}</td>`;
+                                tableHTML += `</tr>`;
+                            });
+                        });
+                        
+                        tableHTML += `</tbody></table></div>`; 
+                        branchHtml += tableHTML + `</details>`;
+                    }
+                    subHtml += `<details class="ro-detail-node subregion-details"><summary><div style="flex-grow:1; display:flex; align-items:center;">${sub}</div><div>${subBadges}</div></summary>${branchHtml}</details>`;
+                }
+                htmlStr += `<details class="ro-detail-node region-details"><summary><div style="flex-grow:1; display:flex; align-items:center;">${topLvl}</div><div>${topBadges}</div></summary>${subHtml}</details>`;
+            }
+            return htmlStr;
+        }
+
+        function applyDrilldownFilters() {
+            const container = document.getElementById('drilldown-body');
+            if (!container) return;
+
+            let isPM = currentOwnerView === 'ALL_PM' || pmOwners.includes(currentOwnerView);
+
+            // Hide/Show Rows based on filter
+            const rows = container.querySelectorAll('.ro-row');
+            rows.forEach(row => {
+                let show = true;
+                if (!isPM) {
+                    if (currentFilter === 'OOS' && row.dataset.oos !== 'true') show = false;
+                    if (currentFilter === 'PRIORITY' && row.dataset.priority !== 'true') show = false;
+                }
+                row.style.display = show ? '' : 'none';
+            });
+
+            // Re-calculate Branch Headers and hide empty ones
+            const branchNodes = container.querySelectorAll('.branch-details');
+            branchNodes.forEach(branch => {
+                const visibleRows = Array.from(branch.querySelectorAll('.ro-row')).filter(r => r.style.display !== 'none');
+                branch.style.display = visibleRows.length === 0 ? 'none' : '';
+                
+                const titleEl = branch.querySelector('.branch-title-text');
+                if (titleEl) {
+                    const originalName = branch.dataset.branchName;
+                    titleEl.innerHTML = `${originalName} (${visibleRows.length} ROs)`;
+                }
+            });
+
+            // Hide empty Subregions
+            const subNodes = container.querySelectorAll('.subregion-details');
+            subNodes.forEach(sub => {
+                const visibleRows = Array.from(sub.querySelectorAll('.ro-row')).filter(r => r.style.display !== 'none');
+                sub.style.display = visibleRows.length === 0 ? 'none' : '';
+            });
+
+            // Hide empty Regions
+            const regNodes = container.querySelectorAll('.region-details');
+            regNodes.forEach(reg => {
+                const visibleRows = Array.from(reg.querySelectorAll('.ro-row')).filter(r => r.style.display !== 'none');
+                reg.style.display = visibleRows.length === 0 ? 'none' : '';
+            });
+        }
+
+        function loadPersonDrilldown(owner, parentViewId) {
+            navigate('person-view', null, true); 
+            currentOwnerView = owner; currentParentView = parentViewId;
+            
+            let isPM = owner === 'ALL_PM' || pmOwners.includes(owner);
+
+            let titleText = `RO Hierarchy: ${owner}`;
+            if (owner === 'ALL_PM') titleText = 'Overall PM Details';
+            if (owner === 'ALL_VENDED') titleText = 'Overall Vended Repair Details';
+            if (owner === 'ALL_ERS') titleText = 'Overall ERS Details';
+
+            document.getElementById('person-name-title').innerText = titleText;
+            document.getElementById('dynamic-back-btn').onclick = () => navigate(parentViewId, null, true);
+            
+            if (isPM) {
+                document.getElementById('standard-drilldown-filters').style.display = 'none';
+                currentFilter = 'ALL';
+            } else {
+                document.getElementById('standard-drilldown-filters').style.display = 'flex';
+            }
+
+            let ownerDataAll = processedData;
+            
+            if (owner === 'ALL_PM') ownerDataAll = processedData.filter(ro => ro.drilldownOwners.some(o => pmOwners.includes(o)));
+            else if (owner === 'ALL_VENDED') ownerDataAll = processedData.filter(ro => ro.drilldownOwners.some(o => vendedOwners.includes(o)));
+            else if (owner === 'ALL_ERS') ownerDataAll = processedData.filter(ro => ro.drilldownOwners.some(o => ersOwners.includes(o)));
+            else ownerDataAll = processedData.filter(ro => ro.drilldownOwners.includes(String(owner)));
+            
+            if (currentCustomerFilter !== 'ALL') {
+                ownerDataAll = ownerDataAll.filter(ro => ro.custKey === currentCustomerFilter);
+            }
+
+            // Generate HTML once with ALL data, then filter via CSS
+            document.getElementById('drilldown-body').innerHTML = generateRoDrilldownHtml(ownerDataAll, isPM);
+            updateAllNoteButtons(); 
+            applyDrilldownFilters(); 
+        }
+
+        function toggleAllDetails(expand) { 
+            document.querySelectorAll('.ro-detail-node').forEach(d => { if(expand) d.setAttribute('open',''); else d.removeAttribute('open'); }); 
+        }
+
+        function handleSearch() {
+            clearTimeout(searchTimeout);
+            searchTimeout = setTimeout(() => {
+                const searchTerm = document.getElementById('global-search').value.toLowerCase();
+                if(searchTerm.length === 0) { navigate(lastActiveView, null, true); return; }
+                navigate('search-view', null, true);
+                document.getElementById('search-term-display').innerText = searchTerm;
+                
+                const results = processedData.filter(ro => ro.unitNo.toLowerCase().includes(searchTerm));
+                let searchHtml = '';
+                if(results.length === 0) {
+                    searchHtml = '<tr><td colspan="7" style="text-align:center;">No matching units.</td></tr>';
+                } else {
+                    let searchUnitsMap = {};
+                    results.forEach(ro => {
+                        if(!searchUnitsMap[ro.unitNo]) {
+                            searchUnitsMap[ro.unitNo] = {
+                                unitNo: ro.unitNo,
+                                unitType: ro.unitType,
+                                roNums: [],
+                                roLinks: [],
+                                openedDates: [],
+                                statuses: [],
+                                ecdCells: [],
+                                dupFlags: [],
+                                owners: [],
+                                isOpenFlags: [],
+                                isOOS: ro.isOOS,
+                                usefulPct: ro.usefulPct,
+                                usefulPctObj: ro.usefulPctObj,
+                                custKey: ro.custKey
+                            };
+                        }
+                        
+                        let ecdCell = '';
+                        if (ro.ecdState === 'missing') ecdCell = `<span class="badge-ecd-missing">${ro.ecdFormatted}</span>`;
+                        else if (ro.ecdState === 'red') ecdCell = `<span class="ecd-red">${ro.ecdFormatted}</span>`;
+                        else ecdCell = `<span class="ecd-green">${ro.ecdFormatted}</span>`;
+
+                        searchUnitsMap[ro.unitNo].roNums.push(ro.roNum);
+                        searchUnitsMap[ro.unitNo].dupFlags.push(ro.possibleDuplicate);
+                        searchUnitsMap[ro.unitNo].isOpenFlags.push(ro.isOpen);
+                        
+                        let dupBadge = ro.possibleDuplicate ? ' <span class="badge" style="background-color:#ffe082; color:#854d0e; font-size:9px; padding:2px 4px; border:1px solid #f59e0b; margin-left:5px; white-space:nowrap;" title="Multiple open orders share similar tasks for this unit.">⚠️ DUP?</span>' : '';
+
+                        let roLinkHtml = ro.roNum.startsWith('NO RO') 
+                            ? `<span style="font-weight: 800; color: var(--urgent-red);">NO ACTIVE RO</span>` 
+                            : `<a href="https://afshub.azurewebsites.net/Vendors/VendedRepairOrder/Estimate/${ro.roNum}" target="_blank" class="ro-link">${ro.roNum}</a>${dupBadge}`;
+                            
+                        searchUnitsMap[ro.unitNo].roLinks.push(roLinkHtml);
+                        searchUnitsMap[ro.unitNo].openedDates.push(ro.openedFormatted);
+                        searchUnitsMap[ro.unitNo].statuses.push(ro.status);
+                        searchUnitsMap[ro.unitNo].ecdCells.push(ecdCell);
+                        
+                        ro.drilldownOwners.forEach(o => searchUnitsMap[ro.unitNo].owners.push(o));
+                    });
+
+                    Object.values(searchUnitsMap).forEach(u => {
+                        let oosBadge = u.isOOS ? `<span class="badge badge-oos">OOS</span>` : `<span class="badge badge-active">ACTIVE</span>`;
+                        let isPri = (u.isOOS && isPriority({isOOS: u.isOOS, usefulPctObj: u.usefulPctObj, unitType: u.unitType}));
+                        let priorityStatusBadge = isPri ? `<span class="badge badge-urgent">Priority</span>` : `<span class="badge badge-low">Normal</span>`;
+
+                        let joinedOwnersHtml = [...new Set(u.owners)].map(ow => `<div class="grouped-ro-item">${ow}</div>`).join('');
+                        let rowCount = u.roNums.length;
+
+                        u.roNums.forEach((roNum, idx) => {
+                            let safeRo = roNum.replace(/[.#$\[\]]/g, '_');
+                            let isOpen = u.isOpenFlags[idx];
+                            
+                            let statusToggleHtml = '';
+                            if (isOpen) {
+                                let isDispatched = !!globalRoCheckState[safeRo];
+                                let toggleClass = isDispatched ? 'status-dispatched' : 'status-pending';
+                                let toggleText = isDispatched ? '✓ DISPATCHED' : 'PENDING';
+                                let toggleState = isDispatched ? 'false' : 'true'; 
+                                statusToggleHtml = `<span class="badge status-toggle ${toggleClass}" data-ro="${safeRo}" onclick="toggleRoCheck('${safeRo}', ${toggleState})">${toggleText}</span>`;
+                            } else {
+                                statusToggleHtml = `<span class="badge" style="background-color: #888; color: white; min-width: 85px; text-align: center; display: inline-block;">CLOSED</span>`;
+                            }
+
+                            let hasNote = globalRoNotesState[safeRo] && globalRoNotesState[safeRo].trim() !== '';
+                            let noteClass = hasNote ? 'note-btn has-note' : 'note-btn';
+                            let noteTitle = hasNote ? globalRoNotesState[safeRo].replace(/"/g, '&quot;') : 'Add Note';
+                            let noteBtnHtml = `<button class="${noteClass}" data-ro="${safeRo}" title="${noteTitle}" onclick="openNoteModal('${safeRo}', '${roNum}')">📝</button>`;
+
+                            let roHtml = `<div style="display:flex; align-items:center; gap: 4px;">${statusToggleHtml} ${u.roLinks[idx]} ${noteBtnHtml}</div>`;
+
+                            searchHtml += `<tr>`;
+                            searchHtml += `<td style="vertical-align:top; padding-top:15px; border-bottom: ${idx === rowCount - 1 ? '1px solid var(--border)' : '1px dashed #eee'};">${roHtml}</td>`;
+                            
+                            if (idx === 0) {
+                                searchHtml += `<td rowspan="${rowCount}" style="vertical-align:top; padding-top:15px; border-bottom: 1px solid var(--border); border-left: 1px dashed #eee;"><strong>${u.unitNo}</strong></td>`;
+                                searchHtml += `<td rowspan="${rowCount}" style="vertical-align:top; padding-top:15px; border-bottom: 1px solid var(--border);">${priorityStatusBadge}</td>`;
+                                searchHtml += `<td rowspan="${rowCount}" style="vertical-align:top; padding-top:15px; border-bottom: 1px solid var(--border); border-right: 1px dashed #eee;">${oosBadge}</td>`;
+                            }
+
+                            let od = u.openedDates[idx] || '';
+                            let st = u.statuses[idx] || '';
+                            let ec = u.ecdCells[idx] || '';
+
+                            searchHtml += `<td style="vertical-align:top; padding-top:15px; border-bottom: ${idx === rowCount - 1 ? '1px solid var(--border)' : '1px dashed #eee'}; font-size:12px; font-weight: 700; color: #555;">${od}</td>`;
+                            
+                            if (idx === 0) {
+                                searchHtml += `<td rowspan="${rowCount}" style="vertical-align:top; padding-top:15px; border-bottom: 1px solid var(--border); border-left: 1px dashed #eee;">${joinedOwnersHtml}</td>`;
+                            }
+                            
+                            searchHtml += `<td style="vertical-align:top; padding-top:15px; border-bottom: ${idx === rowCount - 1 ? '1px solid var(--border)' : '1px dashed #eee'}; font-size:11px; line-height:1.2;"><b>Status:</b> ${st}<br><b>ECD:</b> ${ec}</td>`;
+                            searchHtml += `</tr>`;
+                        });
+                    });
+                }
+                document.getElementById('search-table-body').innerHTML = searchHtml;
+            }, 300);
         }
 
         function navigate(viewId, menuElement = null, preserveCustomerFilter = false) {
