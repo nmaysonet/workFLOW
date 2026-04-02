@@ -8,6 +8,11 @@
     <link href="https://fonts.googleapis.com/css2?family=Raleway:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-storage.js"></script>
+
     <style>
         /* Global Styles & Reset */
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Raleway', sans-serif; }
@@ -23,7 +28,30 @@
             --low-green: #5cb85c;
             --text-light: #f1f1f1;
             --border: #e0e0e0;
+            --urgent-red: #d9534f;
         }
+
+        /* --- LOGIN OVERLAY --- */
+        #login-overlay { 
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
+            background: var(--sidebar-bg); z-index: 99999; 
+            display: flex; align-items: center; justify-content: center; flex-direction: column; 
+        }
+        .login-box { 
+            background: white; padding: 40px; border-radius: 8px; 
+            box-shadow: 0 10px 25px rgba(0,0,0,0.5); text-align: center; width: 350px; 
+        }
+        .login-box h2 { margin-bottom: 20px; color: #333; font-weight: 800; }
+        .login-box input { 
+            width: 100%; padding: 12px; margin-bottom: 15px; 
+            border: 1px solid #ccc; border-radius: 4px; font-size: 16px; font-family: 'Raleway', sans-serif;
+        }
+        .login-box button { 
+            width: 100%; padding: 12px; background: var(--gold); border: none; 
+            font-weight: 800; font-size: 14px; border-radius: 4px; cursor: pointer; transition: 0.2s; 
+        }
+        .login-box button:hover { background: var(--gold-hover); }
+        .login-error { color: var(--urgent-red); margin-bottom: 15px; font-size: 13px; font-weight: bold; display: none; }
 
         /* Sidebar */
         .sidebar { width: 280px; background-color: var(--sidebar-bg); color: var(--text-light); display: flex; flex-direction: column; flex-shrink: 0; }
@@ -152,6 +180,22 @@
 </head>
 <body>
 
+    <div id="login-overlay">
+        <div class="login-box">
+            <svg class="logo-spin" width="50" height="50" viewBox="0 0 100 100" style="margin-bottom:15px;">
+                <circle cx="50" cy="50" r="40" fill="none" stroke="var(--gold)" stroke-width="10"/>
+                <circle cx="50" cy="50" r="10" fill="var(--gold)"/>
+                <g stroke="var(--gold)" stroke-width="10" stroke-linecap="round">
+                    <line x1="50" y1="50" x2="50" y2="15" /><line x1="50" y1="50" x2="83" y2="39" /><line x1="50" y1="50" x2="70" y2="78" /><line x1="50" y1="50" x2="30" y2="78" /><line x1="50" y1="50" x2="17" y2="39" />
+                </g>
+            </svg>
+            <h2>workFLOW+ Login</h2>
+            <div id="login-error" class="login-error">Incorrect Password</div>
+            <input type="password" id="login-pass" placeholder="Enter Password" onkeypress="if(event.key === 'Enter') checkLogin()">
+            <button onclick="checkLogin()">ENTER</button>
+        </div>
+    </div>
+
     <div class="sidebar">
         <div class="sidebar-header">
             <svg class="logo-spin" width="30" height="30" viewBox="0 0 100 100">
@@ -239,6 +283,48 @@
     </div>
 
     <script>
+        const MASTER_EMAIL = "maintenance@ameritfleet.com";
+
+        function checkLogin() {
+            const passwordInput = document.getElementById('login-pass').value;
+            const errorText = document.getElementById('login-error');
+            
+            errorText.style.display = 'none';
+
+            firebase.auth().signInWithEmailAndPassword(MASTER_EMAIL, passwordInput)
+                .then((userCredential) => {
+                    document.getElementById('login-overlay').style.display = 'none';
+                    loadExcelFile(); 
+                })
+                .catch((error) => {
+                    errorText.innerText = "Incorrect Password";
+                    errorText.style.display = 'block';
+                });
+        }
+
+        window.addEventListener('DOMContentLoaded', () => {
+            if (!firebase.apps.length) {
+                firebase.initializeApp({
+                    apiKey: "AIzaSyCr3VAldI-pPCb7APx3rJAEZvf_nl0iz1g",
+                    authDomain: "workflow-dashboard-e6134.firebaseapp.com",
+                    databaseURL: "https://workflow-dashboard-e6134-default-rtdb.firebaseio.com",
+                    projectId: "workflow-dashboard-e6134",
+                    storageBucket: "workflow-dashboard-e6134.firebasestorage.app",
+                    messagingSenderId: "641710248116",
+                    appId: "1:641710248116:web:1546701879d573041447e1"
+                });
+            }
+
+            firebase.auth().onAuthStateChanged((user) => {
+                if (user) {
+                    document.getElementById('login-overlay').style.display = 'none';
+                    loadExcelFile();
+                } else {
+                    document.getElementById('login-overlay').style.display = 'flex';
+                }
+            });
+        });
+
         // --- APP LOGIC --- //
         let allVendors = []; 
         let allContacts = {}; 
@@ -259,13 +345,23 @@
         };
 
         async function loadExcelFile() {
+            const controller = new AbortController();
+            const timeout = setTimeout(() => controller.abort(), 15000);
+
             try {
                 gridContainer.innerHTML = '<div class="no-data-msg">Loading vendor and branch network...</div>';
                 
-                const fileUrl = './vendor_locator.xlsx?v=' + new Date().getTime();
-                const response = await fetch(fileUrl, { cache: 'no-store' });
+                const storageRef = firebase.storage().ref().child('vendor_locator.xlsx');
+                const downloadUrl = await storageRef.getDownloadURL();
                 
-                if (!response.ok) throw new Error('File not found or access denied');
+                const fetchUrl = downloadUrl + (downloadUrl.includes('?') ? '&' : '?') + `_=${Date.now()}`;
+                
+                const response = await fetch(fetchUrl, { 
+                    cache: 'no-store',
+                    signal: controller.signal
+                });
+                
+                if (!response.ok) throw new Error(`HTTP ${response.status} - File not found or access denied`);
                 
                 const arrayBuffer = await response.arrayBuffer();
                 const workbook = XLSX.read(arrayBuffer, { type: 'array' });
@@ -289,7 +385,12 @@
 
             } catch (error) {
                 console.error("Error loading Excel file:", error);
-                gridContainer.innerHTML = `<div class="no-data-msg" style="color: #d9534f;"><b>Error:</b> Could not load vendor_locator.xlsx.</div>`;
+                const errorMsg = error.name === 'AbortError' 
+                    ? 'Firebase Storage request timed out' 
+                    : `Firebase Storage fetch failed: ${error.message}`;
+                gridContainer.innerHTML = `<div class="no-data-msg" style="color: #d9534f;"><b>Error:</b> ${errorMsg}</div>`;
+            } finally {
+                clearTimeout(timeout);
             }
         }
 
@@ -519,8 +620,6 @@
                 gridContainer.innerHTML += `<div class="no-data-msg">Showing first 100 results. Please use the search bar to narrow down the list.</div>`;
             }
         }
-
-        window.addEventListener('DOMContentLoaded', loadExcelFile);
     </script>
 </body>
 </html>
