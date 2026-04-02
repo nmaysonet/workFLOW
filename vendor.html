@@ -542,9 +542,9 @@
             const selectedCustomer = customerSelect.value;
             const searchTerm = searchInput.value.toLowerCase();
 
-            // PREVENT INITIAL DATA DUMP
-            if (selectedCustomer === 'ALL' && searchTerm.trim() === '') {
-                gridContainer.innerHTML = '<div class="no-data-msg">Please select a Customer Group or search for a Branch/Location to view vendors.</div>';
+            // PREVENT INITIAL DATA DUMP AND FORCE SELECTION
+            if (selectedCustomer === 'ALL' || searchTerm.trim() === '') {
+                gridContainer.innerHTML = '<div class="no-data-msg">Please select a Customer Group AND type a Branch/Location to view vendors.</div>';
                 return;
             }
 
@@ -617,7 +617,7 @@
             gridContainer.innerHTML = htmlOutput;
 
             if (filteredData.length > 100) {
-                gridContainer.innerHTML += `<div class="no-data-msg">Showing first 100 results. Please use the search bar to narrow down the list.</div>`;
+                gridContainer.innerHTML += `<div class="no-data-msg">Showing first 100 results. Please narrow down the list.</div>`;
             }
         }
     </script>
