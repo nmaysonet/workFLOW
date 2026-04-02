@@ -11,6 +11,7 @@
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-storage.js"></script>
 
     <style>
         /* Global Styles & Reset */
@@ -319,6 +320,12 @@
                 <input type="text" id="global-search" placeholder="Search by Unit No..." onkeyup="handleSearch()">
             </div>
             <div class="top-actions">
+                <div class="dropdown">
+                    <button class="btn-action dropbtn">VENDOR MAPS ▼</button>
+                    <div class="dropdown-content">
+                        <a href="https://app.mapline.com/map/map_282c81fe/TWZ2TzJHRGcrd3BjaG1QMDNPekVGYUhxNThJd080SUZTK2MwZG" target="_blank">Armored</a>
+                    </div>
+                </div>
                 <a href="https://afshub.azurewebsites.net/Vendors/VendedRepairOrder/CreateVRO" target="_blank" class="btn-action">CREATE A VRO</a>
             </div>
         </div>
@@ -600,56 +607,46 @@
         }
 
         async function fetchWorkbookBuffer() {
-            const candidates = [
-                new URL('./master_workFLOW.xlsx', window.location.href).href,
-                `${window.location.origin}${window.location.pathname.replace(/\/[^/]*$/, '/') }master_workFLOW.xlsx`,
-                `${window.location.origin}/master_workFLOW.xlsx`,
-                'master_workFLOW.xlsx'
-            ];
+            const controller = new AbortController();
+            const timeout = setTimeout(() => controller.abort(), 15000);
 
-            let lastError = null;
+            try {
+                const storageRef = firebase.storage().ref().child('master_workFLOW.xlsx');
+                const downloadUrl = await storageRef.getDownloadURL();
 
-            for (const rawUrl of [...new Set(candidates)]) {
-                const controller = new AbortController();
-                const timeout = setTimeout(() => controller.abort(), 15000);
+                const url = downloadUrl + (downloadUrl.includes('?') ? '&' : '?') + `_=${Date.now()}`;
+                const response = await fetch(url, {
+                    cache: 'no-store',
+                    signal: controller.signal
+                });
 
-                try {
-                    const url = rawUrl + (rawUrl.includes('?') ? '&' : '?') + `_=${Date.now()}`;
-                    const response = await fetch(url, {
-                        cache: 'no-store',
-                        signal: controller.signal
-                    });
-
-                    clearTimeout(timeout);
-
-                    if (!response.ok) {
-                        throw new Error(`HTTP ${response.status}`);
-                    }
-
-                    const data = await response.arrayBuffer();
-
-                    if (!data || data.byteLength < 4) {
-                        throw new Error('Empty or invalid file response.');
-                    }
-
-                    const sig = new Uint8Array(data.slice(0, 2));
-                    const isZip = sig[0] === 0x50 && sig[1] === 0x4B;
-
-                    if (!isZip) {
-                        throw new Error('Response is not a valid XLSX file.');
-                    }
-
-                    return data;
-                } catch (err) {
-                    clearTimeout(timeout);
-                    lastError = new Error(
-                        `${rawUrl} -> ${err.name === 'AbortError' ? 'Request timed out' : err.message}`
-                    );
-                    console.warn('Workbook fetch failed:', lastError.message);
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`);
                 }
-            }
 
-            throw lastError || new Error('Unable to locate master_workFLOW.xlsx');
+                const data = await response.arrayBuffer();
+
+                if (!data || data.byteLength < 4) {
+                    throw new Error('Empty or invalid file response.');
+                }
+
+                const sig = new Uint8Array(data.slice(0, 2));
+                const isZip = sig[0] === 0x50 && sig[1] === 0x4B;
+
+                if (!isZip) {
+                    throw new Error('Response is not a valid XLSX file.');
+                }
+
+                return data;
+            } catch (err) {
+                console.error('Workbook fetch failed:', err);
+                if (err.name === 'AbortError') {
+                    throw new Error('Firebase Storage request timed out');
+                }
+                throw new Error(`Firebase Storage fetch failed: ${err.message}`);
+            } finally {
+                clearTimeout(timeout);
+            }
         }
 
         async function fetchData() {
@@ -662,7 +659,7 @@
             dashboard.style.display = 'none';
             manualUpload.style.display = 'none';
 
-            statusEl.innerText = 'Fetching local database file...';
+            statusEl.innerText = 'Fetching workbook from Firebase Storage...';
             statusEl.style.color = '#888';
 
             try {
@@ -1120,6 +1117,7 @@
             if (!currentOwnerView || processedData.length === 0) return;
             
             let ownerDataAll = processedData;
+            // FIXED: Using drilldownOwners for export so it correctly matches what's visible on screen
             if (currentOwnerView === 'ALL_PM') ownerDataAll = processedData.filter(ro => ro.drilldownOwners.some(o => pmOwners.includes(o)));
             else if (currentOwnerView === 'ALL_VENDED') ownerDataAll = processedData.filter(ro => ro.drilldownOwners.some(o => vendedOwners.includes(o)));
             else if (currentOwnerView === 'ALL_ERS') ownerDataAll = processedData.filter(ro => ro.drilldownOwners.some(o => ersOwners.includes(o)));
@@ -1880,7 +1878,7 @@
                 
                 let rData = summaryTree[reg];
                 let rActive = Math.max(0, rData.totalUnits - rData.oos);
-                let rIcon = expandedSummaryState[reg] ? '▼' : '▶';
+                let rPct = rData.maxRoutes > 0 ? (rActive / rData.maxRoutes) : 0;
                 
                 html += `<tr style="background:#f1f5f9; cursor:pointer;" onclick="toggleSummary('${reg}')">
                     <td style="font-weight:800; color:#334155;"><span style="color:#94a3b8; width:15px; display:inline-block;">${rIcon}</span> ${reg}</td>
@@ -2113,6 +2111,7 @@
                 }
             });
 
+            // Apply Filters
             let targetData = baseOpenData;
             
             if (!isPM) {
@@ -2144,13 +2143,7 @@
                             totalSum += p.TOTAL; totalCount++; 
                         }
                     });
-                    if (totalCount > 0) {
-                        let pct = Math.round((totalSum / totalCount) * 100);
-                        let tc = '#5cb85c';
-                        if (pct < 95) tc = '#d9534f';
-                        else if (pct >= 95 && pct < 100) tc = '#f0ad4e';
-                        topBadges = `<span style="color: ${tc}; font-size: 11px; margin-left: 10px; font-weight: bold;">Useful: ${pct}%</span>`;
-                    }
+                    if (totalCount > 0) topBadges = formatUsefulBadge('Useful', totalSum / totalCount);
                 }
 
                 let subHtml = '';
@@ -2165,13 +2158,7 @@
                                 totalSum += p.TOTAL; totalCount++; 
                             }
                         });
-                        if (totalCount > 0) {
-                            let pct = Math.round((totalSum / totalCount) * 100);
-                            let tc = '#5cb85c';
-                            if (pct < 95) tc = '#d9534f';
-                            else if (pct >= 95 && pct < 100) tc = '#f0ad4e';
-                            subBadges = `<span style="color: ${tc}; font-size: 11px; margin-left: 10px; font-weight: bold;">Useful: ${pct}%</span>`;
-                        }
+                        if (totalCount > 0) subBadges = formatUsefulBadge('Useful', totalSum / totalCount);
                     }
 
                     let branchHtml = '';
@@ -2182,12 +2169,7 @@
                         let u = branchUsefulVals[branchKey] || {};
                         let badgesHtml = '';
                         if (u && u.TOTAL !== null && u.TOTAL !== undefined && !isNaN(u.TOTAL)) {
-                            let pct = Math.round(u.TOTAL * 100);
-                            let tc = '#5cb85c';
-                            if (pct < 95) tc = '#d9534f';
-                            else if (pct >= 95 && pct < 100) tc = '#f0ad4e';
-                            
-                            badgesHtml += `<span style="color: ${tc}; font-size: 11px; margin-left: 10px; font-weight: bold;">Useful: ${pct}%</span>`;
+                            badgesHtml += formatUsefulBadge('Useful', u.TOTAL);
                         }
 
                         let unitsMap = {};
