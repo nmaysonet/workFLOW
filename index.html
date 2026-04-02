@@ -320,12 +320,6 @@
                 <input type="text" id="global-search" placeholder="Search by Unit No..." onkeyup="handleSearch()">
             </div>
             <div class="top-actions">
-                <div class="dropdown">
-                    <button class="btn-action dropbtn">VENDOR MAPS ▼</button>
-                    <div class="dropdown-content">
-                        <a href="https://app.mapline.com/map/map_282c81fe/TWZ2TzJHRGcrd3BjaG1QMDNPekVGYUhxNThJd080SUZTK2MwZG" target="_blank">Armored</a>
-                    </div>
-                </div>
                 <a href="https://afshub.azurewebsites.net/Vendors/VendedRepairOrder/CreateVRO" target="_blank" class="btn-action">CREATE A VRO</a>
             </div>
         </div>
@@ -1448,7 +1442,7 @@
             let activeERS = new Set();
             
             let allCustSet = new Set();
-            let openROsInUnits = new Set();
+            let openROsInUnits = new Map(); // CHANGE: Track open ROs per unit by owner
 
             processedData = vroRaw.map(row => {
                 let roNum = getCol(row, ['Order', 'RO Number', 'RONum', 'AFS RO #']).toUpperCase().trim();
@@ -1467,7 +1461,6 @@
                 let compRaw = getCol(row, ['Completed Date', 'Completed', 'P']);
                 
                 let isOpen = !excludedStatuses.includes(statusStr);
-                if (isOpen) openROsInUnits.add(unit);
 
                 let openedDate = new Date(openedRaw);
                 let openedDT = isNaN(openedDate.getTime()) ? null : openedDate;
@@ -1485,7 +1478,7 @@
                 let validBranchOwner = (unitOwner && unitOwner.toUpperCase() !== 'UNASSIGNED') ? unitOwner : null;
 
                 let creatorInfo = resourceMap[ownerEmail];
-                const isKevinCreated = ownerEmail === 'kanguzza@ameritfleet.com';
+                const isKevinCreated = ownerEmail.includes('kanguzza') || ownerEmail.includes('kevin anguzza');
 
                 // Kevin-created orders = Kevin only.
                 // They should show in Kevin's tile/queue and Kevin's drilldown only.
@@ -1494,7 +1487,7 @@
                     drilldownOwners.add('Kevin Anguzza');
                 } 
                 // Other PM / ERS creator logic stays shared as designed.
-                else if (creatorInfo && (creatorInfo.team === 'ERS' || creatorInfo.team === 'PM')) {
+                else if (creatorInfo && (creatorInfo.team === 'ERS' || creatorInfo.team === 'PM' || (creatorInfo.team === 'VENDED REPAIR' && !creatorInfo.hasBranch))) {
                     if (creatorInfo.name) {
                         kpiOwners.add(creatorInfo.name);
                         drilldownOwners.add(creatorInfo.name);
@@ -1511,6 +1504,14 @@
                         kpiOwners.add(validBranchOwner);
                         drilldownOwners.add(validBranchOwner);
                     }
+                }
+
+                // Populate the Map with visible owners for this unit
+                if (isOpen) {
+                    if (!openROsInUnits.has(unit)) {
+                        openROsInUnits.set(unit, new Set());
+                    }
+                    drilldownOwners.forEach(o => openROsInUnits.get(unit).add(o));
                 }
 
                 let bCode = extractGardaCode(mUnit.branch) || normalizeBranchStr(mUnit.branch);
@@ -1590,16 +1591,28 @@
 
             for (let unit in masterUnits) {
                 let mUnit = masterUnits[unit];
-                if (mUnit.isOOS && !openROsInUnits.has(unit)) {
+                
+                let unitOwner = mUnit.owner;
+                let validBranchOwner = (unitOwner && unitOwner.toUpperCase() !== 'UNASSIGNED') ? unitOwner : null;
+
+                let needsDummyRO = false;
+                if (mUnit.isOOS) {
+                    if (!openROsInUnits.has(unit)) {
+                        needsDummyRO = true;
+                    } else if (validBranchOwner && !openROsInUnits.get(unit).has(validBranchOwner)) {
+                        needsDummyRO = true;
+                    }
+                }
+
+                if (needsDummyRO) {
                     let custKey = getCustKey(mUnit.branch);
                     let drillTopLevel = custKey + (mUnit.region !== '' && mUnit.region !== 'Unknown Region' ? ' ' + mUnit.region : '');
 
                     let kpiOwners = new Set();
                     let drilldownOwners = new Set();
-                    let unitOwner = mUnit.owner;
-                    if (unitOwner && unitOwner.toUpperCase() !== 'UNASSIGNED') {
-                        kpiOwners.add(unitOwner);
-                        drilldownOwners.add(unitOwner);
+                    if (validBranchOwner) {
+                        kpiOwners.add(validBranchOwner);
+                        drilldownOwners.add(validBranchOwner);
                     }
 
                     let bCode = extractGardaCode(mUnit.branch) || normalizeBranchStr(mUnit.branch);
@@ -1878,7 +1891,7 @@
                 
                 let rData = summaryTree[reg];
                 let rActive = Math.max(0, rData.totalUnits - rData.oos);
-                let rPct = rData.maxRoutes > 0 ? (rActive / rData.maxRoutes) : 0;
+                let rIcon = expandedSummaryState[reg] ? '▼' : '▶';
                 
                 html += `<tr style="background:#f1f5f9; cursor:pointer;" onclick="toggleSummary('${reg}')">
                     <td style="font-weight:800; color:#334155;"><span style="color:#94a3b8; width:15px; display:inline-block;">${rIcon}</span> ${reg}</td>
@@ -2143,7 +2156,13 @@
                             totalSum += p.TOTAL; totalCount++; 
                         }
                     });
-                    if (totalCount > 0) topBadges = formatUsefulBadge('Useful', totalSum / totalCount);
+                    if (totalCount > 0) {
+                        let pct = Math.round((totalSum / totalCount) * 100);
+                        let tc = '#5cb85c';
+                        if (pct < 95) tc = '#d9534f';
+                        else if (pct >= 95 && pct < 100) tc = '#f0ad4e';
+                        topBadges = `<span style="color: ${tc}; font-size: 11px; margin-left: 10px; font-weight: bold;">Useful: ${pct}%</span>`;
+                    }
                 }
 
                 let subHtml = '';
@@ -2158,7 +2177,13 @@
                                 totalSum += p.TOTAL; totalCount++; 
                             }
                         });
-                        if (totalCount > 0) subBadges = formatUsefulBadge('Useful', totalSum / totalCount);
+                        if (totalCount > 0) {
+                            let pct = Math.round((totalSum / totalCount) * 100);
+                            let tc = '#5cb85c';
+                            if (pct < 95) tc = '#d9534f';
+                            else if (pct >= 95 && pct < 100) tc = '#f0ad4e';
+                            subBadges = `<span style="color: ${tc}; font-size: 11px; margin-left: 10px; font-weight: bold;">Useful: ${pct}%</span>`;
+                        }
                     }
 
                     let branchHtml = '';
@@ -2169,7 +2194,12 @@
                         let u = branchUsefulVals[branchKey] || {};
                         let badgesHtml = '';
                         if (u && u.TOTAL !== null && u.TOTAL !== undefined && !isNaN(u.TOTAL)) {
-                            badgesHtml += formatUsefulBadge('Useful', u.TOTAL);
+                            let pct = Math.round(u.TOTAL * 100);
+                            let tc = '#5cb85c';
+                            if (pct < 95) tc = '#d9534f';
+                            else if (pct >= 95 && pct < 100) tc = '#f0ad4e';
+                            
+                            badgesHtml += `<span style="color: ${tc}; font-size: 11px; margin-left: 10px; font-weight: bold;">Useful: ${pct}%</span>`;
                         }
 
                         let unitsMap = {};
