@@ -979,17 +979,31 @@
 
         function areTasksSimilar(task1, task2) {
             if (!task1 || !task2) return false;
-            let t1 = task1.toLowerCase().replace(/[^a-z0-9\s]/g, '');
-            let t2 = task2.toLowerCase().replace(/[^a-z0-9\s]/g, '');
-            if (t1 === t2) return true;
+            
+            let t1 = String(task1).toLowerCase().replace(/[^a-z0-9]/g, ' ');
+            let t2 = String(task2).toLowerCase().replace(/[^a-z0-9]/g, ' ');
+            
+            if (t1.trim() === t2.trim()) return true;
 
-            let stopWords = ['repair', 'replace', 'check', 'diagnostics', 'system', 'assembly', 'indicator', 'warning', 'level', 'general', 'accessories', 'and', 'or', 'the', 'for', 'of', 'front', 'rear', 'side', 'left', 'right', 'pm', 'inspection', 'maintenance', 'scheduled', 'unscheduled'];
+            let stopWords = [
+                'repair', 'replace', 'check', 'diagnostics', 'system', 'assembly', 'indicator', 
+                'warning', 'level', 'general', 'accessories', 'and', 'or', 'the', 'for', 'of', 
+                'front', 'rear', 'side', 'left', 'right', 'pm', 'inspection', 'maintenance', 
+                'scheduled', 'unscheduled', 'service', 'preventative', 'preventive', 'routine', 
+                'part', 'parts', 'truck', 'vehicle', 'unit', 'work', 'order', 'completed', 
+                'remove', 'install', 'test', 'fluid', 'filter', 'mounting', 'adjust', 'issue',
+                'with', 'without', 'misc', 'miscellaneous', 'other', 'all', 'any', 'none'
+            ];
+            
             let words1 = t1.split(/\s+/).filter(w => w.length >= 4 && !stopWords.includes(w));
             let words2 = t2.split(/\s+/).filter(w => w.length >= 4 && !stopWords.includes(w));
 
             for (let w1 of words1) {
                 for (let w2 of words2) {
                     if (w1 === w2 || w1 === w2 + 's' || w2 === w1 + 's' || w1 === w2 + 'es' || w2 === w1 + 'es') {
+                        return true;
+                    }
+                    if (w1.includes(w2) || w2.includes(w1)) {
                         return true;
                     }
                 }
@@ -2272,7 +2286,7 @@
                             unitsMap[ro.unitNo].roNums.push(ro.roNum);
                             unitsMap[ro.unitNo].dupFlags.push(ro.possibleDuplicate);
                             
-                            let dupBadge = ro.possibleDuplicate ? ' <span class="badge badge-dup" title="Multiple open orders share similar tasks for this unit.">⚠️ DUP?</span>' : '';
+                            let dupBadge = ro.possibleDuplicate ? ' <span class="badge" style="background-color:#ffe082; color:#854d0e; font-size:9px; padding:2px 4px; border:1px solid #f59e0b; margin-left:5px; white-space:nowrap;" title="Multiple open orders share similar tasks for this unit.">⚠️ DUP?</span>' : '';
 
                             let roLinkHtml = '';
                             if (ro.roNum.startsWith('NO RO')) {
@@ -2328,11 +2342,11 @@
                                 
                                 let safeUnitType = u.unitType || 'UNKNOWN';
                                 let typeBadge = safeUnitType.toUpperCase() === 'SCRAP' 
-                                    ? `<span style="background-color: var(--urgent-red); color: white; padding: 2px 4px; border-radius: 3px; font-weight: 800; letter-spacing: 0.5px;">SCRAP</span>` 
-                                    : `(${safeUnitType})`;
+                                    ? `<span style="background-color: var(--urgent-red); color: white; padding: 2px 4px; border-radius: 3px; font-weight: 800; font-size:10px; margin-left:5px; letter-spacing: 0.5px;">SCRAP</span>` 
+                                    : `<span style="font-size:10px; color:#888; margin-left:5px;">(${safeUnitType})</span>`;
 
                                 if (idx === 0) {
-                                    tableHTML += `<td rowspan="${rowCount}" style="vertical-align:top; padding-top:15px; border-bottom: 1px solid var(--border); border-left: 1px dashed #eee;"><strong>${u.unitNo}</strong> <span style="font-size:10px; color:#888;">${typeBadge}</span></td>`;
+                                    tableHTML += `<td rowspan="${rowCount}" style="vertical-align:top; padding-top:15px; border-bottom: 1px solid var(--border); border-left: 1px dashed #eee;"><strong>${u.unitNo}</strong> ${typeBadge}</td>`;
                                     if (!isPM) {
                                         tableHTML += `<td rowspan="${rowCount}" style="vertical-align:top; padding-top:15px; border-bottom: 1px solid var(--border);">${priorityStatusBadge}</td>`;
                                     }
