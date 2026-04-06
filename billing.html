@@ -310,6 +310,12 @@
             }
         });
 
+        // Makes a string safe for use as a Firebase key
+        function getSafeKey(str) {
+            if (!str) return 'UNK';
+            return String(str).replace(/[.#$\[\]]/g, '_').trim();
+        }
+
         function processWorkbook(workbook) {
             // Reset Data
             coordinators.forEach(c => { billingData.PO[c] = []; billingData.VRO[c] = []; });
@@ -376,8 +382,16 @@
                 let parsedDate = rawDate ? new Date(Math.round((rawDate - 25569) * 86400 * 1000)) : new Date(); // Excel Date conversion fallback
                 if (isNaN(parsedDate)) parsedDate = new Date(rawDate);
 
+                // Build a Deterministic Unique ID based on Row Data (Persistent across refreshes)
+                let safeVendor = getSafeKey(vendorName);
+                let safeInv = type === 'PO' ? getSafeKey(row[invIdx]) : 'NO_INV';
+                let safeRO = getSafeKey(row[roIdx] || 'NO_RO');
+                let safePO = getSafeKey(row[poIdx] || 'NO_PO');
+                let safeAmt = getSafeKey((parseFloat(row[amtIdx]) || 0).toFixed(2));
+                let uniqueId = `BILL_${type}_${safeVendor}_${safeInv}_${safeRO}_${safePO}_${safeAmt}`;
+
                 let item = {
-                    uniqueId: `BILLING_${type}_${i}_${Date.now()}`,
+                    uniqueId: uniqueId,
                     vendor: vendorName,
                     dateObj: parsedDate,
                     invoice: type === 'PO' ? (row[invIdx] || '') : '',
