@@ -32,7 +32,16 @@
         .sidebar-header .logo-plus { color: var(--gold); font-size: 34px; font-weight: 800; margin-left: 3px; line-height: 1; }
         .menu-item { padding: 15px 20px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #4a4b50; font-size: 14px; font-weight: 600; transition: 0.2s;}
         .menu-item:hover, .menu-item.active { background-color: var(--sidebar-hover); color: var(--gold); }
-        .sidebar-footer { margin-top: auto; padding: 20px; text-align: center; border-top: 1px solid #4a4b50; font-size: 11px; font-weight: 700; color: #aaa; background: #2a2b30;}
+        
+        /* Sidebar Truck Graphic */
+        .sidebar-truck { margin-top: auto; padding: 30px; text-align: center; border-top: 1px solid #4a4b50; background: #2a2b30; }
+        @keyframes spin { 100% { transform: rotate(360deg); } }
+        @keyframes bump { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-1.5px); } }
+        @keyframes moveRoad { from { stroke-dashoffset: 0; } to { stroke-dashoffset: 15; } }
+        .moving-truck-svg { overflow: visible; }
+        .truck-body { animation: bump 0.4s ease-in-out infinite; }
+        .wheel { animation: spin 0.8s linear infinite; }
+        .road-line { animation: moveRoad 0.4s linear infinite; }
 
         /* Main Content */
         .main-content { flex-grow: 1; display: flex; flex-direction: column; overflow-y: auto; overflow-x: hidden; }
@@ -125,9 +134,36 @@
         <div class="menu-item" onclick="window.location.href='vendor.html'">Vendor Search</div>
         <div class="menu-item active">Billing Queue</div>
         
-        <div class="sidebar-footer">
-            KEEP ON ROLLING<br>
-            <a href="mailto:sales@ameritfleet.com" style="color: var(--gold); text-decoration: none;">sales@ameritfleet.com</a>
+        <div class="sidebar-truck">
+            <svg width="140" height="70" viewBox="0 0 120 60" xmlns="http://www.w3.org/2000/svg" class="moving-truck-svg">
+                <line class="road-line" x1="0" y1="57" x2="120" y2="57" stroke="#4a4b50" stroke-width="2" stroke-dasharray="10 5"/>
+                <g class="truck-body">
+                    <rect x="5" y="15" width="70" height="35" fill="var(--gold)" rx="3"/>
+                    <path d="M78 25 H 92 L 105 35 V 50 H 78 Z" fill="var(--gold)"/>
+                    <path d="M78 50 H 105" stroke="var(--gold)" stroke-width="2"/>
+                    <path d="M82 28 H 90 L 98 35 H 82 Z" fill="#2a2b30"/>
+                    <rect x="75" y="42" width="3" height="4" fill="#888"/>
+                    <line x1="15" y1="25" x2="65" y2="25" stroke="#c49a1d" stroke-width="1.5"/>
+                </g>
+                <g class="wheel" style="transform-origin: 25px 50px;">
+                    <circle cx="25" cy="50" r="7" fill="#111" stroke="#888" stroke-width="1.5"/>
+                    <circle cx="25" cy="50" r="2" fill="#888"/>
+                    <line x1="25" y1="43" x2="25" y2="57" stroke="#888" stroke-width="1"/>
+                    <line x1="18" y1="50" x2="32" y2="50" stroke="#888" stroke-width="1"/>
+                </g>
+                <g class="wheel" style="transform-origin: 60px 50px;">
+                    <circle cx="60" cy="50" r="7" fill="#111" stroke="#888" stroke-width="1.5"/>
+                    <circle cx="60" cy="50" r="2" fill="#888"/>
+                    <line x1="60" y1="43" x2="60" y2="57" stroke="#888" stroke-width="1"/>
+                    <line x1="53" y1="50" x2="67" y2="50" stroke="#888" stroke-width="1"/>
+                </g>
+                <g class="wheel" style="transform-origin: 92px 50px;">
+                    <circle cx="92" cy="50" r="7" fill="#111" stroke="#888" stroke-width="1.5"/>
+                    <circle cx="92" cy="50" r="2" fill="#888"/>
+                    <line x1="92" y1="43" x2="92" y2="57" stroke="#888" stroke-width="1"/>
+                    <line x1="85" y1="50" x2="99" y2="50" stroke="#888" stroke-width="1"/>
+                </g>
+            </svg>
         </div>
     </div>
 
