@@ -87,11 +87,13 @@
         .date-yellow { background-color: var(--medium-yellow); color: #333; }
         .date-green { background-color: var(--low-green); }
 
-        .billing-status-btn { cursor: pointer; border: none; padding: 6px 12px; border-radius: 4px; font-size: 11px; font-weight: bold; color: white; width: 100px; text-align: center; transition: 0.2s;}
-        .billing-status-btn:hover { opacity: 0.8; }
-        .state-pending { background: var(--urgent-red); }
-        .state-completed { background: var(--medium-yellow); color: #333; }
-        .state-closed { background: var(--closed-gray); }
+        /* Multi-Button Status Group */
+        .status-group { display: flex; gap: 4px; }
+        .status-btn { cursor: pointer; border: 1px solid #ccc; padding: 6px 10px; border-radius: 4px; font-size: 10px; font-weight: bold; background: #fff; color: #555; transition: 0.2s; }
+        .status-btn:hover { background: #f0f0f0; }
+        .status-btn.active-pending { background: var(--urgent-red); color: white; border-color: var(--urgent-red); }
+        .status-btn.active-completed { background: var(--medium-yellow); color: #333; border-color: var(--medium-yellow); }
+        .status-btn.active-closed { background: var(--closed-gray); color: white; border-color: var(--closed-gray); }
 
         .note-btn { background: #f0f0f0; border: 1px solid #ccc; border-radius: 4px; cursor: pointer; padding: 4px 8px; font-size: 12px; transition: 0.2s; margin-left: 8px;}
         .note-btn.has-note { background: var(--gold); border-color: var(--gold-hover); }
@@ -101,8 +103,11 @@
         .modal-box { background: white; padding: 20px; border-radius: 8px; width: 450px; }
         .modal-header { font-size: 18px; font-weight: bold; margin-bottom: 15px; display: flex; justify-content: space-between; }
         .modal-textarea { width: 100%; height: 120px; padding: 10px; border: 1px solid #ccc; border-radius: 4px; resize: vertical; margin-bottom: 15px; }
+        
         .btn-action { background-color: var(--gold); padding: 10px 20px; border-radius: 4px; font-weight: bold; border: none; cursor: pointer; font-size: 13px;}
         .btn-action:hover { background-color: var(--gold-hover); }
+        .btn-dark { background-color: #333; color: white; }
+        .btn-dark:hover { background-color: #111; color: var(--gold); }
         .btn-back { background: #666; color: white; border: none; padding: 8px 15px; border-radius: 4px; cursor: pointer; font-weight: bold;}
     </style>
 </head>
@@ -129,7 +134,10 @@
     <div class="main-content">
         <div class="top-bar">
             <h2 style="font-weight: 300;">Billing Operations</h2>
-            <button class="btn-action" onclick="window.open('https://afshub.azurewebsites.net/Vendors/VendedRepairOrder/CreateVRO', '_blank')">CREATE A VRO</button>
+            <div style="display: flex; gap: 15px;">
+                <button class="btn-action btn-dark" onclick="window.open('https://secure.ameritfleet.com/poissues/issues_report.asp?VRO=All', '_blank')">PO ISSUES PORTAL</button>
+                <button class="btn-action" onclick="window.open('https://afshub.azurewebsites.net/Vendors/VendedRepairOrder/CreateVRO', '_blank')">CREATE A VRO</button>
+            </div>
         </div>
 
         <div id="setup-view" class="view-section active">
@@ -158,8 +166,8 @@
             </div>
 
             <div class="sub-tabs-container">
-                <button class="sub-tab active" onclick="switchTab('tab-po', this)">PO Report</button>
-                <button class="sub-tab" onclick="switchTab('tab-vro', this)">Credit Card Export</button>
+                <button class="sub-tab active" onclick="switchTab('tab-po', this)">PO Issues Orders</button>
+                <button class="sub-tab" onclick="switchTab('tab-vro', this)">Credit Card Orders</button>
             </div>
 
             <div id="tab-po" class="sub-section active">
@@ -297,7 +305,7 @@
                 setTimeout(() => showView('dashboard-view'), 800);
             } catch (error) {
                 console.error(error);
-                statusEl.innerText = `Error: Please ensure sheets "PO Report" and "VRO Export" exist.`;
+                statusEl.innerText = `Error: Please ensure sheets exist.`;
                 statusEl.style.color = 'var(--urgent-red)';
             }
         });
@@ -339,13 +347,13 @@
             };
 
             // PO Specific Columns
-            let vIdx = type === 'PO' ? 0 : getColIdx(['VENDOR', 'CREDIT CARD', 'M']); // Default Col A for PO
-            let dateIdx = type === 'PO' ? 1 : 8; // Col B vs Col I
-            let invIdx = type === 'PO' ? 2 : -1; // Col C vs Blank
-            let roIdx = type === 'PO' ? 6 : 7; // Col G vs Col H
-            let poIdx = type === 'PO' ? 7 : 1; // Col H vs Col B
-            let amtIdx = type === 'PO' ? 8 : 19; // Col I vs Col T
-            let shopIdx = type === 'PO' ? 11 : 6; // Col L vs Col G
+            let vIdx = type === 'PO' ? 0 : getColIdx(['VENDOR', 'CREDIT CARD', 'M']); 
+            let dateIdx = type === 'PO' ? 1 : 8; 
+            let invIdx = type === 'PO' ? 2 : -1; 
+            let roIdx = type === 'PO' ? 6 : 7; 
+            let poIdx = type === 'PO' ? 7 : 1; 
+            let amtIdx = type === 'PO' ? 8 : 19; 
+            let shopIdx = type === 'PO' ? 11 : 6; 
             
             if (type === 'VRO') {
                 vIdx = 12; // Column M constraint check
@@ -483,6 +491,15 @@
                 return;
             }
 
+            // CRITICAL FIX: Capture which <details> are currently open so they don't collapse when the table re-renders
+            let openVendors = new Set();
+            if (container) {
+                container.querySelectorAll('details[open]').forEach(det => {
+                    let summarySpan = det.querySelector('summary span');
+                    if (summarySpan) openVendors.add(summarySpan.innerText.trim());
+                });
+            }
+
             // Group by Vendor
             let vendorGroups = {};
             data.forEach(item => {
@@ -496,7 +513,10 @@
             Object.keys(vendorGroups).sort().forEach(v => {
                 let group = vendorGroups[v];
                 
-                html += `<details>
+                // If it was open before the re-render, keep it open
+                let isOpen = openVendors.has(v.trim()) ? 'open' : '';
+                
+                html += `<details ${isOpen}>
                     <summary>
                         <span style="font-size: 14px;">${v}</span>
                         <div style="font-size: 12px; color: #555;">Qty: <b>${group.qty}</b> &nbsp;|&nbsp; Total: <b>$${group.total.toFixed(2)}</b></div>
@@ -505,7 +525,7 @@
                         <table>
                             <thead>
                                 <tr>
-                                    <th>Status Action</th>
+                                    <th style="min-width: 220px;">Status Action</th>
                                     <th>Date</th>
                                     <th>Invoice #</th>
                                     <th>RO</th>
@@ -540,23 +560,34 @@
                         }
                     }
 
-                    // Firebase Status mapping
+                    // Multi-Button Status Logic
                     let currentStatus = globalBillingStatus[item.uniqueId] || 'PENDING';
-                    let btnClass = currentStatus === 'PENDING' ? 'state-pending' : (currentStatus === 'COMPLETED' ? 'state-completed' : 'state-closed');
                     
+                    let pendingClass = currentStatus === 'PENDING' ? 'active-pending' : '';
+                    let completedClass = currentStatus === 'COMPLETED' ? 'active-completed' : '';
+                    let closedClass = currentStatus === 'CLOSED' ? 'active-closed' : '';
+
+                    let statusButtonsHtml = `
+                        <div class="status-group">
+                            <button type="button" class="status-btn ${pendingClass}" onclick="setStatus('${item.uniqueId}', 'PENDING')">PENDING</button>
+                            <button type="button" class="status-btn ${completedClass}" onclick="setStatus('${item.uniqueId}', 'COMPLETED')">COMPLETED</button>
+                            <button type="button" class="status-btn ${closedClass}" onclick="setStatus('${item.uniqueId}', 'CLOSED')">CLOSED</button>
+                        </div>
+                    `;
+
                     // Firebase Notes mapping
                     let hasNote = globalBillingNotes[item.uniqueId] ? 'has-note' : '';
                     let noteTitle = globalBillingNotes[item.uniqueId] || 'Add Note';
 
                     html += `<tr>
-                        <td><button class="billing-status-btn ${btnClass}" data-id="${item.uniqueId}" onclick="cycleStatus('${item.uniqueId}')">${currentStatus}</button></td>
+                        <td>${statusButtonsHtml}</td>
                         <td><span class="badge-date ${dateClass}">${formattedDate}</span></td>
                         <td>${item.invoice || 'N/A'}</td>
                         <td>${roHtml}</td>
                         <td>${poHtml}</td>
                         <td style="font-weight: 700;">$${item.amount.toFixed(2)}</td>
                         <td>${item.shop}</td>
-                        <td><button class="note-btn ${hasNote}" title="${noteTitle.replace(/"/g, '&quot;')}" onclick="openNoteModal('${item.uniqueId}')">📝</button></td>
+                        <td><button type="button" class="note-btn ${hasNote}" title="${noteTitle.replace(/"/g, '&quot;')}" onclick="openNoteModal('${item.uniqueId}')">📝</button></td>
                     </tr>`;
                 });
 
@@ -567,16 +598,10 @@
         }
 
         // 4. Firebase Actions
-        function cycleStatus(uid) {
-            let current = globalBillingStatus[uid] || 'PENDING';
-            let next = 'PENDING';
-            if (current === 'PENDING') next = 'COMPLETED';
-            else if (current === 'COMPLETED') next = 'CLOSED';
-            else if (current === 'CLOSED') next = 'PENDING'; // Loops back for correction capability
-
-            if(db) db.ref('billingStatuses/' + uid).set(next);
+        function setStatus(uid, status) {
+            if(db) db.ref('billingStatuses/' + uid).set(status);
             else {
-                globalBillingStatus[uid] = next;
+                globalBillingStatus[uid] = status;
                 updateAllUIStates();
             }
         }
