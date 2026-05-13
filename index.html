@@ -1336,12 +1336,16 @@
             XLSX.writeFile(workbook, "VDR_Consolidation_Summary.xlsx");
         }
 
-        function setFilter(val) {
-            currentFilter = val;
+        function syncFilterButtons() {
             document.querySelectorAll('.filter-btn').forEach(btn => {
-                if(btn.dataset.filter === val) { btn.classList.add('active'); btn.style.background = 'var(--gold)'; } 
+                if(btn.dataset.filter === currentFilter) { btn.classList.add('active'); btn.style.background = 'var(--gold)'; }
                 else { btn.classList.remove('active'); btn.style.background = '#e0e0e0'; }
             });
+        }
+
+        function setFilter(val) {
+            currentFilter = val;
+            syncFilterButtons();
             
             let activeView = document.querySelector('.view-section.active').id;
             if (activeView === 'person-view') {
@@ -1534,6 +1538,9 @@
                 if (isKevinCreated) {
                     kpiOwners.add('Kevin Anguzza');
                     drilldownOwners.add('Kevin Anguzza');
+                    if (validBranchOwner) {
+                        drilldownOwners.add(validBranchOwner);
+                    }
                 } 
                 else if (creatorInfo && (creatorInfo.team === 'ERS' || creatorInfo.team === 'PM' || (creatorInfo.team === 'VENDED REPAIR' && !creatorInfo.hasBranch))) {
                     if (creatorInfo.name) {
@@ -2442,7 +2449,9 @@
                 currentFilter = 'ALL';
             } else {
                 document.getElementById('standard-drilldown-filters').style.display = 'flex';
+                currentFilter = 'ALL';
             }
+            syncFilterButtons();
 
             let ownerDataAll = processedData;
             
@@ -2609,6 +2618,7 @@
             if(viewId === 'pm-view') {
                 currentFilter = 'ALL';
             }
+            syncFilterButtons();
             document.querySelectorAll('.view-section').forEach(v => v.classList.remove('active'));
             document.getElementById(viewId).classList.add('active');
             if(viewId !== 'search-view' && viewId !== 'person-view') lastActiveView = viewId;
