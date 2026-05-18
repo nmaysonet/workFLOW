@@ -145,6 +145,9 @@
         .badge-active { background-color: var(--low-green); color: white; }
         .badge-urgent { background-color: var(--urgent-red); color: white; }
         .badge-low { background-color: var(--low-green); color: white; }
+        .queue-source-pill { padding: 3px 7px; border-radius: 999px; font-size: 10px; font-weight: 800; display: inline-block; white-space: nowrap; line-height: 1; letter-spacing: 0.4px; color: #fff; }
+        .queue-source-pm { background-color: #7e22ce; }
+        .queue-source-ers { background-color: var(--urgent-red); }
         
         .ecd-red { color: #d9534f; font-weight: 800; }
         .ecd-green { color: #5cb85c; font-weight: 800; }
@@ -965,6 +968,21 @@
             return false;
         }
 
+        function getQueueSourcePillHtml(sourceQueue, isVendedQueue) {
+            if (!isVendedQueue || !sourceQueue) return '';
+            const normalizedQueues = String(sourceQueue)
+                .toUpperCase()
+                .split(/[\/|,]+/)
+                .map(q => q.trim())
+                .filter(Boolean);
+
+            return Array.from(new Set(normalizedQueues)).map(queue => {
+                if (queue === 'PM') return '<span class="queue-source-pill queue-source-pm">PM</span>';
+                if (queue === 'ERS') return '<span class="queue-source-pill queue-source-ers">ERS</span>';
+                return '';
+            }).filter(Boolean).join(' ');
+        }
+
         function areTasksSimilar(task1, task2) {
             if (!task1 || !task2) return false;
             
@@ -1640,6 +1658,10 @@
 
                 let creatorInfo = resourceMap[ownerEmail];
                 const isKevinCreated = ownerEmail.includes('kanguzza') || ownerEmail.includes('kevin anguzza');
+                let sourceQueue = 'VENDED REPAIR';
+                if (isKevinCreated) sourceQueue = 'PM';
+                else if (creatorInfo && creatorInfo.team === 'PM') sourceQueue = 'PM';
+                else if (creatorInfo && creatorInfo.team === 'ERS') sourceQueue = 'ERS';
 
                 if (isKevinCreated) {
                     kpiOwners.add('Kevin Anguzza');
@@ -1704,7 +1726,8 @@
                     subregion: mUnit.subregion, branch: mUnit.branch, 
                     ecdState, ecdFormatted, ecdMs, openedFormatted, 
                     usefulPct: pcts.TOTAL, usefulPctObj: pcts, region: mUnit.region,
-                    possibleDuplicate: false
+                    possibleDuplicate: false,
+                    sourceQueue: sourceQueue
                 };
 
                 if (isOpen) {
@@ -1778,6 +1801,8 @@
                     let bCode = extractGardaCode(mUnit.branch) || normalizeBranchStr(mUnit.branch);
                     let pcts = branchUsefulMap[bCode] || { LTS: null, ST: null, SHUTTLE: null, TOTAL: null };
 
+                    let otherQueueOrders = hasOpenElsewhere ? actualOpenROs.map(r => ({ roNum: r.roNum, sourceQueue: r.sourceQueue || 'VENDED REPAIR' })) : [];
+
                     let roObj = {
                         roNum: hasOpenElsewhere ? 'SEE_OTHER:' + actualOpenROs.map(r => r.roNum).join(',') : 'NO RO - ' + unit,
                         customer: mUnit.branch,
@@ -1805,7 +1830,9 @@
                         usefulPct: pcts.TOTAL,
                         usefulPctObj: pcts,
                         region: mUnit.region,
-                        possibleDuplicate: false
+                        possibleDuplicate: false,
+                        sourceQueue: hasOpenElsewhere ? Array.from(new Set(otherQueueOrders.map(o => o.sourceQueue).filter(q => q === 'PM' || q === 'ERS'))).join('/') : 'VENDED REPAIR',
+                        otherQueueOrders: otherQueueOrders
                     };
 
                     processedData.push(roObj);
@@ -1929,19 +1956,17 @@
                 for (let sub of Object.keys(summaryTree[reg].subs).sort()) {
                     for (let bra of Object.keys(summaryTree[reg].subs[sub].branches).sort()) {
                         let bData = summaryTree[reg].subs[sub].branches[bra];
-                        if (bData.wipRev > 0 || bData.closedRev > 0) {
-                            branchFinData.push({
-                                name: bra,
-                                wip: bData.wipRev,
-                                closed: bData.closedRev,
-                                total: bData.wipRev + bData.closedRev
-                            });
-                        }
+                        branchFinData.push({
+                            name: bra,
+                            wip: bData.wipRev || 0,
+                            closed: bData.closedRev || 0,
+                            total: (bData.wipRev || 0) + (bData.closedRev || 0)
+                        });
                     }
                 }
             }
             
-            branchFinData.sort((a,b) => b.total - a.total);
+            branchFinData.sort((a,b) => (b.total - a.total) || a.name.localeCompare(b.name));
 
             branchFinData.forEach(b => {
                 html += `
@@ -1961,9 +1986,10 @@
                 </div>`;
             });
 
-            if (html === '') html = '<div style="grid-column: 1 / -1; text-align: center; padding: 20px; color: #888; font-weight:bold;">No spend recorded for the current week.</div>';
+            if (html === '') html = '<div style="grid-column: 1 / -1; text-align: center; padding: 20px; color: #888; font-weight:bold;">No sites available to display.</div>';
             grid.innerHTML = html;
-            document.getElementById('spend-table-body').innerHTML = '';
+            let spendTableBody = document.getElementById('spend-table-body');
+            if (spendTableBody) spendTableBody.innerHTML = '';
         }
 
         function renderAmeritOos() {
@@ -2387,6 +2413,7 @@
         }
 
         function generateRoDrilldownHtml(ownerDataAll, isPM) {
+            let isVendedQueue = currentOwnerView === 'ALL_VENDED' || vendedOwners.includes(currentOwnerView);
             let baseOpenData = ownerDataAll.filter(ro => ro.isOpen);
 
             let branchUsefulVals = {};
@@ -2512,6 +2539,8 @@
                                     statuses: [],
                                     ecdCells: [],
                                     dupFlags: [],
+                                    queueSources: [],
+                                    otherQueueOrders: [],
                                     isOOS: ro.isOOS,
                                     usefulPct: ro.usefulPct,
                                     usefulPctObj: ro.usefulPctObj,
@@ -2533,13 +2562,17 @@
                             if (ro.roNum.startsWith('NO RO')) {
                                 roLinkHtml = `<span style="font-weight: 800; color: var(--urgent-red);">NO ACTIVE RO</span>`;
                             } else if (ro.roNum.startsWith('SEE_OTHER:')) {
-                                let actualROs = ro.roNum.split(':')[1].split(',');
-                                let links = actualROs.map(rNum => `<a href="https://afshub.azurewebsites.net/Vendors/VendedRepairOrder/Estimate/${rNum}" target="_blank" class="ro-link" style="color: #b45309; text-decoration: underline;">${rNum}</a>`).join(', ');
+                                let actualROs = (ro.otherQueueOrders && ro.otherQueueOrders.length > 0)
+                                    ? ro.otherQueueOrders
+                                    : ro.roNum.split(':')[1].split(',').map(rNum => ({ roNum: rNum, sourceQueue: ro.sourceQueue }));
+                                let links = actualROs.map(order => `<a href="https://afshub.azurewebsites.net/Vendors/VendedRepairOrder/Estimate/${order.roNum}" target="_blank" class="ro-link" style="color: #b45309; text-decoration: underline;">${order.roNum}</a>`).join(', ');
                                 roLinkHtml = `<span style="font-weight: 800; color: #b45309; background: #fde68a; padding: 3px 6px; border-radius: 4px; font-size: 10px; border: 1px solid #f59e0b; display: inline-block;">OTHER QUEUE: ${links}</span>`;
                             } else {
                                 roLinkHtml = `<a href="https://afshub.azurewebsites.net/Vendors/VendedRepairOrder/Estimate/${ro.roNum}" target="_blank" class="ro-link">${ro.roNum}</a>${dupBadge}`;
                             }
                             
+                            unitsMap[ro.unitNo].queueSources.push(ro.sourceQueue || 'VENDED REPAIR');
+                            unitsMap[ro.unitNo].otherQueueOrders.push(ro.otherQueueOrders || []);
                             unitsMap[ro.unitNo].roLinks.push(roLinkHtml);
                             
                             unitsMap[ro.unitNo].openedDates.push(ro.openedFormatted);
@@ -2594,7 +2627,8 @@
                                 let noteTitle = hasNote ? globalRoNotesState[safeRo].replace(/"/g, '&quot;') : 'Add Note';
                                 let noteBtnHtml = `<button class="${noteClass}" data-ro="${safeRo}" title="${noteTitle}" onclick="openNoteModal('${safeRo}', '${roNum}')">📝</button>`;
 
-                                let roHtml = `<div style="display:flex; align-items:center; gap: 4px;">${statusToggleHtml} ${u.roLinks[idx]} ${noteBtnHtml}</div>`;
+                                let sourcePillHtml = getQueueSourcePillHtml(u.queueSources[idx], isVendedQueue);
+                                let roHtml = `<div style="display:flex; align-items:center; gap: 4px; flex-wrap: wrap;">${statusToggleHtml} ${u.roLinks[idx]} ${noteBtnHtml} ${sourcePillHtml}</div>`;
 
                                 tableHTML += `<tr class="ro-row" data-oos="${u.isOOS}" data-priority="${isPri}">`;
                                 tableHTML += `<td style="vertical-align:top; padding-top:15px; border-bottom: ${localIdx === rowCount - 1 ? '1px solid var(--border)' : '1px dashed #eee'};">${roHtml}</td>`;
