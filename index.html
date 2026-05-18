@@ -2297,7 +2297,7 @@
             let weekKey = window.globalAppFin && window.globalAppFin.weekKey ? window.globalAppFin.weekKey : getWeekKey(new Date());
             let pendingSpendCount = window.globalAppFin && window.globalAppFin.pendingSpendCount ? window.globalAppFin.pendingSpendCount : 0;
             let adjustedSpendCount = window.globalAppFin && window.globalAppFin.adjustedSpendCount ? window.globalAppFin.adjustedSpendCount : 0;
-            let sourceLabel = window.globalAppFin && window.globalAppFin.source === 'firebase-transition-live-ro-detail' ? 'Firebase transition tracking + live RO Detail spend' : (window.globalAppFin && window.globalAppFin.source === 'firebase-transition' ? 'Firebase transition tracking' : 'Firebase baseline pending');
+            let sourceLabel = window.globalAppFin && window.globalAppFin.source === 'firebase-transition-live-ro-detail' ? 'Live RO Detail spend' : (window.globalAppFin && window.globalAppFin.source === 'firebase-transition' ? 'Firebase transition tracking' : 'Firebase baseline pending');
             let spendAuditText = pendingSpendCount > 0
                 ? `${pendingSpendCount} WIP authorization(s) are pending RO Detail cost. These will backfill on the next refresh once RO Detail catches up.`
                 : `All current-week WIP authorizations have RO Detail spend captured.`;
