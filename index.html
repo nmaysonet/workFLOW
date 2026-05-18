@@ -39,6 +39,12 @@
         .sidebar-header .logo-plus { color: var(--gold); font-size: 34px; font-weight: 800; margin-left: 3px; line-height: 1; }
         .menu-item { padding: 15px 20px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #4a4b50; font-size: 14px; font-weight: 600; transition: 0.2s;}
         .menu-item:hover, .menu-item.active { background-color: var(--sidebar-hover); color: var(--gold); }
+        .menu-item.submenu-toggle::after { content: '▸'; font-size: 12px; transition: transform 0.2s ease; }
+        .menu-item.submenu-toggle.expanded::after { transform: rotate(90deg); }
+        .submenu { display: none; background: #303136; border-bottom: 1px solid #4a4b50; }
+        .submenu.open { display: block; }
+        .submenu .menu-item { padding: 12px 20px 12px 40px; font-size: 13px; border-bottom: 1px solid #3f4046; background: #303136; }
+        .submenu .menu-item:hover, .submenu .menu-item.active { background-color: var(--sidebar-hover); color: var(--gold); }
         .sidebar-truck { margin-top: auto; padding: 30px; text-align: center; border-top: 1px solid #4a4b50; background: #2a2b30; }
 
         @keyframes spin { 100% { transform: rotate(360deg); } }
@@ -238,12 +244,15 @@
             <span class="logo-plus">+</span>
         </div>
         <div class="menu-item active" id="menu-home" onclick="navigate('home-view', this)">Home Dashboard</div>
-        <div class="menu-item" id="menu-pm" onclick="navigate('pm-view', this)">PM Queue</div>
+        <div class="menu-item submenu-toggle" id="menu-other" onclick="toggleOtherQueuesMenu()">Other Queues</div>
+        <div class="submenu" id="other-queues-submenu">
+            <div class="menu-item" id="menu-pm" onclick="navigate('pm-view', this)">PM Queue</div>
+            <div class="menu-item" id="menu-ers" onclick="navigate('ers-view', this)">ERS Queue</div>
+        </div>
         <div class="menu-item" id="menu-vended" onclick="navigate('vended-view', this)">Vended Repair Queue</div>
-        <div class="menu-item" id="menu-ers" onclick="navigate('ers-view', this)">ERS Queue</div>
-        <div class="menu-item" id="menu-spend" onclick="navigate('spend-view', this)">Spend Queue</div>
-        <div class="menu-item" id="menu-summary" onclick="navigate('summary-view', this)">Consolidation Summary</div>
         <div class="menu-item" onclick="window.location.href='vendor.html'">Vendor Search</div>
+        <div class="menu-item" id="menu-spend" onclick="navigate('spend-view', this)">Weekly Spend Matrix</div>
+        <div class="menu-item" id="menu-summary" onclick="navigate('summary-view', this)">Consolidation Summary</div>
         
         <div class="sidebar-truck">
             <svg width="140" height="70" viewBox="0 0 120 60" xmlns="http://www.w3.org/2000/svg" class="moving-truck-svg">
@@ -366,7 +375,7 @@
         </div>
 
         <div id="spend-view" class="view-section">
-            <div class="view-title">Spend Queue</div>
+            <div class="view-title">Weekly Spend Matrix</div>
             <div id="spend-dashboard-widget"></div>
         </div>
 
@@ -422,15 +431,13 @@
                 <div class="drilldown-container table-wrapper">
                     <table id="summaryTable">
                         <colgroup>
-                            <col style="width: 30%;">
-                            <col style="width: 8%;">
-                            <col style="width: 8%;">
-                            <col style="width: 8%;">
-                            <col style="width: 8%;">
-                            <col style="width: 8%;">
+                            <col style="width: 34%;">
+                            <col style="width: 11%;">
+                            <col style="width: 11%;">
                             <col style="width: 10%;">
-                            <col style="width: 10%;">
-                            <col style="width: 10%;">
+                            <col style="width: 11%;">
+                            <col style="width: 11%;">
+                            <col style="width: 12%;">
                         </colgroup>
                         <thead>
                             <tr>
@@ -441,8 +448,6 @@
                                 <th style="text-align:right;">Useful %</th>
                                 <th style="text-align:right;">DoD OOS</th>
                                 <th style="text-align:right;">DoD Change</th>
-                                <th style="text-align:right; color:#2e7d32;">WIP Rev (Wk)</th>
-                                <th style="text-align:right; color:#2e7d32;">Closed Rev (Wk)</th>
                             </tr>
                         </thead>
                         <tbody id="summary-table-body"></tbody>
@@ -1175,7 +1180,7 @@
                 document.getElementById('note-textarea').value = '';
                 renderNoteActivityLog(currentEditingRo);
                 updateAllNoteButtons();
-                triggerViewUpdate();
+                preserveCurrentDrilldownStateAndRefresh();
                 closeNoteModal();
             } catch (err) {
                 console.warn('Save note failed:', err);
@@ -1669,8 +1674,8 @@
                 .filter(Boolean);
 
             return Array.from(new Set(normalizedQueues)).map(queue => {
-                if (queue === 'PM') return '<span class="queue-source-pill queue-source-pm">PM</span>';
-                if (queue === 'ERS') return '<span class="queue-source-pill queue-source-ers">ERS</span>';
+                if (queue === 'PM') return '<span class="queue-source-pill queue-source-pm">PM Queue</span>';
+                if (queue === 'ERS') return '<span class="queue-source-pill queue-source-ers">ERS Queue</span>';
                 return '';
             }).filter(Boolean).join(' ');
         }
@@ -1964,9 +1969,7 @@
                     "Total Units": rData.totalUnits, "OOS": rData.oos, 
                     "Useful %": rData.maxRoutes > 0 ? Math.round(rPct * 100) + '%' : '0%', 
                     "DoD OOS": rData.dodOos, 
-                    "DoD Change": rData.oos - rData.dodOos,
-                    "WIP Rev (Wk)": rData.wipRev || 0,
-                    "Closed Rev (Wk)": rData.closedRev || 0
+                    "DoD Change": rData.oos - rData.dodOos
                 });
                 
                 for (let sub of Object.keys(rData.subs).sort()) {
@@ -1981,9 +1984,7 @@
                         "Total Units": sData.totalUnits, "OOS": sData.oos, 
                         "Useful %": sData.maxRoutes > 0 ? Math.round(sPct * 100) + '%' : '0%', 
                         "DoD OOS": sData.dodOos, 
-                        "DoD Change": sData.oos - sData.dodOos,
-                        "WIP Rev (Wk)": sData.wipRev || 0,
-                        "Closed Rev (Wk)": sData.closedRev || 0
+                        "DoD Change": sData.oos - sData.dodOos
                     });
                     
                     for (let bra of Object.keys(sData.branches).sort()) {
@@ -1998,9 +1999,7 @@
                             "Total Units": bData.totalUnits, "OOS": bData.oos, 
                             "Useful %": bData.maxRoutes > 0 ? Math.round(bPct * 100) + '%' : '0%', 
                             "DoD OOS": bData.dodOos, 
-                            "DoD Change": bData.oos - bData.dodOos,
-                            "WIP Rev (Wk)": bData.wipRev || 0,
-                            "Closed Rev (Wk)": bData.closedRev || 0
+                            "DoD Change": bData.oos - bData.dodOos
                         });
                     }
                 }
@@ -2082,6 +2081,67 @@
                 renderSummary();
                 renderAmeritOos();
             }
+        }
+
+
+        function toggleOtherQueuesMenu() {
+            const submenu = document.getElementById('other-queues-submenu');
+            const toggle = document.getElementById('menu-other');
+            if (!submenu || !toggle) return;
+            submenu.classList.toggle('open');
+            toggle.classList.toggle('expanded');
+        }
+
+        function getOpenDetailPaths(root) {
+            if (!root) return [];
+            const getPath = (detail) => {
+                const path = [];
+                let current = detail;
+                while (current && current !== root) {
+                    const parent = current.parentElement;
+                    if (!parent) break;
+                    const siblings = Array.from(parent.children).filter(el => el.tagName === 'DETAILS');
+                    path.unshift(siblings.indexOf(current));
+                    current = parent.closest('details');
+                }
+                return path;
+            };
+
+            return Array.from(root.querySelectorAll('details'))
+                .filter(detail => detail.open)
+                .map(getPath)
+                .filter(path => path.every(idx => idx >= 0));
+        }
+
+        function restoreOpenDetailPaths(root, paths) {
+            if (!root || !Array.isArray(paths)) return;
+            paths.forEach(path => {
+                let scope = root;
+                let detail = null;
+                for (const idx of path) {
+                    const details = Array.from(scope.children).filter(el => el.tagName === 'DETAILS');
+                    detail = details[idx];
+                    if (!detail) return;
+                    detail.open = true;
+                    scope = detail;
+                }
+            });
+        }
+
+        function preserveCurrentDrilldownStateAndRefresh() {
+            const mainContent = document.querySelector('.main-content');
+            const activeView = document.querySelector('.view-section.active');
+            const root = activeView && activeView.id === 'person-view' ? document.getElementById('drilldown-body') : null;
+            const openPaths = getOpenDetailPaths(root);
+            const scrollTop = mainContent ? mainContent.scrollTop : 0;
+
+            triggerViewUpdate();
+
+            setTimeout(() => {
+                const refreshedRoot = document.getElementById('drilldown-body');
+                restoreOpenDetailPaths(refreshedRoot, openPaths);
+                if (mainContent) mainContent.scrollTop = scrollTop;
+            }, 0);
         }
 
         function processExcelData(vroRaw, roDetailRaw, resourceRawAOA, oosRawAOA, usefulRawAOA, dodRawAOA) {
@@ -2509,7 +2569,7 @@
                         tileOwners: Array.from(drilldownOwners),
                         unitNo: unit,
                         unitType: mUnit.type,
-                        status: hasOpenElsewhere ? `${actualOpenROs.length} OPEN ORDER(S) VIA OTHER QUEUE` : 'NO ACTIVE RO',
+                        status: hasOpenElsewhere ? `${actualOpenROs.length} OPEN ORDER(S)` : 'NO ACTIVE RO',
                         vmrs: '',
                         isOOS: mUnit.isOOS, 
                         isOpen: true,
@@ -2634,7 +2694,7 @@
                     <div style="display: flex; justify-content: space-between; align-items: center;">
                         <div>
                             <div style="font-size: 12px; color: #888; font-weight: 800; text-transform: uppercase;">Weekly WIP Authorization Cap</div>
-                            <div style="font-size: 24px; font-weight: 800; color: #333;">Authorized Into WIP: $${authorizedTotal.toLocaleString('en-US', {minimumFractionDigits:2})} <span style="font-size: 14px; color: #666; font-weight: 600;">(${weekKey} · ${sourceLabel})</span></div>
+                            <div style="font-size: 24px; font-weight: 800; color: #333;">Authorized Into WIP: $${authorizedTotal.toLocaleString('en-US', {minimumFractionDigits:2})}</div>
                         </div>
                         <div style="text-align: right;">
                             <div style="font-size: 12px; color: #888; font-weight: 800; text-transform: uppercase;">Remaining Authorization Capacity</div>
@@ -2875,8 +2935,6 @@
                     <td style="text-align:right;">${getSummaryUsefulHtml(rActive, rData.maxRoutes)}</td>
                     <td style="text-align:right; color:#64748b;">${rData.dodOos}</td>
                     <td style="text-align:right;">${getDoDChangeHtml(rData.oos, rData.dodOos)}</td>
-                    <td style="text-align:right; font-weight:700; color:#2e7d32;">$${(rData.wipRev||0).toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
-                    <td style="text-align:right; font-weight:700; color:#2e7d32;">$${(rData.closedRev||0).toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
                 </tr>`;
 
                 if (expandedSummaryState[reg]) {
@@ -2897,8 +2955,6 @@
                             <td style="text-align:right;">${getSummaryUsefulHtml(sActive, sData.maxRoutes)}</td>
                             <td style="text-align:right; color:#64748b;">${sData.dodOos}</td>
                             <td style="text-align:right;">${getDoDChangeHtml(sData.oos, sData.dodOos)}</td>
-                            <td style="text-align:right; font-weight:600; color:#2e7d32;">$${(sData.wipRev||0).toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
-                            <td style="text-align:right; font-weight:600; color:#2e7d32;">$${(sData.closedRev||0).toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
                         </tr>`;
 
                         if (expandedSummaryState[subId]) {
@@ -2916,15 +2972,13 @@
                                     <td style="text-align:right;">${getSummaryUsefulHtml(bActive, bData.maxRoutes)}</td>
                                     <td style="text-align:right; color:#94a3b8;">${bData.dodOos}</td>
                                     <td style="text-align:right;">${getDoDChangeHtml(bData.oos, bData.dodOos)}</td>
-                                    <td style="text-align:right; color:#2e7d32;">$${(bData.wipRev||0).toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
-                                    <td style="text-align:right; color:#2e7d32;">$${(bData.closedRev||0).toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
                                 </tr>`;
                             }
                         }
                     }
                 }
             }
-            document.getElementById('summary-table-body').innerHTML = html || '<tr><td colspan="9" style="text-align:center; padding: 20px;">No data available</td></tr>';
+            document.getElementById('summary-table-body').innerHTML = html || '<tr><td colspan="7" style="text-align:center; padding: 20px;">No data available</td></tr>';
         }
 
         function generateTileHTML(name, dataSet, chartId = null, isPM = false) {
@@ -3250,6 +3304,29 @@
                             else if (ro.ecdState === 'red') ecdCell = `<span class="ecd-red">${ro.ecdFormatted}</span>`;
                             else ecdCell = `<span class="ecd-green">${ro.ecdFormatted}</span>`;
 
+                            if (String(ro.roNum || '').startsWith('SEE_OTHER:')) {
+                                const actualROs = (ro.otherQueueOrders && ro.otherQueueOrders.length > 0)
+                                    ? ro.otherQueueOrders
+                                    : String(ro.roNum).split(':')[1].split(',').map(rNum => ({ roNum: rNum, sourceQueue: ro.sourceQueue }));
+
+                                actualROs.forEach(order => {
+                                    const actualRoNum = String(order.roNum || '').trim();
+                                    if (!actualRoNum) return;
+                                    const actualDupBadge = ro.possibleDuplicate ? ' <span class="badge badge-dup" title="Multiple open orders share similar tasks for this unit.">⚠️ DUP?</span>' : '';
+                                    const actualRoLinkHtml = `<a href="https://afshub.azurewebsites.net/Vendors/VendedRepairOrder/Estimate/${actualRoNum}" target="_blank" class="ro-link">${actualRoNum}</a>${actualDupBadge}`;
+
+                                    unitsMap[ro.unitNo].roNums.push(actualRoNum);
+                                    unitsMap[ro.unitNo].dupFlags.push(ro.possibleDuplicate);
+                                    unitsMap[ro.unitNo].queueSources.push(order.sourceQueue || ro.sourceQueue || 'VENDED REPAIR');
+                                    unitsMap[ro.unitNo].otherQueueOrders.push([]);
+                                    unitsMap[ro.unitNo].roLinks.push(actualRoLinkHtml);
+                                    unitsMap[ro.unitNo].openedDates.push(ro.openedFormatted);
+                                    unitsMap[ro.unitNo].statuses.push(ro.status);
+                                    unitsMap[ro.unitNo].ecdCells.push(ecdCell);
+                                });
+                                return;
+                            }
+
                             unitsMap[ro.unitNo].roNums.push(ro.roNum);
                             unitsMap[ro.unitNo].dupFlags.push(ro.possibleDuplicate);
                             
@@ -3262,8 +3339,8 @@
                                 let actualROs = (ro.otherQueueOrders && ro.otherQueueOrders.length > 0)
                                     ? ro.otherQueueOrders
                                     : ro.roNum.split(':')[1].split(',').map(rNum => ({ roNum: rNum, sourceQueue: ro.sourceQueue }));
-                                let links = actualROs.map(order => `<a href="https://afshub.azurewebsites.net/Vendors/VendedRepairOrder/Estimate/${order.roNum}" target="_blank" class="ro-link" style="color: #b45309; text-decoration: underline;">${order.roNum}</a>`).join(', ');
-                                roLinkHtml = `<span style="font-weight: 800; color: #b45309; background: #fde68a; padding: 3px 6px; border-radius: 4px; font-size: 10px; border: 1px solid #f59e0b; display: inline-block;">OTHER QUEUE: ${links}</span>`;
+                                let links = actualROs.map(order => `<a href="https://afshub.azurewebsites.net/Vendors/VendedRepairOrder/Estimate/${order.roNum}" target="_blank" class="ro-link">${order.roNum}</a>`).join(', ');
+                                roLinkHtml = links;
                             } else {
                                 roLinkHtml = `<a href="https://afshub.azurewebsites.net/Vendors/VendedRepairOrder/Estimate/${ro.roNum}" target="_blank" class="ro-link">${ro.roNum}</a>${dupBadge}`;
                             }
@@ -3545,8 +3622,8 @@
                             roLinkHtml = `<span style="font-weight: 800; color: var(--urgent-red);">NO ACTIVE RO</span>`;
                         } else if (ro.roNum.startsWith('SEE_OTHER:')) {
                             let actualROs = ro.roNum.split(':')[1].split(',');
-                            let links = actualROs.map(rNum => `<a href="https://afshub.azurewebsites.net/Vendors/VendedRepairOrder/Estimate/${rNum}" target="_blank" class="ro-link" style="color: #b45309; text-decoration: underline;">${rNum}</a>`).join(', ');
-                            roLinkHtml = `<span style="font-weight: 800; color: #b45309; background: #fde68a; padding: 3px 6px; border-radius: 4px; font-size: 10px; border: 1px solid #f59e0b; display: inline-block;">OTHER QUEUE: ${links}</span>`;
+                            let links = actualROs.map(rNum => `<a href="https://afshub.azurewebsites.net/Vendors/VendedRepairOrder/Estimate/${rNum}" target="_blank" class="ro-link">${rNum}</a>`).join(', ');
+                            roLinkHtml = links;
                         } else {
                             roLinkHtml = `<a href="https://afshub.azurewebsites.net/Vendors/VendedRepairOrder/Estimate/${ro.roNum}" target="_blank" class="ro-link">${ro.roNum}</a>${dupBadge}`;
                         }
