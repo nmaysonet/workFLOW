@@ -661,7 +661,12 @@
                 }
 
                 processExcelData(vroRaw, roDetailRaw, resourceRawAOA, oosRawAOA, usefulRawAOA, dodRawAOA);
-                setTimeout(initFirebaseSync, 500);
+                initFirebaseSync();
+                try {
+                    await syncSpendGovernorWithFirebase();
+                } catch (syncError) {
+                    console.warn('Spend governor Firebase sync failed:', syncError);
+                }
 
                 statusEl.innerText = 'Dashboard loaded.';
                 statusEl.style.color = '#2e7d32';
@@ -736,7 +741,12 @@
                 });
 
                 processExcelData(vroRaw, roDetailRaw, resourceRawAOA, oosRawAOA, usefulRawAOA, dodRawAOA);
-                setTimeout(initFirebaseSync, 500);
+                initFirebaseSync();
+                try {
+                    await syncSpendGovernorWithFirebase();
+                } catch (syncError) {
+                    console.warn('Spend governor Firebase sync failed:', syncError);
+                }
 
                 statusEl.innerText = `Loaded ${file.name}`;
                 statusEl.style.color = '#2e7d32';
@@ -866,6 +876,7 @@
         let branchMetricsMap = {}; 
         let masterUnits = {}; 
         let ownerNameToTeam = {};
+        let globalBranchToTeam = {};
         
         let summaryTree = {};
         let expandedSummaryState = {};
@@ -946,6 +957,363 @@
                  if (!isNaN(d.getTime())) return d;
             }
             return null;
+        }
+
+        const WEEKLY_WIP_AUTH_CAP = 225000;
+
+        function safeFirebaseKey(value) {
+            return String(value || '').replace(/[.#$\[\]]/g, '_');
+        }
+
+        function normalizeSpendStatus(status) {
+            const s = String(status || '').toUpperCase().trim();
+
+            if (
+                s.includes('UNASSIGNED') ||
+                s.includes('PENDING ESTIMATE') ||
+                s.includes('PENDING ESTIMATES') ||
+                s === 'ESTIMATE' ||
+                s === 'ESTIMATES' ||
+                s.includes('PENDING APPROVAL')
+            ) {
+                return 'PRE_WIP';
+            }
+
+            if (
+                s.includes('WORK IN PROGRESS') ||
+                s.includes('WORK IN PROCESS') ||
+                s === 'WIP'
+            ) {
+                return 'WIP';
+            }
+
+            if (
+                s.includes('COMPLETED') ||
+                s.includes('CLOSED') ||
+                s.includes('FINAL CHARGES') ||
+                s.includes('BILLED') ||
+                s.includes('INVOICED')
+            ) {
+                return 'CLOSED';
+            }
+
+            return 'OTHER';
+        }
+
+        function getWeekKey(date = new Date()) {
+            const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+            const dayNum = d.getUTCDay() || 7;
+            d.setUTCDate(d.getUTCDate() + 4 - dayNum);
+            const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+            const weekNum = Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
+            return `${d.getUTCFullYear()}-W${String(weekNum).padStart(2, '0')}`;
+        }
+
+        function getRoSpendInfo(roOrRoNum) {
+            const roNum = typeof roOrRoNum === 'string'
+                ? String(roOrRoNum || '').toUpperCase().trim()
+                : String(roOrRoNum && roOrRoNum.roNum ? roOrRoNum.roNum : '').toUpperCase().trim();
+
+            const fin = window.globalOrderFin && window.globalOrderFin[roNum];
+
+            if (fin && !isNaN(Number(fin.total))) {
+                const amount = Number(fin.total || 0);
+                return {
+                    amount: amount,
+                    foundInRoDetail: true,
+                    status: amount > 0 ? 'CONFIRMED_RO_DETAIL' : 'PENDING_RO_DETAIL',
+                    source: 'RO_DETAIL',
+                    roDetailStatus: fin.status || '',
+                    roDetailOpened: fin.opened || null,
+                    roDetailClosedOn: fin.closedon || null
+                };
+            }
+
+            if (typeof roOrRoNum !== 'string' && roOrRoNum && !isNaN(Number(roOrRoNum.total))) {
+                const amount = Number(roOrRoNum.total || 0);
+                return {
+                    amount: amount,
+                    foundInRoDetail: false,
+                    status: amount > 0 ? 'FALLBACK_RO_VALUE' : 'PENDING_RO_DETAIL',
+                    source: 'VRO_FALLBACK',
+                    roDetailStatus: '',
+                    roDetailOpened: null,
+                    roDetailClosedOn: null
+                };
+            }
+
+            return {
+                amount: 0,
+                foundInRoDetail: false,
+                status: 'PENDING_RO_DETAIL',
+                source: 'MISSING_RO_DETAIL',
+                roDetailStatus: '',
+                roDetailOpened: null,
+                roDetailClosedOn: null
+            };
+        }
+
+        function getRoSpend(ro) {
+            return getRoSpendInfo(ro).amount;
+        }
+
+        function getRoSpendByNumber(roNum) {
+            return getRoSpendInfo(String(roNum || '').toUpperCase().trim()).amount;
+        }
+
+        function isSpendGovernedRo(ro) {
+            if (!ro || !ro.roNum) return false;
+            if (String(ro.roNum).startsWith('NO RO') || String(ro.roNum).startsWith('SEE_OTHER:')) return false;
+
+            const bCode = extractGardaCode(ro.branch) || normalizeBranchStr(ro.branch);
+            if (!bCode) return false;
+
+            if (globalBranchToTeam && globalBranchToTeam[bCode]) {
+                return globalBranchToTeam[bCode] === 'VENDED REPAIR';
+            }
+
+            // Safe fallback: if branch/team mapping is missing, only include records that live in the Vended owner population.
+            return ro.drilldownOwners && ro.drilldownOwners.some(o => vendedOwners.includes(o));
+        }
+
+        function getSpendGovernorAuthorizedTotal() {
+            const fin = window.globalAppFin || {};
+            const val = fin.authorizedRev !== undefined ? fin.authorizedRev : fin.wipRev;
+            return Number(val || 0);
+        }
+
+        function isSpendGovernorLocked() {
+            return getSpendGovernorAuthorizedTotal() >= WEEKLY_WIP_AUTH_CAP;
+        }
+
+        function applySpendGovernorFinancials(branchFin) {
+            window.globalBranchFin = branchFin || {};
+
+            for (let reg in summaryTree) {
+                summaryTree[reg].closedRev = 0;
+                summaryTree[reg].wipRev = 0;
+                summaryTree[reg].authorizedRev = 0;
+
+                for (let sub in summaryTree[reg].subs) {
+                    summaryTree[reg].subs[sub].closedRev = 0;
+                    summaryTree[reg].subs[sub].wipRev = 0;
+                    summaryTree[reg].subs[sub].authorizedRev = 0;
+
+                    for (let bra in summaryTree[reg].subs[sub].branches) {
+                        const code = extractGardaCode(bra) || normalizeBranchStr(bra);
+                        const fin = (code && window.globalBranchFin[code]) ? window.globalBranchFin[code] : { closedRev: 0, wipRev: 0, authorizedRev: 0 };
+                        const branchNode = summaryTree[reg].subs[sub].branches[bra];
+
+                        branchNode.closedRev = Number(fin.closedRev || 0);
+                        branchNode.wipRev = Number(fin.wipRev || 0);
+                        branchNode.authorizedRev = Number(fin.authorizedRev || fin.wipRev || 0);
+
+                        summaryTree[reg].subs[sub].closedRev += branchNode.closedRev;
+                        summaryTree[reg].subs[sub].wipRev += branchNode.wipRev;
+                        summaryTree[reg].subs[sub].authorizedRev += branchNode.authorizedRev;
+                    }
+
+                    summaryTree[reg].closedRev += summaryTree[reg].subs[sub].closedRev;
+                    summaryTree[reg].wipRev += summaryTree[reg].subs[sub].wipRev;
+                    summaryTree[reg].authorizedRev += summaryTree[reg].subs[sub].authorizedRev;
+                }
+            }
+        }
+
+        async function syncSpendGovernorWithFirebase() {
+            if (!db || !processedData || processedData.length === 0) {
+                window.globalBranchFin = window.globalBranchFin || {};
+                window.globalAppFin = {
+                    closedRev: 0,
+                    wipRev: 0,
+                    authorizedRev: 0,
+                    cap: WEEKLY_WIP_AUTH_CAP,
+                    remaining: WEEKLY_WIP_AUTH_CAP,
+                    weekKey: getWeekKey(new Date()),
+                    pendingSpendCount: 0,
+                    adjustedSpendCount: 0,
+                    source: 'firebase-unavailable'
+                };
+                applySpendGovernorFinancials(window.globalBranchFin);
+                triggerViewUpdate();
+                return;
+            }
+
+            const now = new Date();
+            const nowIso = now.toISOString();
+            const weekKey = getWeekKey(now);
+
+            const historySnap = await db.ref('spendGovernor/statusHistory').once('value');
+            const allAuthSnap = await db.ref('spendGovernor/authorizations').once('value');
+            const countIndexSnap = await db.ref('spendGovernor/countIndex').once('value');
+
+            const history = historySnap.val() || {};
+            const allAuthorizations = allAuthSnap.val() || {};
+            const existingAuthorizations = allAuthorizations[weekKey] || {};
+            const countIndex = countIndexSnap.val() || {};
+            const updates = {};
+            let adjustedSpendCount = 0;
+
+            // First pass: detect new movement from PRE_WIP into WIP and stamp the authorization event.
+            // Spend is pulled from RO Detail if available, but the authorization is still saved if RO Detail has not refreshed yet.
+            processedData.forEach(ro => {
+                if (!isSpendGovernedRo(ro)) return;
+
+                const roNum = String(ro.roNum || '').toUpperCase().trim();
+                if (!roNum) return;
+
+                const safeRo = safeFirebaseKey(roNum);
+                const currentStatus = String(ro.status || '').trim();
+                const currentNorm = normalizeSpendStatus(currentStatus);
+                const prior = history[safeRo];
+                const priorNorm = prior ? prior.normalizedStatus : null;
+                const alreadyCountedThisWeek = !!existingAuthorizations[safeRo];
+                const alreadyCountedEver = !!countIndex[safeRo];
+                const spendInfo = getRoSpendInfo(ro);
+                const spend = Number(spendInfo.amount || 0);
+
+                const transitionedIntoWip =
+                    prior &&
+                    priorNorm === 'PRE_WIP' &&
+                    currentNorm === 'WIP' &&
+                    !alreadyCountedThisWeek &&
+                    !alreadyCountedEver;
+
+                if (transitionedIntoWip) {
+                    updates[`spendGovernor/authorizations/${weekKey}/${safeRo}`] = {
+                        roNumber: roNum,
+                        unitNo: ro.unitNo || '',
+                        branch: ro.branch || '',
+                        subregion: ro.subregion || '',
+                        region: ro.region || '',
+                        previousStatus: prior.status || '',
+                        previousNormalizedStatus: prior.normalizedStatus || '',
+                        currentStatus: currentStatus,
+                        currentNormalizedStatus: currentNorm,
+                        authorizedAt: nowIso,
+                        weekKey: weekKey,
+                        spend: spend,
+                        spendStatus: spend > 0 ? 'CONFIRMED_RO_DETAIL' : 'PENDING_RO_DETAIL',
+                        spendSource: spendInfo.source,
+                        spendCapturedAt: spend > 0 ? nowIso : null,
+                        spendLastCheckedAt: nowIso,
+                        lastKnownRoDetailStatus: spendInfo.roDetailStatus || '',
+                        source: 'firebase-transition'
+                    };
+
+                    updates[`spendGovernor/countIndex/${safeRo}`] = {
+                        roNumber: roNum,
+                        firstAuthorizedAt: nowIso,
+                        firstAuthorizedWeek: weekKey,
+                        spend: spend,
+                        spendStatus: spend > 0 ? 'CONFIRMED_RO_DETAIL' : 'PENDING_RO_DETAIL',
+                        spendLastCheckedAt: nowIso
+                    };
+                }
+
+                updates[`spendGovernor/statusHistory/${safeRo}`] = {
+                    roNumber: roNum,
+                    unitNo: ro.unitNo || '',
+                    branch: ro.branch || '',
+                    subregion: ro.subregion || '',
+                    region: ro.region || '',
+                    status: currentStatus,
+                    normalizedStatus: currentNorm,
+                    latestSpend: spend,
+                    latestSpendStatus: spendInfo.status,
+                    latestSpendSource: spendInfo.source,
+                    lastKnownRoDetailStatus: spendInfo.roDetailStatus || '',
+                    lastSeenAt: nowIso
+                };
+            });
+
+            // Second pass: aggressively re-check RO Detail for every saved authorization.
+            // If RO Detail was missing on transition day, this backfills the spend later.
+            // If the estimate changes after authorization, this adjusts the saved spend up or down.
+            Object.keys(allAuthorizations).forEach(authWeekKey => {
+                const weekAuths = allAuthorizations[authWeekKey] || {};
+                Object.keys(weekAuths).forEach(safeRo => {
+                    const auth = weekAuths[safeRo] || {};
+                    const roNum = String(auth.roNumber || '').toUpperCase().trim();
+                    if (!roNum) return;
+
+                    const spendInfo = getRoSpendInfo(roNum);
+                    const latestSpend = Number(spendInfo.amount || 0);
+                    const previousSpend = Number(auth.spend || 0);
+                    const hasLatestRoDetailSpend = spendInfo.foundInRoDetail && latestSpend > 0;
+
+                    updates[`spendGovernor/authorizations/${authWeekKey}/${safeRo}/spendLastCheckedAt`] = nowIso;
+                    updates[`spendGovernor/authorizations/${authWeekKey}/${safeRo}/lastKnownRoDetailStatus`] = spendInfo.roDetailStatus || auth.lastKnownRoDetailStatus || '';
+
+                    if (hasLatestRoDetailSpend && Math.abs(latestSpend - previousSpend) >= 0.01) {
+                        adjustedSpendCount++;
+                        updates[`spendGovernor/authorizations/${authWeekKey}/${safeRo}/spend`] = latestSpend;
+                        updates[`spendGovernor/authorizations/${authWeekKey}/${safeRo}/previousSpend`] = previousSpend;
+                        updates[`spendGovernor/authorizations/${authWeekKey}/${safeRo}/spendDelta`] = latestSpend - previousSpend;
+                        updates[`spendGovernor/authorizations/${authWeekKey}/${safeRo}/spendStatus`] = previousSpend > 0 ? 'UPDATED_RO_DETAIL' : 'BACKFILLED_RO_DETAIL';
+                        updates[`spendGovernor/authorizations/${authWeekKey}/${safeRo}/spendSource`] = 'RO_DETAIL';
+                        updates[`spendGovernor/authorizations/${authWeekKey}/${safeRo}/spendUpdatedAt`] = nowIso;
+                        updates[`spendGovernor/authorizations/${authWeekKey}/${safeRo}/spendCapturedAt`] = auth.spendCapturedAt || nowIso;
+
+                        updates[`spendGovernor/countIndex/${safeRo}/spend`] = latestSpend;
+                        updates[`spendGovernor/countIndex/${safeRo}/spendStatus`] = previousSpend > 0 ? 'UPDATED_RO_DETAIL' : 'BACKFILLED_RO_DETAIL';
+                        updates[`spendGovernor/countIndex/${safeRo}/spendLastCheckedAt`] = nowIso;
+                    } else if (!hasLatestRoDetailSpend && previousSpend <= 0) {
+                        updates[`spendGovernor/authorizations/${authWeekKey}/${safeRo}/spendStatus`] = 'PENDING_RO_DETAIL';
+                        updates[`spendGovernor/authorizations/${authWeekKey}/${safeRo}/spendSource`] = spendInfo.source || 'MISSING_RO_DETAIL';
+
+                        updates[`spendGovernor/countIndex/${safeRo}/spendStatus`] = 'PENDING_RO_DETAIL';
+                        updates[`spendGovernor/countIndex/${safeRo}/spendLastCheckedAt`] = nowIso;
+                    }
+                    // Important: if RO Detail is missing later but we previously captured a positive spend,
+                    // keep the prior positive spend instead of overwriting it to zero.
+                });
+            });
+
+            if (Object.keys(updates).length > 0) {
+                await db.ref().update(updates);
+            }
+
+            const refreshedAllAuthSnap = await db.ref('spendGovernor/authorizations').once('value');
+            const refreshedAllAuthorizations = refreshedAllAuthSnap.val() || {};
+            const weeklyAuthorizations = refreshedAllAuthorizations[weekKey] || {};
+
+            let weeklyAuthorizedTotal = 0;
+            let pendingSpendCount = 0;
+            let branchAuthorized = {};
+
+            Object.values(weeklyAuthorizations).forEach(auth => {
+                const spend = Number(auth.spend || 0);
+                weeklyAuthorizedTotal += spend;
+
+                if (spend <= 0 || auth.spendStatus === 'PENDING_RO_DETAIL') {
+                    pendingSpendCount++;
+                }
+
+                const branchCode = extractGardaCode(auth.branch) || normalizeBranchStr(auth.branch) || 'UNKNOWN';
+                if (!branchAuthorized[branchCode]) {
+                    branchAuthorized[branchCode] = { closedRev: 0, wipRev: 0, authorizedRev: 0 };
+                }
+
+                branchAuthorized[branchCode].wipRev += spend;
+                branchAuthorized[branchCode].authorizedRev += spend;
+            });
+
+            window.globalAppFin = {
+                closedRev: 0,
+                wipRev: weeklyAuthorizedTotal,
+                authorizedRev: weeklyAuthorizedTotal,
+                cap: WEEKLY_WIP_AUTH_CAP,
+                remaining: Math.max(0, WEEKLY_WIP_AUTH_CAP - weeklyAuthorizedTotal),
+                weekKey: weekKey,
+                pendingSpendCount: pendingSpendCount,
+                adjustedSpendCount: adjustedSpendCount,
+                lastSpendSyncAt: nowIso,
+                source: 'firebase-transition-live-ro-detail'
+            };
+
+            applySpendGovernorFinancials(branchAuthorized);
+            triggerViewUpdate();
         }
 
         function isPriority(ro) {
@@ -1176,7 +1544,7 @@
                 targetData = targetData.filter(ro => isPriority(ro));
             }
             
-            let lockActive = (window.globalAppFin && (window.globalAppFin.wipRev + window.globalAppFin.closedRev) >= 225000);
+            let lockActive = isSpendGovernorLocked();
             
             if (lockActive && !isPM) {
                 targetData = targetData.filter(ro => {
@@ -1489,6 +1857,9 @@
                     }
                 }
             }
+
+            globalBranchToTeam = branchToTeam;
+            window.globalBranchToTeam = globalBranchToTeam;
 
             // --- FINANCIAL PROCESSING START ---
             let orderFin = {};
@@ -1919,22 +2290,30 @@
         }
 
         function renderSpendQueue() {
-            let globalWip = window.globalAppFin ? window.globalAppFin.wipRev : 0;
-            let globalClosed = window.globalAppFin ? window.globalAppFin.closedRev : 0;
-            let globalTotal = globalWip + globalClosed; 
-            let globalRem = 225000 - globalTotal;
-            let pctUtilized = Math.min(100, (globalTotal / 225000) * 100);
-            let budgetColor = globalTotal < 200000 ? '#16a34a' : (globalTotal < 225000 ? '#f59e0b' : '#dc2626');
+            let authorizedTotal = getSpendGovernorAuthorizedTotal();
+            let globalRem = WEEKLY_WIP_AUTH_CAP - authorizedTotal;
+            let pctUtilized = Math.min(100, (authorizedTotal / WEEKLY_WIP_AUTH_CAP) * 100);
+            let budgetColor = authorizedTotal < 200000 ? '#16a34a' : (authorizedTotal < WEEKLY_WIP_AUTH_CAP ? '#f59e0b' : '#dc2626');
+            let weekKey = window.globalAppFin && window.globalAppFin.weekKey ? window.globalAppFin.weekKey : getWeekKey(new Date());
+            let pendingSpendCount = window.globalAppFin && window.globalAppFin.pendingSpendCount ? window.globalAppFin.pendingSpendCount : 0;
+            let adjustedSpendCount = window.globalAppFin && window.globalAppFin.adjustedSpendCount ? window.globalAppFin.adjustedSpendCount : 0;
+            let sourceLabel = window.globalAppFin && window.globalAppFin.source === 'firebase-transition-live-ro-detail' ? 'Firebase transition tracking + live RO Detail spend' : (window.globalAppFin && window.globalAppFin.source === 'firebase-transition' ? 'Firebase transition tracking' : 'Firebase baseline pending');
+            let spendAuditText = pendingSpendCount > 0
+                ? `${pendingSpendCount} WIP authorization(s) are pending RO Detail cost. These will backfill on the next refresh once RO Detail catches up.`
+                : `All current-week WIP authorizations have RO Detail spend captured.`;
+            if (adjustedSpendCount > 0) {
+                spendAuditText += ` ${adjustedSpendCount} saved authorization spend value(s) were adjusted from RO Detail during this refresh.`;
+            }
             
             let widgetHtml = `
                 <div style="background: #fff; border: 1px solid var(--border); border-radius: 6px; padding: 20px; margin-bottom: 20px; display: flex; flex-direction: column; gap: 15px; border-left: 5px solid ${budgetColor}; box-shadow: 0 2px 5px rgba(0,0,0,0.05);">
                     <div style="display: flex; justify-content: space-between; align-items: center;">
                         <div>
-                            <div style="font-size: 12px; color: #888; font-weight: 800; text-transform: uppercase;">Aggregate Vended Spend (WTD)</div>
-                            <div style="font-size: 24px; font-weight: 800; color: #333;">Total Weekly Spend: $${globalTotal.toLocaleString('en-US', {minimumFractionDigits:2})} <span style="font-size: 14px; color: #666; font-weight: 600;">(WIP: $${globalWip.toLocaleString('en-US')} + Closed: $${globalClosed.toLocaleString('en-US')})</span></div>
+                            <div style="font-size: 12px; color: #888; font-weight: 800; text-transform: uppercase;">Weekly WIP Authorization Cap</div>
+                            <div style="font-size: 24px; font-weight: 800; color: #333;">Authorized Into WIP: $${authorizedTotal.toLocaleString('en-US', {minimumFractionDigits:2})} <span style="font-size: 14px; color: #666; font-weight: 600;">(${weekKey} · ${sourceLabel})</span></div>
                         </div>
                         <div style="text-align: right;">
-                            <div style="font-size: 12px; color: #888; font-weight: 800; text-transform: uppercase;">Remaining Weekly Budget</div>
+                            <div style="font-size: 12px; color: #888; font-weight: 800; text-transform: uppercase;">Remaining Authorization Capacity</div>
                             <div style="font-size: 28px; font-weight: 800; color: ${budgetColor};">$${Math.max(0, globalRem).toLocaleString('en-US', {minimumFractionDigits:2})}</div>
                         </div>
                     </div>
@@ -1942,6 +2321,7 @@
                         <div style="height: 100%; width: ${pctUtilized}%; background: ${budgetColor}; transition: width 0.3s ease;"></div>
                     </div>
                     <div style="font-size: 11px; color: #888; text-align: right; font-weight: bold; margin-top:-5px;">${pctUtilized.toFixed(1)}% Utilized</div>
+                    <div style="font-size: 12px; color: ${pendingSpendCount > 0 ? '#d9534f' : '#64748b'}; font-weight: 700; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 4px; padding: 8px 10px;">${spendAuditText}</div>
                 </div>
                 <div class="kpi-grid" id="spend-branches-grid"></div>
             `;
@@ -1956,11 +2336,11 @@
                 for (let sub of Object.keys(summaryTree[reg].subs).sort()) {
                     for (let bra of Object.keys(summaryTree[reg].subs[sub].branches).sort()) {
                         let bData = summaryTree[reg].subs[sub].branches[bra];
+                        let authorized = bData.authorizedRev !== undefined ? bData.authorizedRev : (bData.wipRev || 0);
                         branchFinData.push({
                             name: bra,
-                            wip: bData.wipRev || 0,
-                            closed: bData.closedRev || 0,
-                            total: (bData.wipRev || 0) + (bData.closedRev || 0)
+                            authorized: authorized || 0,
+                            total: authorized || 0
                         });
                     }
                 }
@@ -1973,14 +2353,10 @@
                 <div class="kpi-tile" style="border-top-color: var(--low-green) !important;">
                     <div class="kpi-name" style="font-size:16px;">${b.name}</div>
                     <div style="margin-bottom: 15px; font-size: 22px; font-weight: 800; color: #333;">$${b.total.toLocaleString('en-US', {minimumFractionDigits:2})}</div>
-                    <div class="kpi-stats-grid" style="grid-template-columns: 1fr 1fr;">
+                    <div class="kpi-stats-grid" style="grid-template-columns: 1fr;">
                         <div class="stat-box">
-                            <div class="title">WIP (Wk)</div>
-                            <div class="num" style="color:var(--medium-yellow);">$${b.wip.toLocaleString('en-US', {minimumFractionDigits:2})}</div>
-                        </div>
-                        <div class="stat-box">
-                            <div class="title">Closed (Wk)</div>
-                            <div class="num" style="color:var(--low-green);">$${b.closed.toLocaleString('en-US', {minimumFractionDigits:2})}</div>
+                            <div class="title">Authorized WIP (Wk)</div>
+                            <div class="num" style="color:var(--medium-yellow);">$${b.authorized.toLocaleString('en-US', {minimumFractionDigits:2})}</div>
                         </div>
                     </div>
                 </div>`;
@@ -2229,10 +2605,8 @@
 
         function generateTileHTML(name, dataSet, chartId = null, isPM = false) {
             
-            let globalWip = window.globalAppFin ? window.globalAppFin.wipRev : 0;
-            let globalClosed = window.globalAppFin ? window.globalAppFin.closedRev : 0;
-            let globalTotal = globalWip + globalClosed;
-            let lockActive = globalTotal >= 225000;
+            let globalTotal = getSpendGovernorAuthorizedTotal();
+            let lockActive = isSpendGovernorLocked();
             
             let filteredOpen = dataSet.filter(ro => ro.isOpen);
 
@@ -2385,9 +2759,7 @@
                     }
                 }
                 
-                let globalWip = window.globalAppFin ? window.globalAppFin.wipRev : 0;
-                let globalClosed = window.globalAppFin ? window.globalAppFin.closedRev : 0;
-                let lockActive = (globalWip + globalClosed) >= 225000;
+                let lockActive = isSpendGovernorLocked();
 
                 if (lockActive && !isPM) {
                     targetData = targetData.filter(ro => {
@@ -2448,9 +2820,7 @@
                 }
             }
 
-            let globalWip = window.globalAppFin ? window.globalAppFin.wipRev : 0;
-            let globalClosed = window.globalAppFin ? window.globalAppFin.closedRev : 0;
-            let lockActive = (globalWip + globalClosed) >= 225000;
+            let lockActive = isSpendGovernorLocked();
 
             if (lockActive && !isPM) {
                 targetData = targetData.filter(ro => {
@@ -2758,13 +3128,11 @@
                 ownerDataAll = ownerDataAll.filter(ro => ro.custKey === currentCustomerFilter);
             }
 
-            let globalWip = window.globalAppFin ? window.globalAppFin.wipRev : 0;
-            let globalClosed = window.globalAppFin ? window.globalAppFin.closedRev : 0;
-            let globalTotal = globalWip + globalClosed;
-            let globalRem = 225000 - globalTotal;
-            let pctUtilized = Math.min(100, (globalTotal / 225000) * 100);
-            let budgetColor = globalTotal < 200000 ? '#16a34a' : (globalTotal < 225000 ? '#f59e0b' : '#dc2626');
-            let lockActive = globalTotal >= 225000;
+            let globalTotal = getSpendGovernorAuthorizedTotal();
+            let globalRem = WEEKLY_WIP_AUTH_CAP - globalTotal;
+            let pctUtilized = Math.min(100, (globalTotal / WEEKLY_WIP_AUTH_CAP) * 100);
+            let budgetColor = globalTotal < 200000 ? '#16a34a' : (globalTotal < WEEKLY_WIP_AUTH_CAP ? '#f59e0b' : '#dc2626');
+            let lockActive = isSpendGovernorLocked();
 
             let warningBanner = (lockActive && !isPM) 
                 ? `<div style="background:#ef4444; color:white; padding: 10px; text-align:center; font-weight:bold; border-radius: 4px; margin-bottom: 15px; font-size: 14px; letter-spacing: 0.5px; box-shadow: 0 2px 4px rgba(239, 68, 68, 0.4);">🔒 WEEKLY WIP RELEASE THRESHOLD MET - ALL NEW WORK HAS BEEN HIDDEN</div>` 
@@ -2776,11 +3144,11 @@
                 <div style="background: #fff; border: 1px solid var(--border); border-radius: 6px; padding: 15px; margin-bottom: 20px; display: flex; flex-direction: column; gap: 10px; border-left: 5px solid ${budgetColor}; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
                     <div style="display: flex; justify-content: space-between; align-items: center;">
                         <div>
-                            <div style="font-size: 11px; color: #888; font-weight: 800; text-transform: uppercase;">Aggregate Vended Budget Tracking (WTD)</div>
-                            <div style="font-size: 18px; font-weight: 800; color: #333;">Total Weekly Spend: $${globalTotal.toLocaleString('en-US', {minimumFractionDigits:2})} <span style="font-size: 13px; color: #666; font-weight: 600;">(WIP: $${globalWip.toLocaleString('en-US')} + Closed: $${globalClosed.toLocaleString('en-US')})</span></div>
+                            <div style="font-size: 11px; color: #888; font-weight: 800; text-transform: uppercase;">Weekly WIP Authorization Tracking</div>
+                            <div style="font-size: 18px; font-weight: 800; color: #333;">Authorized Into WIP: $${globalTotal.toLocaleString('en-US', {minimumFractionDigits:2})}</div>
                         </div>
                         <div style="text-align: right;">
-                            <div style="font-size: 11px; color: #888; font-weight: 800; text-transform: uppercase;">Remaining Weekly Budget</div>
+                            <div style="font-size: 11px; color: #888; font-weight: 800; text-transform: uppercase;">Remaining Authorization Capacity</div>
                             <div style="font-size: 22px; font-weight: 800; color: ${budgetColor};">$${Math.max(0, globalRem).toLocaleString('en-US', {minimumFractionDigits:2})}</div>
                         </div>
                     </div>
@@ -2864,9 +3232,7 @@
                         ro.drilldownOwners.forEach(o => searchUnitsMap[ro.unitNo].owners.push(o));
                     });
 
-                    let globalWip = window.globalAppFin ? window.globalAppFin.wipRev : 0;
-                    let globalClosed = window.globalAppFin ? window.globalAppFin.closedRev : 0;
-                    let lockActive = (globalWip + globalClosed) >= 225000;
+                    let lockActive = isSpendGovernorLocked();
 
                     Object.values(searchUnitsMap).forEach(u => {
                         let oosBadge = u.isOOS ? `<span class="badge badge-oos">OOS</span>` : `<span class="badge badge-active">ACTIVE</span>`;
