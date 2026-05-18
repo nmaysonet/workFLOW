@@ -162,6 +162,36 @@
         .note-btn:hover { background: #e0e0e0; opacity: 1; }
         .note-btn.has-note { background: var(--gold); color: #333; border-color: var(--gold-hover); opacity: 1; box-shadow: 0 1px 3px rgba(0,0,0,0.2); }
 
+        .workflow-compliance-card { margin-top: 12px; border-radius: 6px; padding: 10px; border: 1px solid #e5e7eb; background: #f8fafc; }
+        .workflow-compliance-header { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 8px; }
+        .workflow-compliance-label { font-size: 10px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.5px; color: #475569; }
+        .workflow-compliance-score { font-size: 18px; font-weight: 900; line-height: 1; }
+        .workflow-compliance-rating { padding: 3px 7px; border-radius: 999px; font-size: 9px; font-weight: 900; color: #fff; white-space: nowrap; letter-spacing: 0.4px; }
+        .workflow-compliance-card.compliance-green { border-color: #86efac; background: #f0fdf4; }
+        .workflow-compliance-card.compliance-green .workflow-compliance-score { color: #16a34a; }
+        .workflow-compliance-card.compliance-green .workflow-compliance-rating { background: #16a34a; }
+        .workflow-compliance-card.compliance-yellow { border-color: #fcd34d; background: #fffbeb; }
+        .workflow-compliance-card.compliance-yellow .workflow-compliance-score { color: #d97706; }
+        .workflow-compliance-card.compliance-yellow .workflow-compliance-rating { background: #d97706; }
+        .workflow-compliance-card.compliance-red { border-color: #fca5a5; background: #fef2f2; }
+        .workflow-compliance-card.compliance-red .workflow-compliance-score { color: #dc2626; }
+        .workflow-compliance-card.compliance-red .workflow-compliance-rating { background: #dc2626; }
+        .workflow-compliance-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+        .workflow-compliance-mini { background: rgba(255,255,255,0.7); border: 1px solid rgba(148,163,184,0.35); border-radius: 4px; padding: 5px 3px; text-align: center; }
+        .workflow-compliance-mini .mini-title { font-size: 9px; font-weight: 800; color: #64748b; text-transform: uppercase; }
+        .workflow-compliance-mini .mini-num { font-size: 12px; font-weight: 900; color: #334155; margin-top: 2px; }
+        .workflow-compliance-card.compact { margin-top: 8px; padding: 8px; }
+
+        .activity-log-container { border: 1px solid #e5e7eb; background: #f8fafc; border-radius: 6px; padding: 10px; max-height: 220px; overflow-y: auto; margin-bottom: 12px; }
+        .activity-log-empty { color: #888; font-size: 12px; font-weight: 600; text-align: center; padding: 12px; }
+        .activity-date-group { margin-bottom: 12px; }
+        .activity-date-title { font-size: 11px; font-weight: 900; color: #334155; text-transform: uppercase; margin-bottom: 6px; letter-spacing: 0.5px; }
+        .activity-entry { background: #fff; border: 1px solid #e5e7eb; border-left: 4px solid var(--gold); border-radius: 5px; padding: 8px; margin-bottom: 6px; }
+        .activity-entry.locked { background: #f1f5f9; border-left-color: #94a3b8; color: #64748b; }
+        .activity-entry-meta { font-size: 10px; color: #64748b; font-weight: 800; text-transform: uppercase; margin-bottom: 4px; }
+        .activity-entry-text { font-size: 12px; color: #334155; line-height: 1.35; white-space: pre-wrap; }
+        .activity-helper-text { font-size: 11px; color: #64748b; margin-bottom: 8px; line-height: 1.35; }
+
         .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center; }
         .modal-box { background: white; padding: 20px; border-radius: 8px; width: 450px; max-width: 90%; box-shadow: 0 4px 15px rgba(0,0,0,0.2); }
         .modal-header { font-size: 18px; font-weight: bold; margin-bottom: 15px; color: #333; display: flex; justify-content: space-between; align-items: center;}
@@ -483,10 +513,14 @@
                 <span id="note-modal-title">Notes</span>
                 <button class="modal-close" onclick="closeNoteModal()">&times;</button>
             </div>
-            <textarea id="note-textarea" class="modal-textarea" placeholder="Type your note here..."></textarea>
+            <div class="activity-helper-text">Daily log is tracked in Firebase. Prior-day entries are shown as locked history; add a new update for today instead of overwriting history.</div>
+            <div id="note-activity-log" class="activity-log-container">
+                <div class="activity-log-empty">No activity logged yet.</div>
+            </div>
+            <textarea id="note-textarea" class="modal-textarea" placeholder="Add today's update. Example: Vendor confirmed onsite ETA 2 PM; parts pending."></textarea>
             <div class="modal-actions">
                 <button class="btn-cancel" onclick="closeNoteModal()">Cancel</button>
-                <button class="btn-save" onclick="saveNote()">Save Note</button>
+                <button class="btn-save" onclick="saveNote()">Save Update</button>
             </div>
         </div>
     </div>
@@ -760,10 +794,12 @@
         let db = null;
         let globalRoCheckState = {};
         let globalRoNotesState = {};
+        let globalWorkflowActivityState = {};
 
         try {
             globalRoCheckState = JSON.parse(localStorage.getItem('workflow_checks') || '{}');
             globalRoNotesState = JSON.parse(localStorage.getItem('workflow_notes') || '{}');
+            globalWorkflowActivityState = JSON.parse(localStorage.getItem('workflow_activity') || '{}');
         } catch(e) {}
 
         function initFirebaseSync() {
@@ -782,10 +818,255 @@
                         try { localStorage.setItem('workflow_notes', JSON.stringify(globalRoNotesState)); } catch(e) {}
                         updateAllNoteButtons();
                     });
+
+                    db.ref('workflowActivity').on('value', (snapshot) => {
+                        globalWorkflowActivityState = snapshot.val() || {};
+                        try { localStorage.setItem('workflow_activity', JSON.stringify(globalWorkflowActivityState)); } catch(e) {}
+                        updateAllNoteButtons();
+                        if (processedData && processedData.length > 0) {
+                            triggerViewUpdate();
+                        }
+                    });
                 }
             } catch (error) {
                 console.warn("Firebase Init blocked.", error);
             }
+        }
+
+        function escapeHtml(value) {
+            return String(value === undefined || value === null ? '' : value)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
+        }
+
+        function getLocalDateKey(date = new Date()) {
+            const y = date.getFullYear();
+            const m = String(date.getMonth() + 1).padStart(2, '0');
+            const d = String(date.getDate()).padStart(2, '0');
+            return `${y}-${m}-${d}`;
+        }
+
+        function formatActivityTime(value) {
+            const d = value ? new Date(value) : null;
+            if (!d || isNaN(d.getTime())) return '';
+            return d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+        }
+
+        function isMeaningfulNote(text) {
+            const cleaned = String(text || '').trim();
+            if (cleaned.length < 15) return false;
+            const lower = cleaned.toLowerCase().replace(/[^a-z0-9 ]/g, '').trim();
+            const weak = ['ok', 'done', 'pending', 'called', 'updated', 'na', 'n a', 'none', 'no update', 'same'];
+            if (weak.includes(lower)) return false;
+            if (/^(.)*$/.test(cleaned)) return false;
+            return true;
+        }
+
+        function getRoContextBySafeRo(safeRo) {
+            if (!processedData || processedData.length === 0) return null;
+            return processedData.find(ro => ro && ro.roNum && safeFirebaseKey(ro.roNum) === safeRo) || null;
+        }
+
+        function getActivityEntries(safeRo) {
+            const roActivity = globalWorkflowActivityState && globalWorkflowActivityState[safeRo] ? globalWorkflowActivityState[safeRo] : {};
+            const log = roActivity.activityLog || {};
+            const entries = [];
+            Object.keys(log).forEach(dateKey => {
+                const dateEntries = log[dateKey] || {};
+                Object.keys(dateEntries).forEach(entryKey => {
+                    entries.push(Object.assign({ dateKey, entryKey }, dateEntries[entryKey] || {}));
+                });
+            });
+            entries.sort((a, b) => new Date(b.timestamp || 0) - new Date(a.timestamp || 0));
+            return entries;
+        }
+
+        function getLatestMeaningfulNote(safeRo) {
+            const entries = getActivityEntries(safeRo);
+            const found = entries.find(e => e.actionType === 'NOTE_ADDED' && isMeaningfulNote(e.noteText));
+            if (found) return found.noteText;
+            return globalRoNotesState[safeRo] || '';
+        }
+
+        function roHasMeaningfulNote(safeRo) {
+            const latest = getLatestMeaningfulNote(safeRo);
+            return isMeaningfulNote(latest);
+        }
+
+        function roTouchedToday(safeRo) {
+            const today = getLocalDateKey(new Date());
+            const roActivity = globalWorkflowActivityState && globalWorkflowActivityState[safeRo] ? globalWorkflowActivityState[safeRo] : {};
+            const todayLog = roActivity.activityLog && roActivity.activityLog[today] ? roActivity.activityLog[today] : {};
+            return Object.keys(todayLog).length > 0;
+        }
+
+        function renderNoteActivityLog(safeRo) {
+            const container = document.getElementById('note-activity-log');
+            if (!container) return;
+
+            const entries = getActivityEntries(safeRo);
+            const legacyNote = globalRoNotesState[safeRo];
+            const today = getLocalDateKey(new Date());
+
+            if (entries.length === 0 && (!legacyNote || !legacyNote.trim())) {
+                container.innerHTML = '<div class="activity-log-empty">No activity logged yet.</div>';
+                return;
+            }
+
+            const grouped = {};
+            entries.forEach(e => {
+                const key = e.dateKey || getLocalDateKey(e.timestamp ? new Date(e.timestamp) : new Date());
+                if (!grouped[key]) grouped[key] = [];
+                grouped[key].push(e);
+            });
+
+            let html = '';
+            Object.keys(grouped).sort().reverse().forEach(dateKey => {
+                html += `<div class="activity-date-group"><div class="activity-date-title">${escapeHtml(dateKey)}${dateKey !== today ? ' · LOCKED' : ''}</div>`;
+                grouped[dateKey].forEach(e => {
+                    const locked = dateKey !== today ? ' locked' : '';
+                    const time = formatActivityTime(e.timestamp);
+                    const action = String(e.actionType || 'UPDATE').replace(/_/g, ' ');
+                    const owner = e.assignedOwner ? ` · ${escapeHtml(e.assignedOwner)}` : '';
+                    const body = e.noteText || e.message || action;
+                    html += `<div class="activity-entry${locked}">`;
+                    html += `<div class="activity-entry-meta">${escapeHtml(time)} · ${escapeHtml(action)}${owner}</div>`;
+                    html += `<div class="activity-entry-text">${escapeHtml(body)}</div>`;
+                    html += `</div>`;
+                });
+                html += `</div>`;
+            });
+
+            if (entries.length === 0 && legacyNote && legacyNote.trim()) {
+                html += `<div class="activity-date-group"><div class="activity-date-title">Legacy Latest Note</div><div class="activity-entry locked"><div class="activity-entry-meta">Migrated display only</div><div class="activity-entry-text">${escapeHtml(legacyNote)}</div></div></div>`;
+            }
+
+            container.innerHTML = html;
+        }
+
+        function logWorkflowActivity(safeRo, actionType, noteText = '', meta = {}) {
+            const now = new Date();
+            const nowIso = now.toISOString();
+            const dateKey = getLocalDateKey(now);
+            const roContext = getRoContextBySafeRo(safeRo);
+            const assignedOwner = meta.assignedOwner || (roContext && roContext.kpiOwners && roContext.kpiOwners.length ? roContext.kpiOwners[0] : '') || '';
+            const roNumber = meta.roNumber || (roContext ? roContext.roNum : safeRo);
+            const entry = {
+                timestamp: nowIso,
+                dateKey: dateKey,
+                actionType: actionType,
+                noteText: String(noteText || '').trim(),
+                roNumber: roNumber || '',
+                unitNo: meta.unitNo || (roContext ? roContext.unitNo : '') || '',
+                branch: meta.branch || (roContext ? roContext.branch : '') || '',
+                assignedOwner: assignedOwner,
+                source: meta.source || 'workflow-ui'
+            };
+
+            if (db) {
+                const entryRef = db.ref(`workflowActivity/${safeRo}/activityLog/${dateKey}`).push();
+                const updates = {};
+                updates[`workflowActivity/${safeRo}/activityLog/${dateKey}/${entryRef.key}`] = entry;
+                updates[`workflowActivity/${safeRo}/lastTouchedAt`] = nowIso;
+                updates[`workflowActivity/${safeRo}/lastTouchedDate`] = dateKey;
+                updates[`workflowActivity/${safeRo}/lastTouchedByOwner`] = assignedOwner;
+                updates[`workflowActivity/${safeRo}/lastActionType`] = actionType;
+                updates[`workflowActivity/${safeRo}/roNumber`] = roNumber || '';
+                updates[`workflowActivity/${safeRo}/unitNo`] = entry.unitNo || '';
+                updates[`workflowActivity/${safeRo}/branch`] = entry.branch || '';
+                if (actionType === 'NOTE_ADDED' && isMeaningfulNote(noteText)) {
+                    updates[`workflowActivity/${safeRo}/hasMeaningfulNote`] = true;
+                    updates[`workflowActivity/${safeRo}/lastNoteAt`] = nowIso;
+                    updates[`workflowActivity/${safeRo}/lastNoteDate`] = dateKey;
+                    updates[`workflowActivity/${safeRo}/latestNote`] = String(noteText || '').trim();
+                }
+                return db.ref().update(updates);
+            }
+
+            if (!globalWorkflowActivityState[safeRo]) globalWorkflowActivityState[safeRo] = { activityLog: {} };
+            if (!globalWorkflowActivityState[safeRo].activityLog) globalWorkflowActivityState[safeRo].activityLog = {};
+            if (!globalWorkflowActivityState[safeRo].activityLog[dateKey]) globalWorkflowActivityState[safeRo].activityLog[dateKey] = {};
+            const localKey = 'local_' + now.getTime();
+            globalWorkflowActivityState[safeRo].activityLog[dateKey][localKey] = entry;
+            globalWorkflowActivityState[safeRo].lastTouchedAt = nowIso;
+            globalWorkflowActivityState[safeRo].lastTouchedDate = dateKey;
+            globalWorkflowActivityState[safeRo].lastTouchedByOwner = assignedOwner;
+            globalWorkflowActivityState[safeRo].lastActionType = actionType;
+            if (actionType === 'NOTE_ADDED' && isMeaningfulNote(noteText)) {
+                globalWorkflowActivityState[safeRo].hasMeaningfulNote = true;
+                globalWorkflowActivityState[safeRo].lastNoteAt = nowIso;
+                globalWorkflowActivityState[safeRo].lastNoteDate = dateKey;
+                globalWorkflowActivityState[safeRo].latestNote = String(noteText || '').trim();
+            }
+            try { localStorage.setItem('workflow_activity', JSON.stringify(globalWorkflowActivityState)); } catch(e) {}
+            updateAllNoteButtons();
+            triggerViewUpdate();
+            return Promise.resolve();
+        }
+
+        function calculateWorkflowCompliance(dataSet) {
+            const activeRos = (dataSet || []).filter(ro => {
+                if (!ro || !ro.isOpen || !ro.roNum) return false;
+                const rn = String(ro.roNum || '');
+                if (rn.startsWith('NO RO') || rn.startsWith('SEE_OTHER:')) return false;
+                const norm = normalizeSpendStatus(ro.status);
+                return norm !== 'CLOSED';
+            });
+
+            const total = activeRos.length;
+            if (total === 0) {
+                return { score: 100, rating: 'ON TRACK', colorClass: 'compliance-green', total: 0, touched: 0, notes: 0, dispatched: 0, dispatchTotal: 0, stale: 0, touchPct: 100, notesPct: 100, dispatchPct: 100, staleCleanPct: 100 };
+            }
+
+            let touched = 0;
+            let notes = 0;
+            let stale = 0;
+            let dispatched = 0;
+            let dispatchTotal = 0;
+
+            activeRos.forEach(ro => {
+                const safeRo = safeFirebaseKey(ro.roNum);
+                if (roTouchedToday(safeRo)) touched++;
+                else stale++;
+
+                if (roHasMeaningfulNote(safeRo)) notes++;
+
+                dispatchTotal++;
+                if (!!globalRoCheckState[safeRo]) dispatched++;
+            });
+
+            const touchPct = total ? touched / total : 1;
+            const notesPct = total ? notes / total : 1;
+            const dispatchPct = dispatchTotal ? dispatched / dispatchTotal : 1;
+            const staleCleanPct = total ? (total - stale) / total : 1;
+            const score = Math.round((touchPct * 40) + (notesPct * 30) + (dispatchPct * 20) + (staleCleanPct * 10));
+            const colorClass = score >= 85 ? 'compliance-green' : (score >= 70 ? 'compliance-yellow' : 'compliance-red');
+            const rating = score >= 85 ? 'ON TRACK' : (score >= 70 ? 'WATCH' : 'NEEDS ACTION');
+
+            return { score, rating, colorClass, total, touched, notes, dispatched, dispatchTotal, stale, touchPct: Math.round(touchPct * 100), notesPct: Math.round(notesPct * 100), dispatchPct: Math.round(dispatchPct * 100), staleCleanPct: Math.round(staleCleanPct * 100) };
+        }
+
+        function generateWorkflowComplianceHtml(dataSet, compact = false) {
+            const c = calculateWorkflowCompliance(dataSet);
+            return `
+                <div class="workflow-compliance-card ${c.colorClass}${compact ? ' compact' : ''}" title="Score = 40% daily touches + 30% notes coverage + 20% dispatched flag + 10% stale control">
+                    <div class="workflow-compliance-header">
+                        <div>
+                            <div class="workflow-compliance-label">Daily Workflow Compliance</div>
+                            <div class="workflow-compliance-score">${c.score}%</div>
+                        </div>
+                        <div class="workflow-compliance-rating">${c.rating}</div>
+                    </div>
+                    <div class="workflow-compliance-grid">
+                        <div class="workflow-compliance-mini"><div class="mini-title">Touched</div><div class="mini-num">${c.touched}/${c.total}</div></div>
+                        <div class="workflow-compliance-mini"><div class="mini-title">Notes</div><div class="mini-num">${c.notes}/${c.total}</div></div>
+                        <div class="workflow-compliance-mini"><div class="mini-title">Dispatch</div><div class="mini-num">${c.dispatched}/${c.dispatchTotal}</div></div>
+                        <div class="workflow-compliance-mini"><div class="mini-title">Stale</div><div class="mini-num">${c.stale}</div></div>
+                    </div>
+                </div>`;
         }
 
         function updateAllStatusBadges() {
@@ -805,28 +1086,40 @@
         }
 
         function toggleRoCheck(ro, isChecked) {
-            let safeRo = ro.replace(/[.#$\[\]]/g, '_'); 
+            let safeRo = safeFirebaseKey(ro);
+            const roContext = getRoContextBySafeRo(safeRo);
+            const actionText = isChecked ? 'Marked dispatched.' : 'Moved back to pending.';
             if (db) {
-                db.ref('roChecks/' + safeRo).set(isChecked);
+                db.ref('roChecks/' + safeRo).set(isChecked)
+                    .then(() => logWorkflowActivity(safeRo, isChecked ? 'DISPATCH_MARKED' : 'DISPATCH_REOPENED', actionText, {
+                        source: 'dispatch-toggle',
+                        roNumber: roContext ? roContext.roNum : ro
+                    }))
+                    .catch(err => console.warn('Dispatch status update failed:', err));
             } else {
                 globalRoCheckState[safeRo] = isChecked;
                 try { localStorage.setItem('workflow_checks', JSON.stringify(globalRoCheckState)); } catch(e) {}
+                logWorkflowActivity(safeRo, isChecked ? 'DISPATCH_MARKED' : 'DISPATCH_REOPENED', actionText, {
+                    source: 'dispatch-toggle',
+                    roNumber: roContext ? roContext.roNum : ro
+                });
                 updateAllStatusBadges();
             }
         }
 
         let currentEditingRo = null;
+        let currentEditingRoNum = null;
 
         function updateAllNoteButtons() {
             document.querySelectorAll('.note-btn').forEach(btn => {
                 let ro = btn.getAttribute('data-ro');
-                let note = globalRoNotesState[ro];
+                let note = getLatestMeaningfulNote(ro);
                 if (note && note.trim() !== '') {
                     btn.className = 'note-btn has-note';
-                    btn.title = note; 
+                    btn.title = note;
                 } else {
                     btn.className = 'note-btn';
-                    btn.title = 'Add Note';
+                    btn.title = 'Add Update';
                 }
             });
             if (document.getElementById('summary-view').classList.contains('active')) {
@@ -836,8 +1129,10 @@
 
         window.openNoteModal = function(safeRo, roNum) {
             currentEditingRo = safeRo;
-            document.getElementById('note-modal-title').innerText = 'Notes for ' + roNum;
-            document.getElementById('note-textarea').value = globalRoNotesState[safeRo] || '';
+            currentEditingRoNum = roNum;
+            document.getElementById('note-modal-title').innerText = 'Daily Updates for ' + roNum;
+            document.getElementById('note-textarea').value = '';
+            renderNoteActivityLog(safeRo);
             document.getElementById('note-modal').style.display = 'flex';
             document.getElementById('note-textarea').focus();
         }
@@ -845,20 +1140,49 @@
         window.closeNoteModal = function() {
             document.getElementById('note-modal').style.display = 'none';
             currentEditingRo = null;
+            currentEditingRoNum = null;
         }
 
-        window.saveNote = function() {
+        window.saveNote = async function() {
             if (!currentEditingRo) return;
-            let noteText = document.getElementById('note-textarea').value;
-            if (db) {
-                db.ref('roNotes/' + currentEditingRo).set(noteText);
-            } else {
-                globalRoNotesState[currentEditingRo] = noteText;
-                try { localStorage.setItem('workflow_notes', JSON.stringify(globalRoNotesState)); } catch(e) {}
-                updateAllNoteButtons();
+            let noteText = document.getElementById('note-textarea').value.trim();
+            if (!isMeaningfulNote(noteText)) {
+                alert('Please enter a meaningful update with at least 15 characters.');
+                return;
             }
-            closeNoteModal();
+
+            const latestNote = getLatestMeaningfulNote(currentEditingRo).trim();
+            if (latestNote && latestNote.toLowerCase() === noteText.toLowerCase()) {
+                alert('This update is the same as the latest saved note. Add a new meaningful update if something changed.');
+                return;
+            }
+
+            try {
+                if (db) {
+                    await db.ref('roNotes/' + currentEditingRo).set(noteText);
+                    await logWorkflowActivity(currentEditingRo, 'NOTE_ADDED', noteText, {
+                        source: 'message-button',
+                        roNumber: currentEditingRoNum || currentEditingRo
+                    });
+                } else {
+                    globalRoNotesState[currentEditingRo] = noteText;
+                    try { localStorage.setItem('workflow_notes', JSON.stringify(globalRoNotesState)); } catch(e) {}
+                    await logWorkflowActivity(currentEditingRo, 'NOTE_ADDED', noteText, {
+                        source: 'message-button',
+                        roNumber: currentEditingRoNum || currentEditingRo
+                    });
+                }
+                document.getElementById('note-textarea').value = '';
+                renderNoteActivityLog(currentEditingRo);
+                updateAllNoteButtons();
+                triggerViewUpdate();
+                closeNoteModal();
+            } catch (err) {
+                console.warn('Save note failed:', err);
+                alert('Update could not be saved. Please try again.');
+            }
         }
+
 
         let processedData = []; 
         let currentFilter = 'ALL';
@@ -2297,7 +2621,7 @@
             let weekKey = window.globalAppFin && window.globalAppFin.weekKey ? window.globalAppFin.weekKey : getWeekKey(new Date());
             let pendingSpendCount = window.globalAppFin && window.globalAppFin.pendingSpendCount ? window.globalAppFin.pendingSpendCount : 0;
             let adjustedSpendCount = window.globalAppFin && window.globalAppFin.adjustedSpendCount ? window.globalAppFin.adjustedSpendCount : 0;
-            let sourceLabel = window.globalAppFin && window.globalAppFin.source === 'firebase-transition-live-ro-detail' ? 'Live RO Detail spend' : (window.globalAppFin && window.globalAppFin.source === 'firebase-transition' ? 'Firebase transition tracking' : 'Firebase baseline pending');
+            let sourceLabel = window.globalAppFin && window.globalAppFin.source === 'firebase-transition-live-ro-detail' ? 'Firebase transition tracking + live RO Detail spend' : (window.globalAppFin && window.globalAppFin.source === 'firebase-transition' ? 'Firebase transition tracking' : 'Firebase baseline pending');
             let spendAuditText = pendingSpendCount > 0
                 ? `${pendingSpendCount} WIP authorization(s) are pending RO Detail cost. These will backfill on the next refresh once RO Detail catches up.`
                 : `All current-week WIP authorizations have RO Detail spend captured.`;
@@ -2646,6 +2970,8 @@
                 `;
             }
 
+            let workflowComplianceHtml = chartId ? '' : generateWorkflowComplianceHtml(dataSet);
+
             let innerHtml = `
                 <div class="kpi-name">${name}</div>
                 <div class="kpi-top-metrics">
@@ -2674,6 +3000,7 @@
                         <div class="num urgent">${latePct}%</div>
                     </div>
                 </div>
+                ${workflowComplianceHtml}
             `;
             return innerHtml;
         }
