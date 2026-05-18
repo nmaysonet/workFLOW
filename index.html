@@ -164,9 +164,10 @@
         .status-pending { background-color: var(--urgent-red); color: white; border: 1px solid #c9302c; }
         .status-dispatched { background-color: var(--low-green); color: white; border: 1px solid #4cae4c; }
 
-        .note-btn { background: #f0f0f0; border: 1px solid #ccc; border-radius: 4px; cursor: pointer; padding: 2px 6px; font-size: 12px; transition: 0.2s; opacity: 0.7;}
-        .note-btn:hover { background: #e0e0e0; opacity: 1; }
-        .note-btn.has-note { background: var(--gold); color: #333; border-color: var(--gold-hover); opacity: 1; box-shadow: 0 1px 3px rgba(0,0,0,0.2); }
+        .note-btn { background: #fff0f0; color: var(--urgent-red); border: 1px solid var(--urgent-red); border-radius: 4px; cursor: pointer; padding: 2px 6px; font-size: 12px; transition: 0.2s; opacity: 1; box-shadow: 0 1px 3px rgba(217,83,79,0.18);}
+        .note-btn:hover { background: #ffe1e1; opacity: 1; transform: translateY(-1px); }
+        .note-btn.has-note { background: #f0fdf4; color: #15803d; border-color: #22c55e; opacity: 1; box-shadow: 0 1px 3px rgba(34,197,94,0.22); }
+        .note-btn.has-note:hover { background: #dcfce7; }
 
         .workflow-compliance-card { margin-top: 12px; border-radius: 6px; padding: 10px; border: 1px solid #e5e7eb; background: #f8fafc; }
         .workflow-compliance-header { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 8px; }
@@ -244,12 +245,12 @@
             <span class="logo-plus">+</span>
         </div>
         <div class="menu-item active" id="menu-home" onclick="navigate('home-view', this)">Home Dashboard</div>
-        <div class="menu-item submenu-toggle" id="menu-other" onclick="toggleOtherQueuesMenu()">Other Queues</div>
-        <div class="submenu" id="other-queues-submenu">
+        <div class="menu-item submenu-toggle" id="menu-queues" onclick="toggleQueuesMenu()">Queues</div>
+        <div class="submenu" id="queues-submenu">
+            <div class="menu-item" id="menu-vended" onclick="navigate('vended-view', this)">Vended Repair Queue</div>
             <div class="menu-item" id="menu-pm" onclick="navigate('pm-view', this)">PM Queue</div>
             <div class="menu-item" id="menu-ers" onclick="navigate('ers-view', this)">ERS Queue</div>
         </div>
-        <div class="menu-item" id="menu-vended" onclick="navigate('vended-view', this)">Vended Repair Queue</div>
         <div class="menu-item" onclick="window.location.href='vendor.html'">Vendor Search</div>
         <div class="menu-item" id="menu-spend" onclick="navigate('spend-view', this)">Weekly Spend Matrix</div>
         <div class="menu-item" id="menu-summary" onclick="navigate('summary-view', this)">Consolidation Summary</div>
@@ -318,11 +319,6 @@
             <div id="home-dashboard" style="display:none;">
                 <div class="home-dashboard-header">
                     <h2 style="margin:0;">Aggregate Performance Overview</h2>
-                    <div>
-                        <select class="filter-select customer-filter-select" onchange="setCustomerFilter(this.value)">
-                            <option value="ALL">All Customers</option>
-                        </select>
-                    </div>
                 </div>
                 <div class="home-kpi-container" id="home-kpi-container"></div>
             </div>
@@ -331,11 +327,6 @@
         <div id="pm-view" class="view-section">
             <div class="view-title">
                 <span style="font-weight: 700;">PM Queue</span>
-                <div>
-                    <select class="filter-select customer-filter-select" onchange="setCustomerFilter(this.value)">
-                        <option value="ALL">All Customers</option>
-                    </select>
-                </div>
             </div>
             <div class="kpi-grid" id="pm-kpi-container"></div>
         </div>
@@ -343,11 +334,6 @@
         <div id="vended-view" class="view-section">
             <div class="view-title">
                 <span style="font-weight: 700;">Vended Repair Queue</span>
-                <div>
-                    <select class="filter-select customer-filter-select" onchange="setCustomerFilter(this.value)">
-                        <option value="ALL">All Customers</option>
-                    </select>
-                </div>
             </div>
             <div class="filter-bar">
                 <button class="filter-btn active" data-filter="ALL" onclick="setFilter('ALL')">All Units</button>
@@ -360,11 +346,6 @@
         <div id="ers-view" class="view-section">
             <div class="view-title">
                 <span style="font-weight: 700;">ERS Queue</span>
-                <div>
-                    <select class="filter-select customer-filter-select" onchange="setCustomerFilter(this.value)">
-                        <option value="ALL">All Customers</option>
-                    </select>
-                </div>
             </div>
             <div class="filter-bar">
                 <button class="filter-btn active" data-filter="ALL" onclick="setFilter('ALL')">All Units</button>
@@ -383,9 +364,6 @@
             <div class="view-title">
                 <div style="display:flex; align-items:center; gap: 20px;">
                     <span id="person-name-title" style="font-weight: 700;">Owner Details</span>
-                    <select class="filter-select customer-filter-select" onchange="setCustomerFilter(this.value)">
-                        <option value="ALL">All Customers</option>
-                    </select>
                 </div>
                 <div class="controls-group" style="display: flex; align-items: center;">
                     <button class="btn-green" onclick="exportDrilldownToExcel()">&#11139; Export to XLSX</button>
@@ -829,7 +807,7 @@
                         try { localStorage.setItem('workflow_activity', JSON.stringify(globalWorkflowActivityState)); } catch(e) {}
                         updateAllNoteButtons();
                         if (processedData && processedData.length > 0) {
-                            triggerViewUpdate();
+                            refreshActiveViewPreservingDrilldown();
                         }
                     });
                 }
@@ -1008,7 +986,7 @@
             }
             try { localStorage.setItem('workflow_activity', JSON.stringify(globalWorkflowActivityState)); } catch(e) {}
             updateAllNoteButtons();
-            triggerViewUpdate();
+            refreshActiveViewPreservingDrilldown();
             return Promise.resolve();
         }
 
@@ -1119,12 +1097,12 @@
             document.querySelectorAll('.note-btn').forEach(btn => {
                 let ro = btn.getAttribute('data-ro');
                 let note = getLatestMeaningfulNote(ro);
-                if (note && note.trim() !== '') {
+                if (isMeaningfulNote(note)) {
                     btn.className = 'note-btn has-note';
                     btn.title = note;
                 } else {
                     btn.className = 'note-btn';
-                    btn.title = 'Add Update';
+                    btn.title = 'Needs Update';
                 }
             });
             if (document.getElementById('summary-view').classList.contains('active')) {
@@ -1180,7 +1158,7 @@
                 document.getElementById('note-textarea').value = '';
                 renderNoteActivityLog(currentEditingRo);
                 updateAllNoteButtons();
-                preserveCurrentDrilldownStateAndRefresh();
+                refreshActiveViewPreservingDrilldown();
                 closeNoteModal();
             } catch (err) {
                 console.warn('Save note failed:', err);
@@ -2084,9 +2062,9 @@
         }
 
 
-        function toggleOtherQueuesMenu() {
-            const submenu = document.getElementById('other-queues-submenu');
-            const toggle = document.getElementById('menu-other');
+        function toggleQueuesMenu() {
+            const submenu = document.getElementById('queues-submenu');
+            const toggle = document.getElementById('menu-queues');
             if (!submenu || !toggle) return;
             submenu.classList.toggle('open');
             toggle.classList.toggle('expanded');
@@ -2128,20 +2106,27 @@
             });
         }
 
-        function preserveCurrentDrilldownStateAndRefresh() {
+        function refreshActiveViewPreservingDrilldown() {
             const mainContent = document.querySelector('.main-content');
             const activeView = document.querySelector('.view-section.active');
-            const root = activeView && activeView.id === 'person-view' ? document.getElementById('drilldown-body') : null;
+            const isDrilldownView = activeView && activeView.id === 'person-view';
+            const root = isDrilldownView ? document.getElementById('drilldown-body') : null;
             const openPaths = getOpenDetailPaths(root);
             const scrollTop = mainContent ? mainContent.scrollTop : 0;
 
             triggerViewUpdate();
 
-            setTimeout(() => {
-                const refreshedRoot = document.getElementById('drilldown-body');
-                restoreOpenDetailPaths(refreshedRoot, openPaths);
-                if (mainContent) mainContent.scrollTop = scrollTop;
-            }, 0);
+            if (isDrilldownView) {
+                requestAnimationFrame(() => {
+                    const refreshedRoot = document.getElementById('drilldown-body');
+                    restoreOpenDetailPaths(refreshedRoot, openPaths);
+                    if (mainContent) mainContent.scrollTop = scrollTop;
+                });
+            }
+        }
+
+        function preserveCurrentDrilldownStateAndRefresh() {
+            refreshActiveViewPreservingDrilldown();
         }
 
         function processExcelData(vroRaw, roDetailRaw, resourceRawAOA, oosRawAOA, usefulRawAOA, dodRawAOA) {
@@ -3396,9 +3381,10 @@
                                 let toggleState = isDispatched ? 'false' : 'true'; 
                                 let statusToggleHtml = `<span class="badge status-toggle ${toggleClass}" data-ro="${safeRo}" onclick="toggleRoCheck('${safeRo}', ${toggleState})">${toggleText}</span>`;
 
-                                let hasNote = globalRoNotesState[safeRo] && globalRoNotesState[safeRo].trim() !== '';
+                                let latestNote = getLatestMeaningfulNote(safeRo);
+                                let hasNote = isMeaningfulNote(latestNote);
                                 let noteClass = hasNote ? 'note-btn has-note' : 'note-btn';
-                                let noteTitle = hasNote ? globalRoNotesState[safeRo].replace(/"/g, '&quot;') : 'Add Note';
+                                let noteTitle = hasNote ? escapeHtml(latestNote).replace(/"/g, '&quot;') : 'Needs Update';
                                 let noteBtnHtml = `<button class="${noteClass}" data-ro="${safeRo}" title="${noteTitle}" onclick="openNoteModal('${safeRo}', '${roNum}')">📝</button>`;
 
                                 let sourcePillHtml = getQueueSourcePillHtml(u.queueSources[idx], isVendedQueue);
@@ -3672,9 +3658,10 @@
                                 statusToggleHtml = `<span class="badge" style="background-color: #888; color: white; min-width: 85px; text-align: center; display: inline-block;">CLOSED</span>`;
                             }
 
-                            let hasNote = globalRoNotesState[safeRo] && globalRoNotesState[safeRo].trim() !== '';
+                            let latestNote = getLatestMeaningfulNote(safeRo);
+                            let hasNote = isMeaningfulNote(latestNote);
                             let noteClass = hasNote ? 'note-btn has-note' : 'note-btn';
-                            let noteTitle = hasNote ? globalRoNotesState[safeRo].replace(/"/g, '&quot;') : 'Add Note';
+                            let noteTitle = hasNote ? escapeHtml(latestNote).replace(/"/g, '&quot;') : 'Needs Update';
                             let noteBtnHtml = `<button class="${noteClass}" data-ro="${safeRo}" title="${noteTitle}" onclick="openNoteModal('${safeRo}', '${roNum}')">📝</button>`;
 
                             let roHtml = `<div style="display:flex; align-items:center; gap: 4px;">${statusToggleHtml} ${u.roLinks[idx]} ${noteBtnHtml}</div>`;
@@ -3729,6 +3716,13 @@
             if(menuElement) {
                 document.querySelectorAll('.menu-item').forEach(item => item.classList.remove('active'));
                 menuElement.classList.add('active');
+                const queuesSubmenu = document.getElementById('queues-submenu');
+                const queuesToggle = document.getElementById('menu-queues');
+                if (['pm-view', 'vended-view', 'ers-view'].includes(viewId) && queuesSubmenu && queuesToggle) {
+                    queuesSubmenu.classList.add('open');
+                    queuesToggle.classList.add('expanded');
+                    queuesToggle.classList.add('active');
+                }
             }
             
             if(viewId === 'pm-view') renderKPITiles(pmOwners, 'pm-kpi-container', 'pm-view');
