@@ -1268,6 +1268,7 @@
         let globalBranchToTeam = {};
         
         let summaryTree = {};
+        let summaryUsefulTree = {};
         let expandedSummaryState = {};
 
         const excludedStatuses = [
@@ -2362,13 +2363,12 @@
                 if (rVal !== 'ALL' && reg !== rVal) continue;
 
                 let rData = summaryTree[reg];
-                let rActive = Math.max(0, rData.totalUnits - rData.oos);
-                let rPct = rData.maxRoutes > 0 ? (rActive / rData.maxRoutes) : 0;
+                let rUsefulNode = getSummaryUsefulNode(reg);
                 
                 sumRows.push({
                     "Level": "Region", "Name": reg, "Max Routes": rData.maxRoutes, 
                     "Total Units": rData.totalUnits, "OOS": rData.oos, 
-                    "Useful %": rData.maxRoutes > 0 ? Math.round(rPct * 100) + '%' : '0%', 
+                    "Useful %": getSummaryUsefulTextForNode(rData, rUsefulNode), 
                     "DoD OOS": rData.dodOos, 
                     "DoD Change": rData.oos - rData.dodOos
                 });
@@ -2377,13 +2377,12 @@
                     if (sVal !== 'ALL' && sub !== sVal) continue;
 
                     let sData = rData.subs[sub];
-                    let sActive = Math.max(0, sData.totalUnits - sData.oos);
-                    let sPct = sData.maxRoutes > 0 ? (sActive / sData.maxRoutes) : 0;
+                    let sUsefulNode = getSummaryUsefulNode(reg, sub);
                     
                     sumRows.push({
                         "Level": "Sub Region", "Name": sub, "Max Routes": sData.maxRoutes, 
                         "Total Units": sData.totalUnits, "OOS": sData.oos, 
-                        "Useful %": sData.maxRoutes > 0 ? Math.round(sPct * 100) + '%' : '0%', 
+                        "Useful %": getSummaryUsefulTextForNode(sData, sUsefulNode), 
                         "DoD OOS": sData.dodOos, 
                         "DoD Change": sData.oos - sData.dodOos
                     });
@@ -2392,13 +2391,12 @@
                         if (bVal !== 'ALL' && bra !== bVal) continue;
 
                         let bData = sData.branches[bra];
-                        let bActive = Math.max(0, bData.totalUnits - bData.oos);
-                        let bPct = bData.maxRoutes > 0 ? (bActive / bData.maxRoutes) : 0;
+                        let bUsefulNode = getSummaryUsefulNode(reg, sub, bra);
                         
                         sumRows.push({
                             "Level": "Branch", "Name": bra, "Max Routes": bData.maxRoutes, 
                             "Total Units": bData.totalUnits, "OOS": bData.oos, 
-                            "Useful %": bData.maxRoutes > 0 ? Math.round(bPct * 100) + '%' : '0%', 
+                            "Useful %": getSummaryUsefulTextForNode(bData, bUsefulNode), 
                             "DoD OOS": bData.dodOos, 
                             "DoD Change": bData.oos - bData.dodOos
                         });
@@ -3184,47 +3182,70 @@
             }
 
             summaryTree = {};
+            summaryUsefulTree = {};
+
+            function ensureSummaryBranch(tree, reg, sub, bra, includeFinancials) {
+                if (!tree[reg]) tree[reg] = { maxRoutes:0, totalUnits:0, oos:0, dodOos:0, closedRev:0, wipRev:0, authorizedRev:0, subs: {} };
+                if (!tree[reg].subs[sub]) tree[reg].subs[sub] = { maxRoutes:0, totalUnits:0, oos:0, dodOos:0, closedRev:0, wipRev:0, authorizedRev:0, branches: {} };
+                if (!tree[reg].subs[sub].branches[bra]) {
+                    let code = extractGardaCode(bra) || normalizeBranchStr(bra);
+                    let bMetrics = branchMetricsMap[code] || { maxRoutes:0, dodOos:0 };
+                    let fin = includeFinancials && window.globalBranchFin && window.globalBranchFin[code] ? window.globalBranchFin[code] : { closedRev:0, wipRev:0, authorizedRev:0 };
+
+                    tree[reg].subs[sub].branches[bra] = {
+                        maxRoutes: bMetrics.maxRoutes,
+                        totalUnits: 0,
+                        oos: 0,
+                        dodOos: bMetrics.dodOos,
+                        closedRev: fin.closedRev || 0,
+                        wipRev: fin.wipRev || 0,
+                        authorizedRev: fin.authorizedRev || fin.wipRev || 0
+                    };
+
+                    tree[reg].maxRoutes += bMetrics.maxRoutes;
+                    tree[reg].dodOos += bMetrics.dodOos;
+                    tree[reg].closedRev += fin.closedRev || 0;
+                    tree[reg].wipRev += fin.wipRev || 0;
+                    tree[reg].authorizedRev += fin.authorizedRev || fin.wipRev || 0;
+
+                    tree[reg].subs[sub].maxRoutes += bMetrics.maxRoutes;
+                    tree[reg].subs[sub].dodOos += bMetrics.dodOos;
+                    tree[reg].subs[sub].closedRev += fin.closedRev || 0;
+                    tree[reg].subs[sub].wipRev += fin.wipRev || 0;
+                    tree[reg].subs[sub].authorizedRev += fin.authorizedRev || fin.wipRev || 0;
+                }
+                return tree[reg].subs[sub].branches[bra];
+            }
+
             for (let unit in masterUnits) {
                 let m = masterUnits[unit];
                 let reg = m.region || 'Unknown Region';
                 let sub = m.subregion || 'Unknown Subregion';
                 let bra = m.branch || 'Unknown Branch';
 
-                if (!summaryTree[reg]) summaryTree[reg] = { maxRoutes:0, totalUnits:0, oos:0, dodOos:0, closedRev:0, wipRev:0, subs: {} };
-                if (!summaryTree[reg].subs[sub]) summaryTree[reg].subs[sub] = { maxRoutes:0, totalUnits:0, oos:0, dodOos:0, closedRev:0, wipRev:0, branches: {} };
-                if (!summaryTree[reg].subs[sub].branches[bra]) {
-                    let code = extractGardaCode(bra) || normalizeBranchStr(bra);
-                    let bMetrics = branchMetricsMap[code] || { maxRoutes:0, dodOos:0 };
-                    let fin = window.globalBranchFin && window.globalBranchFin[code] ? window.globalBranchFin[code] : { closedRev:0, wipRev:0 };
-                    
-                    summaryTree[reg].subs[sub].branches[bra] = { 
-                        maxRoutes: bMetrics.maxRoutes, 
-                        totalUnits: 0, 
-                        oos: 0, 
-                        dodOos: bMetrics.dodOos,
-                        closedRev: fin.closedRev,
-                        wipRev: fin.wipRev
-                    };
-                    
-                    summaryTree[reg].maxRoutes += bMetrics.maxRoutes;
-                    summaryTree[reg].dodOos += bMetrics.dodOos;
-                    summaryTree[reg].closedRev += fin.closedRev;
-                    summaryTree[reg].wipRev += fin.wipRev;
-                    
-                    summaryTree[reg].subs[sub].maxRoutes += bMetrics.maxRoutes;
-                    summaryTree[reg].subs[sub].dodOos += bMetrics.dodOos;
-                    summaryTree[reg].subs[sub].closedRev += fin.closedRev;
-                    summaryTree[reg].subs[sub].wipRev += fin.wipRev;
+                // Useful % base remains the full regional/subregional population, including dedicated sites.
+                // This prevents the region/subregion Useful % from being remeasured against only the visible vended sites.
+                let usefulBranch = ensureSummaryBranch(summaryUsefulTree, reg, sub, bra, false);
+                usefulBranch.totalUnits++;
+                summaryUsefulTree[reg].totalUnits++;
+                summaryUsefulTree[reg].subs[sub].totalUnits++;
+                if (m.isOOS) {
+                    usefulBranch.oos++;
+                    summaryUsefulTree[reg].oos++;
+                    summaryUsefulTree[reg].subs[sub].oos++;
                 }
 
+                // Consolidation Summary display should only show vended sites. Dedicated sites stay out of the summary rows.
+                if (m.isDedicatedShop) continue;
+
+                let displayBranch = ensureSummaryBranch(summaryTree, reg, sub, bra, true);
+                displayBranch.totalUnits++;
                 summaryTree[reg].totalUnits++;
                 summaryTree[reg].subs[sub].totalUnits++;
-                summaryTree[reg].subs[sub].branches[bra].totalUnits++;
-
                 if (m.isOOS) {
+                    displayBranch.oos++;
                     summaryTree[reg].oos++;
                     summaryTree[reg].subs[sub].oos++;
-                    summaryTree[reg].subs[sub].branches[bra].oos++;
                 }
             }
 
@@ -3468,6 +3489,28 @@
             return `<span style="color:var(--low-green); font-weight:bold;">${formatted}</span>`;
         }
 
+        function getSummaryUsefulNode(reg, sub = null, bra = null) {
+            if (!summaryUsefulTree || !summaryUsefulTree[reg]) return null;
+            if (!sub) return summaryUsefulTree[reg];
+            if (!summaryUsefulTree[reg].subs || !summaryUsefulTree[reg].subs[sub]) return null;
+            if (!bra) return summaryUsefulTree[reg].subs[sub];
+            return summaryUsefulTree[reg].subs[sub].branches ? summaryUsefulTree[reg].subs[sub].branches[bra] : null;
+        }
+
+        function getSummaryUsefulHtmlForNode(displayNode, usefulNode) {
+            const node = usefulNode || displayNode || { totalUnits: 0, oos: 0, maxRoutes: 0 };
+            const active = Math.max(0, (node.totalUnits || 0) - (node.oos || 0));
+            return getSummaryUsefulHtml(active, node.maxRoutes || 0);
+        }
+
+        function getSummaryUsefulTextForNode(displayNode, usefulNode) {
+            const node = usefulNode || displayNode || { totalUnits: 0, oos: 0, maxRoutes: 0 };
+            const maxRoutes = node.maxRoutes || 0;
+            if (maxRoutes <= 0) return '0%';
+            const active = Math.max(0, (node.totalUnits || 0) - (node.oos || 0));
+            return Math.round((active / maxRoutes) * 100) + '%';
+        }
+
         function getDoDChangeHtml(currentOos, dodOos) {
             let diff = currentOos - dodOos;
             if (diff > 0) return `<span style="color:var(--urgent-red); font-weight:bold;">+${diff}</span>`;
@@ -3503,8 +3546,7 @@
                 if (rVal !== 'ALL' && reg !== rVal) continue;
                 
                 let rData = summaryTree[reg];
-                let rActive = Math.max(0, rData.totalUnits - rData.oos);
-                let rPct = rData.maxRoutes > 0 ? (rActive / rData.maxRoutes) : 0;
+                let rUsefulNode = getSummaryUsefulNode(reg);
                 let rIcon = expandedSummaryState[reg] ? '▼' : '▶';
                 
                 html += `<tr style="background:#f1f5f9; cursor:pointer;" onclick="toggleSummary('${reg}')">
@@ -3512,7 +3554,7 @@
                     <td style="text-align:right; font-weight:700;">${rData.maxRoutes}</td>
                     <td style="text-align:right; font-weight:700;">${rData.totalUnits}</td>
                     <td style="text-align:right; font-weight:800; font-size:14px;">${rData.oos}</td>
-                    <td style="text-align:right;">${getSummaryUsefulHtml(rActive, rData.maxRoutes)}</td>
+                    <td style="text-align:right;">${getSummaryUsefulHtmlForNode(rData, rUsefulNode)}</td>
                     <td style="text-align:right; color:#64748b;">${rData.dodOos}</td>
                     <td style="text-align:right;">${getDoDChangeHtml(rData.oos, rData.dodOos)}</td>
                 </tr>`;
@@ -3522,8 +3564,7 @@
                         if (sVal !== 'ALL' && sub !== sVal) continue;
 
                         let sData = rData.subs[sub];
-                        let sActive = Math.max(0, sData.totalUnits - sData.oos);
-                        let sPct = sData.maxRoutes > 0 ? (sActive / sData.maxRoutes) : 0;
+                        let sUsefulNode = getSummaryUsefulNode(reg, sub);
                         let subId = reg + '|' + sub;
                         let sIcon = expandedSummaryState[subId] ? '▼' : '▶';
                         
@@ -3532,7 +3573,7 @@
                             <td style="text-align:right; font-weight:600;">${sData.maxRoutes}</td>
                             <td style="text-align:right; font-weight:600;">${sData.totalUnits}</td>
                             <td style="text-align:right; font-weight:800; font-size:13px;">${sData.oos}</td>
-                            <td style="text-align:right;">${getSummaryUsefulHtml(sActive, sData.maxRoutes)}</td>
+                            <td style="text-align:right;">${getSummaryUsefulHtmlForNode(sData, sUsefulNode)}</td>
                             <td style="text-align:right; color:#64748b;">${sData.dodOos}</td>
                             <td style="text-align:right;">${getDoDChangeHtml(sData.oos, sData.dodOos)}</td>
                         </tr>`;
@@ -3542,14 +3583,14 @@
                                 if (bVal !== 'ALL' && bra !== bVal) continue;
 
                                 let bData = sData.branches[bra];
-                                let bActive = Math.max(0, bData.totalUnits - bData.oos);
+                                let bUsefulNode = getSummaryUsefulNode(reg, sub, bra);
                                 
                                 html += `<tr style="background:#ffffff;">
                                     <td style="padding-left:55px; font-weight:600; color:#64748b;">${bra}</td>
                                     <td style="text-align:right; color:#475569;">${bData.maxRoutes}</td>
                                     <td style="text-align:right; color:#475569;">${bData.totalUnits}</td>
                                     <td style="text-align:right; font-weight:800; color:#334155;">${bData.oos}</td>
-                                    <td style="text-align:right;">${getSummaryUsefulHtml(bActive, bData.maxRoutes)}</td>
+                                    <td style="text-align:right;">${getSummaryUsefulHtmlForNode(bData, bUsefulNode)}</td>
                                     <td style="text-align:right; color:#94a3b8;">${bData.dodOos}</td>
                                     <td style="text-align:right;">${getDoDChangeHtml(bData.oos, bData.dodOos)}</td>
                                 </tr>`;
