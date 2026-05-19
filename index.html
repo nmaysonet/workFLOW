@@ -1501,6 +1501,115 @@
             return rows;
         }
 
+        function makeSpendChangeLogEventKey(prefix, safeRo, timestamp) {
+            return String(prefix || 'EVENT') + '_' + String(safeRo || 'UNKNOWN') + '_' + String(timestamp || new Date().toISOString()).replace(/[^0-9]/g, '');
+        }
+
+        function buildAuthorizationDerivedChangeRows(allAuthorizations) {
+            const rows = [];
+            const allAuth = allAuthorizations || {};
+
+            Object.keys(allAuth).forEach(weekKey => {
+                const weekAuths = allAuth[weekKey] || {};
+                Object.keys(weekAuths).forEach(safeRo => {
+                    const auth = weekAuths[safeRo] || {};
+                    const roNum = auth.roNumber || safeRo;
+                    const currentSpend = Number(auth.spend || 0);
+
+                    if (auth.authorizedAt) {
+                        rows.push({
+                            safeRo: safeRo,
+                            eventKey: `AUTH_${weekKey}_${safeRo}`,
+                            changedAt: auth.authorizedAt,
+                            changedDate: auth.authorizedAt ? getLocalDateKey(new Date(auth.authorizedAt)) : '',
+                            roNumber: roNum,
+                            unitNo: auth.unitNo || '',
+                            branch: auth.branch || '',
+                            subregion: auth.subregion || '',
+                            region: auth.region || '',
+                            owner: auth.owner || '',
+                            changeType: 'AUTHORIZED INTO WIP',
+                            previousStatus: auth.previousStatus || '',
+                            currentStatus: auth.currentStatus || '',
+                            previousNormalizedStatus: auth.previousNormalizedStatus || '',
+                            currentNormalizedStatus: auth.currentNormalizedStatus || '',
+                            previousSpend: 0,
+                            currentSpend: currentSpend,
+                            spendDelta: currentSpend,
+                            spendSource: auth.spendSource || '',
+                            roDetailStatus: auth.lastKnownRoDetailStatus || '',
+                            closedEvent: false,
+                            source: 'firebase-authorization-derived'
+                        });
+                    }
+
+                    if (auth.spendUpdatedAt && auth.previousSpend !== undefined) {
+                        const previousSpend = Number(auth.previousSpend || 0);
+                        const delta = currentSpend - previousSpend;
+                        if (Math.abs(delta) >= 0.01) {
+                            rows.push({
+                                safeRo: safeRo,
+                                eventKey: makeSpendChangeLogEventKey('AUTH_SPEND', safeRo, auth.spendUpdatedAt),
+                                changedAt: auth.spendUpdatedAt,
+                                changedDate: auth.spendUpdatedAt ? getLocalDateKey(new Date(auth.spendUpdatedAt)) : '',
+                                roNumber: roNum,
+                                unitNo: auth.unitNo || '',
+                                branch: auth.branch || '',
+                                subregion: auth.subregion || '',
+                                region: auth.region || '',
+                                owner: auth.owner || '',
+                                changeType: auth.spendStatus === 'BACKFILLED_RO_DETAIL' ? 'SPEND BACKFILLED' : 'SPEND UPDATED',
+                                previousStatus: auth.currentStatus || '',
+                                currentStatus: auth.currentStatus || '',
+                                previousNormalizedStatus: auth.currentNormalizedStatus || '',
+                                currentNormalizedStatus: auth.currentNormalizedStatus || '',
+                                previousSpend: previousSpend,
+                                currentSpend: currentSpend,
+                                spendDelta: delta,
+                                spendSource: auth.spendSource || '',
+                                roDetailStatus: auth.lastKnownRoDetailStatus || '',
+                                closedEvent: false,
+                                source: 'firebase-authorization-derived'
+                            });
+                        }
+                    }
+                });
+            });
+
+            return rows;
+        }
+
+        function mergeSpendChangeRows(primaryRows, derivedRows) {
+            const merged = [];
+            const seen = new Set();
+
+            [...(primaryRows || []), ...(derivedRows || [])].forEach(row => {
+                const isDerived = row.source === 'firebase-authorization-derived';
+                const isAuthDerived = isDerived && String(row.changeType || '').includes('AUTHORIZED');
+
+                if (isAuthDerived) {
+                    const equivalentLoggedRow = merged.some(existing => {
+                        const sameRo = String(existing.safeRo || '') === String(row.safeRo || '');
+                        const sameTimestamp = String(existing.changedAt || '') === String(row.changedAt || '');
+                        const sameStatusMove = String(existing.previousStatus || '') === String(row.previousStatus || '') &&
+                            String(existing.currentStatus || '') === String(row.currentStatus || '');
+                        const loggedStatusChange = !String(existing.source || '').includes('derived') &&
+                            String(existing.changeType || '').toUpperCase().includes('STATUS');
+                        return sameRo && sameTimestamp && sameStatusMove && loggedStatusChange;
+                    });
+                    if (equivalentLoggedRow) return;
+                }
+
+                const key = row.eventKey || `${row.roNumber || ''}_${row.changedAt || ''}_${row.changeType || ''}_${row.previousSpend || 0}_${row.currentSpend || 0}`;
+                if (seen.has(key)) return;
+                seen.add(key);
+                merged.push(row);
+            });
+
+            merged.sort((a, b) => new Date(b.changedAt || 0) - new Date(a.changedAt || 0));
+            return merged;
+        }
+
         async function refreshSpendChangeLogRows() {
             if (!db) {
                 globalSpendChangeLogRows = [];
@@ -1509,8 +1618,14 @@
             }
 
             try {
-                const snap = await db.ref('spendGovernor/changeLog').once('value');
-                globalSpendChangeLogRows = buildSpendChangeLogRows(snap.val() || {});
+                const [logSnap, authSnap] = await Promise.all([
+                    db.ref('spendGovernor/changeLog').once('value'),
+                    db.ref('spendGovernor/authorizations').once('value')
+                ]);
+
+                const loggedRows = buildSpendChangeLogRows(logSnap.val() || {});
+                const authorizationRows = buildAuthorizationDerivedChangeRows(authSnap.val() || {});
+                globalSpendChangeLogRows = mergeSpendChangeRows(loggedRows, authorizationRows);
             } catch (err) {
                 console.warn('Spend change log load failed:', err);
                 globalSpendChangeLogRows = globalSpendChangeLogRows || [];
@@ -1815,6 +1930,30 @@
 
                     if (hasLatestRoDetailSpend && Math.abs(latestSpend - previousSpend) >= 0.01) {
                         adjustedSpendCount++;
+                        const spendUpdateEventKey = makeSpendChangeLogEventKey('AUTH_SPEND', safeRo, nowIso);
+                        updates[`spendGovernor/changeLog/${safeRo}/${spendUpdateEventKey}`] = {
+                            changedAt: nowIso,
+                            changedDate: getLocalDateKey(now),
+                            roNumber: roNum,
+                            unitNo: auth.unitNo || '',
+                            branch: auth.branch || '',
+                            subregion: auth.subregion || '',
+                            region: auth.region || '',
+                            owner: auth.owner || '',
+                            changeType: previousSpend > 0 ? 'SPEND UPDATED' : 'SPEND BACKFILLED',
+                            previousStatus: auth.currentStatus || '',
+                            currentStatus: auth.currentStatus || '',
+                            previousNormalizedStatus: auth.currentNormalizedStatus || '',
+                            currentNormalizedStatus: auth.currentNormalizedStatus || '',
+                            previousSpend: previousSpend,
+                            currentSpend: latestSpend,
+                            spendDelta: latestSpend - previousSpend,
+                            spendSource: 'RO_DETAIL',
+                            roDetailStatus: spendInfo.roDetailStatus || auth.lastKnownRoDetailStatus || '',
+                            closedEvent: false,
+                            source: 'firebase-authorization-spend-audit'
+                        };
+
                         updates[`spendGovernor/authorizations/${authWeekKey}/${safeRo}/spend`] = latestSpend;
                         updates[`spendGovernor/authorizations/${authWeekKey}/${safeRo}/previousSpend`] = previousSpend;
                         updates[`spendGovernor/authorizations/${authWeekKey}/${safeRo}/spendDelta`] = latestSpend - previousSpend;
