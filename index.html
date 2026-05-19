@@ -1411,7 +1411,7 @@
                     amount: amount,
                     foundInRoDetail: true,
                     status: amount > 0 ? 'CONFIRMED_RO_DETAIL' : 'PENDING_RO_DETAIL',
-                    source: 'RO_DETAIL',
+                    source: fin.source || 'RO_DETAIL',
                     roDetailStatus: fin.status || '',
                     roDetailOpened: fin.opened || null,
                     roDetailClosedOn: fin.closedon || null
@@ -2655,44 +2655,196 @@
 
             // --- FINANCIAL PROCESSING START ---
             let orderFin = {};
-            // Parse array of arrays explicitly by column index to prevent header mismatches
-            for (let i = 1; i < roDetailRaw.length; i++) {
-                let row = roDetailRaw[i];
-                if (!row || row.length < 80) continue; 
 
-                let roNum = String(row[16] || '').toUpperCase().trim(); // Col Q
-                if (!roNum) continue;
-                
-                let linetotal = parseFloat(row[78]) || 0; // Col CA
-                let status = String(row[1] || '').toUpperCase().trim(); // Col B
-                let opened = parseDateSafe(row[4]); // Col E
-                let complt = parseDateSafe(row[6]); // Col G
-                let closedon = parseDateSafe(row[9]); // Col J
-                let shop = String(row[20] || '').trim(); // Col U (TIERII)
+            function normalizeRoDetailHeader(value) {
+                return String(value || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+            }
 
-                if (!orderFin[roNum]) {
-                    orderFin[roNum] = {
-                        status: status,
-                        total: 0,
-                        opened: opened,
-                        complt: complt,
-                        closedon: closedon,
-                        shop: shop
-                    };
+            function parseMoneyValue(value) {
+                if (value === undefined || value === null) return null;
+                const raw = String(value).replace(/[$,]/g, '').trim();
+                if (raw === '') return null;
+                const num = parseFloat(raw);
+                return isNaN(num) ? null : num;
+            }
+
+            function chooseRoDetailSpend(totalEstimateValue, receivedTotalValue) {
+                const totalEstimate = parseMoneyValue(totalEstimateValue);
+                const receivedTotal = parseMoneyValue(receivedTotalValue);
+
+                if (totalEstimate === null && receivedTotal === null) return 0;
+                if (receivedTotal === null) return totalEstimate || 0;
+                if (totalEstimate === null) return receivedTotal || 0;
+
+                // Cost-control rule: do not add both columns together. Use the higher current control value.
+                return Math.max(totalEstimate || 0, receivedTotal || 0);
+            }
+
+            function normalizeShopIdForSpend(value) {
+                const raw = String(value || '').trim();
+                if (!raw) return '';
+                const digits = raw.replace(/\D/g, '');
+                if (digits) {
+                    const n = parseInt(digits, 10);
+                    if (!isNaN(n)) return String(n);
                 }
-                
-                orderFin[roNum].total += linetotal;
+                return raw;
+            }
 
-                if (status === 'CLOSED') orderFin[roNum].status = 'CLOSED';
-                else if (status !== '' && orderFin[roNum].status !== 'CLOSED') orderFin[roNum].status = status;
+            function getHeaderIndexFromMap(headerMap, possibleNames) {
+                for (let name of possibleNames) {
+                    const key = normalizeRoDetailHeader(name);
+                    if (headerMap[key] !== undefined) return headerMap[key];
+                }
+                return -1;
+            }
 
-                if (closedon && !orderFin[roNum].closedon) orderFin[roNum].closedon = closedon;
-                if (opened && !orderFin[roNum].opened) orderFin[roNum].opened = opened;
-                
-                if (shop && shop !== '') {
-                    if (!orderFin[roNum].shop || extractGardaCode(shop)) {
+            function getAoAValue(row, idx) {
+                return idx >= 0 && row && row[idx] !== undefined && row[idx] !== null ? row[idx] : '';
+            }
+
+            function getStatusPriority(status) {
+                const s = String(status || '').toUpperCase();
+                if (s.includes('FINAL CHARGES') || s.includes('BILLED') || s.includes('INVOICED')) return 6;
+                if (s.includes('COMPLETED') || s.includes('CLOSED')) return 5;
+                if (s.includes('WORK IN PROGRESS') || s.includes('WORK IN PROCESS') || s === 'WIP') return 4;
+                if (s === 'ESTIMATES' || s.includes('ESTIMATE')) return 3;
+                if (s.includes('PENDING')) return 2;
+                if (s.includes('UNASSIGNED')) return 1;
+                return 0;
+            }
+
+            let roDetailHeaderIdx = -1;
+            let roDetailHeaderMap = {};
+            for (let i = 0; i < Math.min(20, roDetailRaw.length); i++) {
+                const row = roDetailRaw[i] || [];
+                const tempMap = {};
+                row.forEach((h, idx) => {
+                    const key = normalizeRoDetailHeader(h);
+                    if (key) tempMap[key] = idx;
+                });
+
+                const hasNewRoDetailShape =
+                    tempMap['ronum'] !== undefined &&
+                    (tempMap['totalestimate'] !== undefined || tempMap['receivedtotal'] !== undefined) &&
+                    tempMap['portaltab'] !== undefined;
+
+                if (hasNewRoDetailShape) {
+                    roDetailHeaderIdx = i;
+                    roDetailHeaderMap = tempMap;
+                    break;
+                }
+            }
+
+            if (roDetailHeaderIdx !== -1) {
+                const h = {
+                    roNum: getHeaderIndexFromMap(roDetailHeaderMap, ['RONUM', 'Order', 'RO Number']),
+                    status: getHeaderIndexFromMap(roDetailHeaderMap, ['PortalTab', 'Status']),
+                    opened: getHeaderIndexFromMap(roDetailHeaderMap, ['Opened_PST', 'Opened']),
+                    completed: getHeaderIndexFromMap(roDetailHeaderMap, ['COMPLT_PST', 'Completed Date', 'Completed']),
+                    shop: getHeaderIndexFromMap(roDetailHeaderMap, ['ShopID', 'Shop']),
+                    totalEstimate: getHeaderIndexFromMap(roDetailHeaderMap, ['TotalEstimate', 'Total Estimate']),
+                    receivedTotal: getHeaderIndexFromMap(roDetailHeaderMap, ['ReceivedTotal', 'Received Total']),
+                    vendor: getHeaderIndexFromMap(roDetailHeaderMap, ['Vendor']),
+                    contact: getHeaderIndexFromMap(roDetailHeaderMap, ['Contact', 'Owner']),
+                    unitNo: getHeaderIndexFromMap(roDetailHeaderMap, ['UnitNumber', 'Unit No', 'Vehicle Unit No']),
+                    task: getHeaderIndexFromMap(roDetailHeaderMap, ['CompCodeDesc', 'Task']),
+                    message: getHeaderIndexFromMap(roDetailHeaderMap, ['LastMessageBody', 'Message'])
+                };
+
+                for (let i = roDetailHeaderIdx + 1; i < roDetailRaw.length; i++) {
+                    const row = roDetailRaw[i];
+                    if (!row || !Array.isArray(row)) continue;
+
+                    const roNum = String(getAoAValue(row, h.roNum) || '').toUpperCase().trim();
+                    if (!roNum) continue;
+
+                    const lineValue = chooseRoDetailSpend(
+                        getAoAValue(row, h.totalEstimate),
+                        getAoAValue(row, h.receivedTotal)
+                    );
+
+                    const status = String(getAoAValue(row, h.status) || '').toUpperCase().trim();
+                    const opened = parseDateSafe(getAoAValue(row, h.opened));
+                    const complt = parseDateSafe(getAoAValue(row, h.completed));
+                    const shop = normalizeShopIdForSpend(getAoAValue(row, h.shop));
+
+                    if (!orderFin[roNum]) {
+                        orderFin[roNum] = {
+                            status: status,
+                            statusPriority: getStatusPriority(status),
+                            total: 0,
+                            opened: opened,
+                            complt: complt,
+                            closedon: complt,
+                            shop: shop,
+                            source: 'NEW_RO_DETAIL',
+                            lineCount: 0
+                        };
+                    }
+
+                    // New RO Detail is line-level. Select TotalEstimate vs ReceivedTotal per line, then roll up by RONUM.
+                    orderFin[roNum].total += lineValue;
+                    orderFin[roNum].lineCount += 1;
+
+                    const statusPriority = getStatusPriority(status);
+                    if (status && statusPriority >= (orderFin[roNum].statusPriority || 0)) {
+                        orderFin[roNum].status = status;
+                        orderFin[roNum].statusPriority = statusPriority;
+                    }
+
+                    if (opened && (!orderFin[roNum].opened || opened < orderFin[roNum].opened)) {
+                        orderFin[roNum].opened = opened;
+                    }
+                    if (complt && !orderFin[roNum].complt) orderFin[roNum].complt = complt;
+                    if (complt && !orderFin[roNum].closedon) orderFin[roNum].closedon = complt;
+
+                    if (shop && shop !== '') {
                         orderFin[roNum].shop = shop;
                     }
+                }
+            } else {
+                // Legacy RO Detail fallback: prior export layout used fixed indexes: RO in Q, spend in CA.
+                for (let i = 1; i < roDetailRaw.length; i++) {
+                    let row = roDetailRaw[i];
+                    if (!row || row.length < 80) continue; 
+
+                    let roNum = String(row[16] || '').toUpperCase().trim(); // Col Q
+                    if (!roNum) continue;
+
+                    let linetotal = parseMoneyValue(row[78]) || 0; // Col CA
+                    let status = String(row[1] || '').toUpperCase().trim(); // Col B
+                    let opened = parseDateSafe(row[4]); // Col E
+                    let complt = parseDateSafe(row[6]); // Col G
+                    let closedon = parseDateSafe(row[9]); // Col J
+                    let shop = normalizeShopIdForSpend(row[20]); // Col U (TIERII)
+
+                    if (!orderFin[roNum]) {
+                        orderFin[roNum] = {
+                            status: status,
+                            statusPriority: getStatusPriority(status),
+                            total: 0,
+                            opened: opened,
+                            complt: complt,
+                            closedon: closedon,
+                            shop: shop,
+                            source: 'LEGACY_RO_DETAIL',
+                            lineCount: 0
+                        };
+                    }
+
+                    orderFin[roNum].total += linetotal;
+                    orderFin[roNum].lineCount += 1;
+
+                    const statusPriority = getStatusPriority(status);
+                    if (status && statusPriority >= (orderFin[roNum].statusPriority || 0)) {
+                        orderFin[roNum].status = status;
+                        orderFin[roNum].statusPriority = statusPriority;
+                    }
+
+                    if (closedon && !orderFin[roNum].closedon) orderFin[roNum].closedon = closedon;
+                    if (opened && !orderFin[roNum].opened) orderFin[roNum].opened = opened;
+                    if (shop && shop !== '') orderFin[roNum].shop = shop;
                 }
             }
 
@@ -2718,7 +2870,7 @@
             for (let roNum in orderFin) {
                 let order = orderFin[roNum];
                 
-                let bCode = extractGardaCode(order.shop) || normalizeBranchStr(order.shop);
+                let bCode = normalizeShopIdForSpend(order.shop) || extractGardaCode(order.shop) || normalizeBranchStr(order.shop);
                 if (!bCode) continue;
 
                 if (!branchFin[bCode]) {
@@ -2730,7 +2882,7 @@
 
                 // Ensure we only count financial data for the VENDED network
                 if (branchToTeam[bCode] === 'VENDED REPAIR') {
-                    if (order.status === 'CLOSED') {
+                    if (order.status.includes('CLOSED') || order.status.includes('COMPLETED') || order.status.includes('FINAL CHARGES') || order.status.includes('BILLED') || order.status.includes('INVOICED')) {
                         if (isClosedTW) {
                             branchFin[bCode].closedRev += order.total;
                             globalClosedRev += order.total;
