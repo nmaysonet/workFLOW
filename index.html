@@ -357,7 +357,59 @@
 
         <div id="spend-view" class="view-section">
             <div class="view-title">Weekly Spend Matrix</div>
-            <div id="spend-dashboard-widget"></div>
+            <div class="sub-tabs-container">
+                <button class="sub-tab active" onclick="switchSpendTab('sub-weekly-spend', this)">Weekly Spend Matrix</button>
+                <button class="sub-tab" onclick="switchSpendTab('sub-spend-change-log', this)">Spend / Status Change Log</button>
+            </div>
+            <div id="sub-weekly-spend" class="sub-section active">
+                <div id="spend-dashboard-widget"></div>
+            </div>
+            <div id="sub-spend-change-log" class="sub-section">
+                <div class="drilldown-container">
+                    <div class="view-title" style="margin-bottom: 10px;">
+                        <span style="font-weight:700;">Spend / Status Change Log</span>
+                        <div class="controls-group" style="display:flex; align-items:center;">
+                            <button class="btn-green" onclick="exportSpendChangeLogToExcel()">&#11139; Export to XLSX</button>
+                        </div>
+                    </div>
+                    <div style="font-size:12px; color:#64748b; font-weight:700; margin-bottom:12px;">
+                        Tracks each Firebase-detected status or RO Detail spend change for spend-governed VROs through closure.
+                    </div>
+                    <div class="table-wrapper">
+                        <table id="spend-change-log-table">
+                            <colgroup>
+                                <col style="width: 12%;">
+                                <col style="width: 10%;">
+                                <col style="width: 10%;">
+                                <col style="width: 16%;">
+                                <col style="width: 13%;">
+                                <col style="width: 10%;">
+                                <col style="width: 12%;">
+                                <col style="width: 12%;">
+                                <col style="width: 9%;">
+                                <col style="width: 9%;">
+                                <col style="width: 9%;">
+                            </colgroup>
+                            <thead>
+                                <tr>
+                                    <th>Changed At</th>
+                                    <th>AFS RO #</th>
+                                    <th>Unit No</th>
+                                    <th>Branch / Site</th>
+                                    <th>Owner</th>
+                                    <th>Change Type</th>
+                                    <th>Previous Status</th>
+                                    <th>Current Status</th>
+                                    <th style="text-align:right;">Previous Spend</th>
+                                    <th style="text-align:right;">Current Spend</th>
+                                    <th style="text-align:right;">Spend Change</th>
+                                </tr>
+                            </thead>
+                            <tbody id="spend-change-log-body"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
         </div>
 
         <div id="person-view" class="view-section">
@@ -558,46 +610,75 @@
         }
 
         async function fetchWorkbookBuffer() {
-            const controller = new AbortController();
-            const timeout = setTimeout(() => controller.abort(), 15000);
+            const workbookPath = 'master_workFLOW.xlsx';
+            const configuredBucket = firebase.app && firebase.app().options ? firebase.app().options.storageBucket : '';
+            const bucketCandidates = Array.from(new Set([
+                configuredBucket,
+                'workflow-dashboard-e6134.firebasestorage.app',
+                'workflow-dashboard-e6134.appspot.com'
+            ].filter(Boolean)));
 
-            try {
-                const storageRef = firebase.storage().ref().child('master_workFLOW.xlsx');
-                const downloadUrl = await storageRef.getDownloadURL();
+            async function fetchAndValidateWorkbook(downloadUrl) {
+                const controller = new AbortController();
+                const timeout = setTimeout(() => controller.abort(), 30000);
 
-                const url = downloadUrl + (downloadUrl.includes('?') ? '&' : '?') + `_=${Date.now()}`;
-                const response = await fetch(url, {
-                    cache: 'no-store',
-                    signal: controller.signal
-                });
+                try {
+                    const url = downloadUrl + (downloadUrl.includes('?') ? '&' : '?') + `_=${Date.now()}`;
+                    const response = await fetch(url, {
+                        cache: 'no-store',
+                        signal: controller.signal
+                    });
 
-                if (!response.ok) {
-                    throw new Error(`HTTP ${response.status}`);
+                    if (!response.ok) {
+                        throw new Error(`HTTP ${response.status}`);
+                    }
+
+                    const data = await response.arrayBuffer();
+
+                    if (!data || data.byteLength < 4) {
+                        throw new Error('Empty or invalid file response.');
+                    }
+
+                    const sig = new Uint8Array(data.slice(0, 2));
+                    const isZip = sig[0] === 0x50 && sig[1] === 0x4B;
+
+                    if (!isZip) {
+                        throw new Error('Response is not a valid XLSX file.');
+                    }
+
+                    return data;
+                } catch (err) {
+                    if (err.name === 'AbortError') {
+                        throw new Error('Firebase Storage request timed out');
+                    }
+                    throw err;
+                } finally {
+                    clearTimeout(timeout);
                 }
-
-                const data = await response.arrayBuffer();
-
-                if (!data || data.byteLength < 4) {
-                    throw new Error('Empty or invalid file response.');
-                }
-
-                const sig = new Uint8Array(data.slice(0, 2));
-                const isZip = sig[0] === 0x50 && sig[1] === 0x4B;
-
-                if (!isZip) {
-                    throw new Error('Response is not a valid XLSX file.');
-                }
-
-                return data;
-            } catch (err) {
-                console.error('Workbook fetch failed:', err);
-                if (err.name === 'AbortError') {
-                    throw new Error('Firebase Storage request timed out');
-                }
-                throw new Error(`Firebase Storage fetch failed: ${err.message}`);
-            } finally {
-                clearTimeout(timeout);
             }
+
+            let lastError = null;
+
+            for (let attempt = 1; attempt <= 2; attempt++) {
+                for (let bucket of bucketCandidates) {
+                    try {
+                        const storageRef = bucket === configuredBucket
+                            ? firebase.storage().ref().child(workbookPath)
+                            : firebase.storage().refFromURL(`gs://${bucket}/${workbookPath}`);
+
+                        const downloadUrl = await storageRef.getDownloadURL();
+                        return await fetchAndValidateWorkbook(downloadUrl);
+                    } catch (err) {
+                        lastError = err;
+                        console.warn(`Workbook fetch attempt ${attempt} failed for bucket ${bucket}:`, err);
+                    }
+                }
+
+                await new Promise(resolve => setTimeout(resolve, 750));
+            }
+
+            console.error('Workbook fetch failed:', lastError);
+            throw new Error(`Firebase Storage fetch failed: ${lastError ? lastError.message : 'Unknown error'}`);
         }
 
         async function fetchData() {
@@ -778,6 +859,7 @@
         let globalRoCheckState = {};
         let globalRoNotesState = {};
         let globalWorkflowActivityState = {};
+        let globalSpendChangeLogRows = [];
 
         try {
             globalRoCheckState = JSON.parse(localStorage.getItem('workflow_checks') || '{}');
@@ -1393,6 +1475,145 @@
             return getSpendGovernorAuthorizedTotal() >= WEEKLY_WIP_AUTH_CAP;
         }
 
+        function formatSpendAuditDateTime(value) {
+            const d = value ? new Date(value) : null;
+            if (!d || isNaN(d.getTime())) return '';
+            return d.toLocaleString('en-US', {
+                month: 'numeric',
+                day: 'numeric',
+                year: '2-digit',
+                hour: 'numeric',
+                minute: '2-digit'
+            });
+        }
+
+        function buildSpendChangeLogRows(rawLog) {
+            const rows = [];
+            const raw = rawLog || {};
+            Object.keys(raw).forEach(safeRo => {
+                const roEvents = raw[safeRo] || {};
+                Object.keys(roEvents).forEach(eventKey => {
+                    const e = roEvents[eventKey] || {};
+                    rows.push(Object.assign({ safeRo, eventKey }, e));
+                });
+            });
+            rows.sort((a, b) => new Date(b.changedAt || 0) - new Date(a.changedAt || 0));
+            return rows;
+        }
+
+        async function refreshSpendChangeLogRows() {
+            if (!db) {
+                globalSpendChangeLogRows = [];
+                renderSpendChangeLogTable();
+                return globalSpendChangeLogRows;
+            }
+
+            try {
+                const snap = await db.ref('spendGovernor/changeLog').once('value');
+                globalSpendChangeLogRows = buildSpendChangeLogRows(snap.val() || {});
+            } catch (err) {
+                console.warn('Spend change log load failed:', err);
+                globalSpendChangeLogRows = globalSpendChangeLogRows || [];
+            }
+
+            renderSpendChangeLogTable();
+            return globalSpendChangeLogRows;
+        }
+
+        function switchSpendTab(subId, btn) {
+            document.querySelectorAll('#spend-view .sub-section').forEach(section => section.classList.remove('active'));
+            const target = document.getElementById(subId);
+            if (target) target.classList.add('active');
+
+            document.querySelectorAll('#spend-view .sub-tab').forEach(tab => tab.classList.remove('active'));
+            if (btn) btn.classList.add('active');
+
+            if (subId === 'sub-spend-change-log') {
+                renderSpendChangeLogTable();
+                refreshSpendChangeLogRows();
+            } else {
+                renderSpendQueue();
+            }
+        }
+
+        function renderSpendChangeLogTable() {
+            const tbody = document.getElementById('spend-change-log-body');
+            if (!tbody) return;
+
+            const rows = globalSpendChangeLogRows || [];
+            if (rows.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="11" style="text-align:center; padding:20px; color:#888; font-weight:700;">No spend/status changes have been logged yet. Changes will begin appearing after Firebase sees a status or RO Detail spend change.</td></tr>';
+                return;
+            }
+
+            const displayRows = rows.slice(0, 1000);
+            let html = '';
+            displayRows.forEach(row => {
+                const prevSpend = Number(row.previousSpend || 0);
+                const currSpend = Number(row.currentSpend || 0);
+                const delta = Number(row.spendDelta || (currSpend - prevSpend) || 0);
+                const deltaColor = delta > 0 ? '#dc2626' : (delta < 0 ? '#16a34a' : '#64748b');
+                html += `<tr>
+                    <td>${escapeHtml(formatSpendAuditDateTime(row.changedAt))}</td>
+                    <td><a class="ro-link" href="https://afshub.azurewebsites.net/Vendors/VendedRepairOrder/Details/${encodeURIComponent(row.roNumber || '')}" target="_blank">${escapeHtml(row.roNumber || '')}</a></td>
+                    <td>${escapeHtml(row.unitNo || '')}</td>
+                    <td>${escapeHtml(row.branch || '')}</td>
+                    <td>${escapeHtml(row.owner || '')}</td>
+                    <td><span class="badge" style="background:#e2e8f0; color:#334155;">${escapeHtml(row.changeType || '')}</span></td>
+                    <td>${escapeHtml(row.previousStatus || '')}</td>
+                    <td>${escapeHtml(row.currentStatus || '')}</td>
+                    <td style="text-align:right;">$${prevSpend.toLocaleString('en-US', {minimumFractionDigits:2})}</td>
+                    <td style="text-align:right;">$${currSpend.toLocaleString('en-US', {minimumFractionDigits:2})}</td>
+                    <td style="text-align:right; color:${deltaColor}; font-weight:800;">${delta >= 0 ? '+' : ''}$${delta.toLocaleString('en-US', {minimumFractionDigits:2})}</td>
+                </tr>`;
+            });
+
+            if (rows.length > displayRows.length) {
+                html += `<tr><td colspan="11" style="text-align:center; padding:10px; color:#64748b; font-weight:700;">Showing latest ${displayRows.length.toLocaleString()} of ${rows.length.toLocaleString()} logged changes. Export includes all loaded rows.</td></tr>`;
+            }
+
+            tbody.innerHTML = html;
+        }
+
+        function exportSpendChangeLogToExcel() {
+            const rows = globalSpendChangeLogRows || [];
+            if (rows.length === 0) {
+                alert('No spend/status change log data is available to export yet.');
+                return;
+            }
+
+            const excelRows = rows.map(row => {
+                const prevSpend = Number(row.previousSpend || 0);
+                const currSpend = Number(row.currentSpend || 0);
+                return {
+                    'Changed At': formatSpendAuditDateTime(row.changedAt),
+                    'AFS RO #': row.roNumber || '',
+                    'Unit No': row.unitNo || '',
+                    'Region': row.region || '',
+                    'Subregion': row.subregion || '',
+                    'Branch / Site': row.branch || '',
+                    'Owner': row.owner || '',
+                    'Change Type': row.changeType || '',
+                    'Previous Status': row.previousStatus || '',
+                    'Current Status': row.currentStatus || '',
+                    'Previous Spend': prevSpend,
+                    'Current Spend': currSpend,
+                    'Spend Change': Number(row.spendDelta || (currSpend - prevSpend) || 0),
+                    'Spend Source': row.spendSource || '',
+                    'RO Detail Status': row.roDetailStatus || '',
+                    'Closed Event': row.closedEvent ? 'Yes' : 'No'
+                };
+            });
+
+            const worksheet = XLSX.utils.json_to_sheet(excelRows);
+            autoFitColumns(worksheet, excelRows);
+            styleExcelHeaders(worksheet);
+
+            const workbook = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(workbook, worksheet, 'Spend Status Change Log');
+            XLSX.writeFile(workbook, `workFLOW_spend_status_change_log_${getLocalDateKey(new Date())}.xlsx`);
+        }
+
         function applySpendGovernorFinancials(branchFin) {
             window.globalBranchFin = branchFin || {};
 
@@ -1441,6 +1662,7 @@
                     adjustedSpendCount: 0,
                     source: 'firebase-unavailable'
                 };
+                globalSpendChangeLogRows = [];
                 applySpendGovernorFinancials(window.globalBranchFin);
                 triggerViewUpdate();
                 return;
@@ -1478,6 +1700,43 @@
                 const alreadyCountedEver = !!countIndex[safeRo];
                 const spendInfo = getRoSpendInfo(ro);
                 const spend = Number(spendInfo.amount || 0);
+                const priorSpend = prior && prior.latestSpend !== undefined ? Number(prior.latestSpend || 0) : 0;
+                const auditSpend = (spendInfo.foundInRoDetail || spend > 0 || !prior) ? spend : priorSpend;
+                const priorStatus = prior ? String(prior.status || '').trim() : '';
+                const statusChanged = !!prior && priorStatus !== currentStatus;
+                const spendChanged = !!prior && Math.abs(auditSpend - priorSpend) >= 0.01;
+                const priorWasClosed = !!prior && prior.normalizedStatus === 'CLOSED';
+                const closingNow = !!prior && prior.normalizedStatus !== 'CLOSED' && currentNorm === 'CLOSED';
+
+                if (prior && !priorWasClosed && (statusChanged || spendChanged || closingNow)) {
+                    const changeTypes = [];
+                    if (statusChanged || closingNow) changeTypes.push(closingNow ? 'CLOSED' : 'STATUS');
+                    if (spendChanged) changeTypes.push('SPEND');
+                    const eventKey = nowIso.replace(/[^0-9]/g, '') + '_' + safeRo;
+
+                    updates[`spendGovernor/changeLog/${safeRo}/${eventKey}`] = {
+                        changedAt: nowIso,
+                        changedDate: getLocalDateKey(now),
+                        roNumber: roNum,
+                        unitNo: ro.unitNo || '',
+                        branch: ro.branch || '',
+                        subregion: ro.subregion || '',
+                        region: ro.region || '',
+                        owner: (ro.kpiOwners && ro.kpiOwners.length ? ro.kpiOwners[0] : '') || (ro.drilldownOwners && ro.drilldownOwners.length ? ro.drilldownOwners[0] : '') || '',
+                        changeType: changeTypes.join(' + ') || 'UPDATE',
+                        previousStatus: priorStatus,
+                        currentStatus: currentStatus,
+                        previousNormalizedStatus: prior.normalizedStatus || '',
+                        currentNormalizedStatus: currentNorm,
+                        previousSpend: priorSpend,
+                        currentSpend: auditSpend,
+                        spendDelta: auditSpend - priorSpend,
+                        spendSource: spendInfo.source || '',
+                        roDetailStatus: spendInfo.roDetailStatus || '',
+                        closedEvent: closingNow,
+                        source: 'firebase-day-over-day-audit'
+                    };
+                }
 
                 const transitionedIntoWip =
                     prior &&
@@ -1526,10 +1785,12 @@
                     region: ro.region || '',
                     status: currentStatus,
                     normalizedStatus: currentNorm,
-                    latestSpend: spend,
+                    latestSpend: auditSpend,
+                    latestSpendRaw: spend,
                     latestSpendStatus: spendInfo.status,
                     latestSpendSource: spendInfo.source,
                     lastKnownRoDetailStatus: spendInfo.roDetailStatus || '',
+                    closedAt: currentNorm === 'CLOSED' ? (prior && prior.closedAt ? prior.closedAt : nowIso) : (prior && prior.closedAt ? prior.closedAt : null),
                     lastSeenAt: nowIso
                 };
             });
@@ -1619,6 +1880,7 @@
                 source: 'firebase-transition-live-ro-detail'
             };
 
+            await refreshSpendChangeLogRows();
             applySpendGovernorFinancials(branchAuthorized);
             triggerViewUpdate();
         }
@@ -1656,6 +1918,31 @@
                 if (queue === 'ERS') return '<span class="queue-source-pill queue-source-ers">ERS Queue</span>';
                 return '';
             }).filter(Boolean).join(' ');
+        }
+
+        function hasDedicatedShopOwner(ro, owner) {
+            if (!ro || !ro.dedicatedShopOwners || ro.dedicatedShopOwners.length === 0) return false;
+            if (owner === 'ALL_VENDED') {
+                return ro.dedicatedShopOwners.some(o => vendedOwners.includes(o));
+            }
+            return ro.dedicatedShopOwners.includes(String(owner));
+        }
+
+        function roMatchesOwnerForDrilldown(ro, owner) {
+            if (!ro || !ro.drilldownOwners) return false;
+            if (owner === 'ALL_PM') return ro.drilldownOwners.some(o => pmOwners.includes(o));
+            if (owner === 'ALL_VENDED') return ro.drilldownOwners.some(o => vendedOwners.includes(o)) || hasDedicatedShopOwner(ro, 'ALL_VENDED');
+            if (owner === 'ALL_ERS') return ro.drilldownOwners.some(o => ersOwners.includes(o));
+            if (ro.drilldownOwners.includes(String(owner))) return true;
+            return vendedOwners.includes(String(owner)) && hasDedicatedShopOwner(ro, owner);
+        }
+
+        function shouldDisplayAsDedicatedShopWork(ro, owner) {
+            if (!ro || !hasDedicatedShopOwner(ro, owner)) return false;
+            if (owner === 'ALL_VENDED') {
+                return !ro.drilldownOwners.some(o => vendedOwners.includes(o));
+            }
+            return !ro.drilldownOwners.includes(String(owner));
         }
 
         function areTasksSimilar(task1, task2) {
@@ -1820,10 +2107,7 @@
             if (!currentOwnerView || processedData.length === 0) return;
             
             let ownerDataAll = processedData;
-            if (currentOwnerView === 'ALL_PM') ownerDataAll = processedData.filter(ro => ro.drilldownOwners.some(o => pmOwners.includes(o)));
-            else if (currentOwnerView === 'ALL_VENDED') ownerDataAll = processedData.filter(ro => ro.drilldownOwners.some(o => vendedOwners.includes(o)));
-            else if (currentOwnerView === 'ALL_ERS') ownerDataAll = processedData.filter(ro => ro.drilldownOwners.some(o => ersOwners.includes(o)));
-            else ownerDataAll = processedData.filter(ro => ro.drilldownOwners.includes(String(currentOwnerView)));
+            ownerDataAll = processedData.filter(ro => roMatchesOwnerForDrilldown(ro, currentOwnerView));
             
             if (currentCustomerFilter !== 'ALL') {
                 ownerDataAll = ownerDataAll.filter(ro => ro.custKey === currentCustomerFilter);
@@ -2344,7 +2628,7 @@
                 let owner = String(row[13] || '').trim();
                 
                 if (!unit) continue;
-                if (owner.toUpperCase() === 'DEDICATED') continue; 
+                let isDedicatedShop = owner.toUpperCase() === 'DEDICATED';
                 if (!owner) owner = 'Unassigned';
                 
                 masterUnits[unit] = {
@@ -2353,7 +2637,8 @@
                     branch: branch,
                     type: unitType,
                     isOOS: (oosFlag === 'OOS'),
-                    owner: owner
+                    owner: owner,
+                    isDedicatedShop: isDedicatedShop
                 };
             }
 
@@ -2394,7 +2679,7 @@
                 let drilldownOwners = new Set();
 
                 let unitOwner = mUnit.owner;
-                let validBranchOwner = unitOwner || 'Unassigned';
+                let validBranchOwner = mUnit.isDedicatedShop ? '' : (unitOwner || 'Unassigned');
 
                 let creatorInfo = resourceMap[ownerEmail];
                 const isKevinCreated = ownerEmail.includes('kanguzza') || ownerEmail.includes('kevin anguzza');
@@ -2402,6 +2687,18 @@
                 if (isKevinCreated) sourceQueue = 'PM';
                 else if (creatorInfo && creatorInfo.team === 'PM') sourceQueue = 'PM';
                 else if (creatorInfo && creatorInfo.team === 'ERS') sourceQueue = 'ERS';
+
+                let dedicatedShopOwners = new Set();
+                const creatorIsVended = creatorInfo && creatorInfo.team === 'VENDED REPAIR' && creatorInfo.name;
+                const finShop = orderFin[roNum] && orderFin[roNum].shop ? String(orderFin[roNum].shop).trim() : '';
+                // Dedicated Shop Work Orders should only be routed to the creator/owner when the unit/site
+                // is explicitly marked DEDICATED in the unit/source data. Normal vended branch work must stay
+                // with the regional/subregion coordinator assignment, even when another vended coordinator
+                // created the VRO or RO Detail shows a different shop value.
+                const isDedicatedShopWorkOrder = !!(creatorIsVended && mUnit.isDedicatedShop);
+                if (isDedicatedShopWorkOrder) {
+                    dedicatedShopOwners.add(creatorInfo.name);
+                }
 
                 if (isKevinCreated) {
                     kpiOwners.add('Kevin Anguzza');
@@ -2467,7 +2764,12 @@
                     ecdState, ecdFormatted, ecdMs, openedFormatted, 
                     usefulPct: pcts.TOTAL, usefulPctObj: pcts, region: mUnit.region,
                     possibleDuplicate: false,
-                    sourceQueue: sourceQueue
+                    sourceQueue: sourceQueue,
+                    createdByName: creatorInfo && creatorInfo.name ? creatorInfo.name : '',
+                    createdByTeam: creatorInfo && creatorInfo.team ? creatorInfo.team : '',
+                    isDedicatedShopWorkOrder: isDedicatedShopWorkOrder,
+                    dedicatedShopOwners: Array.from(dedicatedShopOwners),
+                    financialShop: finShop
                 };
 
                 if (isOpen) {
@@ -2478,6 +2780,7 @@
                         else if (t === 'ERS') activeERS.add(o);
                         else activeVended.add(o);
                     });
+                    roObj.dedicatedShopOwners.forEach(o => activeVended.add(o));
                 }
 
                 return roObj;
@@ -2509,7 +2812,7 @@
                 let mUnit = masterUnits[unit];
                 
                 let unitOwner = mUnit.owner;
-                let validBranchOwner = unitOwner || 'Unassigned';
+                let validBranchOwner = mUnit.isDedicatedShop ? '' : (unitOwner || 'Unassigned');
 
                 let actualOpenROs = unitRoGroups[unit] ? unitRoGroups[unit].filter(r => r.isOpen) : [];
                 let hasOpenElsewhere = actualOpenROs.length > 0;
@@ -2735,6 +3038,7 @@
             grid.innerHTML = html;
             let spendTableBody = document.getElementById('spend-table-body');
             if (spendTableBody) spendTableBody.innerHTML = '';
+            renderSpendChangeLogTable();
         }
 
         function renderAmeritOos() {
@@ -3109,7 +3413,7 @@
             let isPM = containerId === 'pm-kpi-container';
 
             ownersList.forEach(owner => {
-                let ownerDataAll = processedData.filter(ro => ro.kpiOwners.includes(owner));
+                let ownerDataAll = processedData.filter(ro => ro.kpiOwners.includes(owner) || (containerId === 'vended-kpi-container' && hasDedicatedShopOwner(ro, owner)));
                 
                 if (currentCustomerFilter !== 'ALL') {
                     ownerDataAll = ownerDataAll.filter(ro => ro.custKey === currentCustomerFilter);
@@ -3152,7 +3456,17 @@
 
         function generateRoDrilldownHtml(ownerDataAll, isPM) {
             let isVendedQueue = currentOwnerView === 'ALL_VENDED' || vendedOwners.includes(currentOwnerView);
-            let baseOpenData = ownerDataAll.filter(ro => ro.isOpen);
+            let baseOpenData = ownerDataAll.filter(ro => ro.isOpen).map(ro => {
+                if (isVendedQueue && shouldDisplayAsDedicatedShopWork(ro, currentOwnerView)) {
+                    return Object.assign({}, ro, {
+                        drillTopLevel: 'Dedicated Shop Work Orders',
+                        subregion: 'Dedicated Shop Work Orders',
+                        branch: ro.financialShop ? `${ro.branch} / Shop ${ro.financialShop}` : ro.branch,
+                        isDedicatedShopDisplay: true
+                    });
+                }
+                return ro;
+            });
 
             let branchUsefulVals = {};
             let subUsefulMap = {};
@@ -3431,7 +3745,11 @@
                         }
                     }
                     if (branchHtml !== '') {
-                        subHtml += `<details class="ro-detail-node subregion-details"><summary><div style="flex-grow:1; display:flex; align-items:center;">${sub}</div><div>${subBadges}</div></summary>${branchHtml}</details>`;
+                        if (topLvl === 'Dedicated Shop Work Orders') {
+                            subHtml += branchHtml;
+                        } else {
+                            subHtml += `<details class="ro-detail-node subregion-details"><summary><div style="flex-grow:1; display:flex; align-items:center;">${sub}</div><div>${subBadges}</div></summary>${branchHtml}</details>`;
+                        }
                     }
                 }
                 if (subHtml !== '') {
@@ -3509,10 +3827,7 @@
 
             let ownerDataAll = processedData;
             
-            if (owner === 'ALL_PM') ownerDataAll = processedData.filter(ro => ro.drilldownOwners.some(o => pmOwners.includes(o)));
-            else if (owner === 'ALL_VENDED') ownerDataAll = processedData.filter(ro => ro.drilldownOwners.some(o => vendedOwners.includes(o)));
-            else if (owner === 'ALL_ERS') ownerDataAll = processedData.filter(ro => ro.drilldownOwners.some(o => ersOwners.includes(o)));
-            else ownerDataAll = processedData.filter(ro => ro.drilldownOwners.includes(String(owner)));
+            ownerDataAll = processedData.filter(ro => roMatchesOwnerForDrilldown(ro, owner));
             
             if (currentCustomerFilter !== 'ALL') {
                 ownerDataAll = ownerDataAll.filter(ro => ro.custKey === currentCustomerFilter);
