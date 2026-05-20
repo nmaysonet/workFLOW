@@ -113,17 +113,19 @@
         body.colorblind-mode .workflow-compliance-card.compliance-red .workflow-compliance-score { color: #9a3412; }
         body.colorblind-mode .workflow-compliance-card.compliance-red .workflow-compliance-rating { background: #D55E00; color: #111; }
 
-        .portal-modal-box { width: calc(100vw - 48px); height: calc(100vh - 48px); max-width: none; max-height: none; padding: 0; overflow: hidden; display: flex; flex-direction: column; border-radius: 8px; border: 2px solid var(--gold); box-shadow: 0 20px 45px rgba(0,0,0,0.45); }
-        .portal-modal-header { padding: 12px 18px; min-height: 54px; background: #2a2b30; color: #fff; border-bottom: 3px solid var(--gold); margin-bottom: 0; }
-        .portal-modal-header #portal-modal-title { color: #fff; font-size: 15px; font-weight: 900; letter-spacing: 0.2px; }
-        .portal-modal-actions { display: flex; align-items: center; gap: 12px; }
-        .portal-fallback-link { background: var(--gold); color: #111; font-size: 12px; font-weight: 900; text-decoration: none; text-transform: uppercase; padding: 9px 14px; border-radius: 4px; border: 1px solid var(--gold-hover); box-shadow: 0 1px 3px rgba(0,0,0,0.25); }
-        .portal-fallback-link:hover { background: var(--gold-hover); color: #111; }
-        .portal-modal-header .modal-close { color: #fff; font-size: 28px; font-weight: 900; line-height: 1; opacity: 0.95; }
-        .portal-modal-header .modal-close:hover { color: var(--gold); }
-        .portal-frame-wrap { flex: 1; background: #f4f6f9; position: relative; }
-        .portal-frame { width: 100%; height: 100%; border: 0; display: block; background: #fff; }
-        .portal-helper { display: none; }
+        .portal-modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.62); z-index: 1200; align-items: center; justify-content: center; padding: 22px; }
+        .portal-modal-box { width: 96vw; height: 92vh; background: #fff; border-radius: 10px; border: 2px solid var(--gold); box-shadow: 0 14px 40px rgba(0,0,0,0.35); display: flex; flex-direction: column; overflow: hidden; }
+        .portal-modal-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 16px; background: #2a2b30; color: #fff; border-bottom: 3px solid var(--gold); }
+        .portal-title { font-size: 15px; font-weight: 900; letter-spacing: 0.3px; }
+        .portal-actions { display: flex; align-items: center; gap: 10px; }
+        .portal-open-new { color: #333; background: var(--gold); padding: 7px 12px; border-radius: 4px; font-size: 12px; font-weight: 900; text-transform: uppercase; box-shadow: 0 1px 3px rgba(0,0,0,0.25); }
+        .portal-open-new:hover { background: var(--gold-hover); color: #111; }
+        .portal-close { background: transparent; color: #fff; border: none; font-size: 26px; line-height: 1; cursor: pointer; padding: 0 4px; font-weight: 900; }
+        .portal-close:hover { color: var(--gold); }
+        .portal-frame-wrap { position: relative; flex: 1; background: #f4f6f9; }
+        .portal-frame { width: 100%; height: 100%; border: none; display: block; background: #fff; }
+        .portal-loading { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 10px; color: #444; font-size: 14px; font-weight: 800; pointer-events: none; background: #f4f6f9; z-index: 2; }
+        .portal-loading small { font-weight: 600; color: #64748b; max-width: 620px; text-align: center; line-height: 1.4; }
 
         .view-section { padding: 30px; display: none; }
         .view-section.active { display: block; }
@@ -356,7 +358,7 @@
                 <div class="dropdown">
                     <button class="btn-action dropbtn">VENDOR MAPS ▼</button>
                     <div class="dropdown-content">
-                        <a href="#" onclick="openPortalModal('https://app.mapline.com/map/map_282c81fe/TWZ2TzJHRGcrd3BjaG1QMDNPekVGYUhxNThJd080SUZTK2MwZG', 'Armored Vendor Map'); return false;">Armored</a>
+                        <a href="#" onclick="return openVendorMapPortal('https://app.mapline.com/map/map_282c81fe/TWZ2TzJHRGcrd3BjaG1QMDNPekVGYUhxNThJd080SUZTK2MwZG', 'Armored Vendor Map')">Armored</a>
                     </div>
                 </div>
                 <a href="https://afshub.azurewebsites.net/Vendors/VendedRepairOrder/CreateVRO" target="_blank" class="btn-action">CREATE A VRO</a>
@@ -619,18 +621,21 @@
         </div>
     </div>
 
-    <div id="portal-modal" class="modal-overlay">
-        <div class="modal-box portal-modal-box">
-            <div class="modal-header portal-modal-header">
-                <span id="portal-modal-title">Vendor Map</span>
-                <div class="portal-modal-actions">
-                    <a id="portal-open-new-tab" class="portal-fallback-link" href="#" target="_blank" rel="noopener">Open in new tab</a>
-                    <button class="modal-close" onclick="closePortalModal()">&times;</button>
+    <div id="vendor-map-portal-modal" class="portal-modal-overlay">
+        <div class="portal-modal-box">
+            <div class="portal-modal-header">
+                <div class="portal-title" id="vendor-map-portal-title">Vendor Map Portal</div>
+                <div class="portal-actions">
+                    <a id="vendor-map-open-new" class="portal-open-new" href="#" target="_blank" rel="noopener">OPEN IN NEW TAB</a>
+                    <button class="portal-close" onclick="closeVendorMapPortal()">&times;</button>
                 </div>
             </div>
             <div class="portal-frame-wrap">
-                <iframe id="portal-frame" class="portal-frame" src="about:blank"></iframe>
-                <div class="portal-helper">If the map provider blocks embedded viewing, use “Open in new tab” above.</div>
+                <div id="vendor-map-loading" class="portal-loading">
+                    Loading vendor map...
+                    <small>If the map provider blocks embedded viewing, use OPEN IN NEW TAB.</small>
+                </div>
+                <iframe id="vendor-map-frame" class="portal-frame" src="about:blank"></iframe>
             </div>
         </div>
     </div>
@@ -661,27 +666,40 @@
             applyColorblindMode(isEnabled);
         }
 
-        window.openPortalModal = function(url, title) {
-            const modal = document.getElementById('portal-modal');
-            const frame = document.getElementById('portal-frame');
-            const titleEl = document.getElementById('portal-modal-title');
-            const newTab = document.getElementById('portal-open-new-tab');
+        function openVendorMapPortal(url, titleText) {
+            if (!url) return false;
+            const modal = document.getElementById('vendor-map-portal-modal');
+            const frame = document.getElementById('vendor-map-frame');
+            const loader = document.getElementById('vendor-map-loading');
+            const title = document.getElementById('vendor-map-portal-title');
+            const openNew = document.getElementById('vendor-map-open-new');
+
             if (!modal || !frame) {
-                window.open(url, '_blank', 'noopener');
-                return;
+                window.open(url, '_blank');
+                return false;
             }
-            if (titleEl) titleEl.innerText = title || 'Vendor Map';
-            if (newTab) newTab.href = url;
-            frame.src = url;
+
+            if (title) title.innerText = titleText || 'Vendor Map Portal';
+            if (openNew) openNew.href = url;
+            if (loader) loader.style.display = 'flex';
             modal.style.display = 'flex';
+            frame.src = 'about:blank';
+
+            setTimeout(() => { frame.src = url; }, 50);
+            setTimeout(() => { if (loader) loader.style.display = 'none'; }, 1800);
+            return false;
         }
 
-        window.closePortalModal = function() {
-            const modal = document.getElementById('portal-modal');
-            const frame = document.getElementById('portal-frame');
+        function closeVendorMapPortal() {
+            const modal = document.getElementById('vendor-map-portal-modal');
+            const frame = document.getElementById('vendor-map-frame');
             if (frame) frame.src = 'about:blank';
             if (modal) modal.style.display = 'none';
         }
+
+        window.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') closeVendorMapPortal();
+        });
 
         function checkLogin() {
             const passwordInput = document.getElementById('login-pass').value;
