@@ -113,13 +113,17 @@
         body.colorblind-mode .workflow-compliance-card.compliance-red .workflow-compliance-score { color: #9a3412; }
         body.colorblind-mode .workflow-compliance-card.compliance-red .workflow-compliance-rating { background: #D55E00; color: #111; }
 
-        .portal-modal-box { width: 92vw; height: 86vh; max-width: 1400px; padding: 0; overflow: hidden; display: flex; flex-direction: column; }
-        .portal-modal-header { padding: 12px 16px; border-bottom: 1px solid var(--border); margin-bottom: 0; }
-        .portal-modal-actions { display: flex; align-items: center; gap: 10px; }
-        .portal-fallback-link { color: #0066cc; font-size: 12px; font-weight: 800; text-decoration: underline; }
+        .portal-modal-box { width: calc(100vw - 48px); height: calc(100vh - 48px); max-width: none; max-height: none; padding: 0; overflow: hidden; display: flex; flex-direction: column; border-radius: 8px; border: 2px solid var(--gold); box-shadow: 0 20px 45px rgba(0,0,0,0.45); }
+        .portal-modal-header { padding: 12px 18px; min-height: 54px; background: #2a2b30; color: #fff; border-bottom: 3px solid var(--gold); margin-bottom: 0; }
+        .portal-modal-header #portal-modal-title { color: #fff; font-size: 15px; font-weight: 900; letter-spacing: 0.2px; }
+        .portal-modal-actions { display: flex; align-items: center; gap: 12px; }
+        .portal-fallback-link { background: var(--gold); color: #111; font-size: 12px; font-weight: 900; text-decoration: none; text-transform: uppercase; padding: 9px 14px; border-radius: 4px; border: 1px solid var(--gold-hover); box-shadow: 0 1px 3px rgba(0,0,0,0.25); }
+        .portal-fallback-link:hover { background: var(--gold-hover); color: #111; }
+        .portal-modal-header .modal-close { color: #fff; font-size: 28px; font-weight: 900; line-height: 1; opacity: 0.95; }
+        .portal-modal-header .modal-close:hover { color: var(--gold); }
         .portal-frame-wrap { flex: 1; background: #f4f6f9; position: relative; }
         .portal-frame { width: 100%; height: 100%; border: 0; display: block; background: #fff; }
-        .portal-helper { position: absolute; left: 12px; bottom: 12px; right: 12px; background: rgba(255,255,255,0.92); border: 1px solid var(--border); border-radius: 6px; padding: 8px 10px; font-size: 11px; color: #555; font-weight: 700; pointer-events: none; }
+        .portal-helper { display: none; }
 
         .view-section { padding: 30px; display: none; }
         .view-section.active { display: block; }
