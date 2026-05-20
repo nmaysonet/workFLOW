@@ -1077,14 +1077,28 @@
             return Promise.resolve();
         }
 
+        function isRealOpenRoForDailyCompliance(ro) {
+            if (!ro || !ro.isOpen || !ro.roNum) return false;
+            const rn = String(ro.roNum || '');
+            if (rn.startsWith('NO RO') || rn.startsWith('SEE_OTHER:')) return false;
+            const norm = normalizeSpendStatus(ro.status);
+            return norm !== 'CLOSED';
+        }
+
+        function getTileOpenRoPopulation(dataSet, isPM = false) {
+            let openRos = (dataSet || []).filter(ro => isRealOpenRoForDailyCompliance(ro));
+            if (isSpendGovernorLocked() && !isPM) {
+                openRos = openRos.filter(ro => {
+                    let st = String(ro.status || '').toUpperCase();
+                    let isPending = st.includes('UNASSIGNED') || st.includes('ESTIMATE');
+                    return !isPending;
+                });
+            }
+            return openRos;
+        }
+
         function calculateWorkflowCompliance(dataSet) {
-            const activeRos = (dataSet || []).filter(ro => {
-                if (!ro || !ro.isOpen || !ro.roNum) return false;
-                const rn = String(ro.roNum || '');
-                if (rn.startsWith('NO RO') || rn.startsWith('SEE_OTHER:')) return false;
-                const norm = normalizeSpendStatus(ro.status);
-                return norm !== 'CLOSED';
-            });
+            const activeRos = (dataSet || []).filter(ro => isRealOpenRoForDailyCompliance(ro));
 
             const total = activeRos.length;
             if (total === 0) {
@@ -1402,6 +1416,24 @@
             const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
             const weekNum = Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
             return `${d.getUTCFullYear()}-W${String(weekNum).padStart(2, '0')}`;
+        }
+
+
+        function isDateInWeekKey(dateValue, weekKey) {
+            const d = dateValue instanceof Date ? dateValue : parseDateSafe(dateValue);
+            if (!d || isNaN(d.getTime())) return false;
+            return getWeekKey(d) === weekKey;
+        }
+
+        function normalizeShopOrBranchKey(value) {
+            const raw = String(value || '').trim();
+            if (!raw) return '';
+            const digits = raw.replace(/\D/g, '');
+            if (digits) {
+                const n = parseInt(digits, 10);
+                if (!isNaN(n)) return String(n);
+            }
+            return extractGardaCode(raw) || normalizeBranchStr(raw) || raw.toUpperCase().replace(/[^A-Z0-9]/g, '');
         }
 
         function getRoSpendInfo(roOrRoNum) {
@@ -1912,6 +1944,117 @@
                     latestSpendSource: spendInfo.source,
                     lastKnownRoDetailStatus: spendInfo.roDetailStatus || '',
                     closedAt: currentNorm === 'CLOSED' ? (prior && prior.closedAt ? prior.closedAt : nowIso) : (prior && prior.closedAt ? prior.closedAt : null),
+                    lastSeenAt: nowIso
+                };
+            });
+
+
+            // Fast-cycle exception: some billing-created orders can move from Unassigned/Pending into WIP and close
+            // before workFLOW+ ever sees the intermediate status. If RO Detail is the first time Firebase sees the RO
+            // and it is already closed/final charges from a same-week open, count it as an inferred authorization.
+            const roDetailFinancials = window.globalOrderFin || {};
+            Object.keys(roDetailFinancials).forEach(roNumRaw => {
+                const roNum = String(roNumRaw || '').toUpperCase().trim();
+                if (!roNum) return;
+
+                const safeRo = safeFirebaseKey(roNum);
+                if (history[safeRo] || countIndex[safeRo] || existingAuthorizations[safeRo]) return;
+
+                const fin = roDetailFinancials[roNum] || {};
+                const currentStatus = String(fin.status || '').trim();
+                const currentNorm = normalizeSpendStatus(currentStatus);
+                if (currentNorm !== 'CLOSED') return;
+
+                const opened = fin.opened || null;
+                const closedOn = fin.closedon || fin.complt || null;
+                if (!isDateInWeekKey(opened, weekKey)) return;
+
+                const shopKey = normalizeShopOrBranchKey(fin.shop || fin.customerLocation || fin.branch);
+                if (!shopKey || !globalBranchToTeam || globalBranchToTeam[shopKey] !== 'VENDED REPAIR') return;
+
+                const spend = Number(fin.total || 0);
+                const eventKey = makeSpendChangeLogEventKey('FAST_CYCLE_CLOSED', safeRo, nowIso);
+                const branchLabel = fin.customerLocation || fin.shop || '';
+                const unitNo = fin.unitNo || '';
+                const ownerLabel = fin.contact || '';
+                const openedIso = opened && opened.toISOString ? opened.toISOString() : '';
+                const closedIso = closedOn && closedOn.toISOString ? closedOn.toISOString() : '';
+
+                updates[`spendGovernor/authorizations/${weekKey}/${safeRo}`] = {
+                    roNumber: roNum,
+                    unitNo: unitNo,
+                    branch: branchLabel,
+                    subregion: '',
+                    region: '',
+                    previousStatus: 'NOT SEEN IN FIREBASE',
+                    previousNormalizedStatus: 'UNKNOWN',
+                    currentStatus: currentStatus,
+                    currentNormalizedStatus: currentNorm,
+                    authorizedAt: nowIso,
+                    inferredOpenedAt: openedIso,
+                    inferredClosedAt: closedIso,
+                    weekKey: weekKey,
+                    spend: spend,
+                    spendStatus: spend > 0 ? 'CONFIRMED_RO_DETAIL' : 'PENDING_RO_DETAIL',
+                    spendSource: fin.source || 'RO_DETAIL',
+                    spendCapturedAt: spend > 0 ? nowIso : null,
+                    spendLastCheckedAt: nowIso,
+                    lastKnownRoDetailStatus: currentStatus,
+                    fastCycleInferred: true,
+                    source: 'firebase-inferred-fast-cycle-closed'
+                };
+
+                updates[`spendGovernor/countIndex/${safeRo}`] = {
+                    roNumber: roNum,
+                    firstAuthorizedAt: nowIso,
+                    firstAuthorizedWeek: weekKey,
+                    spend: spend,
+                    spendStatus: spend > 0 ? 'CONFIRMED_RO_DETAIL' : 'PENDING_RO_DETAIL',
+                    spendLastCheckedAt: nowIso,
+                    fastCycleInferred: true
+                };
+
+                updates[`spendGovernor/changeLog/${safeRo}/${eventKey}`] = {
+                    changedAt: nowIso,
+                    changedDate: getLocalDateKey(now),
+                    roNumber: roNum,
+                    unitNo: unitNo,
+                    branch: branchLabel,
+                    subregion: '',
+                    region: '',
+                    owner: ownerLabel,
+                    changeType: 'INFERRED FAST-CYCLE CLOSED',
+                    previousStatus: 'NOT SEEN IN FIREBASE',
+                    currentStatus: currentStatus,
+                    previousNormalizedStatus: 'UNKNOWN',
+                    currentNormalizedStatus: currentNorm,
+                    previousSpend: 0,
+                    currentSpend: spend,
+                    spendDelta: spend,
+                    spendSource: fin.source || 'RO_DETAIL',
+                    roDetailStatus: currentStatus,
+                    closedEvent: true,
+                    inferredOpenedAt: openedIso,
+                    inferredClosedAt: closedIso,
+                    source: 'firebase-inferred-fast-cycle-closed-audit'
+                };
+
+                updates[`spendGovernor/statusHistory/${safeRo}`] = {
+                    roNumber: roNum,
+                    unitNo: unitNo,
+                    branch: branchLabel,
+                    subregion: '',
+                    region: '',
+                    status: currentStatus,
+                    normalizedStatus: currentNorm,
+                    latestSpend: spend,
+                    latestSpendRaw: spend,
+                    latestSpendStatus: spend > 0 ? 'CONFIRMED_RO_DETAIL' : 'PENDING_RO_DETAIL',
+                    latestSpendSource: fin.source || 'RO_DETAIL',
+                    lastKnownRoDetailStatus: currentStatus,
+                    openedAt: openedIso,
+                    closedAt: closedIso || nowIso,
+                    fastCycleInferred: true,
                     lastSeenAt: nowIso
                 };
             });
@@ -2752,7 +2895,9 @@
                     contact: getHeaderIndexFromMap(roDetailHeaderMap, ['Contact', 'Owner']),
                     unitNo: getHeaderIndexFromMap(roDetailHeaderMap, ['UnitNumber', 'Unit No', 'Vehicle Unit No']),
                     task: getHeaderIndexFromMap(roDetailHeaderMap, ['CompCodeDesc', 'Task']),
-                    message: getHeaderIndexFromMap(roDetailHeaderMap, ['LastMessageBody', 'Message'])
+                    message: getHeaderIndexFromMap(roDetailHeaderMap, ['LastMessageBody', 'Message']),
+                    customer: getHeaderIndexFromMap(roDetailHeaderMap, ['Customer']),
+                    customerLocation: getHeaderIndexFromMap(roDetailHeaderMap, ['CustomerLocation', 'Customer Location'])
                 };
 
                 for (let i = roDetailHeaderIdx + 1; i < roDetailRaw.length; i++) {
@@ -2771,6 +2916,11 @@
                     const opened = parseDateSafe(getAoAValue(row, h.opened));
                     const complt = parseDateSafe(getAoAValue(row, h.completed));
                     const shop = normalizeShopIdForSpend(getAoAValue(row, h.shop));
+                    const unitNo = String(getAoAValue(row, h.unitNo) || '').toUpperCase().trim();
+                    const vendor = String(getAoAValue(row, h.vendor) || '').trim();
+                    const contact = String(getAoAValue(row, h.contact) || '').trim();
+                    const customer = String(getAoAValue(row, h.customer) || '').trim();
+                    const customerLocation = String(getAoAValue(row, h.customerLocation) || '').trim();
 
                     if (!orderFin[roNum]) {
                         orderFin[roNum] = {
@@ -2781,6 +2931,11 @@
                             complt: complt,
                             closedon: complt,
                             shop: shop,
+                            unitNo: unitNo,
+                            vendor: vendor,
+                            contact: contact,
+                            customer: customer,
+                            customerLocation: customerLocation,
                             source: 'NEW_RO_DETAIL',
                             lineCount: 0
                         };
@@ -2805,6 +2960,11 @@
                     if (shop && shop !== '') {
                         orderFin[roNum].shop = shop;
                     }
+                    if (unitNo && !orderFin[roNum].unitNo) orderFin[roNum].unitNo = unitNo;
+                    if (vendor && !orderFin[roNum].vendor) orderFin[roNum].vendor = vendor;
+                    if (contact && !orderFin[roNum].contact) orderFin[roNum].contact = contact;
+                    if (customer && !orderFin[roNum].customer) orderFin[roNum].customer = customer;
+                    if (customerLocation && !orderFin[roNum].customerLocation) orderFin[roNum].customerLocation = customerLocation;
                 }
             } else {
                 // Legacy RO Detail fallback: prior export layout used fixed indexes: RO in Q, spend in CA.
@@ -3612,15 +3772,7 @@
             let globalTotal = getSpendGovernorAuthorizedTotal();
             let lockActive = isSpendGovernorLocked();
             
-            let filteredOpen = dataSet.filter(ro => ro.isOpen);
-
-            if (lockActive && !isPM) {
-                filteredOpen = filteredOpen.filter(ro => {
-                    let st = ro.status.toUpperCase();
-                    let isPending = st.includes('UNASSIGNED') || st.includes('ESTIMATE');
-                    return !isPending;
-                });
-            }
+            let filteredOpen = getTileOpenRoPopulation(dataSet, isPM);
             
             let completedOrders = dataSet.filter(ro => ro.isCompletedKPI);
             let compCount = completedOrders.length;
@@ -3650,7 +3802,7 @@
                 `;
             }
 
-            let workflowComplianceHtml = chartId ? '' : generateWorkflowComplianceHtml(dataSet);
+            let workflowComplianceHtml = chartId ? '' : generateWorkflowComplianceHtml(filteredOpen);
 
             let innerHtml = `
                 <div class="kpi-name">${name}</div>
