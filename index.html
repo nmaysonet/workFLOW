@@ -113,6 +113,26 @@
         body.colorblind-mode .workflow-compliance-card.compliance-red .workflow-compliance-score { color: #9a3412; }
         body.colorblind-mode .workflow-compliance-card.compliance-red .workflow-compliance-rating { background: #D55E00; color: #111; }
 
+
+
+        .spend-log-sort-btn { background: transparent; border: none; color: inherit; font: inherit; font-size: inherit; font-weight: 800; text-transform: uppercase; cursor: pointer; padding: 0; display: inline-flex; align-items: center; gap: 4px; }
+        .spend-log-sort-btn:hover { color: var(--gold-hover); }
+        .spend-log-sort-indicator { font-size: 10px; opacity: 0.75; }
+        .spend-log-group-row td { background: #f8fafc; font-weight: 700; vertical-align: middle; }
+        .spend-log-group-row:hover td { background: #eef2f7; }
+        .spend-log-detail-row td { background: #fff; font-size: 12px; }
+        .spend-log-detail-row .detail-indent { padding-left: 26px; color: #64748b; font-weight: 700; }
+        .spend-log-toggle { background: #e2e8f0; border: 1px solid #cbd5e1; color: #334155; border-radius: 999px; width: 22px; height: 22px; font-weight: 900; cursor: pointer; line-height: 18px; margin-right: 6px; }
+        .spend-log-toggle:hover { background: var(--gold); color: #333; border-color: var(--gold-hover); }
+        .spend-log-check { display: inline-flex; align-items: center; justify-content: center; width: 17px; height: 17px; border-radius: 50%; background: #16a34a; color: #fff; font-size: 11px; font-weight: 900; margin-right: 5px; vertical-align: middle; }
+        .spend-log-pill { padding: 2px 5px; border-radius: 999px; font-size: 9px; font-weight: 900; display: inline-block; max-width: 92px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; vertical-align: middle; line-height: 1.1; letter-spacing: 0.2px; }
+        .spend-log-pill-neutral { background:#e2e8f0; color:#334155; }
+        .spend-log-pill-counted { background:#dcfce7; color:#166534; border:1px solid #86efac; }
+        .spend-log-pill-closed { background:#fee2e2; color:#991b1b; border:1px solid #fecaca; }
+        .spend-log-pill-spend { background:#fef3c7; color:#92400e; border:1px solid #fde68a; }
+        .spend-log-pill-status { background:#dbeafe; color:#1e3a8a; border:1px solid #bfdbfe; }
+        .spend-log-muted { color:#64748b; font-size:11px; font-weight:700; }
+
         .portal-modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.62); z-index: 1200; align-items: center; justify-content: center; padding: 22px; }
         .portal-modal-box { width: 96vw; height: 92vh; background: #fff; border-radius: 10px; border: 2px solid var(--gold); box-shadow: 0 14px 40px rgba(0,0,0,0.35); display: flex; flex-direction: column; overflow: hidden; }
         .portal-modal-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 16px; background: #2a2b30; color: #fff; border-bottom: 3px solid var(--gold); }
@@ -440,30 +460,30 @@
                         <table id="spend-change-log-table">
                             <colgroup>
                                 <col style="width: 12%;">
-                                <col style="width: 10%;">
-                                <col style="width: 10%;">
-                                <col style="width: 16%;">
-                                <col style="width: 13%;">
-                                <col style="width: 10%;">
                                 <col style="width: 12%;">
+                                <col style="width: 9%;">
+                                <col style="width: 15%;">
                                 <col style="width: 12%;">
+                                <col style="width: 11%;">
+                                <col style="width: 11%;">
+                                <col style="width: 11%;">
                                 <col style="width: 9%;">
                                 <col style="width: 9%;">
                                 <col style="width: 9%;">
                             </colgroup>
                             <thead>
                                 <tr>
-                                    <th>Changed At</th>
-                                    <th>AFS RO #</th>
-                                    <th>Unit No</th>
-                                    <th>Branch / Site</th>
-                                    <th>Owner</th>
-                                    <th>Change Type</th>
-                                    <th>Previous Status</th>
-                                    <th>Current Status</th>
-                                    <th style="text-align:right;">Previous Spend</th>
-                                    <th style="text-align:right;">Current Spend</th>
-                                    <th style="text-align:right;">Spend Change</th>
+                                    <th><button class="spend-log-sort-btn" onclick="sortSpendChangeLog('changedAt')">Changed At <span class="spend-log-sort-indicator" data-sort-indicator="changedAt">↕</span></button></th>
+                                    <th><button class="spend-log-sort-btn" onclick="sortSpendChangeLog('roNumber')">AFS RO # <span class="spend-log-sort-indicator" data-sort-indicator="roNumber">↕</span></button></th>
+                                    <th><button class="spend-log-sort-btn" onclick="sortSpendChangeLog('unitNo')">Unit No <span class="spend-log-sort-indicator" data-sort-indicator="unitNo">↕</span></button></th>
+                                    <th><button class="spend-log-sort-btn" onclick="sortSpendChangeLog('branch')">Branch / Site <span class="spend-log-sort-indicator" data-sort-indicator="branch">↕</span></button></th>
+                                    <th><button class="spend-log-sort-btn" onclick="sortSpendChangeLog('owner')">Owner <span class="spend-log-sort-indicator" data-sort-indicator="owner">↕</span></button></th>
+                                    <th><button class="spend-log-sort-btn" onclick="sortSpendChangeLog('changeType')">Change Type <span class="spend-log-sort-indicator" data-sort-indicator="changeType">↕</span></button></th>
+                                    <th><button class="spend-log-sort-btn" onclick="sortSpendChangeLog('previousStatus')">Previous Status <span class="spend-log-sort-indicator" data-sort-indicator="previousStatus">↕</span></button></th>
+                                    <th><button class="spend-log-sort-btn" onclick="sortSpendChangeLog('currentStatus')">Current Status <span class="spend-log-sort-indicator" data-sort-indicator="currentStatus">↕</span></button></th>
+                                    <th style="text-align:right;"><button class="spend-log-sort-btn" onclick="sortSpendChangeLog('previousSpend')">Previous Spend <span class="spend-log-sort-indicator" data-sort-indicator="previousSpend">↕</span></button></th>
+                                    <th style="text-align:right;"><button class="spend-log-sort-btn" onclick="sortSpendChangeLog('currentSpend')">Current Spend <span class="spend-log-sort-indicator" data-sort-indicator="currentSpend">↕</span></button></th>
+                                    <th style="text-align:right;"><button class="spend-log-sort-btn" onclick="sortSpendChangeLog('spendDelta')">Spend Change <span class="spend-log-sort-indicator" data-sort-indicator="spendDelta">↕</span></button></th>
                                 </tr>
                             </thead>
                             <tbody id="spend-change-log-body"></tbody>
@@ -1765,6 +1785,7 @@
                             spendSource: auth.spendSource || '',
                             roDetailStatus: auth.lastKnownRoDetailStatus || '',
                             closedEvent: false,
+                            countedTowardCap: true,
                             source: 'firebase-authorization-derived'
                         });
                     }
@@ -1795,6 +1816,7 @@
                                 spendSource: auth.spendSource || '',
                                 roDetailStatus: auth.lastKnownRoDetailStatus || '',
                                 closedEvent: false,
+                                countedTowardCap: false,
                                 source: 'firebase-authorization-derived'
                             });
                         }
@@ -1877,6 +1899,127 @@
             }
         }
 
+        let spendChangeLogSortState = { key: 'changedAt', dir: 'desc' };
+        let expandedSpendChangeRos = {};
+
+        function isSpendChangeCountedTowardCap(row) {
+            if (!row) return false;
+            if (row.countedTowardCap === true) return true;
+            const source = String(row.source || '').toLowerCase();
+            const type = String(row.changeType || '').toUpperCase();
+            if (source.includes('firebase-authorization-derived') && type.includes('AUTHORIZED')) return true;
+            if (source.includes('firebase-spend-governor-audit')) return true;
+            const countedTypes = [
+                'OBSERVED WIP AUTHORIZATION',
+                'AUTHORIZED INTO WIP',
+                'FIRST SEEN IN WIP',
+                'INFERRED FAST-CYCLE CLOSED',
+                'BYPASSED WIP TO CLOSED'
+            ];
+            return countedTypes.some(t => type.includes(t));
+        }
+
+        function getSpendChangeDisplayType(row) {
+            const raw = String(row && row.changeType ? row.changeType : '').trim();
+            const upper = raw.toUpperCase();
+            if (upper === 'AUTHORIZED INTO WIP') return 'AUTH WIP';
+            if (upper === 'OBSERVED WIP AUTHORIZATION') return 'AUTH WIP';
+            if (upper === 'BYPASSED WIP TO CLOSED') return 'BYPASS CLOSED';
+            if (upper === 'INFERRED FAST-CYCLE CLOSED') return 'FAST CLOSED';
+            if (upper === 'FIRST SEEN IN WIP') return 'FIRST WIP';
+            if (upper === 'SPEND BACKFILLED') return 'BACKFILLED';
+            if (upper === 'SPEND UPDATED') return 'SPEND UPDATE';
+            return raw || 'UPDATE';
+        }
+
+        function getSpendChangePillClass(row) {
+            const type = String(row && row.changeType ? row.changeType : '').toUpperCase();
+            if (isSpendChangeCountedTowardCap(row)) return 'spend-log-pill-counted';
+            if (type.includes('CLOSED')) return 'spend-log-pill-closed';
+            if (type.includes('SPEND')) return 'spend-log-pill-spend';
+            if (type.includes('STATUS')) return 'spend-log-pill-status';
+            return 'spend-log-pill-neutral';
+        }
+
+        function getSpendChangeComparableValue(row, key) {
+            if (!row) return '';
+            if (key === 'changedAt') return new Date(row.changedAt || 0).getTime() || 0;
+            if (key === 'previousSpend') return Number(row.previousSpend || 0);
+            if (key === 'currentSpend') return Number(row.currentSpend || 0);
+            if (key === 'spendDelta') {
+                const prevSpend = Number(row.previousSpend || 0);
+                const currSpend = Number(row.currentSpend || 0);
+                return Number(row.spendDelta || (currSpend - prevSpend) || 0);
+            }
+            return String(row[key] || '').toUpperCase();
+        }
+
+        function buildSpendChangeGroups(rows) {
+            const groupsMap = {};
+            (rows || []).forEach(row => {
+                const key = row.safeRo || row.roNumber || 'UNKNOWN';
+                if (!groupsMap[key]) {
+                    groupsMap[key] = { key, rows: [], counted: false };
+                }
+                groupsMap[key].rows.push(row);
+                if (isSpendChangeCountedTowardCap(row)) groupsMap[key].counted = true;
+            });
+
+            const groups = Object.values(groupsMap);
+            groups.forEach(group => {
+                group.rows.sort((a, b) => new Date(b.changedAt || 0) - new Date(a.changedAt || 0));
+                const latest = group.rows[0] || {};
+                const countedRow = group.rows.find(r => isSpendChangeCountedTowardCap(r));
+                const summaryRow = countedRow || latest;
+                group.latest = latest;
+                group.summary = summaryRow;
+                group.changedAt = latest.changedAt || summaryRow.changedAt || '';
+                group.roNumber = summaryRow.roNumber || latest.roNumber || group.key;
+                group.unitNo = summaryRow.unitNo || latest.unitNo || '';
+                group.branch = summaryRow.branch || latest.branch || '';
+                group.owner = summaryRow.owner || latest.owner || '';
+                group.changeType = summaryRow.changeType || latest.changeType || '';
+                group.previousStatus = summaryRow.previousStatus || latest.previousStatus || '';
+                group.currentStatus = latest.currentStatus || summaryRow.currentStatus || '';
+                group.previousSpend = Number(summaryRow.previousSpend || 0);
+                group.currentSpend = Number(latest.currentSpend !== undefined ? latest.currentSpend : summaryRow.currentSpend || 0);
+                group.spendDelta = Number(group.currentSpend - group.previousSpend);
+            });
+            return groups;
+        }
+
+        function updateSpendChangeSortIndicators() {
+            document.querySelectorAll('[data-sort-indicator]').forEach(el => {
+                const key = el.getAttribute('data-sort-indicator');
+                if (key === spendChangeLogSortState.key) {
+                    el.innerText = spendChangeLogSortState.dir === 'asc' ? '▲' : '▼';
+                } else {
+                    el.innerText = '↕';
+                }
+            });
+        }
+
+        function sortSpendChangeLog(key) {
+            if (spendChangeLogSortState.key === key) {
+                spendChangeLogSortState.dir = spendChangeLogSortState.dir === 'asc' ? 'desc' : 'asc';
+            } else {
+                spendChangeLogSortState.key = key;
+                spendChangeLogSortState.dir = key === 'changedAt' || key === 'currentSpend' || key === 'spendDelta' ? 'desc' : 'asc';
+            }
+            renderSpendChangeLogTable();
+        }
+
+        function toggleSpendChangeRo(safeRo) {
+            expandedSpendChangeRos[safeRo] = !expandedSpendChangeRos[safeRo];
+            renderSpendChangeLogTable();
+        }
+
+        function renderSpendChangeLogTypePill(row) {
+            const label = getSpendChangeDisplayType(row);
+            const full = String(row && row.changeType ? row.changeType : label);
+            return `<span class="spend-log-pill ${getSpendChangePillClass(row)}" title="${escapeHtml(full)}">${escapeHtml(label)}</span>`;
+        }
+
         function renderSpendChangeLogTable() {
             const tbody = document.getElementById('spend-change-log-body');
             if (!tbody) return;
@@ -1884,36 +2027,80 @@
             const rows = globalSpendChangeLogRows || [];
             if (rows.length === 0) {
                 tbody.innerHTML = '<tr><td colspan="11" style="text-align:center; padding:20px; color:#888; font-weight:700;">No spend/status changes have been logged yet. Changes will begin appearing after Firebase sees a status or RO Detail spend change.</td></tr>';
+                updateSpendChangeSortIndicators();
                 return;
             }
 
-            const displayRows = rows.slice(0, 1000);
+            const groups = buildSpendChangeGroups(rows);
+            const key = spendChangeLogSortState.key || 'changedAt';
+            const dir = spendChangeLogSortState.dir === 'asc' ? 1 : -1;
+            groups.sort((a, b) => {
+                let av = getSpendChangeComparableValue(a, key);
+                let bv = getSpendChangeComparableValue(b, key);
+                if (typeof av === 'number' && typeof bv === 'number') return (av - bv) * dir;
+                return String(av).localeCompare(String(bv)) * dir;
+            });
+
+            const displayGroups = groups.slice(0, 1000);
             let html = '';
-            displayRows.forEach(row => {
-                const prevSpend = Number(row.previousSpend || 0);
-                const currSpend = Number(row.currentSpend || 0);
-                const delta = Number(row.spendDelta || (currSpend - prevSpend) || 0);
+            displayGroups.forEach(group => {
+                const row = group.summary || {};
+                const latest = group.latest || row;
+                const prevSpend = Number(group.previousSpend || row.previousSpend || 0);
+                const currSpend = Number(group.currentSpend || row.currentSpend || 0);
+                const delta = Number(group.spendDelta || (currSpend - prevSpend) || 0);
                 const deltaColor = delta > 0 ? '#dc2626' : (delta < 0 ? '#16a34a' : '#64748b');
-                html += `<tr>
-                    <td>${escapeHtml(formatSpendAuditDateTime(row.changedAt))}</td>
-                    <td><a class="ro-link" href="https://afshub.azurewebsites.net/Vendors/VendedRepairOrder/Details/${encodeURIComponent(row.roNumber || '')}" target="_blank">${escapeHtml(row.roNumber || '')}</a></td>
-                    <td>${escapeHtml(row.unitNo || '')}</td>
-                    <td>${escapeHtml(row.branch || '')}</td>
-                    <td>${escapeHtml(row.owner || '')}</td>
-                    <td><span class="badge" style="background:#e2e8f0; color:#334155;">${escapeHtml(row.changeType || '')}</span></td>
-                    <td>${escapeHtml(row.previousStatus || '')}</td>
-                    <td>${escapeHtml(row.currentStatus || '')}</td>
+                const safeKey = String(group.key || row.safeRo || row.roNumber || '').replace(/'/g, "\\'");
+                const expanded = !!expandedSpendChangeRos[group.key];
+                const hasDetails = group.rows.length > 1;
+                const check = group.counted ? '<span class="spend-log-check" title="Counted toward weekly spend total">✓</span>' : '';
+                const toggle = hasDetails ? `<button class="spend-log-toggle" onclick="toggleSpendChangeRo('${safeKey}')" title="${expanded ? 'Collapse' : 'Expand'} RO change history">${expanded ? '−' : '+'}</button>` : '<span style="display:inline-block;width:28px;"></span>';
+                const detailText = hasDetails ? `<div class="spend-log-muted">${group.rows.length} logged changes · ${expanded ? 'expanded' : 'collapsed'}</div>` : '<div class="spend-log-muted">1 logged change</div>';
+
+                html += `<tr class="spend-log-group-row">
+                    <td>${escapeHtml(formatSpendAuditDateTime(latest.changedAt || row.changedAt))}</td>
+                    <td>${toggle}${check}<a class="ro-link" href="https://afshub.azurewebsites.net/Vendors/VendedRepairOrder/Details/${encodeURIComponent(group.roNumber || '')}" target="_blank">${escapeHtml(group.roNumber || '')}</a>${detailText}</td>
+                    <td>${escapeHtml(group.unitNo || '')}</td>
+                    <td>${escapeHtml(group.branch || '')}</td>
+                    <td>${escapeHtml(group.owner || '')}</td>
+                    <td>${renderSpendChangeLogTypePill(row)}</td>
+                    <td>${escapeHtml(group.previousStatus || '')}</td>
+                    <td>${escapeHtml(group.currentStatus || '')}</td>
                     <td style="text-align:right;">$${prevSpend.toLocaleString('en-US', {minimumFractionDigits:2})}</td>
                     <td style="text-align:right;">$${currSpend.toLocaleString('en-US', {minimumFractionDigits:2})}</td>
                     <td style="text-align:right; color:${deltaColor}; font-weight:800;">${delta >= 0 ? '+' : ''}$${delta.toLocaleString('en-US', {minimumFractionDigits:2})}</td>
                 </tr>`;
+
+                if (expanded) {
+                    group.rows.forEach(detail => {
+                        const dPrevSpend = Number(detail.previousSpend || 0);
+                        const dCurrSpend = Number(detail.currentSpend || 0);
+                        const dDelta = Number(detail.spendDelta || (dCurrSpend - dPrevSpend) || 0);
+                        const dDeltaColor = dDelta > 0 ? '#dc2626' : (dDelta < 0 ? '#16a34a' : '#64748b');
+                        const dCheck = isSpendChangeCountedTowardCap(detail) ? '<span class="spend-log-check" title="Counted toward weekly spend total">✓</span>' : '';
+                        html += `<tr class="spend-log-detail-row">
+                            <td>${escapeHtml(formatSpendAuditDateTime(detail.changedAt))}</td>
+                            <td><span class="detail-indent">↳</span>${dCheck}<a class="ro-link" href="https://afshub.azurewebsites.net/Vendors/VendedRepairOrder/Details/${encodeURIComponent(detail.roNumber || '')}" target="_blank">${escapeHtml(detail.roNumber || '')}</a></td>
+                            <td>${escapeHtml(detail.unitNo || '')}</td>
+                            <td>${escapeHtml(detail.branch || '')}</td>
+                            <td>${escapeHtml(detail.owner || '')}</td>
+                            <td>${renderSpendChangeLogTypePill(detail)}</td>
+                            <td>${escapeHtml(detail.previousStatus || '')}</td>
+                            <td>${escapeHtml(detail.currentStatus || '')}</td>
+                            <td style="text-align:right;">$${dPrevSpend.toLocaleString('en-US', {minimumFractionDigits:2})}</td>
+                            <td style="text-align:right;">$${dCurrSpend.toLocaleString('en-US', {minimumFractionDigits:2})}</td>
+                            <td style="text-align:right; color:${dDeltaColor}; font-weight:800;">${dDelta >= 0 ? '+' : ''}$${dDelta.toLocaleString('en-US', {minimumFractionDigits:2})}</td>
+                        </tr>`;
+                    });
+                }
             });
 
-            if (rows.length > displayRows.length) {
-                html += `<tr><td colspan="11" style="text-align:center; padding:10px; color:#64748b; font-weight:700;">Showing latest ${displayRows.length.toLocaleString()} of ${rows.length.toLocaleString()} logged changes. Export includes all loaded rows.</td></tr>`;
+            if (groups.length > displayGroups.length) {
+                html += `<tr><td colspan="11" style="text-align:center; padding:10px; color:#64748b; font-weight:700;">Showing latest ${displayGroups.length.toLocaleString()} of ${groups.length.toLocaleString()} RO groups. Export includes all loaded change rows.</td></tr>`;
             }
 
             tbody.innerHTML = html;
+            updateSpendChangeSortIndicators();
         }
 
         function exportSpendChangeLogToExcel() {
@@ -2092,6 +2279,7 @@
                     closedEvent: currentNormalizedStatus === 'CLOSED',
                     inferredOpenedAt: inferredOpenedAt || null,
                     inferredClosedAt: inferredClosedAt || null,
+                    countedTowardCap: true,
                     source: source || 'firebase-spend-governor-audit'
                 };
             }
@@ -2147,6 +2335,7 @@
                         spendSource: spendInfo.source || '',
                         roDetailStatus: spendInfo.roDetailStatus || '',
                         closedEvent: closingNow,
+                        countedTowardCap: false,
                         source: 'firebase-day-over-day-audit'
                     };
                 }
@@ -2360,6 +2549,7 @@
                             spendSource: 'RO_DETAIL',
                             roDetailStatus: spendInfo.roDetailStatus || auth.lastKnownRoDetailStatus || '',
                             closedEvent: false,
+                            countedTowardCap: false,
                             source: 'firebase-authorization-spend-audit'
                         };
 
