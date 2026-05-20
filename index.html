@@ -72,6 +72,61 @@
         .dropdown-content a:hover { background-color: #f9f9f9; color: var(--gold); }
         .dropdown:hover .dropdown-content { display: block; margin-top: -2px; padding-top: 2px; }
 
+
+        .colorblind-toggle { background-color: #ffffff; color: #333; border: 2px solid #666; padding: 8px 12px; border-radius: 4px; font-weight: 900; font-size: 11px; cursor: pointer; letter-spacing: 0.3px; transition: 0.2s; }
+        .colorblind-toggle:hover { background: #f4f6f9; transform: translateY(-1px); }
+        .colorblind-toggle.active { background: #005a8b; color: #fff; border-color: #005a8b; }
+
+        body.colorblind-mode {
+            --gold: #0072B2;
+            --gold-hover: #005A8B;
+            --urgent-red: #D55E00;
+            --medium-yellow: #E69F00;
+            --low-green: #009E73;
+            --sidebar-bg: #2f3b46;
+            --sidebar-hover: #405160;
+        }
+        body.colorblind-mode .queue-source-pm { background-color: #CC79A7; color: #111; }
+        body.colorblind-mode .queue-source-ers { background-color: #D55E00; color: #111; }
+        body.colorblind-mode .note-btn { background: #fff7ed; color: #9a3412; border: 2px solid #D55E00; }
+        body.colorblind-mode .note-btn::before { content: 'Needs note · '; font-weight: 900; }
+        body.colorblind-mode .note-btn.has-note { background: #eff6ff; color: #1d4ed8; border-color: #0072B2; box-shadow: 0 1px 3px rgba(0,114,178,0.22); }
+        body.colorblind-mode .note-btn.has-note::before { content: 'Updated · '; font-weight: 900; }
+        body.colorblind-mode .status-pending { background: #D55E00; color: #111; border-color: #9a3412; }
+        body.colorblind-mode .status-dispatched { background: #0072B2; color: #fff; border-color: #005A8B; }
+        body.colorblind-mode .badge-oos,
+        body.colorblind-mode .badge-urgent { background-color: #D55E00; color: #111; }
+        body.colorblind-mode .badge-active,
+        body.colorblind-mode .badge-low { background-color: #0072B2; color: #fff; }
+        body.colorblind-mode .stat-box .num.urgent,
+        body.colorblind-mode .highlight-box.urgent-box .num,
+        body.colorblind-mode .ecd-red { color: #D55E00; }
+        body.colorblind-mode .stat-box .num.good,
+        body.colorblind-mode .ecd-green { color: #0072B2; }
+        body.colorblind-mode .workflow-compliance-card.compliance-green { border-color: #0072B2; background: #eff6ff; }
+        body.colorblind-mode .workflow-compliance-card.compliance-green .workflow-compliance-score { color: #005A8B; }
+        body.colorblind-mode .workflow-compliance-card.compliance-green .workflow-compliance-rating { background: #0072B2; }
+        body.colorblind-mode .workflow-compliance-card.compliance-yellow { border-color: #E69F00; background: #fff7ed; }
+        body.colorblind-mode .workflow-compliance-card.compliance-yellow .workflow-compliance-score { color: #b45309; }
+        body.colorblind-mode .workflow-compliance-card.compliance-yellow .workflow-compliance-rating { background: #E69F00; color: #111; }
+        body.colorblind-mode .workflow-compliance-card.compliance-red { border-color: #D55E00; background: #fff7ed; }
+        body.colorblind-mode .workflow-compliance-card.compliance-red .workflow-compliance-score { color: #9a3412; }
+        body.colorblind-mode .workflow-compliance-card.compliance-red .workflow-compliance-rating { background: #D55E00; color: #111; }
+
+        .portal-modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.62); z-index: 1200; align-items: center; justify-content: center; padding: 22px; }
+        .portal-modal-box { width: 96vw; height: 92vh; background: #fff; border-radius: 10px; border: 2px solid var(--gold); box-shadow: 0 14px 40px rgba(0,0,0,0.35); display: flex; flex-direction: column; overflow: hidden; }
+        .portal-modal-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 16px; background: #2a2b30; color: #fff; border-bottom: 3px solid var(--gold); }
+        .portal-title { font-size: 15px; font-weight: 900; letter-spacing: 0.3px; }
+        .portal-actions { display: flex; align-items: center; gap: 10px; }
+        .portal-open-new { color: #333; background: var(--gold); padding: 7px 12px; border-radius: 4px; font-size: 12px; font-weight: 900; text-transform: uppercase; box-shadow: 0 1px 3px rgba(0,0,0,0.25); }
+        .portal-open-new:hover { background: var(--gold-hover); color: #111; }
+        .portal-close { background: transparent; color: #fff; border: none; font-size: 26px; line-height: 1; cursor: pointer; padding: 0 4px; font-weight: 900; }
+        .portal-close:hover { color: var(--gold); }
+        .portal-frame-wrap { position: relative; flex: 1; background: #f4f6f9; }
+        .portal-frame { width: 100%; height: 100%; border: none; display: block; background: #fff; }
+        .portal-loading { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 10px; color: #444; font-size: 14px; font-weight: 800; pointer-events: none; background: #f4f6f9; z-index: 2; }
+        .portal-loading small { font-weight: 600; color: #64748b; max-width: 620px; text-align: center; line-height: 1.4; }
+
         .view-section { padding: 30px; display: none; }
         .view-section.active { display: block; }
 
@@ -299,10 +354,11 @@
                 <img src="logo.png" alt="Logo" class="top-logo">
             </div>
             <div class="top-actions">
+                <button id="colorblind-toggle" class="colorblind-toggle" type="button" onclick="toggleColorblindMode()">COLORBLIND MODE</button>
                 <div class="dropdown">
                     <button class="btn-action dropbtn">VENDOR MAPS ▼</button>
                     <div class="dropdown-content">
-                        <a href="https://app.mapline.com/map/map_282c81fe/TWZ2TzJHRGcrd3BjaG1QMDNPekVGYUhxNThJd080SUZTK2MwZG" target="_blank">Armored</a>
+                        <a href="#" onclick="return openVendorMapPortal('https://app.mapline.com/map/map_282c81fe/TWZ2TzJHRGcrd3BjaG1QMDNPekVGYUhxNThJd080SUZTK2MwZG', 'Armored Vendor Map')">Armored</a>
                     </div>
                 </div>
                 <a href="https://afshub.azurewebsites.net/Vendors/VendedRepairOrder/CreateVRO" target="_blank" class="btn-action">CREATE A VRO</a>
@@ -565,8 +621,85 @@
         </div>
     </div>
 
+    <div id="vendor-map-portal-modal" class="portal-modal-overlay">
+        <div class="portal-modal-box">
+            <div class="portal-modal-header">
+                <div class="portal-title" id="vendor-map-portal-title">Vendor Map Portal</div>
+                <div class="portal-actions">
+                    <a id="vendor-map-open-new" class="portal-open-new" href="#" target="_blank" rel="noopener">OPEN IN NEW TAB</a>
+                    <button class="portal-close" onclick="closeVendorMapPortal()">&times;</button>
+                </div>
+            </div>
+            <div class="portal-frame-wrap">
+                <div id="vendor-map-loading" class="portal-loading">
+                    Loading vendor map...
+                    <small>If the map provider blocks embedded viewing, use OPEN IN NEW TAB.</small>
+                </div>
+                <iframe id="vendor-map-frame" class="portal-frame" src="about:blank"></iframe>
+            </div>
+        </div>
+    </div>
+
     <script>
         const MASTER_EMAIL = "maintenance@ameritfleet.com";
+
+
+        function applyColorblindMode(isEnabled) {
+            document.body.classList.toggle('colorblind-mode', !!isEnabled);
+            const toggle = document.getElementById('colorblind-toggle');
+            if (toggle) {
+                toggle.classList.toggle('active', !!isEnabled);
+                toggle.innerText = isEnabled ? 'COLORBLIND MODE: ON' : 'COLORBLIND MODE';
+                toggle.setAttribute('aria-pressed', isEnabled ? 'true' : 'false');
+            }
+            try { localStorage.setItem('workflow_colorblind_mode', isEnabled ? '1' : '0'); } catch(e) {}
+        }
+
+        window.toggleColorblindMode = function() {
+            const isEnabled = !document.body.classList.contains('colorblind-mode');
+            applyColorblindMode(isEnabled);
+        }
+
+        function initColorblindMode() {
+            let isEnabled = false;
+            try { isEnabled = localStorage.getItem('workflow_colorblind_mode') === '1'; } catch(e) {}
+            applyColorblindMode(isEnabled);
+        }
+
+        function openVendorMapPortal(url, titleText) {
+            if (!url) return false;
+            const modal = document.getElementById('vendor-map-portal-modal');
+            const frame = document.getElementById('vendor-map-frame');
+            const loader = document.getElementById('vendor-map-loading');
+            const title = document.getElementById('vendor-map-portal-title');
+            const openNew = document.getElementById('vendor-map-open-new');
+
+            if (!modal || !frame) {
+                window.open(url, '_blank');
+                return false;
+            }
+
+            if (title) title.innerText = titleText || 'Vendor Map Portal';
+            if (openNew) openNew.href = url;
+            if (loader) loader.style.display = 'flex';
+            modal.style.display = 'flex';
+            frame.src = 'about:blank';
+
+            setTimeout(() => { frame.src = url; }, 50);
+            setTimeout(() => { if (loader) loader.style.display = 'none'; }, 1800);
+            return false;
+        }
+
+        function closeVendorMapPortal() {
+            const modal = document.getElementById('vendor-map-portal-modal');
+            const frame = document.getElementById('vendor-map-frame');
+            if (frame) frame.src = 'about:blank';
+            if (modal) modal.style.display = 'none';
+        }
+
+        window.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') closeVendorMapPortal();
+        });
 
         function checkLogin() {
             const passwordInput = document.getElementById('login-pass').value;
@@ -586,6 +719,7 @@
         }
 
         window.addEventListener('DOMContentLoaded', () => {
+            initColorblindMode();
             if (!firebase.apps.length) {
                 firebase.initializeApp({
                     apiKey: "AIzaSyCr3VAldI-pPCb7APx3rJAEZvf_nl0iz1g",
@@ -1369,6 +1503,7 @@
         }
 
         const WEEKLY_WIP_AUTH_CAP = 225000;
+        const WEEKLY_WIP_RELEASE_THRESHOLD = WEEKLY_WIP_AUTH_CAP; // Hard cap: stop new releases once the weekly cap is reached.
 
         function safeFirebaseKey(value) {
             return String(value || '').replace(/[.#$\[\]]/g, '_');
@@ -1434,6 +1569,32 @@
                 if (!isNaN(n)) return String(n);
             }
             return extractGardaCode(raw) || normalizeBranchStr(raw) || raw.toUpperCase().replace(/[^A-Z0-9]/g, '');
+        }
+
+        function getBranchTeamFromMap(branchValue, teamMap) {
+            const map = teamMap || globalBranchToTeam || {};
+            const raw = String(branchValue || '').trim();
+            if (!raw || !map) return '';
+
+            const possibleKeys = [
+                extractGardaCode(raw),
+                normalizeBranchStr(raw),
+                normalizeShopOrBranchKey(raw)
+            ].filter(Boolean);
+
+            for (let key of possibleKeys) {
+                if (map[key]) return String(map[key]).trim().toUpperCase();
+            }
+
+            return '';
+        }
+
+        function isVendedSummarySite(unitRecord) {
+            if (!unitRecord) return false;
+            if (unitRecord.isDedicatedShop) return false;
+
+            const team = unitRecord.siteTeam || getBranchTeamFromMap(unitRecord.branch);
+            return String(team || '').trim().toUpperCase() === 'VENDED REPAIR';
         }
 
         function getRoSpendInfo(roOrRoNum) {
@@ -1510,7 +1671,34 @@
         }
 
         function isSpendGovernorLocked() {
-            return getSpendGovernorAuthorizedTotal() >= WEEKLY_WIP_AUTH_CAP;
+            return getSpendGovernorAuthorizedTotal() >= WEEKLY_WIP_RELEASE_THRESHOLD;
+        }
+
+        function getWeekStartEnd(date = new Date()) {
+            const d = new Date(date);
+            const day = d.getDay();
+            const diffToMonday = d.getDate() - day + (day === 0 ? -6 : 1);
+            const start = new Date(d);
+            start.setDate(diffToMonday);
+            start.setHours(0, 0, 0, 0);
+            const end = new Date(start);
+            end.setDate(start.getDate() + 7);
+            return { start, end };
+        }
+
+        function getWeeklyRunRateForecast(currentSpend, asOf = new Date()) {
+            const { start, end } = getWeekStartEnd(asOf);
+            const elapsedMs = Math.max(1, asOf.getTime() - start.getTime());
+            const totalMs = Math.max(1, end.getTime() - start.getTime());
+            const elapsedFraction = Math.min(1, Math.max(0.001, elapsedMs / totalMs));
+            const projected = Number(currentSpend || 0) / elapsedFraction;
+            return {
+                projectedWeekEndSpend: projected,
+                elapsedFraction: elapsedFraction,
+                elapsedPct: elapsedFraction * 100,
+                remainingToCap: Math.max(0, WEEKLY_WIP_AUTH_CAP - Number(currentSpend || 0)),
+                remainingToReleaseThreshold: Math.max(0, WEEKLY_WIP_RELEASE_THRESHOLD - Number(currentSpend || 0))
+            };
         }
 
         function formatSpendAuditDateTime(value) {
@@ -1808,8 +1996,12 @@
                     closedRev: 0,
                     wipRev: 0,
                     authorizedRev: 0,
+                    projectedWeekEndRev: 0,
+                    elapsedWeekPct: getWeeklyRunRateForecast(0, new Date()).elapsedPct,
                     cap: WEEKLY_WIP_AUTH_CAP,
+                    releaseThreshold: WEEKLY_WIP_RELEASE_THRESHOLD,
                     remaining: WEEKLY_WIP_AUTH_CAP,
+                    remainingToReleaseThreshold: WEEKLY_WIP_RELEASE_THRESHOLD,
                     weekKey: getWeekKey(new Date()),
                     pendingSpendCount: 0,
                     adjustedSpendCount: 0,
@@ -1835,6 +2027,74 @@
             const countIndex = countIndexSnap.val() || {};
             const updates = {};
             let adjustedSpendCount = 0;
+
+            function stampSpendAuthorization({ safeRo, roNum, unitNo, branch, subregion, region, owner, previousStatus, previousNormalizedStatus, currentStatus, currentNormalizedStatus, spend, spendStatus, spendSource, roDetailStatus, source, countType, inferredOpenedAt, inferredClosedAt }) {
+                if (!safeRo || !roNum) return;
+                if (existingAuthorizations[safeRo] || countIndex[safeRo]) return;
+
+                const numericSpend = Number(spend || 0);
+                const eventKey = makeSpendChangeLogEventKey(countType || 'AUTH', safeRo, nowIso);
+
+                updates[`spendGovernor/authorizations/${weekKey}/${safeRo}`] = {
+                    roNumber: roNum,
+                    unitNo: unitNo || '',
+                    branch: branch || '',
+                    subregion: subregion || '',
+                    region: region || '',
+                    owner: owner || '',
+                    previousStatus: previousStatus || '',
+                    previousNormalizedStatus: previousNormalizedStatus || '',
+                    currentStatus: currentStatus || '',
+                    currentNormalizedStatus: currentNormalizedStatus || '',
+                    authorizedAt: nowIso,
+                    inferredOpenedAt: inferredOpenedAt || null,
+                    inferredClosedAt: inferredClosedAt || null,
+                    weekKey: weekKey,
+                    spend: numericSpend,
+                    spendStatus: numericSpend > 0 ? (spendStatus || 'CONFIRMED_RO_DETAIL') : 'PENDING_RO_DETAIL',
+                    spendSource: spendSource || 'RO_DETAIL',
+                    spendCapturedAt: numericSpend > 0 ? nowIso : null,
+                    spendLastCheckedAt: nowIso,
+                    lastKnownRoDetailStatus: roDetailStatus || currentStatus || '',
+                    countType: countType || 'OBSERVED WIP AUTHORIZATION',
+                    source: source || 'firebase-spend-governor'
+                };
+
+                updates[`spendGovernor/countIndex/${safeRo}`] = {
+                    roNumber: roNum,
+                    firstAuthorizedAt: nowIso,
+                    firstAuthorizedWeek: weekKey,
+                    spend: numericSpend,
+                    spendStatus: numericSpend > 0 ? (spendStatus || 'CONFIRMED_RO_DETAIL') : 'PENDING_RO_DETAIL',
+                    spendLastCheckedAt: nowIso,
+                    countType: countType || 'OBSERVED WIP AUTHORIZATION'
+                };
+
+                updates[`spendGovernor/changeLog/${safeRo}/${eventKey}`] = {
+                    changedAt: nowIso,
+                    changedDate: getLocalDateKey(now),
+                    roNumber: roNum,
+                    unitNo: unitNo || '',
+                    branch: branch || '',
+                    subregion: subregion || '',
+                    region: region || '',
+                    owner: owner || '',
+                    changeType: countType || 'OBSERVED WIP AUTHORIZATION',
+                    previousStatus: previousStatus || '',
+                    currentStatus: currentStatus || '',
+                    previousNormalizedStatus: previousNormalizedStatus || '',
+                    currentNormalizedStatus: currentNormalizedStatus || '',
+                    previousSpend: 0,
+                    currentSpend: numericSpend,
+                    spendDelta: numericSpend,
+                    spendSource: spendSource || 'RO_DETAIL',
+                    roDetailStatus: roDetailStatus || currentStatus || '',
+                    closedEvent: currentNormalizedStatus === 'CLOSED',
+                    inferredOpenedAt: inferredOpenedAt || null,
+                    inferredClosedAt: inferredClosedAt || null,
+                    source: source || 'firebase-spend-governor-audit'
+                };
+            }
 
             // First pass: detect new movement from PRE_WIP into WIP and stamp the authorization event.
             // Spend is pulled from RO Detail if available, but the authorization is still saved if RO Detail has not refreshed yet.
@@ -1891,6 +2151,15 @@
                     };
                 }
 
+                const openedForWeekCheck = spendInfo.roDetailOpened || parseDateSafe(ro.openedFormatted);
+                const closedForWeekCheck = spendInfo.roDetailClosedOn || null;
+                const firstSeenInWipThisWeek =
+                    !prior &&
+                    currentNorm === 'WIP' &&
+                    isDateInWeekKey(openedForWeekCheck, weekKey) &&
+                    !alreadyCountedThisWeek &&
+                    !alreadyCountedEver;
+
                 const transitionedIntoWip =
                     prior &&
                     priorNorm === 'PRE_WIP' &&
@@ -1898,36 +2167,48 @@
                     !alreadyCountedThisWeek &&
                     !alreadyCountedEver;
 
+                const bypassedWipToClosed =
+                    prior &&
+                    priorNorm === 'PRE_WIP' &&
+                    currentNorm === 'CLOSED' &&
+                    !alreadyCountedThisWeek &&
+                    !alreadyCountedEver;
+
+                let countType = '';
+                let sourceType = '';
                 if (transitionedIntoWip) {
-                    updates[`spendGovernor/authorizations/${weekKey}/${safeRo}`] = {
-                        roNumber: roNum,
+                    countType = 'OBSERVED WIP AUTHORIZATION';
+                    sourceType = 'firebase-transition';
+                } else if (firstSeenInWipThisWeek) {
+                    countType = 'FIRST SEEN IN WIP';
+                    sourceType = 'firebase-inferred-first-seen-wip';
+                } else if (bypassedWipToClosed) {
+                    countType = 'BYPASSED WIP TO CLOSED';
+                    sourceType = 'firebase-bypassed-wip-to-closed';
+                }
+
+                if (countType) {
+                    stampSpendAuthorization({
+                        safeRo,
+                        roNum,
                         unitNo: ro.unitNo || '',
                         branch: ro.branch || '',
                         subregion: ro.subregion || '',
                         region: ro.region || '',
-                        previousStatus: prior.status || '',
-                        previousNormalizedStatus: prior.normalizedStatus || '',
-                        currentStatus: currentStatus,
+                        owner: (ro.kpiOwners && ro.kpiOwners.length ? ro.kpiOwners[0] : '') || (ro.drilldownOwners && ro.drilldownOwners.length ? ro.drilldownOwners[0] : '') || '',
+                        previousStatus: prior ? (prior.status || '') : 'NOT SEEN IN FIREBASE',
+                        previousNormalizedStatus: prior ? (prior.normalizedStatus || '') : 'UNKNOWN',
+                        currentStatus,
                         currentNormalizedStatus: currentNorm,
-                        authorizedAt: nowIso,
-                        weekKey: weekKey,
-                        spend: spend,
+                        spend,
                         spendStatus: spend > 0 ? 'CONFIRMED_RO_DETAIL' : 'PENDING_RO_DETAIL',
                         spendSource: spendInfo.source,
-                        spendCapturedAt: spend > 0 ? nowIso : null,
-                        spendLastCheckedAt: nowIso,
-                        lastKnownRoDetailStatus: spendInfo.roDetailStatus || '',
-                        source: 'firebase-transition'
-                    };
-
-                    updates[`spendGovernor/countIndex/${safeRo}`] = {
-                        roNumber: roNum,
-                        firstAuthorizedAt: nowIso,
-                        firstAuthorizedWeek: weekKey,
-                        spend: spend,
-                        spendStatus: spend > 0 ? 'CONFIRMED_RO_DETAIL' : 'PENDING_RO_DETAIL',
-                        spendLastCheckedAt: nowIso
-                    };
+                        roDetailStatus: spendInfo.roDetailStatus || '',
+                        source: sourceType,
+                        countType,
+                        inferredOpenedAt: openedForWeekCheck && openedForWeekCheck.toISOString ? openedForWeekCheck.toISOString() : null,
+                        inferredClosedAt: closedForWeekCheck && closedForWeekCheck.toISOString ? closedForWeekCheck.toISOString() : null
+                    });
                 }
 
                 updates[`spendGovernor/statusHistory/${safeRo}`] = {
@@ -1949,95 +2230,73 @@
             });
 
 
-            // Fast-cycle exception: some billing-created orders can move from Unassigned/Pending into WIP and close
-            // before workFLOW+ ever sees the intermediate status. If RO Detail is the first time Firebase sees the RO
-            // and it is already closed/final charges from a same-week open, count it as an inferred authorization.
+            // RO Detail catch-up exception: RO Detail is the safety net for work that moves too fast for the browser refresh cycle.
+            // Count same-week VROs first seen in WIP/Closed and VROs Firebase previously saw in PRE_WIP that now show Closed/Final Charges.
             const roDetailFinancials = window.globalOrderFin || {};
             Object.keys(roDetailFinancials).forEach(roNumRaw => {
                 const roNum = String(roNumRaw || '').toUpperCase().trim();
                 if (!roNum) return;
 
                 const safeRo = safeFirebaseKey(roNum);
-                if (history[safeRo] || countIndex[safeRo] || existingAuthorizations[safeRo]) return;
+                if (countIndex[safeRo] || existingAuthorizations[safeRo]) return;
 
                 const fin = roDetailFinancials[roNum] || {};
                 const currentStatus = String(fin.status || '').trim();
                 const currentNorm = normalizeSpendStatus(currentStatus);
-                if (currentNorm !== 'CLOSED') return;
+                if (currentNorm !== 'WIP' && currentNorm !== 'CLOSED') return;
 
                 const opened = fin.opened || null;
                 const closedOn = fin.closedon || fin.complt || null;
-                if (!isDateInWeekKey(opened, weekKey)) return;
+                const prior = history[safeRo];
+                const priorNorm = prior ? prior.normalizedStatus : null;
+                const openedThisWeek = isDateInWeekKey(opened, weekKey);
 
                 const shopKey = normalizeShopOrBranchKey(fin.shop || fin.customerLocation || fin.branch);
                 if (!shopKey || !globalBranchToTeam || globalBranchToTeam[shopKey] !== 'VENDED REPAIR') return;
 
+                let countType = '';
+                let sourceType = '';
+                if (!prior && currentNorm === 'WIP' && openedThisWeek) {
+                    countType = 'FIRST SEEN IN WIP';
+                    sourceType = 'firebase-ro-detail-first-seen-wip';
+                } else if (!prior && currentNorm === 'CLOSED' && openedThisWeek) {
+                    countType = 'INFERRED FAST-CYCLE CLOSED';
+                    sourceType = 'firebase-inferred-fast-cycle-closed';
+                } else if (prior && priorNorm === 'PRE_WIP' && currentNorm === 'CLOSED') {
+                    countType = 'BYPASSED WIP TO CLOSED';
+                    sourceType = 'firebase-ro-detail-bypassed-wip-to-closed';
+                }
+
+                if (!countType) return;
+
                 const spend = Number(fin.total || 0);
-                const eventKey = makeSpendChangeLogEventKey('FAST_CYCLE_CLOSED', safeRo, nowIso);
                 const branchLabel = fin.customerLocation || fin.shop || '';
                 const unitNo = fin.unitNo || '';
                 const ownerLabel = fin.contact || '';
-                const openedIso = opened && opened.toISOString ? opened.toISOString() : '';
-                const closedIso = closedOn && closedOn.toISOString ? closedOn.toISOString() : '';
+                const openedIso = opened && opened.toISOString ? opened.toISOString() : null;
+                const closedIso = closedOn && closedOn.toISOString ? closedOn.toISOString() : null;
 
-                updates[`spendGovernor/authorizations/${weekKey}/${safeRo}`] = {
-                    roNumber: roNum,
-                    unitNo: unitNo,
-                    branch: branchLabel,
-                    subregion: '',
-                    region: '',
-                    previousStatus: 'NOT SEEN IN FIREBASE',
-                    previousNormalizedStatus: 'UNKNOWN',
-                    currentStatus: currentStatus,
-                    currentNormalizedStatus: currentNorm,
-                    authorizedAt: nowIso,
-                    inferredOpenedAt: openedIso,
-                    inferredClosedAt: closedIso,
-                    weekKey: weekKey,
-                    spend: spend,
-                    spendStatus: spend > 0 ? 'CONFIRMED_RO_DETAIL' : 'PENDING_RO_DETAIL',
-                    spendSource: fin.source || 'RO_DETAIL',
-                    spendCapturedAt: spend > 0 ? nowIso : null,
-                    spendLastCheckedAt: nowIso,
-                    lastKnownRoDetailStatus: currentStatus,
-                    fastCycleInferred: true,
-                    source: 'firebase-inferred-fast-cycle-closed'
-                };
-
-                updates[`spendGovernor/countIndex/${safeRo}`] = {
-                    roNumber: roNum,
-                    firstAuthorizedAt: nowIso,
-                    firstAuthorizedWeek: weekKey,
-                    spend: spend,
-                    spendStatus: spend > 0 ? 'CONFIRMED_RO_DETAIL' : 'PENDING_RO_DETAIL',
-                    spendLastCheckedAt: nowIso,
-                    fastCycleInferred: true
-                };
-
-                updates[`spendGovernor/changeLog/${safeRo}/${eventKey}`] = {
-                    changedAt: nowIso,
-                    changedDate: getLocalDateKey(now),
-                    roNumber: roNum,
-                    unitNo: unitNo,
+                stampSpendAuthorization({
+                    safeRo,
+                    roNum,
+                    unitNo,
                     branch: branchLabel,
                     subregion: '',
                     region: '',
                     owner: ownerLabel,
-                    changeType: 'INFERRED FAST-CYCLE CLOSED',
-                    previousStatus: 'NOT SEEN IN FIREBASE',
-                    currentStatus: currentStatus,
-                    previousNormalizedStatus: 'UNKNOWN',
+                    previousStatus: prior ? (prior.status || '') : 'NOT SEEN IN FIREBASE',
+                    previousNormalizedStatus: prior ? (prior.normalizedStatus || '') : 'UNKNOWN',
+                    currentStatus,
                     currentNormalizedStatus: currentNorm,
-                    previousSpend: 0,
-                    currentSpend: spend,
-                    spendDelta: spend,
+                    spend,
+                    spendStatus: spend > 0 ? 'CONFIRMED_RO_DETAIL' : 'PENDING_RO_DETAIL',
                     spendSource: fin.source || 'RO_DETAIL',
                     roDetailStatus: currentStatus,
-                    closedEvent: true,
+                    source: sourceType,
+                    countType,
                     inferredOpenedAt: openedIso,
-                    inferredClosedAt: closedIso,
-                    source: 'firebase-inferred-fast-cycle-closed-audit'
-                };
+                    inferredClosedAt: closedIso
+                });
 
                 updates[`spendGovernor/statusHistory/${safeRo}`] = {
                     roNumber: roNum,
@@ -2053,8 +2312,9 @@
                     latestSpendSource: fin.source || 'RO_DETAIL',
                     lastKnownRoDetailStatus: currentStatus,
                     openedAt: openedIso,
-                    closedAt: closedIso || nowIso,
-                    fastCycleInferred: true,
+                    closedAt: currentNorm === 'CLOSED' ? (closedIso || nowIso) : null,
+                    fastCycleInferred: countType === 'INFERRED FAST-CYCLE CLOSED',
+                    bypassedWipToClosed: countType === 'BYPASSED WIP TO CLOSED',
                     lastSeenAt: nowIso
                 };
             });
@@ -2155,12 +2415,17 @@
                 branchAuthorized[branchCode].authorizedRev += spend;
             });
 
+            const forecastInfo = getWeeklyRunRateForecast(weeklyAuthorizedTotal, now);
             window.globalAppFin = {
                 closedRev: 0,
                 wipRev: weeklyAuthorizedTotal,
                 authorizedRev: weeklyAuthorizedTotal,
+                projectedWeekEndRev: forecastInfo.projectedWeekEndSpend,
+                elapsedWeekPct: forecastInfo.elapsedPct,
                 cap: WEEKLY_WIP_AUTH_CAP,
+                releaseThreshold: WEEKLY_WIP_RELEASE_THRESHOLD,
                 remaining: Math.max(0, WEEKLY_WIP_AUTH_CAP - weeklyAuthorizedTotal),
+                remainingToReleaseThreshold: Math.max(0, WEEKLY_WIP_RELEASE_THRESHOLD - weeklyAuthorizedTotal),
                 weekKey: weekKey,
                 pendingSpendCount: pendingSpendCount,
                 adjustedSpendCount: adjustedSpendCount,
@@ -3083,6 +3348,8 @@
                 
                 if (!unit) continue;
                 let isDedicatedShop = owner.toUpperCase() === 'DEDICATED';
+                let siteTeam = getBranchTeamFromMap(branch, branchToTeam);
+                let isVendedSite = !isDedicatedShop && siteTeam === 'VENDED REPAIR';
                 if (!owner) owner = 'Unassigned';
                 
                 masterUnits[unit] = {
@@ -3092,7 +3359,9 @@
                     type: unitType,
                     isOOS: (oosFlag === 'OOS'),
                     owner: owner,
-                    isDedicatedShop: isDedicatedShop
+                    isDedicatedShop: isDedicatedShop,
+                    siteTeam: siteTeam,
+                    isVendedSite: isVendedSite
                 };
             }
 
@@ -3400,8 +3669,8 @@
                     summaryUsefulTree[reg].subs[sub].oos++;
                 }
 
-                // Consolidation Summary display should only show vended sites. Dedicated sites stay out of the summary rows.
-                if (m.isDedicatedShop) continue;
+                // Consolidation Summary display should only show true vended sites. Dedicated and non-vended sites stay out of the summary rows.
+                if (!isVendedSummarySite(m)) continue;
 
                 let displayBranch = ensureSummaryBranch(summaryTree, reg, sub, bra, true);
                 displayBranch.totalUnits++;
@@ -3441,8 +3710,12 @@
         function renderSpendQueue() {
             let authorizedTotal = getSpendGovernorAuthorizedTotal();
             let globalRem = WEEKLY_WIP_AUTH_CAP - authorizedTotal;
+            let forecastInfo = getWeeklyRunRateForecast(authorizedTotal, new Date());
+            let projectedWeekEnd = window.globalAppFin && window.globalAppFin.projectedWeekEndRev !== undefined ? Number(window.globalAppFin.projectedWeekEndRev || 0) : forecastInfo.projectedWeekEndSpend;
             let pctUtilized = Math.min(100, (authorizedTotal / WEEKLY_WIP_AUTH_CAP) * 100);
-            let budgetColor = authorizedTotal < 200000 ? '#16a34a' : (authorizedTotal < WEEKLY_WIP_AUTH_CAP ? '#f59e0b' : '#dc2626');
+            let pctProjected = Math.min(100, (projectedWeekEnd / WEEKLY_WIP_AUTH_CAP) * 100);
+            let pctForecastOnly = Math.max(0, pctProjected - pctUtilized);
+            let budgetColor = authorizedTotal < WEEKLY_WIP_AUTH_CAP ? '#16a34a' : '#dc2626';
             let weekKey = window.globalAppFin && window.globalAppFin.weekKey ? window.globalAppFin.weekKey : getWeekKey(new Date());
             let pendingSpendCount = window.globalAppFin && window.globalAppFin.pendingSpendCount ? window.globalAppFin.pendingSpendCount : 0;
             let adjustedSpendCount = window.globalAppFin && window.globalAppFin.adjustedSpendCount ? window.globalAppFin.adjustedSpendCount : 0;
@@ -3458,18 +3731,23 @@
                 <div style="background: #fff; border: 1px solid var(--border); border-radius: 6px; padding: 20px; margin-bottom: 20px; display: flex; flex-direction: column; gap: 15px; border-left: 5px solid ${budgetColor}; box-shadow: 0 2px 5px rgba(0,0,0,0.05);">
                     <div style="display: flex; justify-content: space-between; align-items: center;">
                         <div>
-                            <div style="font-size: 12px; color: #888; font-weight: 800; text-transform: uppercase;">Weekly WIP Authorization Cap</div>
-                            <div style="font-size: 24px; font-weight: 800; color: #333;">Authorized Into WIP: $${authorizedTotal.toLocaleString('en-US', {minimumFractionDigits:2})}</div>
+                            <div style="font-size: 12px; color: #888; font-weight: 800; text-transform: uppercase;">Weekly Spend Governor Cap</div>
+                            <div style="font-size: 24px; font-weight: 800; color: #333;">Captured Toward Cap: $${authorizedTotal.toLocaleString('en-US', {minimumFractionDigits:2})}</div>
                         </div>
                         <div style="text-align: right;">
                             <div style="font-size: 12px; color: #888; font-weight: 800; text-transform: uppercase;">Remaining Authorization Capacity</div>
                             <div style="font-size: 28px; font-weight: 800; color: ${budgetColor};">$${Math.max(0, globalRem).toLocaleString('en-US', {minimumFractionDigits:2})}</div>
                         </div>
                     </div>
-                    <div style="background: #e2e8f0; height: 12px; border-radius: 6px; overflow: hidden; width: 100%;">
-                        <div style="height: 100%; width: ${pctUtilized}%; background: ${budgetColor}; transition: width 0.3s ease;"></div>
+                    <div style="background: #e2e8f0; height: 16px; border-radius: 8px; overflow: hidden; width: 100%; display:flex;">
+                        <div title="Actual current-week authorized spend" style="height: 100%; width: ${pctUtilized}%; background: ${budgetColor}; transition: width 0.3s ease;"></div>
+                        <div title="Projected week-ending run rate" style="height: 100%; width: ${pctForecastOnly}%; background: #86efac; transition: width 0.3s ease;"></div>
                     </div>
-                    <div style="font-size: 11px; color: #888; text-align: right; font-weight: bold; margin-top:-5px;">${pctUtilized.toFixed(1)}% Utilized</div>
+                    <div style="display:flex; justify-content:space-between; gap:10px; font-size: 11px; color: #64748b; font-weight: bold; margin-top:-5px;">
+                        <span>${pctUtilized.toFixed(1)}% actual utilized</span>
+                        <span>Forecast week ending: $${projectedWeekEnd.toLocaleString('en-US', {minimumFractionDigits:2})} (${pctProjected.toFixed(1)}% of cap)</span>
+                    </div>
+                    <div style="font-size: 11px; color: #64748b; font-weight: 700; background:#f0fdf4; border:1px solid #bbf7d0; border-radius:4px; padding:8px 10px;">Green = actual current-week captured spend. Light green = projected week-end forecast based on current run rate. Gray = remaining capacity beyond the forecast. The hard weekly cap is $${WEEKLY_WIP_AUTH_CAP.toLocaleString('en-US')}.</div>
                     <div style="font-size: 12px; color: ${pendingSpendCount > 0 ? '#d9534f' : '#64748b'}; font-weight: 700; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 4px; padding: 8px 10px;">${spendAuditText}</div>
                 </div>
                 <div class="kpi-grid" id="spend-branches-grid"></div>
@@ -3542,6 +3820,7 @@
                 if (rVal !== 'ALL' && mUnit.region !== rVal) continue;
                 if (sVal !== 'ALL' && mUnit.subregion !== sVal) continue;
                 if (bVal !== 'ALL' && mUnit.branch !== bVal) continue;
+                if (!isVendedSummarySite(mUnit)) continue;
 
                 if (mUnit.isOOS) { 
                     let ros = unitRoGroups[unit] || [];
@@ -4333,11 +4612,11 @@
             let globalTotal = getSpendGovernorAuthorizedTotal();
             let globalRem = WEEKLY_WIP_AUTH_CAP - globalTotal;
             let pctUtilized = Math.min(100, (globalTotal / WEEKLY_WIP_AUTH_CAP) * 100);
-            let budgetColor = globalTotal < 200000 ? '#16a34a' : (globalTotal < WEEKLY_WIP_AUTH_CAP ? '#f59e0b' : '#dc2626');
+            let budgetColor = globalTotal < WEEKLY_WIP_AUTH_CAP ? '#16a34a' : '#dc2626';
             let lockActive = isSpendGovernorLocked();
 
             let warningBanner = (lockActive && !isPM) 
-                ? `<div style="background:#ef4444; color:white; padding: 10px; text-align:center; font-weight:bold; border-radius: 4px; margin-bottom: 15px; font-size: 14px; letter-spacing: 0.5px; box-shadow: 0 2px 4px rgba(239, 68, 68, 0.4);">🔒 WEEKLY WIP RELEASE THRESHOLD MET - ALL NEW WORK HAS BEEN HIDDEN</div>` 
+                ? `<div style="background:#ef4444; color:white; padding: 10px; text-align:center; font-weight:bold; border-radius: 4px; margin-bottom: 15px; font-size: 14px; letter-spacing: 0.5px; box-shadow: 0 2px 4px rgba(239, 68, 68, 0.4);">🔒 WEEKLY CAP MET - ALL NEW WORK HAS BEEN HIDDEN</div>` 
                 : '';
 
             let isVendedQueue = owner === 'ALL_VENDED' || vendedOwners.includes(owner);
@@ -4346,8 +4625,8 @@
                 <div style="background: #fff; border: 1px solid var(--border); border-radius: 6px; padding: 15px; margin-bottom: 20px; display: flex; flex-direction: column; gap: 10px; border-left: 5px solid ${budgetColor}; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
                     <div style="display: flex; justify-content: space-between; align-items: center;">
                         <div>
-                            <div style="font-size: 11px; color: #888; font-weight: 800; text-transform: uppercase;">Weekly WIP Authorization Tracking</div>
-                            <div style="font-size: 18px; font-weight: 800; color: #333;">Authorized Into WIP: $${globalTotal.toLocaleString('en-US', {minimumFractionDigits:2})}</div>
+                            <div style="font-size: 11px; color: #888; font-weight: 800; text-transform: uppercase;">Weekly Spend Governor Tracking</div>
+                            <div style="font-size: 18px; font-weight: 800; color: #333;">Captured Toward Cap: $${globalTotal.toLocaleString('en-US', {minimumFractionDigits:2})}</div>
                         </div>
                         <div style="text-align: right;">
                             <div style="font-size: 11px; color: #888; font-weight: 800; text-transform: uppercase;">Remaining Authorization Capacity</div>
