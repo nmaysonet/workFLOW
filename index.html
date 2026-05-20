@@ -2207,17 +2207,31 @@
             const historySnap = await db.ref('spendGovernor/statusHistory').once('value');
             const allAuthSnap = await db.ref('spendGovernor/authorizations').once('value');
             const countIndexSnap = await db.ref('spendGovernor/countIndex').once('value');
+            const changeLogSnap = await db.ref('spendGovernor/changeLog').once('value');
 
             const history = historySnap.val() || {};
             const allAuthorizations = allAuthSnap.val() || {};
             const existingAuthorizations = allAuthorizations[weekKey] || {};
             const countIndex = countIndexSnap.val() || {};
+            const allChangeLog = changeLogSnap.val() || {};
             const updates = {};
             let adjustedSpendCount = 0;
 
+            function hasAuthorizationAnyWeek(safeRo) {
+                if (!safeRo) return false;
+                return Object.keys(allAuthorizations || {}).some(wk => {
+                    const weekAuths = allAuthorizations[wk] || {};
+                    return !!weekAuths[safeRo];
+                });
+            }
+
             function stampSpendAuthorization({ safeRo, roNum, unitNo, branch, subregion, region, owner, previousStatus, previousNormalizedStatus, currentStatus, currentNormalizedStatus, spend, spendStatus, spendSource, roDetailStatus, source, countType, inferredOpenedAt, inferredClosedAt }) {
                 if (!safeRo || !roNum) return;
-                if (existingAuthorizations[safeRo] || countIndex[safeRo]) return;
+                const authUpdatePath = `spendGovernor/authorizations/${weekKey}/${safeRo}`;
+                if (updates[authUpdatePath]) return;
+                // Block true duplicates, but allow a repair if countIndex exists without any saved authorization record.
+                // This can happen when an older build logged the status change but did not write the weekly authorization row.
+                if (existingAuthorizations[safeRo] || (countIndex[safeRo] && hasAuthorizationAnyWeek(safeRo))) return;
 
                 const numericSpend = Number(spend || 0);
                 const eventKey = makeSpendChangeLogEventKey(countType || 'AUTH', safeRo, nowIso);
@@ -2506,6 +2520,58 @@
                     bypassedWipToClosed: countType === 'BYPASSED WIP TO CLOSED',
                     lastSeenAt: nowIso
                 };
+            });
+
+
+            // Reconciliation pass: repair any current-week cap events that were logged in the change log
+            // but did not create a weekly authorization record. This protects against older builds or refresh timing
+            // where the app captured PRE-WIP -> WIP / CLOSED movement as a log row but missed the cap total.
+            Object.keys(allChangeLog || {}).forEach(safeRo => {
+                if (!safeRo) return;
+                if (existingAuthorizations[safeRo] || updates[`spendGovernor/authorizations/${weekKey}/${safeRo}`]) return;
+                if (countIndex[safeRo] && hasAuthorizationAnyWeek(safeRo)) return;
+
+                const roEvents = allChangeLog[safeRo] || {};
+                const repairCandidates = Object.values(roEvents).filter(ev => {
+                    if (!ev) return false;
+                    const changedAt = ev.changedAt ? new Date(ev.changedAt) : null;
+                    if (!isDateInWeekKey(changedAt, weekKey)) return false;
+                    const prevNorm = ev.previousNormalizedStatus || normalizeSpendStatus(ev.previousStatus || '');
+                    const currNorm = ev.currentNormalizedStatus || normalizeSpendStatus(ev.currentStatus || '');
+                    if (prevNorm !== 'PRE_WIP') return false;
+                    return currNorm === 'WIP' || currNorm === 'CLOSED';
+                }).sort((a, b) => new Date(a.changedAt || 0) - new Date(b.changedAt || 0));
+
+                if (repairCandidates.length === 0) return;
+                const ev = repairCandidates[0];
+                const currNorm = ev.currentNormalizedStatus || normalizeSpendStatus(ev.currentStatus || '');
+                const countType = currNorm === 'WIP' ? 'OBSERVED WIP AUTHORIZATION' : 'BYPASSED WIP TO CLOSED';
+                const roNum = String(ev.roNumber || '').toUpperCase().trim();
+                if (!roNum) return;
+
+                const spendInfo = getRoSpendInfo(roNum);
+                const repairSpend = spendInfo && spendInfo.foundInRoDetail ? Number(spendInfo.amount || 0) : Number(ev.currentSpend || 0);
+                stampSpendAuthorization({
+                    safeRo,
+                    roNum,
+                    unitNo: ev.unitNo || '',
+                    branch: ev.branch || '',
+                    subregion: ev.subregion || '',
+                    region: ev.region || '',
+                    owner: ev.owner || '',
+                    previousStatus: ev.previousStatus || '',
+                    previousNormalizedStatus: ev.previousNormalizedStatus || 'PRE_WIP',
+                    currentStatus: ev.currentStatus || '',
+                    currentNormalizedStatus: currNorm,
+                    spend: repairSpend,
+                    spendStatus: repairSpend > 0 ? 'CONFIRMED_RO_DETAIL' : 'PENDING_RO_DETAIL',
+                    spendSource: spendInfo.source || ev.spendSource || 'RO_DETAIL',
+                    roDetailStatus: spendInfo.roDetailStatus || ev.roDetailStatus || '',
+                    source: 'firebase-change-log-reconciliation',
+                    countType,
+                    inferredOpenedAt: ev.inferredOpenedAt || null,
+                    inferredClosedAt: ev.inferredClosedAt || null
+                });
             });
 
             // Second pass: aggressively re-check RO Detail for every saved authorization.
