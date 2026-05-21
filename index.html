@@ -246,6 +246,15 @@
         .note-btn.has-note { background: #f0fdf4; color: #15803d; border-color: #22c55e; opacity: 1; box-shadow: 0 1px 3px rgba(34,197,94,0.22); }
         .note-btn.has-note:hover { background: #dcfce7; }
 
+
+        .locked-prewip-row td { background: #f1f5f9 !important; color: #64748b !important; }
+        .locked-prewip-row:hover td { background: #e2e8f0 !important; }
+        .ro-link-locked { color: #64748b !important; font-weight: 800; cursor: not-allowed; text-decoration: none !important; opacity: 0.85; }
+        .locked-status-toggle { background: #cbd5e1 !important; color: #475569 !important; border: 1px solid #94a3b8 !important; cursor: not-allowed !important; box-shadow: none !important; opacity: 1 !important; min-width: 85px; text-align: center; display: inline-block; }
+        .locked-status-toggle:hover { transform: none !important; opacity: 1 !important; }
+        .lock-warning-tooltip { display: none; color: #dc2626; background: #fff1f2; border: 1px solid #fecdd3; border-radius: 4px; padding: 3px 6px; font-size: 10px; font-weight: 900; letter-spacing: 0.3px; text-transform: uppercase; }
+        .locked-prewip-row:hover .lock-warning-tooltip { display: inline-block; }
+
         .workflow-compliance-card { margin-top: 12px; border-radius: 6px; padding: 10px; border: 1px solid #e5e7eb; background: #f8fafc; }
         .workflow-compliance-header { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 8px; }
         .workflow-compliance-label { font-size: 10px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.5px; color: #475569; }
@@ -1292,15 +1301,7 @@
         }
 
         function getTileOpenRoPopulation(dataSet, isPM = false) {
-            let openRos = (dataSet || []).filter(ro => isRealOpenRoForDailyCompliance(ro));
-            if (isSpendGovernorLocked() && !isPM) {
-                openRos = openRos.filter(ro => {
-                    let st = String(ro.status || '').toUpperCase();
-                    let isPending = st.includes('UNASSIGNED') || st.includes('ESTIMATE');
-                    return !isPending;
-                });
-            }
-            return openRos;
+            return (dataSet || []).filter(ro => isRealOpenRoForDailyCompliance(ro));
         }
 
         function calculateWorkflowCompliance(dataSet, dateKey = getLocalDateKey(new Date())) {
@@ -1371,6 +1372,7 @@
 
         function updateAllStatusBadges() {
             document.querySelectorAll('.status-toggle').forEach(btn => {
+                if (btn.getAttribute('data-locked') === 'true' || btn.classList.contains('locked-status-toggle')) return;
                 let ro = btn.getAttribute('data-ro');
                 let isDispatched = !!globalRoCheckState[ro];
                 if (isDispatched) {
@@ -1388,6 +1390,10 @@
         function toggleRoCheck(ro, isChecked) {
             let safeRo = safeFirebaseKey(ro);
             const roContext = getRoContextBySafeRo(safeRo);
+            if (roContext && shouldLockPreWipRow(roContext.status)) {
+                alert(PRE_WIP_LOCK_MESSAGE);
+                return;
+            }
             const actionText = isChecked ? 'Marked dispatched.' : 'Moved back to pending.';
             if (db) {
                 db.ref('roChecks/' + safeRo).set(isChecked)
@@ -1584,7 +1590,7 @@
             return null;
         }
 
-        const WEEKLY_WIP_AUTH_CAP = 225000;
+        const WEEKLY_WIP_AUTH_CAP = 60000;
         const WEEKLY_WIP_RELEASE_THRESHOLD = WEEKLY_WIP_AUTH_CAP; // Hard cap: stop new releases once the weekly cap is reached.
         const MANUAL_GOVERNOR_PASSWORD_B64 = 'QW1lcml0MDI4MyQ=';
         const MANUAL_GOVERNOR_TZ = 'America/New_York';
@@ -1703,8 +1709,8 @@
 
         function getSpendGovernorLockBannerText() {
             return getSpendGovernorLockReason() === 'MANUAL_LOCK'
-                ? '🔒 MANUAL GOVERNOR LOCK ACTIVE - PRE-WIP WORK HAS BEEN HIDDEN'
-                : '🔒 WEEKLY CAP MET - PRE-WIP WORK HAS BEEN HIDDEN';
+                ? '🔒 MANUAL GOVERNOR LOCK ACTIVE - PRE-WIP WORK IS LOCKED'
+                : '🔒 WEEKLY CAP MET - PRE-WIP WORK IS LOCKED';
         }
 
         function toggleManualGovernorLock() {
@@ -1785,6 +1791,39 @@
 
             return 'OTHER';
         }
+
+        const PRE_WIP_LOCK_MESSAGE = 'VRO PROGRESSION PROHIBITED, PLEASE WAIT FOR WEEKLY SPEND RESET';
+
+        function isPreWipStatus(status) {
+            return normalizeSpendStatus(status) === 'PRE_WIP';
+        }
+
+        function shouldLockPreWipRow(status) {
+            return isSpendGovernorLocked() && isPreWipStatus(status);
+        }
+
+        function getLockTooltipHtml() {
+            return `<span class="lock-warning-tooltip">${PRE_WIP_LOCK_MESSAGE}</span>`;
+        }
+
+        function getLockedRoDisplayFromHtml(linkHtml, fallbackRo = '') {
+            const raw = String(linkHtml || '');
+            const locked = raw.replace(/<a([^>]*?)class=["']ro-link["']([^>]*)>(.*?)<\/a>/gi, `<span class="ro-link ro-link-locked" title="${PRE_WIP_LOCK_MESSAGE}">$3</span>`);
+            if (locked !== raw) return locked;
+            const label = escapeHtml(fallbackRo || raw || 'LOCKED RO');
+            return `<span class="ro-link ro-link-locked" title="${PRE_WIP_LOCK_MESSAGE}">${label}</span>`;
+        }
+
+        function getDispatchToggleHtml(safeRo, isDispatched, locked = false) {
+            const toggleClass = isDispatched ? 'status-dispatched' : 'status-pending';
+            const toggleText = isDispatched ? '✓ DISPATCHED' : 'PENDING';
+            if (locked) {
+                return `<span class="badge locked-status-toggle ${toggleClass}" data-ro="${safeRo}" data-locked="true" title="${PRE_WIP_LOCK_MESSAGE}">${toggleText}</span>`;
+            }
+            const toggleState = isDispatched ? 'false' : 'true';
+            return `<span class="badge status-toggle ${toggleClass}" data-ro="${safeRo}" onclick="toggleRoCheck('${safeRo}', ${toggleState})">${toggleText}</span>`;
+        }
+
 
         function getWeekKey(date = new Date()) {
             const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
@@ -3168,13 +3207,7 @@
             
             let lockActive = isSpendGovernorLocked();
             
-            if (lockActive && !isPM) {
-                targetData = targetData.filter(ro => {
-                    let st = ro.status.toUpperCase();
-                    let isPending = st.includes('UNASSIGNED') || st.includes('ESTIMATE');
-                    return !isPending;
-                });
-            }
+            // Lockout does not remove pre-WIP ROs from export; it only prevents progression actions in the UI.
 
             if (targetData.length === 0) { alert("No data available to export."); return; }
 
@@ -4209,7 +4242,7 @@
             const manualLockActive = manualLock.active;
             const manualLockStatusColor = manualLockActive ? '#dc2626' : '#16a34a';
             const manualLockStatusBg = manualLockActive ? '#fef2f2' : '#f0fdf4';
-            const manualLockStatusText = manualLockActive ? 'ACTIVE - PRE-WIP HIDDEN' : 'OFF';
+            const manualLockStatusText = manualLockActive ? 'ACTIVE - PRE-WIP LOCKED' : 'OFF';
             const manualLockExpiryText = manualLockActive ? `Auto reset: ${formatManualGovernorLockExpiry(manualLock.expiresAt)}` : 'Auto reset applies only when manual lock is active.';
             const manualLockHtml = `
                 <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; background:${manualLockStatusBg}; border:1px solid ${manualLockStatusColor}; border-radius:6px; padding:10px 12px; flex-wrap:wrap;">
@@ -4694,13 +4727,7 @@
                 
                 let lockActive = isSpendGovernorLocked();
 
-                if (lockActive && !isPM) {
-                    targetData = targetData.filter(ro => {
-                        let st = ro.status.toUpperCase();
-                        let isPending = st.includes('UNASSIGNED') || st.includes('ESTIMATE');
-                        return !isPending;
-                    });
-                }
+                // During lockout, pre-WIP work stays visible but progression actions are locked.
 
                 if (targetData.length === 0) return; 
 
@@ -4765,15 +4792,9 @@
 
             let lockActive = isSpendGovernorLocked();
 
-            if (lockActive && !isPM) {
-                targetData = targetData.filter(ro => {
-                    let st = ro.status.toUpperCase();
-                    let isPending = st.includes('UNASSIGNED') || st.includes('ESTIMATE');
-                    return !isPending;
-                });
-            }
+            // During lockout, pre-WIP work stays visible but is action-locked.
 
-            if(targetData.length === 0) return `<p style="margin-top:15px; color:#666;">No active Repair Orders to display under the current filters or governance lock.</p>`;
+            if(targetData.length === 0) return `<p style="margin-top:15px; color:#666;">No active Repair Orders to display under the current filters.</p>`;
             
             let hierarchy = {};
             targetData.forEach(ro => {
@@ -4932,7 +4953,7 @@
                         let tableHTML = `<div class="table-wrapper"><table><colgroup><col style="width:23%;"><col style="width:11%;">${isPM ? '' : '<col style="width:11%;">'}<col style="width:9%;"><col style="width:11%;"><col style="width:21%;"><col style="width:14%;"></colgroup><thead><tr><th>AFS RO # & Dispatch</th><th>Unit No</th>${isPM ? '' : '<th>Priority Status</th>'}<th>OOS Status</th><th>Opened Date</th><th>Status</th><th>ECD</th></tr></thead><tbody>`;
                         
                         let visibleRowsCount = 0;
-                        let hiddenCount = 0;
+                        let lockedCount = 0;
 
                         groupedUnits.forEach(u => {
                             let oosBadge = u.isOOS ? `<span class="badge badge-oos">OOS</span>` : `<span class="badge badge-active">ACTIVE</span>`;
@@ -4942,13 +4963,7 @@
 
                             let visibleIdxs = [];
                             u.roNums.forEach((_, idx) => {
-                                if (lockActive && !isPM) {
-                                    let st = u.statuses[idx].toUpperCase();
-                                    if (st.includes('UNASSIGNED') || st.includes('ESTIMATE')) {
-                                        hiddenCount++;
-                                        return; 
-                                    }
-                                }
+                                if (shouldLockPreWipRow(u.statuses[idx])) lockedCount++;
                                 visibleIdxs.push(idx);
                             });
 
@@ -4960,11 +4975,9 @@
                             visibleIdxs.forEach((idx, localIdx) => {
                                 let roNum = u.roNums[idx];
                                 let safeRo = roNum.replace(/[.#$\[\]]/g, '_');
+                                let isPreWipLocked = shouldLockPreWipRow(u.statuses[idx]);
                                 let isDispatched = !!globalRoCheckState[safeRo];
-                                let toggleClass = isDispatched ? 'status-dispatched' : 'status-pending';
-                                let toggleText = isDispatched ? '✓ DISPATCHED' : 'PENDING';
-                                let toggleState = isDispatched ? 'false' : 'true'; 
-                                let statusToggleHtml = `<span class="badge status-toggle ${toggleClass}" data-ro="${safeRo}" onclick="toggleRoCheck('${safeRo}', ${toggleState})">${toggleText}</span>`;
+                                let statusToggleHtml = getDispatchToggleHtml(safeRo, isDispatched, isPreWipLocked);
 
                                 let latestNote = getLatestMeaningfulNote(safeRo);
                                 let hasNote = isMeaningfulNote(latestNote);
@@ -4973,9 +4986,11 @@
                                 let noteBtnHtml = `<button class="${noteClass}" data-ro="${safeRo}" title="${noteTitle}" onclick="openNoteModal('${safeRo}', '${roNum}')">📝</button>`;
 
                                 let sourcePillHtml = getQueueSourcePillHtml(u.queueSources[idx], isVendedQueue);
-                                let roHtml = `<div style="display:flex; align-items:center; gap: 4px; flex-wrap: wrap;">${statusToggleHtml} ${u.roLinks[idx]} ${noteBtnHtml} ${sourcePillHtml}</div>`;
+                                let roLinkDisplayHtml = isPreWipLocked ? getLockedRoDisplayFromHtml(u.roLinks[idx], roNum) : u.roLinks[idx];
+                                let lockTooltipHtml = isPreWipLocked ? getLockTooltipHtml() : '';
+                                let roHtml = `<div style="display:flex; align-items:center; gap: 4px; flex-wrap: wrap;">${statusToggleHtml} ${roLinkDisplayHtml} ${noteBtnHtml} ${sourcePillHtml} ${lockTooltipHtml}</div>`;
 
-                                tableHTML += `<tr class="ro-row" data-oos="${u.isOOS}" data-priority="${isPri}">`;
+                                tableHTML += `<tr class="ro-row${isPreWipLocked ? ' locked-prewip-row' : ''}" data-oos="${u.isOOS}" data-priority="${isPri}" title="${isPreWipLocked ? PRE_WIP_LOCK_MESSAGE : ''}">`;
                                 tableHTML += `<td style="vertical-align:top; padding-top:15px; border-bottom: ${localIdx === rowCount - 1 ? '1px solid var(--border)' : '1px dashed #eee'};">${roHtml}</td>`;
                                 
                                 let safeUnitType = u.unitType || 'UNKNOWN';
@@ -5008,7 +5023,7 @@
                         
                         tableHTML += `</tbody></table></div>`; 
 
-                        let hiddenMsg = hiddenCount > 0 ? `<span style="color:var(--urgent-red); font-size:11px; font-weight:bold; margin-left: 10px;">(${hiddenCount} Pending ROs Hidden due to Budget Cap)</span>` : '';
+                        let hiddenMsg = lockedCount > 0 ? `<span style="color:var(--urgent-red); font-size:11px; font-weight:bold; margin-left: 10px;">(${lockedCount} PRE-WIP ROs Locked)</span>` : '';
 
                         if (visibleRowsCount > 0) {
                             branchHtml += `<details class="ro-detail-node branch-details" data-branch-name="${branch}"><summary><div style="flex-grow:1; display:flex; align-items:center;"><span class="branch-title-text">${branch} (${visibleRowsCount} WIP)</span>${hiddenMsg}</div><div>${badgesHtml}</div></summary>`;
@@ -5228,18 +5243,12 @@
                             let isOpen = u.isOpenFlags[idx];
                             let st = u.statuses[idx] || '';
 
-                            if (lockActive) {
-                                let isPending = st.toUpperCase().includes('UNASSIGNED') || st.toUpperCase().includes('ESTIMATE');
-                                if (isPending) return; 
-                            }
+                            let isPreWipLocked = shouldLockPreWipRow(st);
                             
                             let statusToggleHtml = '';
                             if (isOpen) {
                                 let isDispatched = !!globalRoCheckState[safeRo];
-                                let toggleClass = isDispatched ? 'status-dispatched' : 'status-pending';
-                                let toggleText = isDispatched ? '✓ DISPATCHED' : 'PENDING';
-                                let toggleState = isDispatched ? 'false' : 'true'; 
-                                statusToggleHtml = `<span class="badge status-toggle ${toggleClass}" data-ro="${safeRo}" onclick="toggleRoCheck('${safeRo}', ${toggleState})">${toggleText}</span>`;
+                                statusToggleHtml = getDispatchToggleHtml(safeRo, isDispatched, isPreWipLocked);
                             } else {
                                 statusToggleHtml = `<span class="badge" style="background-color: #888; color: white; min-width: 85px; text-align: center; display: inline-block;">CLOSED</span>`;
                             }
@@ -5250,9 +5259,11 @@
                             let noteTitle = hasNote ? escapeHtml(latestNote).replace(/"/g, '&quot;') : 'Needs Update';
                             let noteBtnHtml = `<button class="${noteClass}" data-ro="${safeRo}" title="${noteTitle}" onclick="openNoteModal('${safeRo}', '${roNum}')">📝</button>`;
 
-                            let roHtml = `<div style="display:flex; align-items:center; gap: 4px;">${statusToggleHtml} ${u.roLinks[idx]} ${noteBtnHtml}</div>`;
+                            let roLinkDisplayHtml = isPreWipLocked ? getLockedRoDisplayFromHtml(u.roLinks[idx], roNum) : u.roLinks[idx];
+                            let lockTooltipHtml = isPreWipLocked ? getLockTooltipHtml() : '';
+                            let roHtml = `<div style="display:flex; align-items:center; gap: 4px; flex-wrap: wrap;">${statusToggleHtml} ${roLinkDisplayHtml} ${noteBtnHtml} ${lockTooltipHtml}</div>`;
 
-                            searchHtml += `<tr>`;
+                            searchHtml += `<tr class="${isPreWipLocked ? 'locked-prewip-row' : ''}" title="${isPreWipLocked ? PRE_WIP_LOCK_MESSAGE : ''}">`;
                             searchHtml += `<td style="vertical-align:top; padding-top:15px; border-bottom: ${idx === rowCount - 1 ? '1px solid var(--border)' : '1px dashed #eee'};">${roHtml}</td>`;
                             
                             let safeUnitType = u.unitType || 'UNKNOWN';
