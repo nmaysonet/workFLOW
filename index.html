@@ -1023,11 +1023,14 @@
         let globalRoNotesState = {};
         let globalWorkflowActivityState = {};
         let globalSpendChangeLogRows = [];
+        let globalManualGovernorLockState = {};
+        let manualGovernorResetWriteInFlight = false;
 
         try {
             globalRoCheckState = JSON.parse(localStorage.getItem('workflow_checks') || '{}');
             globalRoNotesState = JSON.parse(localStorage.getItem('workflow_notes') || '{}');
             globalWorkflowActivityState = JSON.parse(localStorage.getItem('workflow_activity') || '{}');
+            globalManualGovernorLockState = JSON.parse(localStorage.getItem('manual_governor_lock') || '{}');
         } catch(e) {}
 
         function initFirebaseSync() {
@@ -1055,6 +1058,19 @@
                             refreshActiveViewPreservingDrilldown();
                         }
                     });
+
+                    db.ref('spendGovernor/manualLock').on('value', (snapshot) => {
+                        globalManualGovernorLockState = snapshot.val() || {};
+                        try { localStorage.setItem('manual_governor_lock', JSON.stringify(globalManualGovernorLockState)); } catch(e) {}
+                        checkAndAutoResetManualGovernorLock();
+                        if (processedData && processedData.length > 0) {
+                            refreshActiveViewPreservingDrilldown();
+                        }
+                    });
+
+                    if (!window.__manualGovernorResetTimer) {
+                        window.__manualGovernorResetTimer = setInterval(checkAndAutoResetManualGovernorLock, 60000);
+                    }
                 }
             } catch (error) {
                 console.warn("Firebase Init blocked.", error);
@@ -1570,6 +1586,166 @@
 
         const WEEKLY_WIP_AUTH_CAP = 225000;
         const WEEKLY_WIP_RELEASE_THRESHOLD = WEEKLY_WIP_AUTH_CAP; // Hard cap: stop new releases once the weekly cap is reached.
+        const MANUAL_GOVERNOR_PASSWORD_B64 = 'QW1lcml0MDI4MyQ=';
+        const MANUAL_GOVERNOR_TZ = 'America/New_York';
+
+        function getTimeZoneParts(date = new Date(), timeZone = MANUAL_GOVERNOR_TZ) {
+            const parts = new Intl.DateTimeFormat('en-US', {
+                timeZone,
+                weekday: 'short',
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit',
+                hour12: false,
+                hourCycle: 'h23'
+            }).formatToParts(date);
+            const out = {};
+            parts.forEach(p => { if (p.type !== 'literal') out[p.type] = p.value; });
+            return {
+                weekday: out.weekday,
+                year: Number(out.year),
+                month: Number(out.month),
+                day: Number(out.day),
+                hour: Number(out.hour),
+                minute: Number(out.minute),
+                second: Number(out.second)
+            };
+        }
+
+        function makeDateInTimeZone(year, month, day, hour, minute, second, timeZone = MANUAL_GOVERNOR_TZ) {
+            let guess = new Date(Date.UTC(year, month - 1, day, hour, minute, second));
+            for (let i = 0; i < 4; i++) {
+                const actual = getTimeZoneParts(guess, timeZone);
+                const desiredUtc = Date.UTC(year, month - 1, day, hour, minute, second);
+                const actualUtc = Date.UTC(actual.year, actual.month - 1, actual.day, actual.hour, actual.minute, actual.second);
+                guess = new Date(guess.getTime() + (desiredUtc - actualUtc));
+            }
+            return guess;
+        }
+
+        function getManualGovernorLockExpiryIso(now = new Date()) {
+            const parts = getTimeZoneParts(now, MANUAL_GOVERNOR_TZ);
+            const dayIndex = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 }[parts.weekday] ?? 0;
+            let daysUntilSunday = (7 - dayIndex) % 7;
+            let targetDate = new Date(Date.UTC(parts.year, parts.month - 1, parts.day));
+            targetDate.setUTCDate(targetDate.getUTCDate() + daysUntilSunday);
+            let expiry = makeDateInTimeZone(targetDate.getUTCFullYear(), targetDate.getUTCMonth() + 1, targetDate.getUTCDate(), 23, 59, 0, MANUAL_GOVERNOR_TZ);
+            if (expiry.getTime() <= now.getTime()) {
+                targetDate.setUTCDate(targetDate.getUTCDate() + 7);
+                expiry = makeDateInTimeZone(targetDate.getUTCFullYear(), targetDate.getUTCMonth() + 1, targetDate.getUTCDate(), 23, 59, 0, MANUAL_GOVERNOR_TZ);
+            }
+            return expiry.toISOString();
+        }
+
+        function formatManualGovernorLockExpiry(iso) {
+            if (!iso) return 'Sunday 11:59 PM ET';
+            const d = new Date(iso);
+            if (isNaN(d.getTime())) return 'Sunday 11:59 PM ET';
+            return new Intl.DateTimeFormat('en-US', {
+                timeZone: MANUAL_GOVERNOR_TZ,
+                weekday: 'short',
+                month: 'numeric',
+                day: 'numeric',
+                hour: 'numeric',
+                minute: '2-digit',
+                hour12: true
+            }).format(d) + ' ET';
+        }
+
+        function getManualGovernorLockInfo() {
+            const state = globalManualGovernorLockState || {};
+            const expiresAt = state.expiresAt || '';
+            const expired = !!(expiresAt && new Date(expiresAt).getTime() <= Date.now());
+            return {
+                active: !!state.enabled && !expired,
+                expired,
+                enabled: !!state.enabled,
+                setAt: state.setAt || '',
+                setBy: state.setBy || '',
+                expiresAt,
+                lastChangedAt: state.lastChangedAt || ''
+            };
+        }
+
+        function checkAndAutoResetManualGovernorLock() {
+            const info = getManualGovernorLockInfo();
+            if (!info.enabled || !info.expired || manualGovernorResetWriteInFlight) return;
+            manualGovernorResetWriteInFlight = true;
+            const resetPayload = {
+                enabled: false,
+                resetAt: new Date().toISOString(),
+                resetReason: 'AUTO_RESET_SUNDAY_2359_ET',
+                lastChangedAt: new Date().toISOString()
+            };
+            if (db) {
+                db.ref('spendGovernor/manualLock').update(resetPayload).finally(() => { manualGovernorResetWriteInFlight = false; });
+            } else {
+                globalManualGovernorLockState = Object.assign({}, globalManualGovernorLockState || {}, resetPayload);
+                try { localStorage.setItem('manual_governor_lock', JSON.stringify(globalManualGovernorLockState)); } catch(e) {}
+                manualGovernorResetWriteInFlight = false;
+            }
+        }
+
+        function isManualGovernorLockActive() {
+            const info = getManualGovernorLockInfo();
+            if (info.expired) checkAndAutoResetManualGovernorLock();
+            return !!info.active;
+        }
+
+        function getSpendGovernorLockReason() {
+            if (isManualGovernorLockActive()) return 'MANUAL_LOCK';
+            if (getSpendGovernorAuthorizedTotal() >= WEEKLY_WIP_RELEASE_THRESHOLD) return 'CAP_MET';
+            return '';
+        }
+
+        function getSpendGovernorLockBannerText() {
+            return getSpendGovernorLockReason() === 'MANUAL_LOCK'
+                ? '🔒 MANUAL GOVERNOR LOCK ACTIVE - PRE-WIP WORK HAS BEEN HIDDEN'
+                : '🔒 WEEKLY CAP MET - PRE-WIP WORK HAS BEEN HIDDEN';
+        }
+
+        function toggleManualGovernorLock() {
+            const currentlyActive = isManualGovernorLockActive();
+            const entered = window.prompt(`Enter password to ${currentlyActive ? 'turn OFF' : 'turn ON'} the manual governor lock:`);
+            if (entered === null) return;
+            let expectedPassword = '';
+            try { expectedPassword = atob(MANUAL_GOVERNOR_PASSWORD_B64); } catch(e) { expectedPassword = ''; }
+            if (entered !== expectedPassword) {
+                alert('Incorrect password. Manual governor lock was not changed.');
+                return;
+            }
+
+            const nowIso = new Date().toISOString();
+            const nextEnabled = !currentlyActive;
+            const payload = {
+                enabled: nextEnabled,
+                lastChangedAt: nowIso,
+                lastChangedBy: 'Manual Toggle'
+            };
+
+            if (nextEnabled) {
+                payload.setAt = nowIso;
+                payload.setBy = 'Manual Toggle';
+                payload.expiresAt = getManualGovernorLockExpiryIso(new Date());
+                payload.resetReason = '';
+            } else {
+                payload.disabledAt = nowIso;
+                payload.disabledBy = 'Manual Toggle';
+            }
+
+            if (db) {
+                db.ref('spendGovernor/manualLock').update(payload)
+                    .then(() => refreshActiveViewPreservingDrilldown())
+                    .catch(err => alert('Manual governor lock update failed: ' + err.message));
+            } else {
+                globalManualGovernorLockState = Object.assign({}, globalManualGovernorLockState || {}, payload);
+                try { localStorage.setItem('manual_governor_lock', JSON.stringify(globalManualGovernorLockState)); } catch(e) {}
+                refreshActiveViewPreservingDrilldown();
+            }
+        }
 
         function safeFirebaseKey(value) {
             return String(value || '').replace(/[.#$\[\]]/g, '_');
@@ -1737,7 +1913,7 @@
         }
 
         function isSpendGovernorLocked() {
-            return getSpendGovernorAuthorizedTotal() >= WEEKLY_WIP_RELEASE_THRESHOLD;
+            return isManualGovernorLockActive() || getSpendGovernorAuthorizedTotal() >= WEEKLY_WIP_RELEASE_THRESHOLD;
         }
 
         function getWeekStartEnd(date = new Date()) {
@@ -4028,6 +4204,22 @@
             if (adjustedSpendCount > 0) {
                 spendAuditText += ` ${adjustedSpendCount} saved authorization spend value(s) were adjusted from RO Detail during this refresh.`;
             }
+
+            const manualLock = getManualGovernorLockInfo();
+            const manualLockActive = manualLock.active;
+            const manualLockStatusColor = manualLockActive ? '#dc2626' : '#16a34a';
+            const manualLockStatusBg = manualLockActive ? '#fef2f2' : '#f0fdf4';
+            const manualLockStatusText = manualLockActive ? 'ACTIVE - PRE-WIP HIDDEN' : 'OFF';
+            const manualLockExpiryText = manualLockActive ? `Auto reset: ${formatManualGovernorLockExpiry(manualLock.expiresAt)}` : 'Auto reset applies only when manual lock is active.';
+            const manualLockHtml = `
+                <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; background:${manualLockStatusBg}; border:1px solid ${manualLockStatusColor}; border-radius:6px; padding:10px 12px; flex-wrap:wrap;">
+                    <div>
+                        <div style="font-size:11px; font-weight:900; color:#475569; text-transform:uppercase; letter-spacing:0.4px;">Manual Governor Lock</div>
+                        <div style="font-size:13px; font-weight:900; color:${manualLockStatusColor};">${manualLockStatusText}</div>
+                        <div style="font-size:11px; font-weight:700; color:#64748b; margin-top:2px;">${manualLockExpiryText}</div>
+                    </div>
+                    <button class="btn-action" onclick="toggleManualGovernorLock()" style="background:${manualLockActive ? '#dc2626' : 'var(--gold)'}; color:${manualLockActive ? '#fff' : '#333'};">${manualLockActive ? 'TURN OFF LOCK' : 'TURN ON LOCK'}</button>
+                </div>`;
             
             let widgetHtml = `
                 <div style="background: #fff; border: 1px solid var(--border); border-radius: 6px; padding: 20px; margin-bottom: 20px; display: flex; flex-direction: column; gap: 15px; border-left: 5px solid ${budgetColor}; box-shadow: 0 2px 5px rgba(0,0,0,0.05);">
@@ -4050,6 +4242,7 @@
                         <span>Forecast week ending: $${projectedWeekEnd.toLocaleString('en-US', {minimumFractionDigits:2})} (${pctProjected.toFixed(1)}% of cap)</span>
                     </div>
                     <div style="font-size: 11px; color: #64748b; font-weight: 700; background:#f0fdf4; border:1px solid #bbf7d0; border-radius:4px; padding:8px 10px;">Green = actual current-week captured spend. Light green = projected week-end forecast based on current run rate. Gray = remaining capacity beyond the forecast. The hard weekly cap is $${WEEKLY_WIP_AUTH_CAP.toLocaleString('en-US')}.</div>
+                    ${manualLockHtml}
                     <div style="font-size: 12px; color: ${pendingSpendCount > 0 ? '#d9534f' : '#64748b'}; font-weight: 700; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 4px; padding: 8px 10px;">${spendAuditText}</div>
                 </div>
                 <div class="kpi-grid" id="spend-branches-grid"></div>
@@ -4918,7 +5111,7 @@
             let lockActive = isSpendGovernorLocked();
 
             let warningBanner = (lockActive && !isPM) 
-                ? `<div style="background:#ef4444; color:white; padding: 10px; text-align:center; font-weight:bold; border-radius: 4px; margin-bottom: 15px; font-size: 14px; letter-spacing: 0.5px; box-shadow: 0 2px 4px rgba(239, 68, 68, 0.4);">🔒 WEEKLY CAP MET - ALL NEW WORK HAS BEEN HIDDEN</div>` 
+                ? `<div style="background:#ef4444; color:white; padding: 10px; text-align:center; font-weight:bold; border-radius: 4px; margin-bottom: 15px; font-size: 14px; letter-spacing: 0.5px; box-shadow: 0 2px 4px rgba(239, 68, 68, 0.4);">${getSpendGovernorLockBannerText()}</div>` 
                 : '';
 
             let isVendedQueue = owner === 'ALL_VENDED' || vendedOwners.includes(owner);
