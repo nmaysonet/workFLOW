@@ -2320,7 +2320,7 @@
 
                 html += `<tr class="spend-log-group-row">
                     <td>${escapeHtml(formatSpendAuditDateTime(latest.changedAt || row.changedAt))}</td>
-                    <td>${toggle}${check}<a class="ro-link" href="https://afshub.azurewebsites.net/Vendors/VendedRepairOrder/Details/${encodeURIComponent(group.roNumber || '')}" target="_blank">${escapeHtml(group.roNumber || '')}</a>${detailText}</td>
+                    <td>${toggle}${check}<a class="ro-link" href="https://afshub.azurewebsites.net/Vendors/VendedRepairOrder/Estimate/${encodeURIComponent(group.roNumber || '')}" target="_blank">${escapeHtml(group.roNumber || '')}</a>${detailText}</td>
                     <td>${escapeHtml(group.unitNo || '')}</td>
                     <td>${escapeHtml(group.branch || '')}</td>
                     <td>${escapeHtml(group.owner || '')}</td>
@@ -2341,7 +2341,7 @@
                         const dCheck = isSpendChangeCountedTowardCap(detail) ? '<span class="spend-log-check" title="Counted toward weekly spend total">✓</span>' : '';
                         html += `<tr class="spend-log-detail-row">
                             <td>${escapeHtml(formatSpendAuditDateTime(detail.changedAt))}</td>
-                            <td><span class="detail-indent">↳</span>${dCheck}<a class="ro-link" href="https://afshub.azurewebsites.net/Vendors/VendedRepairOrder/Details/${encodeURIComponent(detail.roNumber || '')}" target="_blank">${escapeHtml(detail.roNumber || '')}</a></td>
+                            <td><span class="detail-indent">↳</span>${dCheck}<a class="ro-link" href="https://afshub.azurewebsites.net/Vendors/VendedRepairOrder/Estimate/${encodeURIComponent(detail.roNumber || '')}" target="_blank">${escapeHtml(detail.roNumber || '')}</a></td>
                             <td>${escapeHtml(detail.unitNo || '')}</td>
                             <td>${escapeHtml(detail.branch || '')}</td>
                             <td>${escapeHtml(detail.owner || '')}</td>
