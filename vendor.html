@@ -62,6 +62,13 @@
         .menu-item { padding: 15px 20px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #4a4b50; font-size: 14px; font-weight: 600; transition: 0.2s; }
         .menu-item:hover { background-color: var(--sidebar-hover); color: var(--gold); }
         .menu-item.active { background-color: var(--sidebar-hover); color: var(--gold); border-left: 4px solid var(--gold); }
+
+        .menu-item.submenu-toggle::after { content: '▸'; font-size: 12px; transition: transform 0.2s ease; }
+        .menu-item.submenu-toggle.expanded::after { transform: rotate(90deg); }
+        .submenu { display: none; background: #303136; border-bottom: 1px solid #4a4b50; }
+        .submenu.open { display: block; }
+        .submenu .menu-item { padding: 12px 20px 12px 40px; font-size: 13px; border-bottom: 1px solid #3f4046; background: #303136; }
+        .submenu .menu-item:hover, .submenu .menu-item.active { background-color: var(--sidebar-hover); color: var(--gold); }
         
         /* Sidebar Truck Graphic */
         .sidebar-truck { margin-top: auto; padding: 30px; text-align: center; border-top: 1px solid #4a4b50; background: #2a2b30; }
@@ -213,12 +220,16 @@
             <span class="logo-plus">+</span>
         </div>
 
-        <div class="menu-item" onclick="window.location.href='index.html'">Home Dashboard</div>
-        <div class="menu-item" onclick="window.location.href='index.html'">PM Queue</div>
-        <div class="menu-item" onclick="window.location.href='index.html'">Vended Repair Queue</div>
-        <div class="menu-item" onclick="window.location.href='index.html'">ERS Queue</div>
-        <div class="menu-item" onclick="window.location.href='index.html'">Consolidation Summary</div>
+        <div class="menu-item" onclick="goWorkflowTab('home-view', 'menu-home')">Home Dashboard</div>
+        <div class="menu-item submenu-toggle" id="menu-queues" onclick="toggleQueuesMenu()">Queues</div>
+        <div class="submenu" id="queues-submenu">
+            <div class="menu-item" onclick="goWorkflowTab('vended-view', 'menu-vended', true)">Vended Repair Queue</div>
+            <div class="menu-item" onclick="goWorkflowTab('pm-view', 'menu-pm', true)">PM Queue</div>
+            <div class="menu-item" onclick="goWorkflowTab('ers-view', 'menu-ers', true)">ERS Queue</div>
+        </div>
         <div class="menu-item active">Vendor Search</div>
+        <div class="menu-item" onclick="goWorkflowTab('spend-view', 'menu-spend')">Weekly Spend Matrix</div>
+        <div class="menu-item" onclick="goWorkflowTab('summary-view', 'menu-summary')">Consolidation Summary</div>
         
         <div class="sidebar-truck">
             <svg width="140" height="70" viewBox="0 0 120 60" xmlns="http://www.w3.org/2000/svg" class="moving-truck-svg">
@@ -283,6 +294,27 @@
     </div>
 
     <script>
+
+        function goWorkflowTab(viewId, menuId, expandQueues = false) {
+            try {
+                sessionStorage.setItem('workflow_nav_target', JSON.stringify({
+                    viewId: viewId,
+                    menuId: menuId,
+                    expandQueues: !!expandQueues,
+                    ts: Date.now()
+                }));
+            } catch (e) {}
+            window.location.href = 'index.html';
+        }
+
+        function toggleQueuesMenu() {
+            const submenu = document.getElementById('queues-submenu');
+            const toggle = document.getElementById('menu-queues');
+            if (!submenu || !toggle) return;
+            submenu.classList.toggle('open');
+            toggle.classList.toggle('expanded');
+        }
+
         const MASTER_EMAIL = "maintenance@ameritfleet.com";
 
         function checkLogin() {
