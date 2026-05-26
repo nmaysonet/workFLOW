@@ -454,6 +454,7 @@
             <div class="sub-tabs-container">
                 <button class="sub-tab active" onclick="switchSpendTab('sub-weekly-spend', this)">Weekly Spend Matrix</button>
                 <button class="sub-tab" onclick="switchSpendTab('sub-spend-change-log', this)">Spend / Status Change Log</button>
+                <button class="sub-tab" onclick="switchSpendTab('sub-weekly-history', this)">Weekly History</button>
             </div>
             <div id="sub-weekly-spend" class="sub-section active">
                 <div id="spend-dashboard-widget"></div>
@@ -502,6 +503,20 @@
                             <tbody id="spend-change-log-body"></tbody>
                         </table>
                     </div>
+                </div>
+            </div>
+            <div id="sub-weekly-history" class="sub-section">
+                <div class="drilldown-container">
+                    <div class="view-title" style="margin-bottom: 10px;">
+                        <span style="font-weight:700;">Weekly Spend History</span>
+                        <div class="controls-group" style="display:flex; align-items:center;">
+                            <button class="btn-green" onclick="exportWeeklySpendHistoryToExcel()">&#11139; Export to XLSX</button>
+                        </div>
+                    </div>
+                    <div style="font-size:12px; color:#64748b; font-weight:700; margin-bottom:12px;">
+                        Shows weekly captured spend totals from Firebase and lets you expand each week to see the VROs locked into spend for that week.
+                    </div>
+                    <div id="weekly-spend-history-body"></div>
                 </div>
             </div>
         </div>
@@ -1032,6 +1047,8 @@
         let globalRoNotesState = {};
         let globalWorkflowActivityState = {};
         let globalSpendChangeLogRows = [];
+        let globalWeeklySpendHistoryRows = [];
+        let expandedWeeklySpendWeeks = {};
         let globalManualGovernorLockState = {};
         let manualGovernorResetWriteInFlight = false;
 
@@ -2155,9 +2172,213 @@
             if (subId === 'sub-spend-change-log') {
                 renderSpendChangeLogTable();
                 refreshSpendChangeLogRows();
+            } else if (subId === 'sub-weekly-history') {
+                renderWeeklySpendHistory();
+                refreshWeeklySpendHistoryRows();
             } else {
                 renderSpendQueue();
             }
+        }
+
+
+        function getWeekSortValue(weekKey) {
+            const m = String(weekKey || '').match(/(\d{4})-W(\d{1,2})/);
+            if (!m) return 0;
+            return (Number(m[1]) * 100) + Number(m[2]);
+        }
+
+        function getAuthRowRoUrl(roNumber) {
+            const ro = String(roNumber || '').trim();
+            if (!ro || ro.toUpperCase().startsWith('NO RO') || ro.toUpperCase().startsWith('SEE_OTHER')) return '';
+            return `https://afshub.azurewebsites.net/Vendors/VendedRepairOrder/Estimate/${encodeURIComponent(ro)}`;
+        }
+
+        function buildWeeklySpendHistoryRows(authData) {
+            const rows = [];
+            Object.keys(authData || {}).forEach(weekKey => {
+                const weekAuths = authData[weekKey] || {};
+                Object.keys(weekAuths).forEach(safeRo => {
+                    const auth = weekAuths[safeRo] || {};
+                    const roNumber = auth.roNumber || auth.roNum || safeRo;
+                    rows.push({
+                        weekKey: auth.weekKey || weekKey,
+                        safeRo: safeRo,
+                        roNumber: roNumber,
+                        unitNo: auth.unitNo || '',
+                        branch: auth.branch || auth.customerLocation || '',
+                        owner: auth.owner || auth.contact || '',
+                        previousStatus: auth.previousStatus || '',
+                        currentStatus: auth.currentStatus || auth.lastKnownRoDetailStatus || '',
+                        captureType: auth.captureType || auth.countType || auth.source || 'CAPTURED',
+                        capturedAt: auth.capturedAt || auth.authorizedAt || auth.spendCapturedAt || auth.spendUpdatedAt || '',
+                        openedDate: auth.openedDate || auth.openedFormatted || '',
+                        completedDate: auth.completedDate || auth.completedFormatted || '',
+                        spend: Number(auth.spend || auth.currentSpend || 0),
+                        spendStatus: auth.spendStatus || '',
+                        spendSource: auth.spendSource || '',
+                        roUrl: getAuthRowRoUrl(roNumber)
+                    });
+                });
+            });
+            rows.sort((a, b) => {
+                const weekDiff = getWeekSortValue(b.weekKey) - getWeekSortValue(a.weekKey);
+                if (weekDiff !== 0) return weekDiff;
+                return new Date(b.capturedAt || 0) - new Date(a.capturedAt || 0);
+            });
+            return rows;
+        }
+
+        function groupWeeklySpendHistory(rows) {
+            const map = {};
+            (rows || []).forEach(row => {
+                const week = row.weekKey || 'UNKNOWN';
+                if (!map[week]) map[week] = { weekKey: week, totalSpend: 0, vroCount: 0, rows: [] };
+                map[week].rows.push(row);
+                map[week].totalSpend += Number(row.spend || 0);
+            });
+            Object.values(map).forEach(group => {
+                const uniqueRos = new Set(group.rows.map(r => r.roNumber || r.safeRo));
+                group.vroCount = uniqueRos.size;
+                group.rows.sort((a, b) => new Date(b.capturedAt || 0) - new Date(a.capturedAt || 0));
+            });
+            return Object.values(map).sort((a, b) => getWeekSortValue(b.weekKey) - getWeekSortValue(a.weekKey));
+        }
+
+        async function refreshWeeklySpendHistoryRows() {
+            if (!db) {
+                globalWeeklySpendHistoryRows = [];
+                renderWeeklySpendHistory();
+                return globalWeeklySpendHistoryRows;
+            }
+            try {
+                const authSnap = await db.ref('spendGovernor/authorizations').once('value');
+                globalWeeklySpendHistoryRows = buildWeeklySpendHistoryRows(authSnap.val() || {});
+            } catch (err) {
+                console.warn('Weekly spend history load failed:', err);
+                globalWeeklySpendHistoryRows = globalWeeklySpendHistoryRows || [];
+            }
+            renderWeeklySpendHistory();
+            return globalWeeklySpendHistoryRows;
+        }
+
+        function toggleWeeklySpendWeek(weekKey) {
+            expandedWeeklySpendWeeks[weekKey] = !expandedWeeklySpendWeeks[weekKey];
+            renderWeeklySpendHistory();
+        }
+
+        function renderWeeklySpendHistory() {
+            const container = document.getElementById('weekly-spend-history-body');
+            if (!container) return;
+
+            const groups = groupWeeklySpendHistory(globalWeeklySpendHistoryRows || []);
+            if (groups.length === 0) {
+                container.innerHTML = `<div style="padding:18px; text-align:center; color:#64748b; font-weight:800; background:#f8fafc; border:1px solid #e2e8f0; border-radius:6px;">No weekly spend history has been logged yet. Weekly totals will appear as Firebase governor authorizations are created.</div>`;
+                return;
+            }
+
+            const maxTotal = Math.max(...groups.map(g => Number(g.totalSpend || 0)), 1);
+            let html = `<div style="display:flex; flex-direction:column; gap:10px; margin-bottom:18px;">`;
+            groups.forEach(group => {
+                const pct = Math.max(1, Math.min(100, (Number(group.totalSpend || 0) / maxTotal) * 100));
+                html += `
+                    <div style="display:grid; grid-template-columns: 90px 1fr 130px 80px; gap:10px; align-items:center;">
+                        <div style="font-weight:900; color:#334155;">${escapeHtml(group.weekKey)}</div>
+                        <div style="background:#e2e8f0; border-radius:999px; height:18px; overflow:hidden;">
+                            <div style="width:${pct}%; height:100%; background:#16a34a;"></div>
+                        </div>
+                        <div style="font-weight:900; text-align:right; color:#111827;">$${Number(group.totalSpend || 0).toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2})}</div>
+                        <div style="font-size:12px; color:#64748b; font-weight:800; text-align:right;">${group.vroCount} VROs</div>
+                    </div>`;
+            });
+            html += `</div>`;
+
+            html += `<div style="overflow-x:auto;"><table style="min-width:1000px;"><thead><tr>
+                <th style="width:6%;">Expand</th>
+                <th style="width:14%;">Week</th>
+                <th style="width:16%; text-align:right;">Captured Spend</th>
+                <th style="width:12%; text-align:right;">VROs</th>
+                <th style="width:52%;">Summary</th>
+            </tr></thead><tbody>`;
+
+            groups.forEach(group => {
+                const isOpen = !!expandedWeeklySpendWeeks[group.weekKey];
+                const topRows = [...group.rows].sort((a, b) => Number(b.spend || 0) - Number(a.spend || 0)).slice(0, 3);
+                const summary = topRows.map(r => `${r.roNumber}: $${Number(r.spend || 0).toLocaleString('en-US', {maximumFractionDigits:0})}`).join(' · ');
+                html += `<tr>
+                    <td><button class="filter-btn" style="padding:4px 9px;" onclick="toggleWeeklySpendWeek('${escapeHtml(group.weekKey)}')">${isOpen ? '−' : '+'}</button></td>
+                    <td style="font-weight:900;">${escapeHtml(group.weekKey)}</td>
+                    <td style="text-align:right; font-weight:900; color:#16a34a;">$${Number(group.totalSpend || 0).toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2})}</td>
+                    <td style="text-align:right; font-weight:800;">${group.vroCount}</td>
+                    <td style="font-size:12px; color:#64748b; font-weight:700;">${escapeHtml(summary || 'No VRO detail')}</td>
+                </tr>`;
+
+                if (isOpen) {
+                    html += `<tr><td colspan="5" style="padding:0; background:#f8fafc;"><div style="padding:12px;"><table style="min-width:1100px;"><thead><tr>
+                        <th>Captured At</th><th>AFS RO #</th><th>Unit No</th><th>Branch / Site</th><th>Owner</th><th>Capture Type</th><th>Previous Status</th><th>Current Status</th><th style="text-align:right;">Spend</th>
+                    </tr></thead><tbody>`;
+                    group.rows.forEach(row => {
+                        const roLink = row.roUrl ? `<a class="ro-link" href="${escapeHtml(row.roUrl)}" target="_blank">${escapeHtml(row.roNumber)}</a>` : escapeHtml(row.roNumber || '');
+                        html += `<tr>
+                            <td>${escapeHtml(row.capturedAt ? new Date(row.capturedAt).toLocaleString() : '')}</td>
+                            <td>${roLink}</td>
+                            <td>${escapeHtml(row.unitNo || '')}</td>
+                            <td>${escapeHtml(row.branch || '')}</td>
+                            <td>${escapeHtml(row.owner || '')}</td>
+                            <td>${escapeHtml(row.captureType || '')}</td>
+                            <td>${escapeHtml(row.previousStatus || '')}</td>
+                            <td>${escapeHtml(row.currentStatus || '')}</td>
+                            <td style="text-align:right; font-weight:800;">$${Number(row.spend || 0).toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2})}</td>
+                        </tr>`;
+                    });
+                    html += `</tbody></table></div></td></tr>`;
+                }
+            });
+
+            html += `</tbody></table></div>`;
+            container.innerHTML = html;
+        }
+
+        function exportWeeklySpendHistoryToExcel() {
+            const rows = globalWeeklySpendHistoryRows || [];
+            if (rows.length === 0) {
+                alert('No weekly spend history available to export.');
+                return;
+            }
+            const groups = groupWeeklySpendHistory(rows);
+            const summaryRows = groups.map(g => ({
+                'Week': g.weekKey,
+                'Captured Spend': Number(g.totalSpend || 0),
+                'VRO Count': g.vroCount
+            }));
+            const detailRows = rows.map(r => ({
+                'Week': r.weekKey,
+                'Captured At': r.capturedAt || '',
+                'AFS RO #': r.roNumber || '',
+                'Unit No': r.unitNo || '',
+                'Branch / Site': r.branch || '',
+                'Owner': r.owner || '',
+                'Capture Type': r.captureType || '',
+                'Previous Status': r.previousStatus || '',
+                'Current Status': r.currentStatus || '',
+                'Opened Date': r.openedDate || '',
+                'Completed Date': r.completedDate || '',
+                'Spend': Number(r.spend || 0),
+                'Spend Status': r.spendStatus || '',
+                'Spend Source': r.spendSource || ''
+            }));
+
+            const wb = XLSX.utils.book_new();
+            const wsSummary = XLSX.utils.json_to_sheet(summaryRows);
+            autoFitColumns(wsSummary, summaryRows);
+            styleExcelHeaders(wsSummary);
+            XLSX.utils.book_append_sheet(wb, wsSummary, 'Weekly Summary');
+
+            const wsDetail = XLSX.utils.json_to_sheet(detailRows);
+            autoFitColumns(wsDetail, detailRows);
+            styleExcelHeaders(wsDetail);
+            XLSX.utils.book_append_sheet(wb, wsDetail, 'Weekly VRO Detail');
+
+            XLSX.writeFile(wb, `weekly_spend_history_${getLocalDateKey(new Date())}.xlsx`);
         }
 
         let spendChangeLogSortState = { key: 'changedAt', dir: 'desc' };
