@@ -2279,16 +2279,26 @@
             }
 
             const maxTotal = Math.max(...groups.map(g => Number(g.totalSpend || 0)), 1);
-            let html = `<div style="display:flex; flex-direction:column; gap:10px; margin-bottom:18px;">`;
+            let html = `<div style="display:flex; align-items:center; gap:14px; flex-wrap:wrap; margin-bottom:12px; font-size:12px; font-weight:900; color:#475569;">
+                <span><span style="display:inline-block; width:12px; height:12px; border-radius:3px; background:#16a34a; vertical-align:-2px; margin-right:5px;"></span>Under Weekly Cap</span>
+                <span><span style="display:inline-block; width:12px; height:12px; border-radius:3px; background:#dc2626; vertical-align:-2px; margin-right:5px;"></span>At / Over Weekly Cap</span>
+                <span style="color:#64748b;">Weekly Cap: $${Number(WEEKLY_WIP_AUTH_CAP || 0).toLocaleString('en-US', {maximumFractionDigits:0})}</span>
+            </div>`;
+            html += `<div style="display:flex; flex-direction:column; gap:10px; margin-bottom:18px;">`;
             groups.forEach(group => {
-                const pct = Math.max(1, Math.min(100, (Number(group.totalSpend || 0) / maxTotal) * 100));
+                const weekSpend = Number(group.totalSpend || 0);
+                const isOverCap = weekSpend >= WEEKLY_WIP_AUTH_CAP;
+                const barColor = isOverCap ? '#dc2626' : '#16a34a';
+                const amountColor = isOverCap ? '#dc2626' : '#111827';
+                const capLabel = isOverCap ? '<span style="margin-left:8px; padding:2px 6px; border-radius:999px; background:#fee2e2; color:#991b1b; font-size:10px; font-weight:900; white-space:nowrap;">OVER CAP</span>' : '';
+                const pct = Math.max(1, Math.min(100, (weekSpend / maxTotal) * 100));
                 html += `
-                    <div style="display:grid; grid-template-columns: 90px 1fr 130px 80px; gap:10px; align-items:center;">
+                    <div style="display:grid; grid-template-columns: 90px 1fr 170px 80px; gap:10px; align-items:center;">
                         <div style="font-weight:900; color:#334155;">${escapeHtml(group.weekKey)}</div>
                         <div style="background:#e2e8f0; border-radius:999px; height:18px; overflow:hidden;">
-                            <div style="width:${pct}%; height:100%; background:#16a34a;"></div>
+                            <div style="width:${pct}%; height:100%; background:${barColor};"></div>
                         </div>
-                        <div style="font-weight:900; text-align:right; color:#111827;">$${Number(group.totalSpend || 0).toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2})}</div>
+                        <div style="font-weight:900; text-align:right; color:${amountColor};">$${weekSpend.toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2})}${capLabel}</div>
                         <div style="font-size:12px; color:#64748b; font-weight:800; text-align:right;">${group.vroCount} VROs</div>
                     </div>`;
             });
@@ -2309,7 +2319,7 @@
                 html += `<tr>
                     <td><button class="filter-btn" style="padding:4px 9px;" onclick="toggleWeeklySpendWeek('${escapeHtml(group.weekKey)}')">${isOpen ? '−' : '+'}</button></td>
                     <td style="font-weight:900;">${escapeHtml(group.weekKey)}</td>
-                    <td style="text-align:right; font-weight:900; color:#16a34a;">$${Number(group.totalSpend || 0).toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2})}</td>
+                    <td style="text-align:right; font-weight:900; color:${Number(group.totalSpend || 0) >= WEEKLY_WIP_AUTH_CAP ? '#dc2626' : '#16a34a'};">$${Number(group.totalSpend || 0).toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2})}</td>
                     <td style="text-align:right; font-weight:800;">${group.vroCount}</td>
                     <td style="font-size:12px; color:#64748b; font-weight:700;">${escapeHtml(summary || 'No VRO detail')}</td>
                 </tr>`;
