@@ -955,6 +955,7 @@
 
                 statusEl.innerText = 'Dashboard loaded.';
                 statusEl.style.color = '#2e7d32';
+                setTimeout(applyExternalNavigationRequest, 0);
             } catch (error) {
                 console.error('Fetch failed:', error);
                 statusEl.innerText = `Failed to load live data. ${error.message}`;
@@ -1035,6 +1036,7 @@
 
                 statusEl.innerText = `Loaded ${file.name}`;
                 statusEl.style.color = '#2e7d32';
+                setTimeout(applyExternalNavigationRequest, 0);
             } catch (error) {
                 console.error('Manual upload parse error:', error);
                 statusEl.innerText = `Error parsing file: ${error.message}`;
@@ -3634,6 +3636,52 @@
             if (!submenu || !toggle) return;
             submenu.classList.toggle('open');
             toggle.classList.toggle('expanded');
+        }
+
+
+        function applyExternalNavigationRequest() {
+            let target = null;
+            try {
+                const raw = sessionStorage.getItem('workflow_nav_target') || localStorage.getItem('workflow_nav_target');
+                if (raw) {
+                    target = JSON.parse(raw);
+                    sessionStorage.removeItem('workflow_nav_target');
+                    localStorage.removeItem('workflow_nav_target');
+                }
+            } catch (e) { target = null; }
+
+            if (!target) {
+                try {
+                    const params = new URLSearchParams(window.location.search);
+                    const viewFromQuery = params.get('view');
+                    const viewFromHash = window.location.hash ? window.location.hash.replace('#', '') : '';
+                    const viewId = viewFromQuery || viewFromHash;
+                    if (viewId) target = { viewId: viewId };
+                } catch (e) {}
+            }
+
+            if (!target || !target.viewId || !document.getElementById(target.viewId)) return;
+
+            const viewToMenu = {
+                'home-view': 'menu-home',
+                'vended-view': 'menu-vended',
+                'pm-view': 'menu-pm',
+                'ers-view': 'menu-ers',
+                'spend-view': 'menu-spend',
+                'summary-view': 'menu-summary'
+            };
+
+            const menuId = target.menuId || viewToMenu[target.viewId] || null;
+            const menuElement = menuId ? document.getElementById(menuId) : null;
+
+            if (['vended-view', 'pm-view', 'ers-view'].includes(target.viewId) || target.expandQueues) {
+                const submenu = document.getElementById('queues-submenu');
+                const toggle = document.getElementById('menu-queues');
+                if (submenu) submenu.classList.add('open');
+                if (toggle) toggle.classList.add('expanded');
+            }
+
+            navigate(target.viewId, menuElement, true);
         }
 
         function getOpenDetailPaths(root) {
