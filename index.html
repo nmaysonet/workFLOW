@@ -1323,14 +1323,30 @@
             return (dataSet || []).filter(ro => isRealOpenRoForDailyCompliance(ro));
         }
 
+        function isComplianceEligibleRo(ro) {
+            if (!isRealOpenRoForDailyCompliance(ro)) return false;
+
+            // During a spend/manual lockout, pre-WIP work remains visible for awareness and notes,
+            // but coordinators are not allowed to progress it. Compliance should only score the
+            // work they are allowed/expected to actively manage: WIP.
+            if (isSpendGovernorLocked()) {
+                return normalizeSpendStatus(ro.status) === 'WIP';
+            }
+
+            return true;
+        }
+
         function calculateWorkflowCompliance(dataSet, dateKey = getLocalDateKey(new Date())) {
-            const activeRos = (dataSet || []).filter(ro => isRealOpenRoForDailyCompliance(ro));
+            const realOpenRos = (dataSet || []).filter(ro => isRealOpenRoForDailyCompliance(ro));
+            const activeRos = realOpenRos.filter(ro => isComplianceEligibleRo(ro));
+            const lockActive = isSpendGovernorLocked();
+            const lockedExcluded = lockActive ? Math.max(0, realOpenRos.length - activeRos.length) : 0;
             const todayKey = getLocalDateKey(new Date());
             const isToday = dateKey === todayKey;
 
             const total = activeRos.length;
             if (total === 0) {
-                return { score: 100, rating: 'ON TRACK', colorClass: 'compliance-green', total: 0, touched: 0, notes: 0, dispatched: 0, dispatchTotal: 0, stale: 0, touchPct: 100, notesPct: 100, dispatchPct: 100, staleCleanPct: 100, dateKey };
+                return { score: 100, rating: 'ON TRACK', colorClass: 'compliance-green', total: 0, touched: 0, notes: 0, dispatched: 0, dispatchTotal: 0, stale: 0, touchPct: 100, notesPct: 100, dispatchPct: 100, staleCleanPct: 100, dateKey, lockActive, lockedExcluded, realOpenTotal: realOpenRos.length };
             }
 
             let touched = 0;
@@ -1359,14 +1375,17 @@
             const colorClass = score >= 85 ? 'compliance-green' : (score >= 70 ? 'compliance-yellow' : 'compliance-red');
             const rating = score >= 85 ? 'ON TRACK' : (score >= 70 ? 'WATCH' : 'NEEDS ACTION');
 
-            return { score, rating, colorClass, total, touched, notes, dispatched, dispatchTotal, stale, touchPct: Math.round(touchPct * 100), notesPct: Math.round(notesPct * 100), dispatchPct: Math.round(dispatchPct * 100), staleCleanPct: Math.round(staleCleanPct * 100), dateKey };
+            return { score, rating, colorClass, total, touched, notes, dispatched, dispatchTotal, stale, touchPct: Math.round(touchPct * 100), notesPct: Math.round(notesPct * 100), dispatchPct: Math.round(dispatchPct * 100), staleCleanPct: Math.round(staleCleanPct * 100), dateKey, lockActive, lockedExcluded, realOpenTotal: realOpenRos.length };
         }
 
         function generateWorkflowComplianceHtml(dataSet, compact = false) {
             const c = calculateWorkflowCompliance(dataSet);
             const prior = calculateWorkflowCompliance(dataSet, getPriorLocalDateKey());
+            const lockNote = c.lockActive && c.lockedExcluded > 0
+                ? `<div style="margin-top:6px; font-size:10px; font-weight:800; color:#64748b; text-transform:uppercase; letter-spacing:0.3px;">${c.lockedExcluded} locked pre-WIP RO${c.lockedExcluded === 1 ? '' : 's'} excluded from score</div>`
+                : '';
             return `
-                <div class="workflow-compliance-card ${c.colorClass}${compact ? ' compact' : ''}" title="Score = 40% daily touches + 30% notes coverage + 20% dispatched flag + 10% stale control">
+                <div class="workflow-compliance-card ${c.colorClass}${compact ? ' compact' : ''}" title="Score is based only on ROs coordinators are allowed to work. During spend/manual lockout, locked pre-WIP rows are excluded from compliance scoring.">
                     <div class="workflow-compliance-header">
                         <div>
                             <div class="workflow-compliance-label">Daily Workflow Compliance</div>
@@ -1386,6 +1405,7 @@
                         <div class="workflow-compliance-mini"><div class="mini-title">Dispatch</div><div class="mini-num">${c.dispatched}/${c.dispatchTotal}</div></div>
                         <div class="workflow-compliance-mini"><div class="mini-title">Stale</div><div class="mini-num">${c.stale}</div></div>
                     </div>
+                    ${lockNote}
                 </div>`;
         }
 
