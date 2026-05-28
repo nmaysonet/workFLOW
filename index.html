@@ -1053,11 +1053,14 @@
         let expandedWeeklySpendWeeks = {};
         let globalManualGovernorLockState = {};
         let manualGovernorResetWriteInFlight = false;
+        let globalUnlimitedSpendState = {};
+        let unlimitedSpendResetWriteInFlight = false;
 
         try {
             globalRoCheckState = JSON.parse(localStorage.getItem('workflow_checks') || '{}');
             globalRoNotesState = JSON.parse(localStorage.getItem('workflow_notes') || '{}');
             globalWorkflowActivityState = JSON.parse(localStorage.getItem('workflow_activity') || '{}');
+            globalUnlimitedSpendState = JSON.parse(localStorage.getItem('unlimited_spend_mode') || '{}');
             globalManualGovernorLockState = JSON.parse(localStorage.getItem('manual_governor_lock') || '{}');
         } catch(e) {}
 
@@ -1096,8 +1099,20 @@
                         }
                     });
 
+                    db.ref('spendGovernor/unlimitedSpendMode').on('value', (snapshot) => {
+                        globalUnlimitedSpendState = snapshot.val() || {};
+                        try { localStorage.setItem('unlimited_spend_mode', JSON.stringify(globalUnlimitedSpendState)); } catch(e) {}
+                        checkAndAutoResetUnlimitedSpendMode();
+                        if (processedData && processedData.length > 0) {
+                            refreshActiveViewPreservingDrilldown();
+                        }
+                    });
+
                     if (!window.__manualGovernorResetTimer) {
-                        window.__manualGovernorResetTimer = setInterval(checkAndAutoResetManualGovernorLock, 60000);
+                        window.__manualGovernorResetTimer = setInterval(() => {
+                            checkAndAutoResetManualGovernorLock();
+                            checkAndAutoResetUnlimitedSpendMode();
+                        }, 60000);
                     }
                 }
             } catch (error) {
@@ -1740,9 +1755,89 @@
             return !!info.active;
         }
 
+        function getUnlimitedSpendModeInfo() {
+            const state = globalUnlimitedSpendState || {};
+            const expiresAt = state.expiresAt || '';
+            const expired = !!(expiresAt && new Date(expiresAt).getTime() <= Date.now());
+            return {
+                active: !!state.enabled && !expired,
+                expired,
+                enabled: !!state.enabled,
+                setAt: state.setAt || '',
+                setBy: state.setBy || '',
+                expiresAt,
+                lastChangedAt: state.lastChangedAt || ''
+            };
+        }
+
+        function checkAndAutoResetUnlimitedSpendMode() {
+            const info = getUnlimitedSpendModeInfo();
+            if (!info.enabled || !info.expired || unlimitedSpendResetWriteInFlight) return;
+            unlimitedSpendResetWriteInFlight = true;
+            const resetPayload = {
+                enabled: false,
+                resetAt: new Date().toISOString(),
+                resetReason: 'AUTO_RESET_SUNDAY_2359_ET',
+                lastChangedAt: new Date().toISOString()
+            };
+            if (db) {
+                db.ref('spendGovernor/unlimitedSpendMode').update(resetPayload).finally(() => { unlimitedSpendResetWriteInFlight = false; });
+            } else {
+                globalUnlimitedSpendState = Object.assign({}, globalUnlimitedSpendState || {}, resetPayload);
+                try { localStorage.setItem('unlimited_spend_mode', JSON.stringify(globalUnlimitedSpendState)); } catch(e) {}
+                unlimitedSpendResetWriteInFlight = false;
+            }
+        }
+
+        function isUnlimitedSpendModeActive() {
+            const info = getUnlimitedSpendModeInfo();
+            if (info.expired) checkAndAutoResetUnlimitedSpendMode();
+            return !!info.active;
+        }
+
+        function toggleUnlimitedSpendMode() {
+            const currentlyActive = isUnlimitedSpendModeActive();
+            const entered = window.prompt(`Enter password to ${currentlyActive ? 'turn OFF' : 'turn ON'} unlimited spend mode for this week:`);
+            if (entered === null) return;
+            let expectedPassword = '';
+            try { expectedPassword = atob(MANUAL_GOVERNOR_PASSWORD_B64); } catch(e) { expectedPassword = ''; }
+            if (entered !== expectedPassword) {
+                alert('Incorrect password. Unlimited spend mode was not changed.');
+                return;
+            }
+
+            const nowIso = new Date().toISOString();
+            const nextEnabled = !currentlyActive;
+            const payload = {
+                enabled: nextEnabled,
+                lastChangedAt: nowIso,
+                lastChangedBy: 'Manual Toggle'
+            };
+
+            if (nextEnabled) {
+                payload.setAt = nowIso;
+                payload.setBy = 'Manual Toggle';
+                payload.expiresAt = getManualGovernorLockExpiryIso(new Date());
+                payload.resetReason = '';
+            } else {
+                payload.disabledAt = nowIso;
+                payload.disabledBy = 'Manual Toggle';
+            }
+
+            if (db) {
+                db.ref('spendGovernor/unlimitedSpendMode').update(payload)
+                    .then(() => refreshActiveViewPreservingDrilldown())
+                    .catch(err => alert('Unlimited spend mode update failed: ' + err.message));
+            } else {
+                globalUnlimitedSpendState = Object.assign({}, globalUnlimitedSpendState || {}, payload);
+                try { localStorage.setItem('unlimited_spend_mode', JSON.stringify(globalUnlimitedSpendState)); } catch(e) {}
+                refreshActiveViewPreservingDrilldown();
+            }
+        }
+
         function getSpendGovernorLockReason() {
             if (isManualGovernorLockActive()) return 'MANUAL_LOCK';
-            if (getSpendGovernorAuthorizedTotal() >= WEEKLY_WIP_RELEASE_THRESHOLD) return 'CAP_MET';
+            if (!isUnlimitedSpendModeActive() && getSpendGovernorAuthorizedTotal() >= WEEKLY_WIP_RELEASE_THRESHOLD) return 'CAP_MET';
             return '';
         }
 
@@ -1991,7 +2086,7 @@
         }
 
         function isSpendGovernorLocked() {
-            return isManualGovernorLockActive() || getSpendGovernorAuthorizedTotal() >= WEEKLY_WIP_RELEASE_THRESHOLD;
+            return isManualGovernorLockActive() || (!isUnlimitedSpendModeActive() && getSpendGovernorAuthorizedTotal() >= WEEKLY_WIP_RELEASE_THRESHOLD);
         }
 
         function getWeekStartEnd(date = new Date()) {
@@ -4552,6 +4647,22 @@
                     </div>
                     <button class="btn-action" onclick="toggleManualGovernorLock()" style="background:${manualLockActive ? '#dc2626' : 'var(--gold)'}; color:${manualLockActive ? '#fff' : '#333'};">${manualLockActive ? 'TURN OFF LOCK' : 'TURN ON LOCK'}</button>
                 </div>`;
+
+            const unlimitedSpend = getUnlimitedSpendModeInfo();
+            const unlimitedActive = unlimitedSpend.active;
+            const unlimitedStatusColor = unlimitedActive ? '#2563eb' : '#16a34a';
+            const unlimitedStatusBg = unlimitedActive ? '#eff6ff' : '#f0fdf4';
+            const unlimitedStatusText = unlimitedActive ? 'ACTIVE - CAP BYPASSED THIS WEEK' : 'OFF';
+            const unlimitedExpiryText = unlimitedActive ? `Auto reset: ${formatManualGovernorLockExpiry(unlimitedSpend.expiresAt)}` : 'When active, the weekly cap will not lock progression for the current week.';
+            const unlimitedSpendHtml = `
+                <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; background:${unlimitedStatusBg}; border:1px solid ${unlimitedStatusColor}; border-radius:6px; padding:10px 12px; flex-wrap:wrap;">
+                    <div>
+                        <div style="font-size:11px; font-weight:900; color:#475569; text-transform:uppercase; letter-spacing:0.4px;">Unlimited Spend Mode</div>
+                        <div style="font-size:13px; font-weight:900; color:${unlimitedStatusColor};">${unlimitedStatusText}</div>
+                        <div style="font-size:11px; font-weight:700; color:#64748b; margin-top:2px;">${unlimitedExpiryText}</div>
+                    </div>
+                    <button class="btn-action" onclick="toggleUnlimitedSpendMode()" style="background:${unlimitedActive ? '#2563eb' : 'var(--gold)'}; color:${unlimitedActive ? '#fff' : '#333'};">${unlimitedActive ? 'TURN OFF UNLIMITED' : 'TURN ON UNLIMITED'}</button>
+                </div>`;
             
             let widgetHtml = `
                 <div style="background: #fff; border: 1px solid var(--border); border-radius: 6px; padding: 20px; margin-bottom: 20px; display: flex; flex-direction: column; gap: 15px; border-left: 5px solid ${budgetColor}; box-shadow: 0 2px 5px rgba(0,0,0,0.05);">
@@ -4575,6 +4686,7 @@
                     </div>
                     <div style="font-size: 11px; color: #64748b; font-weight: 700; background:#f0fdf4; border:1px solid #bbf7d0; border-radius:4px; padding:8px 10px;">Green = actual current-week captured spend. Light green = projected week-end forecast based on current run rate. Gray = remaining capacity beyond the forecast. The hard weekly cap is $${WEEKLY_WIP_AUTH_CAP.toLocaleString('en-US')}.</div>
                     ${manualLockHtml}
+                    ${unlimitedSpendHtml}
                     <div style="font-size: 12px; color: ${pendingSpendCount > 0 ? '#d9534f' : '#64748b'}; font-weight: 700; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 4px; padding: 8px 10px;">${spendAuditText}</div>
                 </div>
                 <div class="kpi-grid" id="spend-branches-grid"></div>
