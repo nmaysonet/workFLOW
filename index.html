@@ -5535,31 +5535,52 @@
             let pctUtilized = Math.min(100, (globalTotal / WEEKLY_WIP_AUTH_CAP) * 100);
             let budgetColor = globalTotal < WEEKLY_WIP_AUTH_CAP ? '#16a34a' : '#dc2626';
             let lockActive = isSpendGovernorLocked();
+            let unlimitedSpendActiveForView = isUnlimitedSpendModeActive();
 
             let warningBanner = (lockActive && !isPM) 
                 ? `<div style="background:#ef4444; color:white; padding: 10px; text-align:center; font-weight:bold; border-radius: 4px; margin-bottom: 15px; font-size: 14px; letter-spacing: 0.5px; box-shadow: 0 2px 4px rgba(239, 68, 68, 0.4);">${getSpendGovernorLockBannerText()}</div>` 
                 : '';
 
             let isVendedQueue = owner === 'ALL_VENDED' || vendedOwners.includes(owner);
-            let budgetHeaderHtml = (isVendedQueue && !isPM) ? `
-                ${warningBanner}
-                <div style="background: #fff; border: 1px solid var(--border); border-radius: 6px; padding: 15px; margin-bottom: 20px; display: flex; flex-direction: column; gap: 10px; border-left: 5px solid ${budgetColor}; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
-                    <div style="display: flex; justify-content: space-between; align-items: center;">
-                        <div>
-                            <div style="font-size: 11px; color: #888; font-weight: 800; text-transform: uppercase;">Weekly Spend Governor Tracking</div>
-                            <div style="font-size: 18px; font-weight: 800; color: #333;">Captured Toward Cap: $${globalTotal.toLocaleString('en-US', {minimumFractionDigits:2})}</div>
+            let budgetHeaderHtml = '';
+            if (isVendedQueue && !isPM) {
+                if (unlimitedSpendActiveForView) {
+                    budgetHeaderHtml = `
+                        ${warningBanner}
+                        <div style="background: #eff6ff; border: 1px solid #93c5fd; border-radius: 6px; padding: 15px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; gap: 12px; border-left: 5px solid #2563eb; box-shadow: 0 1px 3px rgba(0,0,0,0.05); flex-wrap: wrap;">
+                            <div>
+                                <div style="font-size: 11px; color: #475569; font-weight: 900; text-transform: uppercase; letter-spacing:0.4px;">Weekly Spend Governor</div>
+                                <div style="font-size: 18px; font-weight: 900; color: #1d4ed8;">Unlimited Spend Mode Active</div>
+                                <div style="font-size: 12px; color: #475569; font-weight: 700; margin-top: 3px;">Weekly cap is not enforcing progression for this week. Coordinator spend bars and remaining-cap warnings are hidden while unlimited mode is active.</div>
+                            </div>
+                            <div style="text-align:right;">
+                                <div style="font-size: 11px; color: #64748b; font-weight: 900; text-transform: uppercase;">Current Captured Spend</div>
+                                <div style="font-size: 22px; font-weight: 900; color:#1d4ed8;">$${globalTotal.toLocaleString('en-US', {minimumFractionDigits:2})}</div>
+                            </div>
                         </div>
-                        <div style="text-align: right;">
-                            <div style="font-size: 11px; color: #888; font-weight: 800; text-transform: uppercase;">Remaining Authorization Capacity</div>
-                            <div style="font-size: 22px; font-weight: 800; color: ${budgetColor};">$${Math.max(0, globalRem).toLocaleString('en-US', {minimumFractionDigits:2})}</div>
+                    `;
+                } else {
+                    budgetHeaderHtml = `
+                        ${warningBanner}
+                        <div style="background: #fff; border: 1px solid var(--border); border-radius: 6px; padding: 15px; margin-bottom: 20px; display: flex; flex-direction: column; gap: 10px; border-left: 5px solid ${budgetColor}; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <div>
+                                    <div style="font-size: 11px; color: #888; font-weight: 800; text-transform: uppercase;">Weekly Spend Governor Tracking</div>
+                                    <div style="font-size: 18px; font-weight: 800; color: #333;">Captured Toward Cap: $${globalTotal.toLocaleString('en-US', {minimumFractionDigits:2})}</div>
+                                </div>
+                                <div style="text-align: right;">
+                                    <div style="font-size: 11px; color: #888; font-weight: 800; text-transform: uppercase;">Remaining Authorization Capacity</div>
+                                    <div style="font-size: 22px; font-weight: 800; color: ${budgetColor};">$${Math.max(0, globalRem).toLocaleString('en-US', {minimumFractionDigits:2})}</div>
+                                </div>
+                            </div>
+                            <div style="background: #e2e8f0; height: 10px; border-radius: 5px; overflow: hidden; width: 100%;">
+                                <div style="height: 100%; width: ${pctUtilized}%; background: ${budgetColor}; transition: width 0.3s ease;"></div>
+                            </div>
+                            <div style="font-size: 10px; color: #888; text-align: right; font-weight: bold; margin-top:-5px;">${pctUtilized.toFixed(1)}% Utilized</div>
                         </div>
-                    </div>
-                    <div style="background: #e2e8f0; height: 10px; border-radius: 5px; overflow: hidden; width: 100%;">
-                        <div style="height: 100%; width: ${pctUtilized}%; background: ${budgetColor}; transition: width 0.3s ease;"></div>
-                    </div>
-                    <div style="font-size: 10px; color: #888; text-align: right; font-weight: bold; margin-top:-5px;">${pctUtilized.toFixed(1)}% Utilized</div>
-                </div>
-            ` : '';
+                    `;
+                }
+            }
 
             document.getElementById('drilldown-body').innerHTML = budgetHeaderHtml + generateRoDrilldownHtml(ownerDataAll, isPM);
             updateAllNoteButtons(); 
