@@ -1693,6 +1693,34 @@
             return true;
         }
 
+
+        function isWorkflowComplianceMetricFilter(metricFilter) {
+            return ['TOUCHED','NOT_TOUCHED','NOTES','NO_NOTES','DISPATCHED','NOT_DISPATCHED','STALE'].includes(metricFilter);
+        }
+
+        function isRepairClassComplianceMetricFilter(metricFilter) {
+            return ['REPAIR_CLASS','REPAIR_CLASS_REVIEW_NEEDED','REPAIR_CLASS_REVIEW_REMAINING','REPAIR_CLASS_NOT_TOUCHED','REPAIR_CLASS_CORRECTED'].includes(metricFilter);
+        }
+
+        function isOpenTileMetricFilter(metricFilter) {
+            return ['OPEN','OOS','PRIORITY'].includes(metricFilter);
+        }
+
+        function getOwnerMetricDrilldownRows(ownerRows, isPM, metricFilter) {
+            const f = metricFilter || 'ALL';
+            let rows = ownerRows || [];
+
+            // Tile-square clicks must use the same population that created the tile number.
+            // Open/OOS/Priority, Daily Workflow Compliance, and Daily Repair Class Compliance
+            // are all calculated from current real open ROs only. This prevents closed
+            // repair-class history rows from appearing when a square says only 2 items remain.
+            if (isOpenTileMetricFilter(f) || isWorkflowComplianceMetricFilter(f) || isRepairClassComplianceMetricFilter(f)) {
+                rows = getTileOpenRoPopulation(rows, isPM);
+            }
+
+            return rows.filter(ro => roMatchesMetricObject(ro, f));
+        }
+
         function roMatchesMetricObject(ro, metricFilter) {
             const f = metricFilter || currentDrilldownMetricFilter || 'ALL';
             if (f === 'ALL') return true;
@@ -6740,7 +6768,7 @@
 
             const metricFilterActiveForRender = currentDrilldownMetricFilter && currentDrilldownMetricFilter !== 'ALL';
             if (metricFilterActiveForRender) {
-                ownerDataAll = ownerDataAll.filter(ro => roMatchesMetricObject(ro, currentDrilldownMetricFilter));
+                ownerDataAll = getOwnerMetricDrilldownRows(ownerDataAll, isPM, currentDrilldownMetricFilter);
             }
 
             let globalTotal = getSpendGovernorAuthorizedTotal();
