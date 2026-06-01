@@ -1675,29 +1675,39 @@
 
         function rowMatchesMetricFilter(row) {
             const f = currentDrilldownMetricFilter || 'ALL';
+            const isComplianceRow = row.dataset.complianceEligible === 'true';
             if (f === 'ALL') return true;
             if (f === 'OPEN') return row.dataset.open === 'true';
             if (f === 'COMPLETED') return row.dataset.completedReview === 'true';
             if (f === 'OOS') return row.dataset.oos === 'true';
             if (f === 'PRIORITY') return row.dataset.priority === 'true';
-            if (f === 'TOUCHED') return row.dataset.touched === 'true';
-            if (f === 'NOT_TOUCHED') return row.dataset.touched !== 'true';
-            if (f === 'NOTES') return row.dataset.note === 'true';
-            if (f === 'DISPATCHED') return row.dataset.dispatched === 'true';
-            if (f === 'STALE') return row.dataset.stale === 'true';
-            if (f === 'REPAIR_CLASS') return row.dataset.repairClassIssue === 'true';
+
+            if (f === 'TOUCHED') return isComplianceRow && row.dataset.touched === 'true';
+            if (f === 'NOT_TOUCHED') return isComplianceRow && row.dataset.touched !== 'true';
+            if (f === 'NOTES') return isComplianceRow && row.dataset.note === 'true';
+            if (f === 'NO_NOTES') return isComplianceRow && row.dataset.note !== 'true';
+            if (f === 'DISPATCHED') return isComplianceRow && row.dataset.dispatched === 'true';
+            if (f === 'NOT_DISPATCHED') return isComplianceRow && row.dataset.dispatched !== 'true';
+            if (f === 'STALE') return isComplianceRow && row.dataset.stale === 'true';
+
+            if (f === 'REPAIR_CLASS') return row.dataset.repairClassIssue === 'true' || row.dataset.repairClassCorrected === 'true';
             if (f === 'REPAIR_CLASS_REVIEW_NEEDED') return row.dataset.repairClassIssue === 'true' && row.dataset.repairClassCorrected !== 'true';
+            if (f === 'REPAIR_CLASS_REVIEW_REMAINING') return row.dataset.repairClassIssue === 'true' && row.dataset.repairClassCorrected !== 'true' && row.dataset.touched !== 'true';
+            if (f === 'REPAIR_CLASS_NOT_TOUCHED') return row.dataset.repairClassIssue === 'true' && row.dataset.touched !== 'true';
+            if (f === 'REPAIR_CLASS_CORRECTED') return row.dataset.repairClassCorrected === 'true';
             return true;
         }
 
         function getMetricFilterLabel() {
             const labels = {
-                OPEN: 'Open ROs', COMPLETED: 'Completed ROs', OOS: 'OOS ROs', PRIORITY: 'Priority ROs', TOUCHED: 'Touched Today', NOT_TOUCHED: 'Not Touched Today', NOTES: 'Notes Current', DISPATCHED: 'Dispatched', STALE: 'Stale ROs', REPAIR_CLASS: 'Repair Class Issues', REPAIR_CLASS_REVIEW_NEEDED: 'Review Needed'
+                OPEN: 'Open ROs', COMPLETED: 'Completed ROs', OOS: 'OOS ROs', PRIORITY: 'Priority ROs', TOUCHED: 'Touched Today', NOT_TOUCHED: 'Left to Touch Today', NOTES: 'Notes Current', NO_NOTES: 'Left Needing Notes', DISPATCHED: 'Dispatched', NOT_DISPATCHED: 'Left to Dispatch', STALE: 'Stale ROs', REPAIR_CLASS: 'Repair Class Issues', REPAIR_CLASS_REVIEW_NEEDED: 'Review Needed', REPAIR_CLASS_REVIEW_REMAINING: 'Left to Review Today', REPAIR_CLASS_NOT_TOUCHED: 'Repair Class Left to Touch', REPAIR_CLASS_CORRECTED: 'Corrected / Cleared'
             };
             return labels[currentDrilldownMetricFilter] || '';
         }
-        function generateWorkflowComplianceHtml(dataSet, compact = false) {
+        function generateWorkflowComplianceHtml(dataSet, compact = false, owner = currentOwnerView, parentViewId = currentParentView) {
             const c = calculateWorkflowCompliance(dataSet);
+            const ownerArg = String(owner || currentOwnerView || '').replace(/'/g, "\\'");
+            const parentArg = String(parentViewId || currentParentView || '').replace(/'/g, "\\'");
             const prior = calculateWorkflowCompliance(dataSet, getPriorLocalDateKey());
             const lockNote = c.lockActive && c.lockedExcluded > 0
                 ? `<div style="margin-top:6px; font-size:10px; font-weight:800; color:#64748b; text-transform:uppercase; letter-spacing:0.3px;">${c.lockedExcluded} locked pre-WIP RO${c.lockedExcluded === 1 ? '' : 's'} excluded from score</div>`
@@ -1718,10 +1728,10 @@
                         </div>
                     </div>
                     <div class="workflow-compliance-grid">
-                        <div class="workflow-compliance-mini clickable" onclick="openOwnerMetricDrilldown(currentOwnerView, currentParentView, 'TOUCHED', event)" title="Show ROs touched today"><div class="mini-title">Touched</div><div class="mini-num">${c.touched}/${c.total}</div></div>
-                        <div class="workflow-compliance-mini clickable" onclick="openOwnerMetricDrilldown(currentOwnerView, currentParentView, 'NOTES', event)" title="Show ROs with current meaningful notes"><div class="mini-title">Notes</div><div class="mini-num">${c.notes}/${c.total}</div></div>
-                        <div class="workflow-compliance-mini clickable" onclick="openOwnerMetricDrilldown(currentOwnerView, currentParentView, 'DISPATCHED', event)" title="Show dispatched ROs"><div class="mini-title">Dispatch</div><div class="mini-num">${c.dispatched}/${c.dispatchTotal}</div></div>
-                        <div class="workflow-compliance-mini clickable" onclick="openOwnerMetricDrilldown(currentOwnerView, currentParentView, 'STALE', event)" title="Show stale ROs"><div class="mini-title">Stale</div><div class="mini-num">${c.stale}</div></div>
+                        <div class="workflow-compliance-mini clickable" onclick="openOwnerMetricDrilldown('${ownerArg}', '${parentArg}', 'NOT_TOUCHED', event)" title="Show ROs left to touch today"><div class="mini-title">Touched</div><div class="mini-num">${c.touched}/${c.total}</div></div>
+                        <div class="workflow-compliance-mini clickable" onclick="openOwnerMetricDrilldown('${ownerArg}', '${parentArg}', 'NO_NOTES', event)" title="Show ROs still needing a meaningful note"><div class="mini-title">Notes</div><div class="mini-num">${c.notes}/${c.total}</div></div>
+                        <div class="workflow-compliance-mini clickable" onclick="openOwnerMetricDrilldown('${ownerArg}', '${parentArg}', 'NOT_DISPATCHED', event)" title="Show ROs still needing dispatch confirmation"><div class="mini-title">Dispatch</div><div class="mini-num">${c.dispatched}/${c.dispatchTotal}</div></div>
+                        <div class="workflow-compliance-mini clickable" onclick="openOwnerMetricDrilldown('${ownerArg}', '${parentArg}', 'STALE', event)" title="Show stale ROs"><div class="mini-title">Stale</div><div class="mini-num">${c.stale}</div></div>
                     </div>
                     ${lockNote}
                 </div>`;
@@ -4817,8 +4827,10 @@
             return { issues, openIssues, touchedCount, reviewedOrTouched, score, colorClass, rating, dateKey };
         }
 
-        function generateBillingComplianceHtml(dataSet) {
+        function generateBillingComplianceHtml(dataSet, owner = currentOwnerView, parentViewId = currentParentView) {
             const current = getRepairClassComplianceSummary(dataSet);
+            const ownerArg = String(owner || currentOwnerView || '').replace(/'/g, "\\'");
+            const parentArg = String(parentViewId || currentParentView || '').replace(/'/g, "\\'");
             const issues = current.issues;
             if (!issues.length) return '';
             const prior = getRepairClassComplianceSummary(dataSet, getPriorLocalDateKey());
@@ -4838,10 +4850,10 @@
                         </div>
                     </div>
                     <div class="workflow-compliance-grid">
-                        <div class="workflow-compliance-mini clickable" onclick="openOwnerMetricDrilldown(currentOwnerView, currentParentView, 'REPAIR_CLASS', event)" title="Show repair class issue ROs"><div class="mini-title">RO Review</div><div class="mini-num">${issues.length}</div></div>
-                        <div class="workflow-compliance-mini clickable" onclick="openOwnerMetricDrilldown(currentOwnerView, currentParentView, 'TOUCHED', event)" title="Show repair class ROs touched today"><div class="mini-title">Touched</div><div class="mini-num">${current.touchedCount}/${issues.length}</div></div>
-                        <div class="workflow-compliance-mini clickable" onclick="openOwnerMetricDrilldown(currentOwnerView, currentParentView, 'REPAIR_CLASS_REVIEW_NEEDED', event)" title="Show repair class ROs needing review"><div class="mini-title">Review Needed</div><div class="mini-num">${current.openIssues.length}</div></div>
-                        <div class="workflow-compliance-mini clickable" onclick="openOwnerMetricDrilldown(currentOwnerView, currentParentView, 'REPAIR_CLASS', event)" title="Show repair class issue ROs"><div class="mini-title">Corrected</div><div class="mini-num">${issues.length - current.openIssues.length}</div></div>
+                        <div class="workflow-compliance-mini clickable" onclick="openOwnerMetricDrilldown('${ownerArg}', '${parentArg}', 'REPAIR_CLASS_REVIEW_REMAINING', event)" title="Show repair class ROs still left to review today"><div class="mini-title">RO Review</div><div class="mini-num">${current.reviewedOrTouched}/${issues.length}</div></div>
+                        <div class="workflow-compliance-mini clickable" onclick="openOwnerMetricDrilldown('${ownerArg}', '${parentArg}', 'REPAIR_CLASS_NOT_TOUCHED', event)" title="Show repair class ROs still not touched today"><div class="mini-title">Touched</div><div class="mini-num">${current.touchedCount}/${issues.length}</div></div>
+                        <div class="workflow-compliance-mini clickable" onclick="openOwnerMetricDrilldown('${ownerArg}', '${parentArg}', 'REPAIR_CLASS_REVIEW_NEEDED', event)" title="Show repair class ROs needing review"><div class="mini-title">Review Needed</div><div class="mini-num">${current.openIssues.length}</div></div>
+                        <div class="workflow-compliance-mini clickable" onclick="openOwnerMetricDrilldown('${ownerArg}', '${parentArg}', 'REPAIR_CLASS_CORRECTED', event)" title="Show repair class ROs already corrected/cleared"><div class="mini-title">Corrected</div><div class="mini-num">${issues.length - current.openIssues.length}</div></div>
                     </div>
                 </div>`;
         }
@@ -6136,8 +6148,8 @@
                 `;
             }
 
-            let workflowComplianceHtml = chartId ? '' : generateWorkflowComplianceHtml(filteredOpen);
-            let billingComplianceHtml = chartId ? '' : generateBillingComplianceHtml(filteredOpen);
+            let workflowComplianceHtml = chartId ? '' : generateWorkflowComplianceHtml(filteredOpen, false, name, parentViewId);
+            let billingComplianceHtml = chartId ? '' : generateBillingComplianceHtml(filteredOpen, name, parentViewId);
 
             let innerHtml = `
                 <div class="kpi-name">${name}</div>
@@ -6529,7 +6541,8 @@
                                 const rowStale = !rowTouched;
                                 const rowRepairIssue = !!getRepairClassIssueForSafeRo(rowSafeRo);
                                 const rowRepairCorrected = getBillingReviewStatusForSafeRo(rowSafeRo) === 'Corrected' || getBillingReviewStatusForSafeRo(rowSafeRo) === 'Cleared';
-                                tableHTML += `<tr class="ro-row${isPreWipLocked ? ' locked-prewip-row' : ''}" data-oos="${u.isOOS}" data-priority="${isPri}" data-open="${!isCompletedRepairClassReview}" data-completed-review="${isCompletedRepairClassReview}" data-touched="${rowTouched}" data-note="${rowHasNote}" data-dispatched="${rowDispatched}" data-stale="${rowStale}" data-repair-class-issue="${rowRepairIssue}" data-repair-class-corrected="${rowRepairCorrected}" title="${isPreWipLocked ? PRE_WIP_LOCK_MESSAGE : ''}">`;
+                                const rowComplianceEligible = !isCompletedRepairClassReview && (!isSpendGovernorLocked() || !isPreWipLocked);
+                                tableHTML += `<tr class="ro-row${isPreWipLocked ? ' locked-prewip-row' : ''}" data-oos="${u.isOOS}" data-priority="${isPri}" data-open="${!isCompletedRepairClassReview}" data-completed-review="${isCompletedRepairClassReview}" data-compliance-eligible="${rowComplianceEligible}" data-touched="${rowTouched}" data-note="${rowHasNote}" data-dispatched="${rowDispatched}" data-stale="${rowStale}" data-repair-class-issue="${rowRepairIssue}" data-repair-class-corrected="${rowRepairCorrected}" title="${isPreWipLocked ? PRE_WIP_LOCK_MESSAGE : ''}">`;
                                 tableHTML += `<td style="vertical-align:top; padding-top:15px; border-bottom: ${localIdx === rowCount - 1 ? '1px solid var(--border)' : '1px dashed #eee'};">${roHtml}</td>`;
                                 
                                 let safeUnitType = u.unitType || 'UNKNOWN';
@@ -6594,6 +6607,9 @@
 
             // Hide/Show Rows based on filter
             const rows = container.querySelectorAll('.ro-row');
+            const metricActive = currentDrilldownMetricFilter && currentDrilldownMetricFilter !== 'ALL';
+            const standardFilterActive = currentFilter && currentFilter !== 'ALL';
+            const shouldAutoExpandFilteredResults = metricActive || standardFilterActive;
             rows.forEach(row => {
                 let show = true;
                 if (!isPM) {
@@ -6604,11 +6620,23 @@
                 row.style.display = show ? '' : 'none';
             });
 
+            const visibleRowTotal = Array.from(rows).filter(r => r.style.display !== 'none').length;
+            let emptyMsg = container.querySelector('#metric-filter-empty-message');
+            if (metricActive && visibleRowTotal === 0) {
+                if (!emptyMsg) {
+                    const label = getMetricFilterLabel() || 'selected metric';
+                    container.insertAdjacentHTML('beforeend', `<div id="metric-filter-empty-message" style="margin-top:12px; padding:14px; border:1px solid #cbd5e1; background:#f8fafc; border-radius:6px; color:#475569; font-size:13px; font-weight:800;">No remaining items found for ${label}.</div>`);
+                }
+            } else if (emptyMsg) {
+                emptyMsg.remove();
+            }
+
             // Re-calculate Branch Headers and hide empty ones
             const branchNodes = container.querySelectorAll('.branch-details');
             branchNodes.forEach(branch => {
                 const visibleRows = Array.from(branch.querySelectorAll('.ro-row')).filter(r => r.style.display !== 'none');
                 branch.style.display = visibleRows.length === 0 ? 'none' : '';
+                if (shouldAutoExpandFilteredResults && visibleRows.length > 0) branch.setAttribute('open', '');
                 
                 const titleEl = branch.querySelector('.branch-title-text');
                 if (titleEl) {
@@ -6622,6 +6650,7 @@
             subNodes.forEach(sub => {
                 const visibleRows = Array.from(sub.querySelectorAll('.ro-row')).filter(r => r.style.display !== 'none');
                 sub.style.display = visibleRows.length === 0 ? 'none' : '';
+                if (shouldAutoExpandFilteredResults && visibleRows.length > 0) sub.setAttribute('open', '');
             });
 
             // Hide empty Regions
@@ -6629,6 +6658,7 @@
             regNodes.forEach(reg => {
                 const visibleRows = Array.from(reg.querySelectorAll('.ro-row')).filter(r => r.style.display !== 'none');
                 reg.style.display = visibleRows.length === 0 ? 'none' : '';
+                if (shouldAutoExpandFilteredResults && visibleRows.length > 0) reg.setAttribute('open', '');
             });
         }
 
