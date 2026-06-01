@@ -115,6 +115,65 @@
 
 
 
+        .weekly-history-shell { width: 100%; max-width: 100%; }
+        .weekly-history-legend { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; margin-bottom: 12px; font-size: 12px; font-weight: 900; color: #475569; }
+        .weekly-history-legend .legend-chip { display: inline-block; width: 12px; height: 12px; border-radius: 3px; vertical-align: -2px; margin-right: 5px; }
+        .weekly-history-note { font-size: 12px; color: #64748b; font-weight: 800; line-height: 1.35; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 10px 12px; margin-bottom: 12px; }
+        .weekly-history-rollup { display: flex; flex-direction: column; gap: 10px; margin-bottom: 18px; width: 100%; max-width: 100%; }
+        .weekly-history-rollup-row { display: grid; grid-template-columns: 92px minmax(260px, 1fr) 150px 78px minmax(210px, 250px); gap: 12px; align-items: center; width: 100%; max-width: 100%; }
+        .weekly-history-week { font-weight: 900; color: #334155; white-space: nowrap; }
+        .weekly-history-bars { min-width: 0; }
+        .weekly-history-cap-bar { background: #e2e8f0; border-radius: 999px; height: 18px; overflow: hidden; margin-bottom: 5px; }
+        .weekly-history-budget-bar { display: flex; height: 9px; border-radius: 999px; overflow: hidden; background: #e2e8f0; }
+        .weekly-history-amount { font-weight: 900; text-align: center; white-space: nowrap; }
+        .weekly-history-vros { font-size: 12px; color: #64748b; font-weight: 800; text-align: center; white-space: nowrap; }
+        .weekly-history-split { font-size: 11px; color: #334155; font-weight: 900; text-align: center; line-height: 1.15; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; }
+        .weekly-history-status-pill { display: inline-flex; align-items: center; justify-content: center; margin-left: 0; padding: 2px 7px; border-radius: 999px; font-size: 9px; font-weight: 900; white-space: nowrap; line-height: 1.1; }
+        .weekly-history-status-pill.over-cap { background: #fee2e2; color: #991b1b; margin-left: 6px; }
+        .weekly-history-status-pill.locked { background: #e0f2fe; color: #075985; }
+        .weekly-history-status-pill.live { background: #fef3c7; color: #92400e; }
+        .weekly-history-table-wrap { width: 100%; max-width: 100%; border: 1px solid #e2e8f0; border-radius: 8px; background: #fff; box-shadow: 0 1px 3px rgba(15,23,42,0.06); overflow-x: auto; overflow-y: hidden; scrollbar-gutter: stable; }
+        .weekly-history-table-wrap::-webkit-scrollbar, .weekly-history-detail-panel::-webkit-scrollbar { height: 10px; }
+        .weekly-history-table-wrap::-webkit-scrollbar-track, .weekly-history-detail-panel::-webkit-scrollbar-track { background: #f1f5f9; border-radius: 999px; }
+        .weekly-history-table-wrap::-webkit-scrollbar-thumb, .weekly-history-detail-panel::-webkit-scrollbar-thumb { background: #94a3b8; border-radius: 999px; border: 2px solid #f1f5f9; }
+        .weekly-history-table { width: 100%; min-width: 0; table-layout: fixed; border-collapse: collapse; }
+        .weekly-history-table th, .weekly-history-table td { text-align: center; vertical-align: middle; }
+        .weekly-history-table th { white-space: normal; line-height: 1.15; }
+        .weekly-history-table td { font-size: 12px; }
+        .weekly-history-table .col-expand { width: 6%; }
+        .weekly-history-table .col-week { width: 9%; }
+        .weekly-history-table .col-weekend { width: 11%; }
+        .weekly-history-table .col-spend { width: 15%; }
+        .weekly-history-table .col-vros { width: 8%; }
+        .weekly-history-table .col-budget { width: 13.5%; }
+        .weekly-history-table .col-split { width: 24%; }
+        .weekly-history-expand-btn { min-width: 30px; height: 26px; padding: 0 8px !important; border-radius: 6px; display: inline-flex; align-items: center; justify-content: center; margin: 0 auto; }
+        .weekly-history-detail-cell { padding: 0 !important; background: #f8fafc !important; }
+        .weekly-history-detail-panel { width: 100%; max-width: 100%; overflow-x: auto; overflow-y: visible; padding: 12px; background: #f8fafc; border-top: 1px solid #e2e8f0; box-shadow: inset 8px 0 12px -14px rgba(15,23,42,0.35), inset -8px 0 12px -14px rgba(15,23,42,0.35); }
+        .weekly-history-detail-table { width: 100%; min-width: 1320px; table-layout: fixed; border-collapse: collapse; background: #fff; border: 1px solid #e2e8f0; border-radius: 6px; overflow: hidden; }
+        .weekly-history-detail-table th, .weekly-history-detail-table td { text-align: center; vertical-align: middle; font-size: 11px; }
+        .weekly-history-detail-table th { position: sticky; top: 0; z-index: 1; background: #f1f5f9; white-space: normal; line-height: 1.15; padding: 10px 6px; word-break: normal; overflow-wrap: break-word; }
+        .weekly-history-detail-table td { line-height: 1.25; padding: 9px 6px; }
+        .weekly-history-money { font-weight: 900; white-space: nowrap; text-align: center !important; }
+        .weekly-history-muted { color: #64748b; font-weight: 800; }
+        .weekly-budget-pill { display: inline-flex; align-items: center; justify-content: center; min-width: 66px; padding: 3px 7px; border-radius: 999px; font-size: 9px; font-weight: 900; line-height: 1; letter-spacing: 0.35px; white-space: nowrap; }
+        .weekly-budget-pill.included { background: #dbeafe; color: #2563eb; border: 1px solid #bfdbfe; }
+        .weekly-budget-pill.excluded { background: #f3e8ff; color: #7c3aed; border: 1px solid #d8b4fe; }
+        .weekly-history-split-cell { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; width: 100%; min-height: 36px; }
+        .weekly-history-split-text { color: #334155; font-weight: 900; font-size: 11px; line-height: 1.15; text-align: center; }
+        @media (max-width: 1450px) {
+            .weekly-history-rollup-row { grid-template-columns: 82px minmax(220px, 1fr) 140px 72px 205px; gap: 9px; }
+            .weekly-history-table .col-spend { width: 14.5%; }
+            .weekly-history-table .col-budget { width: 13%; }
+            .weekly-history-table .col-split { width: 25%; }
+        }
+        @media (max-width: 1180px) {
+            .weekly-history-table { min-width: 1040px; }
+            .weekly-history-rollup-row { grid-template-columns: 80px 1fr 135px; }
+            .weekly-history-vros, .weekly-history-split { grid-column: span 1; }
+        }
+
+
         .spend-log-sort-btn { background: transparent; border: none; color: inherit; font: inherit; font-size: inherit; font-weight: 800; text-transform: uppercase; cursor: pointer; padding: 0; display: inline-flex; align-items: center; gap: 4px; }
         .spend-log-sort-btn:hover { color: var(--gold-hover); }
         .spend-log-sort-indicator { font-size: 10px; opacity: 0.75; }
@@ -246,6 +305,50 @@
         .note-btn.has-note { background: #f0fdf4; color: #15803d; border-color: #22c55e; opacity: 1; box-shadow: 0 1px 3px rgba(34,197,94,0.22); }
         .note-btn.has-note:hover { background: #dcfce7; }
 
+        .billing-badge { display:inline-block; padding:3px 7px; border-radius:999px; font-size:9px; font-weight:900; letter-spacing:0.35px; text-transform:uppercase; color:#7f1d1d; background:#fee2e2; border:1px solid #fca5a5; white-space:nowrap; }
+        .billing-badge.billing-review { color:#92400e; background:#fef3c7; border-color:#f59e0b; }
+        .billing-badge.repclass-review { color:#7f1d1d; background:#fee2e2; border-color:#ef4444; }
+        .billing-badge.excludable-review { color:#581c87; background:#f3e8ff; border-color:#a855f7; }
+        .billing-kpi-strip { display:grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap:12px; margin-bottom:16px; }
+        .billing-kpi { background:#fff; border:1px solid var(--border); border-top:4px solid var(--gold); border-radius:8px; padding:14px; box-shadow:0 1px 3px rgba(0,0,0,0.06); }
+        .billing-kpi .label { font-size:10px; font-weight:900; color:#64748b; text-transform:uppercase; letter-spacing:0.5px; }
+        .billing-kpi .value { font-size:24px; font-weight:900; color:#334155; margin-top:4px; }
+        .billing-kpi.clickable, .highlight-box.clickable, .stat-box.clickable, .workflow-compliance-mini.clickable { cursor:pointer; transition:transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease; }
+        .billing-kpi.clickable:hover, .highlight-box.clickable:hover, .stat-box.clickable:hover, .workflow-compliance-mini.clickable:hover { transform:translateY(-2px); box-shadow:0 6px 14px rgba(15,23,42,0.14); border-color:var(--gold); }
+        .billing-owner-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(340px,1fr)); gap:16px; margin-bottom:18px; }
+        .billing-owner-tile { background:#fff; border:1px solid var(--border); border-top:4px solid var(--gold); border-radius:8px; padding:16px; box-shadow:0 1px 3px rgba(0,0,0,0.08); }
+        .billing-owner-name { font-size:18px; font-weight:900; color:#334155; margin-bottom:10px; }
+        .billing-owner-metrics { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; }
+        .billing-owner-metric { background:#f8fafc; border:1px solid #e2e8f0; border-radius:6px; padding:8px; text-align:center; cursor:pointer; transition:0.15s; }
+        .billing-owner-metric:hover { background:#fff7ed; border-color:var(--gold); transform:translateY(-1px); }
+        .billing-owner-metric .label { font-size:9px; font-weight:900; color:#64748b; text-transform:uppercase; letter-spacing:0.35px; }
+        .billing-owner-metric .value { font-size:18px; font-weight:900; color:#334155; margin-top:2px; }
+        .billing-active-filter { display:inline-flex; align-items:center; gap:8px; font-size:12px; font-weight:900; color:#334155; background:#f8fafc; border:1px solid #cbd5e1; border-radius:999px; padding:6px 10px; }
+        .billing-active-filter button { border:none; background:#334155; color:#fff; border-radius:999px; font-size:10px; font-weight:900; padding:3px 7px; cursor:pointer; }
+        .billing-filter-pill { padding:8px 12px; border:1px solid #cbd5e1; border-radius:999px; background:#fff; cursor:pointer; font-size:12px; font-weight:900; color:#334155; }
+        .billing-filter-pill.active { background:var(--gold); border-color:var(--gold); color:#222; }
+        .billing-reasons { font-size:11px; line-height:1.35; color:#334155; }
+        .billing-reasons strong { color:#111827; }
+        .billing-status-select { padding:6px 8px; border:1px solid #cbd5e1; border-radius:4px; font-size:12px; font-weight:700; background:#fff; }
+        .billing-table th { background:#1f2937; color:#fff; }
+        .billing-table td { font-size:12px; }
+
+        .repair-class-cell { display:flex; flex-direction:column; gap:5px; min-width:120px; }
+        .repair-class-name { font-size:11px; font-weight:900; color:#334155; line-height:1.2; }
+        .repair-class-pill { display:inline-block; width:max-content; max-width:100%; padding:3px 7px; border-radius:999px; font-size:9px; font-weight:900; letter-spacing:0.3px; text-transform:uppercase; white-space:normal; line-height:1.15; }
+        .repair-class-pill.clean { color:#166534; background:#dcfce7; border:1px solid #86efac; }
+        .repair-class-pill.review { color:#7f1d1d; background:#fee2e2; border:1px solid #fca5a5; }
+        .repair-class-pill.excludable { color:#581c87; background:#f3e8ff; border:1px solid #c084fc; }
+        .repair-class-actions { display:flex; gap:5px; flex-wrap:wrap; margin-top:2px; }
+        .repair-class-toggle { min-width:86px; margin-right:0; padding:4px 7px; border-radius:12px; font-size:10px; font-weight:900; text-transform:uppercase; }
+        .repair-class-toggle.status-pending::before { content:''; }
+        .repair-class-toggle.status-dispatched::before { content:'✓ '; }
+        .billing-table { table-layout: fixed; min-width: 1320px; }
+        .billing-table th, .billing-table td { vertical-align: top; }
+        .billing-table .review-col { width: 150px; min-width:150px; }
+        .billing-status-select { max-width:135px; width:135px; }
+
+
 
         .locked-prewip-row td { background: #f1f5f9 !important; color: #64748b !important; }
         .locked-prewip-row:hover td { background: #e2e8f0 !important; }
@@ -264,6 +367,12 @@
         .workflow-compliance-prior { width: 62px; min-height: 42px; border: 1px solid #cbd5e1; border-radius: 6px; background: rgba(255,255,255,0.78); display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 4px 3px; box-shadow: 0 1px 2px rgba(15,23,42,0.06); }
         .workflow-compliance-prior .prior-title { font-size: 8px; font-weight: 900; color: #64748b; text-transform: uppercase; line-height: 1.05; text-align: center; letter-spacing: 0.25px; }
         .workflow-compliance-prior .prior-score { font-size: 13px; font-weight: 900; color: #334155; line-height: 1.15; margin-top: 2px; }
+        .workflow-compliance-prior.compliance-green { border-color: #86efac; background: #f0fdf4; }
+        .workflow-compliance-prior.compliance-green .prior-score { color: #16a34a; }
+        .workflow-compliance-prior.compliance-yellow { border-color: #fcd34d; background: #fffbeb; }
+        .workflow-compliance-prior.compliance-yellow .prior-score { color: #d97706; }
+        .workflow-compliance-prior.compliance-red { border-color: #fca5a5; background: #fef2f2; }
+        .workflow-compliance-prior.compliance-red .prior-score { color: #dc2626; }
         .workflow-compliance-card.compliance-green { border-color: #86efac; background: #f0fdf4; }
         .workflow-compliance-card.compliance-green .workflow-compliance-score { color: #16a34a; }
         .workflow-compliance-card.compliance-green .workflow-compliance-rating { background: #16a34a; }
@@ -621,6 +730,8 @@
             </div>
         </div>
 
+
+
         <div id="search-view" class="view-section">
             <div class="view-title">
                 <div style="display:flex; align-items:center; gap: 20px;">
@@ -868,6 +979,79 @@
             throw new Error(`Firebase Storage fetch failed: ${lastError ? lastError.message : 'Unknown error'}`);
         }
 
+
+        async function fetchAgingRepairsBuffer() {
+            const workbookPath = 'Aging Repairs.xlsx';
+            const configuredBucket = firebase.app && firebase.app().options ? firebase.app().options.storageBucket : '';
+            const bucketCandidates = Array.from(new Set([
+                configuredBucket,
+                'workflow-dashboard-e6134.firebasestorage.app',
+                'workflow-dashboard-e6134.appspot.com'
+            ].filter(Boolean)));
+            let lastError = null;
+            for (let bucket of bucketCandidates) {
+                try {
+                    const storageRef = bucket === configuredBucket
+                        ? firebase.storage().ref().child(workbookPath)
+                        : firebase.storage().refFromURL(`gs://${bucket}/${workbookPath}`);
+                    const downloadUrl = await storageRef.getDownloadURL();
+                    const response = await fetch(downloadUrl + (downloadUrl.includes('?') ? '&' : '?') + `_=${Date.now()}`, { cache: 'no-store' });
+                    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                    const data = await response.arrayBuffer();
+                    const sig = new Uint8Array(data.slice(0, 2));
+                    if (!(sig[0] === 0x50 && sig[1] === 0x4B)) throw new Error('Aging Repairs response is not a valid XLSX file.');
+                    return data;
+                } catch (err) {
+                    lastError = err;
+                    console.warn(`Aging Repairs fetch failed for bucket ${bucket}:`, err);
+                }
+            }
+            throw new Error(lastError ? lastError.message : 'Aging Repairs.xlsx not found.');
+        }
+
+        async function loadAgingRepairsFromFirebase(showWarnings = false) {
+            const statusEl = document.getElementById('billing-load-status');
+            if (statusEl) {
+                statusEl.innerText = 'Loading Aging Repairs.xlsx...';
+                statusEl.style.color = '#64748b';
+            }
+            try {
+                const data = await fetchAgingRepairsBuffer();
+                const workbook = XLSX.read(data, { type: 'array' });
+                let selectedAoa = [];
+                workbook.SheetNames.forEach(sheetName => {
+                    const aoa = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], { header: 1, defval: '' });
+                    if (!selectedAoa.length && aoa && aoa.length > 0) selectedAoa = aoa;
+                    const name = String(sheetName || '').toLowerCase();
+                    if (name.includes('aging') || name.includes('repair')) selectedAoa = aoa;
+                });
+                processAgingRepairsData(selectedAoa || []);
+                window.__agingRepairsReviewLoaded = true;
+                try {
+                    await lockClosedWeeklySpendAllocationSnapshotsFromFirebase();
+                } catch (snapshotErr) {
+                    console.warn('Weekly spend repair-class allocation snapshot failed:', snapshotErr);
+                }
+                if (statusEl) {
+                    statusEl.innerText = `Loaded ${globalBillingRows.length} billing exception${globalBillingRows.length === 1 ? '' : 's'}.`;
+                    statusEl.style.color = '#15803d';
+                }
+                refreshActiveViewPreservingDrilldown();
+                return true;
+            } catch (err) {
+                if (showWarnings) console.warn('Aging Repairs billing queue source not loaded:', err);
+                window.__agingRepairsReviewLoaded = false;
+                globalBillingRows = [];
+                globalBillingIssueMap = {};
+                if (statusEl) {
+                    statusEl.innerText = `Aging Repairs.xlsx not loaded: ${err.message || err}`;
+                    statusEl.style.color = '#dc2626';
+                }
+                renderBillingQueue();
+                return false;
+            }
+        }
+
         async function fetchData() {
             const statusEl = document.getElementById('upload-status');
             const uploadBox = document.getElementById('upload-box');
@@ -953,6 +1137,12 @@
                     console.warn('Spend governor Firebase sync failed:', syncError);
                 }
 
+                try {
+                    await loadAgingRepairsFromFirebase(true);
+                } catch (billingLoadError) {
+                    console.warn('Aging Repairs billing load failed:', billingLoadError);
+                }
+
                 statusEl.innerText = 'Dashboard loaded.';
                 statusEl.style.color = '#2e7d32';
                 setTimeout(applyExternalNavigationRequest, 0);
@@ -1034,6 +1224,12 @@
                     console.warn('Spend governor Firebase sync failed:', syncError);
                 }
 
+                try {
+                    await loadAgingRepairsFromFirebase(true);
+                } catch (billingLoadError) {
+                    console.warn('Aging Repairs billing load failed:', billingLoadError);
+                }
+
                 statusEl.innerText = `Loaded ${file.name}`;
                 statusEl.style.color = '#2e7d32';
                 setTimeout(applyExternalNavigationRequest, 0);
@@ -1049,8 +1245,14 @@
         let globalRoNotesState = {};
         let globalWorkflowActivityState = {};
         let globalSpendChangeLogRows = [];
+        let globalBillingRows = [];
+        let globalBillingIssueMap = {};
+        let globalBillingReviewState = {};
+        let currentBillingFilter = 'ALL';
         let globalWeeklySpendHistoryRows = [];
         let expandedWeeklySpendWeeks = {};
+        let globalWeeklySpendAllocationSnapshotWriteInFlight = false;
+        window.__agingRepairsReviewLoaded = false;
         let globalManualGovernorLockState = {};
         let manualGovernorResetWriteInFlight = false;
         let globalUnlimitedSpendState = {};
@@ -1060,6 +1262,7 @@
             globalRoCheckState = JSON.parse(localStorage.getItem('workflow_checks') || '{}');
             globalRoNotesState = JSON.parse(localStorage.getItem('workflow_notes') || '{}');
             globalWorkflowActivityState = JSON.parse(localStorage.getItem('workflow_activity') || '{}');
+            globalBillingReviewState = JSON.parse(localStorage.getItem('workflow_billing_review_status') || '{}');
             globalUnlimitedSpendState = JSON.parse(localStorage.getItem('unlimited_spend_mode') || '{}');
             globalManualGovernorLockState = JSON.parse(localStorage.getItem('manual_governor_lock') || '{}');
         } catch(e) {}
@@ -1088,6 +1291,13 @@
                         if (processedData && processedData.length > 0) {
                             refreshActiveViewPreservingDrilldown();
                         }
+                    });
+
+                    db.ref('billingReviewStatus').on('value', (snapshot) => {
+                        globalBillingReviewState = snapshot.val() || {};
+                        try { localStorage.setItem('workflow_billing_review_status', JSON.stringify(globalBillingReviewState)); } catch(e) {}
+                        renderBillingQueue();
+                        if (processedData && processedData.length > 0) refreshActiveViewPreservingDrilldown();
                     });
 
                     db.ref('spendGovernor/manualLock').on('value', (snapshot) => {
@@ -1393,6 +1603,99 @@
             return { score, rating, colorClass, total, touched, notes, dispatched, dispatchTotal, stale, touchPct: Math.round(touchPct * 100), notesPct: Math.round(notesPct * 100), dispatchPct: Math.round(dispatchPct * 100), staleCleanPct: Math.round(staleCleanPct * 100), dateKey, lockActive, lockedExcluded, realOpenTotal: realOpenRos.length };
         }
 
+
+        function stopTileClick(event) {
+            if (event) {
+                event.preventDefault();
+                event.stopPropagation();
+            }
+        }
+
+        function openOwnerMetricDrilldown(owner, parentViewId, metricFilter, event) {
+            stopTileClick(event);
+            currentDrilldownMetricFilter = metricFilter || 'ALL';
+            loadPersonDrilldown(owner, parentViewId);
+        }
+
+        function clearOwnerMetricFilter() {
+            currentDrilldownMetricFilter = 'ALL';
+            applyDrilldownFilters();
+        }
+
+        function setBillingOwnerMetricFilter(owner, metric, event) {
+            stopTileClick(event);
+            currentBillingOwnerFilter = owner || 'ALL';
+            currentBillingMetricFilter = metric || 'ALL';
+            const searchEl = document.getElementById('billing-search');
+            if (searchEl) searchEl.value = '';
+            renderBillingQueue();
+        }
+
+        function clearBillingOwnerMetricFilter() {
+            currentBillingOwnerFilter = 'ALL';
+            currentBillingMetricFilter = 'ALL';
+            renderBillingQueue();
+        }
+
+        function getBillingReviewStatus(r) {
+            return String((r && (r.reviewStatus || getBillingReviewStatusForSafeRo(r.safeRo))) || 'Open');
+        }
+
+        function isBillingClosedStatus(status) {
+            return normalizeSpendStatus(status) === 'CLOSED' || /COMPLETED|CLOSED|FINAL CHARGES|BILLED|INVOICED/i.test(String(status || ''));
+        }
+
+        function isBillingRowUnresolved(r) {
+            const st = getBillingReviewStatus(r);
+            return !['Corrected','Cleared'].includes(st);
+        }
+
+        function isBillingRowReviewNeeded(r) {
+            const st = getBillingReviewStatus(r);
+            return ['Open','Correction Needed','Escalated'].includes(st);
+        }
+
+        function filterBillingRowsByMetric(rows, owner, metric) {
+            let out = (rows || []).filter(isBillingRowUnresolved);
+            if (owner && owner !== 'ALL') {
+                out = out.filter(r => String(r.coordinator || 'Unassigned') === owner);
+            }
+            if (metric === 'OPEN') out = out.filter(r => !isBillingClosedStatus(r.currentStatus));
+            else if (metric === 'COMPLETED') out = out.filter(r => isBillingClosedStatus(r.currentStatus));
+            else if (metric === 'REVIEW_NEEDED') out = out.filter(isBillingRowReviewNeeded);
+            else if (metric === 'NEEDS_FIX') out = out.filter(isBillingRowUnresolved);
+            else if (metric === 'COMPLIANCE') out = out;
+            return out;
+        }
+
+        function getRepairClassIssueForSafeRo(safeRo) {
+            if (!safeRo || !globalBillingRows) return null;
+            return globalBillingRows.find(r => r.safeRo === safeRo && isBillingRowUnresolved(Object.assign({}, r, { reviewStatus: getBillingReviewStatusForSafeRo(r.safeRo) }))) || null;
+        }
+
+        function rowMatchesMetricFilter(row) {
+            const f = currentDrilldownMetricFilter || 'ALL';
+            if (f === 'ALL') return true;
+            if (f === 'OPEN') return row.dataset.open === 'true';
+            if (f === 'COMPLETED') return row.dataset.completedReview === 'true';
+            if (f === 'OOS') return row.dataset.oos === 'true';
+            if (f === 'PRIORITY') return row.dataset.priority === 'true';
+            if (f === 'TOUCHED') return row.dataset.touched === 'true';
+            if (f === 'NOT_TOUCHED') return row.dataset.touched !== 'true';
+            if (f === 'NOTES') return row.dataset.note === 'true';
+            if (f === 'DISPATCHED') return row.dataset.dispatched === 'true';
+            if (f === 'STALE') return row.dataset.stale === 'true';
+            if (f === 'REPAIR_CLASS') return row.dataset.repairClassIssue === 'true';
+            if (f === 'REPAIR_CLASS_REVIEW_NEEDED') return row.dataset.repairClassIssue === 'true' && row.dataset.repairClassCorrected !== 'true';
+            return true;
+        }
+
+        function getMetricFilterLabel() {
+            const labels = {
+                OPEN: 'Open ROs', COMPLETED: 'Completed ROs', OOS: 'OOS ROs', PRIORITY: 'Priority ROs', TOUCHED: 'Touched Today', NOT_TOUCHED: 'Not Touched Today', NOTES: 'Notes Current', DISPATCHED: 'Dispatched', STALE: 'Stale ROs', REPAIR_CLASS: 'Repair Class Issues', REPAIR_CLASS_REVIEW_NEEDED: 'Review Needed'
+            };
+            return labels[currentDrilldownMetricFilter] || '';
+        }
         function generateWorkflowComplianceHtml(dataSet, compact = false) {
             const c = calculateWorkflowCompliance(dataSet);
             const prior = calculateWorkflowCompliance(dataSet, getPriorLocalDateKey());
@@ -1407,7 +1710,7 @@
                             <div class="workflow-compliance-score">${c.score}%</div>
                         </div>
                         <div class="workflow-compliance-actions">
-                            <div class="workflow-compliance-prior" title="Prior day score (${prior.dateKey}) based on the same open RO population and prior-day workflow activity">
+                            <div class="workflow-compliance-prior ${prior.colorClass}" title="Prior day score (${prior.dateKey}) based on the same open RO population and prior-day workflow activity">
                                 <div class="prior-title">Prior Day</div>
                                 <div class="prior-score">${prior.score}%</div>
                             </div>
@@ -1415,10 +1718,10 @@
                         </div>
                     </div>
                     <div class="workflow-compliance-grid">
-                        <div class="workflow-compliance-mini"><div class="mini-title">Touched</div><div class="mini-num">${c.touched}/${c.total}</div></div>
-                        <div class="workflow-compliance-mini"><div class="mini-title">Notes</div><div class="mini-num">${c.notes}/${c.total}</div></div>
-                        <div class="workflow-compliance-mini"><div class="mini-title">Dispatch</div><div class="mini-num">${c.dispatched}/${c.dispatchTotal}</div></div>
-                        <div class="workflow-compliance-mini"><div class="mini-title">Stale</div><div class="mini-num">${c.stale}</div></div>
+                        <div class="workflow-compliance-mini clickable" onclick="openOwnerMetricDrilldown(currentOwnerView, currentParentView, 'TOUCHED', event)" title="Show ROs touched today"><div class="mini-title">Touched</div><div class="mini-num">${c.touched}/${c.total}</div></div>
+                        <div class="workflow-compliance-mini clickable" onclick="openOwnerMetricDrilldown(currentOwnerView, currentParentView, 'NOTES', event)" title="Show ROs with current meaningful notes"><div class="mini-title">Notes</div><div class="mini-num">${c.notes}/${c.total}</div></div>
+                        <div class="workflow-compliance-mini clickable" onclick="openOwnerMetricDrilldown(currentOwnerView, currentParentView, 'DISPATCHED', event)" title="Show dispatched ROs"><div class="mini-title">Dispatch</div><div class="mini-num">${c.dispatched}/${c.dispatchTotal}</div></div>
+                        <div class="workflow-compliance-mini clickable" onclick="openOwnerMetricDrilldown(currentOwnerView, currentParentView, 'STALE', event)" title="Show stale ROs"><div class="mini-title">Stale</div><div class="mini-num">${c.stale}</div></div>
                     </div>
                     ${lockNote}
                 </div>`;
@@ -1546,6 +1849,9 @@
 
         let processedData = []; 
         let currentFilter = 'ALL';
+        let currentDrilldownMetricFilter = 'ALL';
+        let currentBillingOwnerFilter = 'ALL';
+        let currentBillingMetricFilter = 'ALL';
         let currentCustomerFilter = 'ALL';
         let currentOwnerView = '';
         let currentParentView = '';
@@ -2310,6 +2616,171 @@
             return `https://afshub.azurewebsites.net/Vendors/VendedRepairOrder/Estimate/${encodeURIComponent(ro)}`;
         }
 
+
+        function getWeekStartEndFromWeekKey(weekKey) {
+            const m = String(weekKey || '').match(/(\d{4})-W(\d{1,2})/);
+            if (!m) return getWeekStartEnd(new Date());
+            const year = Number(m[1]);
+            const week = Number(m[2]);
+            const jan4 = new Date(year, 0, 4);
+            const jan4Day = jan4.getDay() || 7;
+            const start = new Date(jan4);
+            start.setDate(jan4.getDate() - jan4Day + 1 + ((week - 1) * 7));
+            start.setHours(0, 0, 0, 0);
+            const end = new Date(start);
+            end.setDate(start.getDate() + 7);
+            return { start, end };
+        }
+
+        function isWeekClosedForHistory(weekKey) {
+            const { end } = getWeekStartEndFromWeekKey(weekKey);
+            return new Date().getTime() >= end.getTime();
+        }
+
+        function getWeekEndLabel(weekKey) {
+            const { end } = getWeekStartEndFromWeekKey(weekKey);
+            const displayEnd = new Date(end);
+            displayEnd.setDate(displayEnd.getDate() - 1);
+            return getLocalDateKey(displayEnd);
+        }
+
+        function formatWeeklyHistoryMoney(value) {
+            return `$${Number(value || 0).toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2})}`;
+        }
+
+        function normalizeRepairClassForBudget(value) {
+            return String(value || '').toUpperCase().replace(/[_-]/g, ' ').replace(/\s+/g, ' ').trim();
+        }
+
+        function isBudgetExcludedRepairClass(repairClass) {
+            const r = normalizeRepairClassForBudget(repairClass);
+            if (!r || r === 'NO TRANSFER' || r === 'REVIEW' || r === 'NOT AVAILABLE') return false;
+            const excluded = ['DEF MAINT', 'DRIVER ABUSE', 'ACCIDENT DAMAGE', 'TOWING', 'SPECIAL PROJ', 'MERCHANT'];
+            return excluded.some(cls => r.includes(cls));
+        }
+
+        function getWeeklyBudgetSnapshot(auth) {
+            const snap = auth && (auth.weeklyBudgetSnapshot || auth.weekEndBudgetSnapshot || auth.budgetAllocationSnapshot) ? (auth.weeklyBudgetSnapshot || auth.weekEndBudgetSnapshot || auth.budgetAllocationSnapshot) : null;
+            if (!snap || snap.locked !== true) return null;
+            return snap;
+        }
+
+        function findProcessedRoForWeeklySpend(rowLike) {
+            const roNumber = String((rowLike && (rowLike.roNumber || rowLike.roNum)) || '').toUpperCase().trim();
+            const safeRo = (rowLike && rowLike.safeRo) || safeFirebaseKey(roNumber);
+            return (processedData || []).find(ro => {
+                const candidateRo = String(ro && ro.roNum ? ro.roNum : '').toUpperCase().trim();
+                return candidateRo === roNumber || safeFirebaseKey(candidateRo) === safeRo;
+            }) || null;
+        }
+
+        function getRepairClassInfoForWeeklySpend(rowLike, preferLockedSnapshot = true) {
+            const snapshot = preferLockedSnapshot ? getWeeklyBudgetSnapshot(rowLike) : null;
+            const spend = Number(snapshot && snapshot.spend !== undefined ? snapshot.spend : (rowLike && (rowLike.spend !== undefined ? rowLike.spend : rowLike.currentSpend)) || 0);
+
+            if (snapshot) {
+                const included = Number(snapshot.budgetIncludedSpend || 0);
+                const excluded = Number(snapshot.budgetExcludedSpend || 0);
+                return {
+                    currentRepairClass: snapshot.currentRepairClass || 'Not Available',
+                    transferRepairClass: snapshot.transferRepairClass || 'No Transfer',
+                    budgetBucket: snapshot.budgetBucket || (excluded > 0 ? 'Budget Excluded' : 'Budget Included'),
+                    budgetIncludedSpend: included,
+                    budgetExcludedSpend: excluded,
+                    budgetAllocationBasis: snapshot.allocationBasis || 'Locked End-of-Week snapshot',
+                    budgetSnapshotLocked: true,
+                    budgetSnapshotLockedAt: snapshot.lockedAt || '',
+                    budgetSnapshotWeekEnd: snapshot.weekEndDate || '',
+                    aiRepairClassReasons: snapshot.aiRepairClassReasons || ''
+                };
+            }
+
+            const safeRo = (rowLike && rowLike.safeRo) || safeFirebaseKey((rowLike && (rowLike.roNumber || rowLike.roNum)) || '');
+            const issue = globalBillingIssueMap && globalBillingIssueMap[safeRo] ? globalBillingIssueMap[safeRo] : null;
+            const roContext = findProcessedRoForWeeklySpend(rowLike || {});
+            const roNumber = String((rowLike && (rowLike.roNumber || rowLike.roNum)) || (roContext && roContext.roNum) || '').toUpperCase().trim();
+            const fin = window.globalOrderFin && roNumber ? window.globalOrderFin[roNumber] : null;
+
+            const currentRepairClass = (issue && issue.repClass) ||
+                (rowLike && (rowLike.currentRepairClass || rowLike.actualRepairClass || rowLike.repClass || rowLike.repairClass)) ||
+                (roContext && roContext.repClass) ||
+                (fin && fin.repClass) ||
+                'Not Available';
+
+            const rawTransfer = (issue && (issue.recommendedClass || issue.suggestedService)) ||
+                (rowLike && (rowLike.transferRepairClass || rowLike.recommendedRepairClass || rowLike.recommendedClass)) ||
+                '';
+            const transferRepairClass = rawTransfer && !/^review$/i.test(String(rawTransfer).trim()) ? rawTransfer : 'No Transfer';
+            const allocationClass = transferRepairClass !== 'No Transfer' ? transferRepairClass : currentRepairClass;
+            const excluded = isBudgetExcludedRepairClass(allocationClass);
+
+            return {
+                currentRepairClass,
+                transferRepairClass,
+                budgetBucket: excluded ? 'Budget Excluded' : 'Budget Included',
+                budgetIncludedSpend: excluded ? 0 : spend,
+                budgetExcludedSpend: excluded ? spend : 0,
+                budgetAllocationBasis: issue ? 'AI repair-class transfer logic' : 'Current repair class / no transfer',
+                budgetSnapshotLocked: false,
+                budgetSnapshotLockedAt: '',
+                budgetSnapshotWeekEnd: '',
+                aiRepairClassReasons: issue && issue.reasons ? issue.reasons.join(' | ') : ''
+            };
+        }
+
+        function buildWeeklyBudgetSnapshotFromAuth(weekKey, safeRo, auth) {
+            if (!isWeekClosedForHistory(weekKey)) return null;
+            const roNumber = auth.roNumber || auth.roNum || safeRo;
+            const spend = Number(auth.spend !== undefined ? auth.spend : auth.currentSpend || 0);
+            const info = getRepairClassInfoForWeeklySpend(Object.assign({}, auth, { weekKey, safeRo, roNumber, spend }), false);
+            return {
+                locked: true,
+                lockedAt: new Date().toISOString(),
+                weekKey,
+                weekEndDate: getWeekEndLabel(weekKey),
+                roNumber,
+                currentRepairClass: info.currentRepairClass || 'Not Available',
+                transferRepairClass: info.transferRepairClass || 'No Transfer',
+                budgetBucket: info.budgetBucket || 'Budget Included',
+                budgetIncludedSpend: Number(info.budgetIncludedSpend || 0),
+                budgetExcludedSpend: Number(info.budgetExcludedSpend || 0),
+                spend,
+                allocationBasis: info.budgetAllocationBasis || 'End-of-Week repair class allocation',
+                aiRepairClassReasons: info.aiRepairClassReasons || '',
+                snapshotVersion: 1
+            };
+        }
+
+        async function lockClosedWeeklySpendAllocationSnapshots(authData) {
+            if (!db || !window.__agingRepairsReviewLoaded || globalWeeklySpendAllocationSnapshotWriteInFlight) return false;
+            const updates = {};
+            Object.keys(authData || {}).forEach(weekKey => {
+                if (!isWeekClosedForHistory(weekKey)) return;
+                const weekAuths = authData[weekKey] || {};
+                Object.keys(weekAuths).forEach(safeRo => {
+                    const auth = weekAuths[safeRo] || {};
+                    if (getWeeklyBudgetSnapshot(auth)) return;
+                    const snapshot = buildWeeklyBudgetSnapshotFromAuth(weekKey, safeRo, auth);
+                    if (!snapshot) return;
+                    updates[`spendGovernor/authorizations/${weekKey}/${safeRo}/weeklyBudgetSnapshot`] = snapshot;
+                });
+            });
+            if (!Object.keys(updates).length) return false;
+            globalWeeklySpendAllocationSnapshotWriteInFlight = true;
+            try {
+                await db.ref().update(updates);
+                return true;
+            } finally {
+                globalWeeklySpendAllocationSnapshotWriteInFlight = false;
+            }
+        }
+
+        async function lockClosedWeeklySpendAllocationSnapshotsFromFirebase() {
+            if (!db || !window.__agingRepairsReviewLoaded) return false;
+            const authSnap = await db.ref('spendGovernor/authorizations').once('value');
+            return lockClosedWeeklySpendAllocationSnapshots(authSnap.val() || {});
+        }
+
         function buildWeeklySpendHistoryRows(authData) {
             const rows = [];
             Object.keys(authData || {}).forEach(weekKey => {
@@ -2317,7 +2788,9 @@
                 Object.keys(weekAuths).forEach(safeRo => {
                     const auth = weekAuths[safeRo] || {};
                     const roNumber = auth.roNumber || auth.roNum || safeRo;
-                    rows.push({
+                    const snapshot = getWeeklyBudgetSnapshot(auth);
+                    const displaySpend = Number(snapshot && snapshot.spend !== undefined ? snapshot.spend : (auth.spend !== undefined ? auth.spend : auth.currentSpend || 0));
+                    const baseRow = {
                         weekKey: auth.weekKey || weekKey,
                         safeRo: safeRo,
                         roNumber: roNumber,
@@ -2330,11 +2803,13 @@
                         capturedAt: auth.capturedAt || auth.authorizedAt || auth.spendCapturedAt || auth.spendUpdatedAt || '',
                         openedDate: auth.openedDate || auth.openedFormatted || '',
                         completedDate: auth.completedDate || auth.completedFormatted || '',
-                        spend: Number(auth.spend || auth.currentSpend || 0),
+                        spend: displaySpend,
                         spendStatus: auth.spendStatus || '',
                         spendSource: auth.spendSource || '',
                         roUrl: getAuthRowRoUrl(roNumber)
-                    });
+                    };
+                    const repairClassInfo = getRepairClassInfoForWeeklySpend(Object.assign({}, auth, baseRow), true);
+                    rows.push(Object.assign(baseRow, repairClassInfo));
                 });
             });
             rows.sort((a, b) => {
@@ -2349,14 +2824,23 @@
             const map = {};
             (rows || []).forEach(row => {
                 const week = row.weekKey || 'UNKNOWN';
-                if (!map[week]) map[week] = { weekKey: week, totalSpend: 0, vroCount: 0, rows: [] };
+                if (!map[week]) {
+                    map[week] = { weekKey: week, weekEndDate: getWeekEndLabel(week), totalSpend: 0, budgetIncludedSpend: 0, budgetExcludedSpend: 0, vroCount: 0, lockedRows: 0, rows: [] };
+                }
                 map[week].rows.push(row);
                 map[week].totalSpend += Number(row.spend || 0);
+                map[week].budgetIncludedSpend += Number(row.budgetIncludedSpend || 0);
+                map[week].budgetExcludedSpend += Number(row.budgetExcludedSpend || 0);
+                if (row.budgetSnapshotLocked) map[week].lockedRows += 1;
             });
             Object.values(map).forEach(group => {
                 const uniqueRos = new Set(group.rows.map(r => r.roNumber || r.safeRo));
                 group.vroCount = uniqueRos.size;
                 group.rows.sort((a, b) => new Date(b.capturedAt || 0) - new Date(a.capturedAt || 0));
+                const denom = Math.max(Number(group.totalSpend || 0), 0.01);
+                group.budgetIncludedPct = (Number(group.budgetIncludedSpend || 0) / denom) * 100;
+                group.budgetExcludedPct = (Number(group.budgetExcludedSpend || 0) / denom) * 100;
+                group.allocationLocked = group.rows.length > 0 && group.lockedRows === group.rows.length;
             });
             return Object.values(map).sort((a, b) => getWeekSortValue(b.weekKey) - getWeekSortValue(a.weekKey));
         }
@@ -2368,8 +2852,16 @@
                 return globalWeeklySpendHistoryRows;
             }
             try {
-                const authSnap = await db.ref('spendGovernor/authorizations').once('value');
-                globalWeeklySpendHistoryRows = buildWeeklySpendHistoryRows(authSnap.val() || {});
+                let authSnap = await db.ref('spendGovernor/authorizations').once('value');
+                let authData = authSnap.val() || {};
+                if (window.__agingRepairsReviewLoaded) {
+                    const wroteSnapshots = await lockClosedWeeklySpendAllocationSnapshots(authData);
+                    if (wroteSnapshots) {
+                        authSnap = await db.ref('spendGovernor/authorizations').once('value');
+                        authData = authSnap.val() || {};
+                    }
+                }
+                globalWeeklySpendHistoryRows = buildWeeklySpendHistoryRows(authData);
             } catch (err) {
                 console.warn('Weekly spend history load failed:', err);
                 globalWeeklySpendHistoryRows = globalWeeklySpendHistoryRows || [];
@@ -2394,74 +2886,118 @@
             }
 
             const weeklyCapForBars = Math.max(Number(WEEKLY_WIP_AUTH_CAP || 0), 1);
-            let html = `<div style="display:flex; align-items:center; gap:14px; flex-wrap:wrap; margin-bottom:12px; font-size:12px; font-weight:900; color:#475569;">
-                <span><span style="display:inline-block; width:12px; height:12px; border-radius:3px; background:#16a34a; vertical-align:-2px; margin-right:5px;"></span>Under Weekly Cap</span>
-                <span><span style="display:inline-block; width:12px; height:12px; border-radius:3px; background:#dc2626; vertical-align:-2px; margin-right:5px;"></span>At / Over Weekly Cap</span>
-                <span style="color:#64748b;">Weekly Cap: $${Number(WEEKLY_WIP_AUTH_CAP || 0).toLocaleString('en-US', {maximumFractionDigits:0})}</span>
-            </div>`;
-            html += `<div style="display:flex; flex-direction:column; gap:10px; margin-bottom:18px;">`;
+            let html = `<div class="weekly-history-shell">
+                <div class="weekly-history-legend">
+                    <span><span class="legend-chip" style="background:#16a34a;"></span>Under Weekly Cap</span>
+                    <span><span class="legend-chip" style="background:#dc2626;"></span>At / Over Weekly Cap</span>
+                    <span><span class="legend-chip" style="background:#2563eb;"></span>Budget Included</span>
+                    <span><span class="legend-chip" style="background:#7c3aed;"></span>Budget Excluded</span>
+                    <span style="color:#64748b;">Weekly Cap: $${Number(WEEKLY_WIP_AUTH_CAP || 0).toLocaleString('en-US', {maximumFractionDigits:0})}</span>
+                </div>
+                <div class="weekly-history-note">
+                    Weekly History bridges end-of-week spend to current repair class, AI transfer repair class, and Budget Included / Budget Excluded allocation. Closed weeks are locked as an End-of-Week snapshot once Aging Repairs review logic is loaded.
+                </div>
+                <div class="weekly-history-rollup">`;
+
             groups.forEach(group => {
                 const weekSpend = Number(group.totalSpend || 0);
                 const isOverCap = weekSpend >= WEEKLY_WIP_AUTH_CAP;
                 const barColor = isOverCap ? '#dc2626' : '#16a34a';
                 const amountColor = isOverCap ? '#dc2626' : '#111827';
-                const capLabel = isOverCap ? '<span style="margin-left:8px; padding:2px 6px; border-radius:999px; background:#fee2e2; color:#991b1b; font-size:10px; font-weight:900; white-space:nowrap;">OVER CAP</span>' : '';
+                const capLabel = isOverCap ? '<span class="weekly-history-status-pill over-cap">OVER CAP</span>' : '';
+                const lockLabel = group.allocationLocked ? '<span class="weekly-history-status-pill locked">EOW LOCKED</span>' : '<span class="weekly-history-status-pill live">LIVE</span>';
                 const pct = Math.max(1, Math.min(100, (weekSpend / weeklyCapForBars) * 100));
+                const includedPct = Number(group.budgetIncludedPct || 0);
+                const excludedPct = Number(group.budgetExcludedPct || 0);
                 html += `
-                    <div style="display:grid; grid-template-columns: 90px 1fr 170px 80px; gap:10px; align-items:center;">
-                        <div style="font-weight:900; color:#334155;">${escapeHtml(group.weekKey)}</div>
-                        <div style="background:#e2e8f0; border-radius:999px; height:18px; overflow:hidden;">
-                            <div style="width:${pct}%; height:100%; background:${barColor};"></div>
+                    <div class="weekly-history-rollup-row">
+                        <div class="weekly-history-week">${escapeHtml(group.weekKey)}</div>
+                        <div class="weekly-history-bars">
+                            <div class="weekly-history-cap-bar">
+                                <div style="width:${pct}%; height:100%; background:${barColor};"></div>
+                            </div>
+                            <div class="weekly-history-budget-bar">
+                                <div title="Budget Included" style="width:${Math.max(0, Math.min(100, includedPct))}%; background:#2563eb;"></div>
+                                <div title="Budget Excluded" style="width:${Math.max(0, Math.min(100, excludedPct))}%; background:#7c3aed;"></div>
+                            </div>
                         </div>
-                        <div style="font-weight:900; text-align:right; color:${amountColor};">$${weekSpend.toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2})}${capLabel}</div>
-                        <div style="font-size:12px; color:#64748b; font-weight:800; text-align:right;">${group.vroCount} VROs</div>
+                        <div class="weekly-history-amount" style="color:${amountColor};">${formatWeeklyHistoryMoney(weekSpend)}${capLabel}</div>
+                        <div class="weekly-history-vros">${group.vroCount} VROs</div>
+                        <div class="weekly-history-split"><span>${includedPct.toFixed(1)}% Included / ${excludedPct.toFixed(1)}% Excluded</span>${lockLabel}</div>
                     </div>`;
             });
             html += `</div>`;
 
-            html += `<div style="overflow-x:auto;"><table style="min-width:1000px;"><thead><tr>
-                <th style="width:6%;">Expand</th>
-                <th style="width:14%;">Week</th>
-                <th style="width:16%; text-align:right;">Captured Spend</th>
-                <th style="width:12%; text-align:right;">VROs</th>
-                <th style="width:52%;">Summary</th>
+            html += `<div class="weekly-history-table-wrap"><table class="weekly-history-table"><thead><tr>
+                <th class="col-expand">Expand</th>
+                <th class="col-week">Week</th>
+                <th class="col-weekend">Week End</th>
+                <th class="col-spend">EOW / Captured Spend</th>
+                <th class="col-vros">VROs</th>
+                <th class="col-budget">Budget Included</th>
+                <th class="col-budget">Budget Excluded</th>
+                <th class="col-split">Budget Split</th>
             </tr></thead><tbody>`;
 
             groups.forEach(group => {
                 const isOpen = !!expandedWeeklySpendWeeks[group.weekKey];
-                const topRows = [...group.rows].sort((a, b) => Number(b.spend || 0) - Number(a.spend || 0)).slice(0, 3);
-                const summary = topRows.map(r => `${r.roNumber}: $${Number(r.spend || 0).toLocaleString('en-US', {maximumFractionDigits:0})}`).join(' · ');
+                const splitText = `${Number(group.budgetIncludedPct || 0).toFixed(1)}% Included / ${Number(group.budgetExcludedPct || 0).toFixed(1)}% Excluded`;
+                const statusText = group.allocationLocked ? 'EOW Locked' : 'Live';
                 html += `<tr>
-                    <td><button class="filter-btn" style="padding:4px 9px;" onclick="toggleWeeklySpendWeek('${escapeHtml(group.weekKey)}')">${isOpen ? '−' : '+'}</button></td>
+                    <td><button class="filter-btn weekly-history-expand-btn" onclick="toggleWeeklySpendWeek('${escapeHtml(group.weekKey)}')">${isOpen ? '−' : '+'}</button></td>
                     <td style="font-weight:900;">${escapeHtml(group.weekKey)}</td>
-                    <td style="text-align:right; font-weight:900; color:${Number(group.totalSpend || 0) >= WEEKLY_WIP_AUTH_CAP ? '#dc2626' : '#16a34a'};">$${Number(group.totalSpend || 0).toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2})}</td>
-                    <td style="text-align:right; font-weight:800;">${group.vroCount}</td>
-                    <td style="font-size:12px; color:#64748b; font-weight:700;">${escapeHtml(summary || 'No VRO detail')}</td>
+                    <td class="weekly-history-muted">${escapeHtml(group.weekEndDate || '')}</td>
+                    <td class="weekly-history-money" style="color:${Number(group.totalSpend || 0) >= WEEKLY_WIP_AUTH_CAP ? '#dc2626' : '#16a34a'};">${formatWeeklyHistoryMoney(group.totalSpend || 0)}</td>
+                    <td style="font-weight:900;">${group.vroCount}</td>
+                    <td class="weekly-history-money" style="color:#2563eb;">${formatWeeklyHistoryMoney(group.budgetIncludedSpend || 0)}</td>
+                    <td class="weekly-history-money" style="color:#7c3aed;">${formatWeeklyHistoryMoney(group.budgetExcludedSpend || 0)}</td>
+                    <td><div class="weekly-history-split-cell"><span class="weekly-history-split-text">${escapeHtml(splitText)}</span><span class="weekly-history-status-pill ${group.allocationLocked ? 'locked' : 'live'}">${escapeHtml(statusText.toUpperCase())}</span></div></td>
                 </tr>`;
 
                 if (isOpen) {
-                    html += `<tr><td colspan="5" style="padding:0; background:#f8fafc;"><div style="padding:12px;"><table style="min-width:1100px;"><thead><tr>
-                        <th>Captured At</th><th>AFS RO #</th><th>Unit No</th><th>Branch / Site</th><th>Owner</th><th>Capture Type</th><th>Previous Status</th><th>Current Status</th><th style="text-align:right;">Spend</th>
+                    html += `<tr><td colspan="8" class="weekly-history-detail-cell"><div class="weekly-history-detail-panel"><table class="weekly-history-detail-table"><thead><tr>
+                        <th style="width:118px;">Captured At</th>
+                        <th style="width:105px;">AFS RO #</th>
+                        <th style="width:78px;">Unit No</th>
+                        <th style="width:142px;">Branch / Site</th>
+                        <th style="width:112px;">Owner</th>
+                        <th style="width:98px;">Capture Type</th>
+                        <th style="width:118px;">Current Repair Class</th>
+                        <th style="width:118px;">Transfer Repair Class</th>
+                        <th style="width:88px;">Budget Bucket</th>
+                        <th style="width:106px;">Previous Status</th>
+                        <th style="width:106px;">Current Status</th>
+                        <th style="width:92px;">Spend</th>
+                        <th style="width:102px;">Included</th>
+                        <th style="width:102px;">Excluded</th>
                     </tr></thead><tbody>`;
                     group.rows.forEach(row => {
                         const roLink = row.roUrl ? `<a class="ro-link" href="${escapeHtml(row.roUrl)}" target="_blank">${escapeHtml(row.roNumber)}</a>` : escapeHtml(row.roNumber || '');
-                        html += `<tr>
+                        const isExcludedBucket = row.budgetBucket === 'Budget Excluded';
+                        const bucketShort = isExcludedBucket ? 'EXCLUDED' : 'INCLUDED';
+                        const lockTitle = row.budgetSnapshotLocked ? `EOW locked ${row.budgetSnapshotWeekEnd || ''}` : 'Live allocation';
+                        html += `<tr title="${escapeHtml((row.budgetAllocationBasis || '') + (row.aiRepairClassReasons ? ' · ' + row.aiRepairClassReasons : '')).replace(/"/g, '&quot;')}">
                             <td>${escapeHtml(row.capturedAt ? new Date(row.capturedAt).toLocaleString() : '')}</td>
                             <td>${roLink}</td>
                             <td>${escapeHtml(row.unitNo || '')}</td>
                             <td>${escapeHtml(row.branch || '')}</td>
                             <td>${escapeHtml(row.owner || '')}</td>
                             <td>${escapeHtml(row.captureType || '')}</td>
+                            <td>${escapeHtml(row.currentRepairClass || 'Not Available')}</td>
+                            <td>${escapeHtml(row.transferRepairClass || 'No Transfer')}</td>
+                            <td><span class="weekly-budget-pill ${isExcludedBucket ? 'excluded' : 'included'}" title="${escapeHtml(lockTitle)}">${bucketShort}</span></td>
                             <td>${escapeHtml(row.previousStatus || '')}</td>
                             <td>${escapeHtml(row.currentStatus || '')}</td>
-                            <td style="text-align:right; font-weight:800;">$${Number(row.spend || 0).toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2})}</td>
+                            <td class="weekly-history-money">${formatWeeklyHistoryMoney(row.spend || 0)}</td>
+                            <td class="weekly-history-money" style="color:#2563eb;">${formatWeeklyHistoryMoney(row.budgetIncludedSpend || 0)}</td>
+                            <td class="weekly-history-money" style="color:#7c3aed;">${formatWeeklyHistoryMoney(row.budgetExcludedSpend || 0)}</td>
                         </tr>`;
                     });
                     html += `</tbody></table></div></td></tr>`;
                 }
             });
 
-            html += `</tbody></table></div>`;
+            html += `</tbody></table></div></div>`;
             container.innerHTML = html;
         }
 
@@ -2474,24 +3010,40 @@
             const groups = groupWeeklySpendHistory(rows);
             const summaryRows = groups.map(g => ({
                 'Week': g.weekKey,
-                'Captured Spend': Number(g.totalSpend || 0),
-                'VRO Count': g.vroCount
+                'Week End': g.weekEndDate || '',
+                'EOW / Captured Spend': Number(g.totalSpend || 0),
+                'VRO Count': g.vroCount,
+                'Budget Included Spend': Number(g.budgetIncludedSpend || 0),
+                'Budget Included %': Number(g.budgetIncludedPct || 0) / 100,
+                'Budget Excluded Spend': Number(g.budgetExcludedSpend || 0),
+                'Budget Excluded %': Number(g.budgetExcludedPct || 0) / 100,
+                'Allocation Locked': g.allocationLocked ? 'Yes' : 'No'
             }));
             const detailRows = rows.map(r => ({
                 'Week': r.weekKey,
+                'Week End': getWeekEndLabel(r.weekKey),
                 'Captured At': r.capturedAt || '',
                 'AFS RO #': r.roNumber || '',
                 'Unit No': r.unitNo || '',
                 'Branch / Site': r.branch || '',
                 'Owner': r.owner || '',
                 'Capture Type': r.captureType || '',
+                'Current Repair Class': r.currentRepairClass || 'Not Available',
+                'Transfer Repair Class': r.transferRepairClass || 'No Transfer',
+                'Budget Bucket': r.budgetBucket || '',
+                'Budget Included Spend': Number(r.budgetIncludedSpend || 0),
+                'Budget Excluded Spend': Number(r.budgetExcludedSpend || 0),
+                'Budget Allocation Basis': r.budgetAllocationBasis || '',
+                'EOW Snapshot Locked': r.budgetSnapshotLocked ? 'Yes' : 'No',
+                'Snapshot Locked At': r.budgetSnapshotLockedAt || '',
                 'Previous Status': r.previousStatus || '',
                 'Current Status': r.currentStatus || '',
                 'Opened Date': r.openedDate || '',
                 'Completed Date': r.completedDate || '',
                 'Spend': Number(r.spend || 0),
                 'Spend Status': r.spendStatus || '',
-                'Spend Source': r.spendSource || ''
+                'Spend Source': r.spendSource || '',
+                'AI Repair Class Reasons': r.aiRepairClassReasons || ''
             }));
 
             const wb = XLSX.utils.book_new();
@@ -3721,6 +4273,7 @@
 
         function setFilter(val) {
             currentFilter = val;
+            currentDrilldownMetricFilter = 'ALL';
             document.querySelectorAll('.filter-btn').forEach(btn => {
                 if(btn.dataset.filter === val) { btn.classList.add('active'); btn.style.background = 'var(--gold)'; } 
                 else { btn.classList.remove('active'); btn.style.background = '#e0e0e0'; }
@@ -3866,6 +4419,563 @@
 
         function preserveCurrentDrilldownStateAndRefresh() {
             refreshActiveViewPreservingDrilldown();
+        }
+
+
+        function formatCurrency(value) {
+            const n = Number(String(value ?? '').replace(/[$,]/g, ''));
+            const amount = isNaN(n) ? 0 : n;
+            return '$' + amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        }
+
+        function normalizeBillingText(value) {
+            return String(value || '').toUpperCase().trim();
+        }
+
+        function getBillingServiceFromRepClass(repClass) {
+            const r = normalizeBillingText(repClass).replace(/[_-]/g, ' ');
+            if (['OSC PM', 'AFS PM', 'OSC HO', 'SAFETY INS', 'STATE INS'].includes(r)) return 'PM';
+            if (['OSC RD', 'BRINKS ERSA', 'GARDA ERSA', 'US FOODS ERSA', 'BRINKSROSID', 'EMERGENCY', 'ROAD CALL'].includes(r)) return 'ERS';
+            if (r === 'SCHEDULED') return 'VENDED REPAIR';
+            if (['DEF MAINT', 'DRIVER ABUSE', 'ACCIDENT DAMAGE', 'ACCIDENT DAM', 'ACC DAM', 'TOWING', 'SPECIAL PROJ', 'MERCHANT PM'].includes(r)) return 'EXCLUDABLE / SPECIAL REVIEW';
+            return 'VENDED REPAIR';
+        }
+
+        function isGardaErsaRepairClass(repClass) {
+            const r = normalizeBillingText(repClass).replace(/[_-]/g, ' ').replace(/\s+/g, ' ');
+            return r === 'GARDA ERSA';
+        }
+
+        function billingContainsAny(text, words) {
+            const t = String(text || '').toLowerCase();
+            return words.filter(w => t.includes(String(w).toLowerCase()));
+        }
+
+        function getBillingRoUrl(roNum) {
+            return `https://afshub.azurewebsites.net/Vendors/VendedRepairOrder/Estimate/${encodeURIComponent(roNum || '')}`;
+        }
+
+        function normalizeQueueNameForRepairClass(value) {
+            const s = String(value || '').toUpperCase();
+            if (s.includes('PM')) return 'PM';
+            if (s.includes('ERS') || s.includes('RESCUE') || s.includes('ROAD')) return 'ERS';
+            if (s.includes('VENDED')) return 'VENDED REPAIR';
+            return s || 'VENDED REPAIR';
+        }
+
+        function isRepairClassStatusCleared(safeRo) {
+            const status = getBillingReviewStatusForSafeRo(safeRo);
+            return ['Corrected','Cleared'].includes(status);
+        }
+
+        function getFriendlyRepairClassLabel(recommendedClass, fallback) {
+            const r = String(recommendedClass || '').toUpperCase();
+            if (r.includes('DRIVER')) return 'DRIVER ABUSE REVIEW';
+            if (r.includes('GARDA') || r.includes('ERSA')) return 'GARDA ERSA RECOMMENDATION';
+            if (r.includes('OSC PM') || r === 'PM') return 'OSC PM RECOMMENDATION';
+            if (r.includes('DEF')) return 'DEF MAINT REVIEW';
+            if (r.includes('ACCIDENT')) return 'ACCIDENT DAMAGE REVIEW';
+            if (r.includes('TOW')) return 'TOWING REVIEW';
+            if (r.includes('SPECIAL')) return 'SPECIAL PROJECT REVIEW';
+            if (r.includes('MERCHANT')) return 'MERCHANT PM REVIEW';
+            return fallback || 'REPAIR CLASS REVIEW';
+        }
+
+        function getResponsibleQueueForRecommendation(recommendedClass, queueSource) {
+            const r = String(recommendedClass || '').toUpperCase();
+            if (r.includes('OSC PM') || r === 'PM') return 'PM';
+            if (r.includes('GARDA') || r.includes('ERSA')) return 'ERS';
+            return normalizeQueueNameForRepairClass(queueSource);
+        }
+
+        function determineRecommendedRepairClassFromEvidence(primaryRepClass, combinedText, spend, tireQty, hits) {
+            const current = String(primaryRepClass || '').toUpperCase();
+            const text = String(combinedText || '').toUpperCase();
+            const hasAny = arr => arr.some(x => text.includes(String(x).toUpperCase()));
+            const isAlready = needle => current.includes(needle);
+
+            // GARDA ERSA is emergency road-call support. Once an RO is already classed as GARDA ERSA,
+            // it takes precedence over driver abuse, accident damage, towing, DEF, or any other evidence.
+            if (isGardaErsaRepairClass(primaryRepClass)) return null;
+
+            if (isAlready('MERCHANT')) return null;
+            if (tireQty >= 4 && !isAlready('DEF')) {
+                return { recommendedClass: 'DEF MAINT', reason: `Tire quantity across billed lines is ${tireQty}; 4+ tires should be reviewed as DEF MAINT.` };
+            }
+            if (hasAny(['ACCIDENT','COLLISION','CRASH','STRUCK','IMPACT','DEER','BODY DAMAGE','VANDAL','WINDSHIELD IMPACT']) && !isAlready('ACC')) {
+                return { recommendedClass: 'ACCIDENT DAMAGE', reason: 'Accident/impact/physical damage language supports ACCIDENT DAMAGE review.' };
+            }
+            if (hasAny(['DRIVER ABUSE','DRIVER CAUSED','OPERATOR ERROR','ROAD HAZARD','SIDEWALL','LOCKOUT','LOST KEY','MISFUEL','DEF IN FUEL','FUEL CONTAMINATION','OUT OF FUEL','REGEN','DERATE']) && !isAlready('ABUSE')) {
+                return { recommendedClass: 'DRIVER ABUSE', reason: 'Driver-caused indicators support DRIVER ABUSE review.' };
+            }
+            if (hasAny(['SAMSARA','CAMERA INSTALL','TELEMATICS INSTALL','RETROFIT','UPFIT']) && !isAlready('SPECIAL')) {
+                return { recommendedClass: 'SPECIAL PROJ', reason: 'Project/install language supports SPECIAL PROJ review.' };
+            }
+            if (hasAny(['ROAD CALL','ROADSIDE','EMERGENCY','BREAKDOWN','NO START','UNIT DOWN','MOBILE RESCUE']) && !(isAlready('ERSA') || current.includes('ROAD CALL'))) {
+                return { recommendedClass: 'GARDA ERSA', reason: 'Roadside/emergency language supports GARDA ERSA review.' };
+            }
+            if (hasAny(['TOW','TOWED','TOWING','WRECKER','ROLLBACK','WINCH','RECOVERY']) && !(isAlready('TOW') || isAlready('ERSA'))) {
+                return { recommendedClass: 'TOWING', reason: 'Tow/wrecker/recovery language supports TOWING review unless this was emergency roadside.' };
+            }
+            const major = hits.majorHits && hits.majorHits.length;
+            if ((major || (current.includes('DEF') && spend > 1500)) && !isAlready('DEF')) {
+                return { recommendedClass: 'DEF MAINT', reason: `Major repair evidence (${(hits.majorHits || []).slice(0,4).join(', ') || 'high-dollar major repair'}) supports DEF MAINT review.` };
+            }
+            return null;
+        }
+
+        function processAgingRepairsData(agingRawAOA) {
+            globalBillingRows = [];
+            globalBillingIssueMap = {};
+            if (!agingRawAOA || !agingRawAOA.length) {
+                renderBillingQueue();
+                return;
+            }
+
+            const groups = {};
+            const IDX = {
+                ro: 9, unit: 18,
+                familyComponentDescription: 33,
+                componentCode: 34,
+                componentDescription: 35,
+                repClass: 39,
+                sectionComment: 40,
+                lineType: 41,
+                lineDescription: 42,
+                quantity: 43,
+                additionalNotes: 67
+            };
+
+            function parseQty(v) {
+                const n = parseFloat(String(v || '').replace(/,/g, '').trim());
+                return isNaN(n) ? 0 : n;
+            }
+
+            for (let i = 0; i < agingRawAOA.length; i++) {
+                const row = agingRawAOA[i] || [];
+                const ro = String(row[IDX.ro] || '').toUpperCase().trim();
+                if (!ro || ro === 'RONUM' || ro === 'RO NUMBER' || !/\d/.test(ro)) continue;
+                if (!groups[ro]) {
+                    groups[ro] = {
+                        roNumber: ro,
+                        unitNo: String(row[IDX.unit] || '').toUpperCase().trim(),
+                        repClasses: new Set(),
+                        familyComponents: [],
+                        componentCodes: [],
+                        componentDescriptions: [],
+                        sectionComments: [],
+                        lineTypes: [],
+                        lineDescriptions: [],
+                        additionalNotes: [],
+                        tireQty: 0,
+                        lineCount: 0
+                    };
+                }
+                const g = groups[ro];
+                const repClass = String(row[IDX.repClass] || '').trim();
+                if (repClass) g.repClasses.add(repClass);
+                const family = String(row[IDX.familyComponentDescription] || '').trim();
+                const compCode = String(row[IDX.componentCode] || '').trim();
+                const compDesc = String(row[IDX.componentDescription] || '').trim();
+                const section = String(row[IDX.sectionComment] || '').trim();
+                const lineType = String(row[IDX.lineType] || '').trim();
+                const lineDesc = String(row[IDX.lineDescription] || '').trim();
+                const notes = String(row[IDX.additionalNotes] || '').trim();
+                if (family) g.familyComponents.push(family);
+                if (compCode) g.componentCodes.push(compCode);
+                if (compDesc) g.componentDescriptions.push(compDesc);
+                if (section) g.sectionComments.push(section);
+                if (lineType) g.lineTypes.push(lineType);
+                if (lineDesc) g.lineDescriptions.push(lineDesc);
+                if (notes) g.additionalNotes.push(notes);
+                const tireText = `${family} ${compDesc} ${lineDesc}`.toLowerCase();
+                if (tireText.includes('tire') || tireText.includes('tyre')) g.tireQty += parseQty(row[IDX.quantity]) || 1;
+                g.lineCount += 1;
+                if (!g.unitNo && row[IDX.unit]) g.unitNo = String(row[IDX.unit]).toUpperCase().trim();
+            }
+
+            const roLookup = {};
+            (processedData || []).forEach(ro => { if (ro && ro.roNum) roLookup[String(ro.roNum).toUpperCase()] = ro; });
+            // Repair-class detection must be conservative. Weak words like "filter", "oil",
+            // "inspection", or "service" can appear inside major repairs and should not flip
+            // a repair to PM by themselves. Major repair / excludable evidence overrides weak PM signals.
+            const explicitPmKeywords = ['preventive maintenance', 'preventative maintenance', 'pm service', 'pm inspection', 'dot inspection', 'bit inspection', 'annual inspection', 'safety inspection', 'state inspection', 'oil change', 'oil and filter service', 'lube service', 'service interval', 'scheduled pm'];
+            const weakPmKeywords = ['filter', 'oil', 'inspection', 'service', 'lube'];
+            const ersKeywords = ['roadside', 'road call', 'no start', 'jump start', 'tow', 'towing', 'breakdown', 'disabled', 'emergency', 'unit down roadside', 'mobile rescue', 'tire blowout', 'locked out'];
+            const majorRepairKeywords = ['engine', 'engine replacement', 'transmission', 'aftertreatment', 'dpf', 'emissions', 'regen', 'def', 'def system', 'turbo', 'injector', 'egr', 'radiator', 'coolant', 'drivetrain', 'differential', 'axle', 'overhaul', 'replace engine', 'replacement', 'failed', 'failure', 'derate'];
+            const excludableKeywords = ['accident', 'collision', 'driver abuse', 'misuse', 'vandalism', 'damage', 'deferred maintenance', 'deferred', 'engine replacement', 'transmission', 'aftertreatment', 'dpf', 'emissions', 'regen', 'def in fuel', 'fuel contamination', 'road hazard', 'sidewall', 'lockout', 'lost key', 'samsara', 'camera install', 'retrofit', 'upfit', 'merchant'];
+
+            Object.values(groups).forEach(g => {
+                const roContext = roLookup[g.roNumber] || null;
+                const fin = window.globalOrderFin && window.globalOrderFin[g.roNumber] ? window.globalOrderFin[g.roNumber] : {};
+                const currentStatus = (roContext && roContext.status) || fin.status || '';
+                const queueSource = (roContext && roContext.sourceQueue) || getBillingServiceFromRepClass(Array.from(g.repClasses)[0] || '');
+                const branch = (roContext && roContext.branch) || fin.customerLocation || fin.shop || '';
+                const coordinator = (roContext && roContext.owner) || fin.contact || '';
+                const spend = Number(fin.total || 0);
+                const combinedText = [
+                    ...g.familyComponents, ...g.componentDescriptions, ...g.sectionComments,
+                    ...g.lineDescriptions, ...g.additionalNotes
+                ].join(' | ');
+                const repClassList = Array.from(g.repClasses);
+                const primaryRepClass = repClassList[0] || '';
+
+                // Hard precedence rule: if Aging Repairs already shows GARDA ERSA anywhere on the RO,
+                // do not create a repair-class exception or recommend any other class.
+                if (repClassList.some(isGardaErsaRepairClass)) return;
+
+                const repService = getBillingServiceFromRepClass(primaryRepClass);
+                const explicitPmHits = billingContainsAny(combinedText, explicitPmKeywords);
+                const weakPmHits = billingContainsAny(combinedText, weakPmKeywords);
+                const majorHits = billingContainsAny(combinedText, majorRepairKeywords);
+                const ersHits = billingContainsAny(combinedText, ersKeywords);
+                const exHits = billingContainsAny(combinedText, excludableKeywords);
+                const primaryRepUpper = String(primaryRepClass || '').toUpperCase();
+                const isDefMaint = primaryRepUpper.includes('DEF');
+                const isHighDollarDef = isDefMaint && spend > 1500;
+                const hasExplicitPmSignal = explicitPmHits.length > 0 || /(^|\s)PM(\s|$)/i.test(combinedText);
+                const hasMajorRepairSignal = majorHits.length > 0 || isHighDollarDef;
+                const flags = [];
+                const reasons = [];
+                const suggested = new Set();
+                let recommendedClass = '';
+                let responsibleQueue = normalizeQueueNameForRepairClass(queueSource);
+
+                const explicitRecommendation = determineRecommendedRepairClassFromEvidence(primaryRepClass, combinedText, spend, g.tireQty, { majorHits });
+                if (explicitRecommendation) {
+                    recommendedClass = explicitRecommendation.recommendedClass;
+                    responsibleQueue = getResponsibleQueueForRecommendation(recommendedClass, queueSource);
+                    const label = getFriendlyRepairClassLabel(recommendedClass, 'REPAIR CLASS REVIEW');
+                    flags.push(label);
+                    suggested.add(recommendedClass);
+                    reasons.push(explicitRecommendation.reason);
+                }
+
+                if (!recommendedClass && queueSource === 'PM' && repService !== 'PM') {
+                    recommendedClass = 'OSC PM';
+                    responsibleQueue = 'PM';
+                    flags.push(getFriendlyRepairClassLabel(recommendedClass));
+                    suggested.add(recommendedClass);
+                    reasons.push(`This RO is in the PM queue but current REPCLASS is ${primaryRepClass || 'blank'}.`);
+                }
+                if (!recommendedClass && queueSource === 'ERS' && repService !== 'ERS') {
+                    recommendedClass = 'GARDA ERSA';
+                    responsibleQueue = 'ERS';
+                    flags.push(getFriendlyRepairClassLabel(recommendedClass));
+                    suggested.add(recommendedClass);
+                    reasons.push(`This RO is in the ERS queue but current REPCLASS is ${primaryRepClass || 'blank'}.`);
+                }
+
+                if (!recommendedClass && hasExplicitPmSignal && repService !== 'PM' && !hasMajorRepairSignal) {
+                    recommendedClass = 'OSC PM';
+                    responsibleQueue = 'PM';
+                    flags.push(getFriendlyRepairClassLabel(recommendedClass));
+                    suggested.add(recommendedClass);
+                    const hits = explicitPmHits.length ? explicitPmHits : ['PM'];
+                    reasons.push(`Explicit PM signal(s): ${hits.slice(0, 4).join(', ')}.`);
+                } else if (hasExplicitPmSignal && repService !== 'PM' && hasMajorRepairSignal) {
+                    // PM-like work can occur as part of a major repair. Do not recommend PM when major repair evidence is present.
+                    if (!String(primaryRepClass).toUpperCase().match(/DEF|ABUSE|ACC|TOW|ERSA|SPECIAL|MERCHANT/)) {
+                        recommendedClass = 'DEF MAINT';
+                        responsibleQueue = normalizeQueueNameForRepairClass(queueSource);
+                        flags.push(getFriendlyRepairClassLabel(recommendedClass));
+                        suggested.add(recommendedClass);
+                        reasons.push(`PM-related work appears to be part of a major repair (${majorHits.slice(0, 4).join(', ') || 'high-dollar repair'}); classify based on the major repair, not the PM line.`);
+                    }
+                } else if (weakPmHits.length && repService !== 'PM') {
+                    // Weak words like filter/oil/service are supporting context only and never create a PM recommendation alone.
+                }
+                const uniqueFlags = Array.from(new Set(flags));
+                if (!uniqueFlags.length) return;
+                const safeRo = safeFirebaseKey(g.roNumber);
+                const review = globalBillingReviewState[safeRo] || { status: 'Open' };
+                const row = {
+                    safeRo,
+                    roNumber: g.roNumber,
+                    unitNo: g.unitNo || (roContext && roContext.unitNo) || fin.unitNo || '',
+                    branch,
+                    coordinator,
+                    queueSource,
+                    currentStatus,
+                    repClass: repClassList.join(', '),
+                    suggestedService: Array.from(suggested).join(', ') || 'Review',
+                    recommendedClass: recommendedClass || Array.from(suggested)[0] || 'Review',
+                    responsibleQueue: responsibleQueue || normalizeQueueNameForRepairClass(queueSource),
+                    spend,
+                    flags: uniqueFlags,
+                    reasons,
+                    tireQty: g.tireQty,
+                    lineCount: g.lineCount,
+                    reviewStatus: review.status || 'Open',
+                    reviewReason: review.reason || ''
+                };
+                globalBillingRows.push(row);
+                globalBillingIssueMap[safeRo] = row;
+            });
+
+            globalBillingRows.sort((a, b) => {
+                const aOpen = String(a.reviewStatus || 'Open') === 'Open' ? 0 : 1;
+                const bOpen = String(b.reviewStatus || 'Open') === 'Open' ? 0 : 1;
+                if (aOpen !== bOpen) return aOpen - bOpen;
+                return (b.spend || 0) - (a.spend || 0);
+            });
+            renderBillingQueue();
+            if (processedData && processedData.length > 0) {
+                setTimeout(() => refreshActiveViewPreservingDrilldown(), 0);
+            }
+        }
+
+        function getBillingBadgesHtml(roNum) {
+            const issue = globalBillingIssueMap && globalBillingIssueMap[safeFirebaseKey(roNum)] ? globalBillingIssueMap[safeFirebaseKey(roNum)] : null;
+            if (!issue) return '';
+            return issue.flags.slice(0, 2).map(flag => {
+                let cls = 'billing-review';
+                if (flag.includes('REP') || flag.includes('PM') || flag.includes('GARDA')) cls = 'repclass-review';
+                if (flag.includes('DEF') || flag.includes('DRIVER') || flag.includes('ACCIDENT') || flag.includes('TOWING') || flag.includes('SPECIAL') || flag.includes('MERCHANT') || flag.includes('4+')) cls = 'excludable-review';
+                return `<span class="billing-badge ${cls}" title="${escapeHtml(issue.reasons.join(' ')).replace(/"/g, '&quot;')}">${escapeHtml(flag)}</span>`;
+            }).join(' ');
+        }
+
+
+        function getRepairClassCellHtml(roOrNum) {
+            const roObj = typeof roOrNum === 'object' ? roOrNum : null;
+            const roNum = roObj ? roObj.roNum : roOrNum;
+            const issue = roObj ? getVisibleBillingIssueForRo(roObj) : getBillingIssueForRo(roNum);
+            if (!issue) return `<div class="repair-class-cell"><span class="repair-class-pill clean">OK</span></div>`;
+            const safeRo = issue.safeRo || safeFirebaseKey(roNum);
+            const reviewStatus = getBillingReviewStatusForSafeRo(safeRo);
+            const label = getFriendlyRepairClassLabel(issue.recommendedClass || issue.suggestedService, 'REPAIR CLASS REVIEW');
+            const cls = label.includes('DEF') || label.includes('DRIVER') || label.includes('ACCIDENT') || label.includes('TOWING') || label.includes('SPECIAL') || label.includes('MERCHANT') ? 'excludable' : 'review';
+            const reasonText = `${label}. Current repair class: ${issue.repClass || 'blank'}. Recommended: ${issue.recommendedClass || issue.suggestedService || 'Review'}. ${(issue.reasons || []).join(' ')}`;
+            const title = escapeHtml(reasonText).replace(/"/g, '&quot;');
+            const isCorrected = ['Corrected','Cleared'].includes(reviewStatus);
+            return `<div class="repair-class-cell" title="${title}">
+                <div class="repair-class-name">${escapeHtml(issue.repClass || 'Review')}</div>
+                <span class="repair-class-pill ${cls}">${escapeHtml(label)}</span>
+                <div class="repair-class-actions">
+                    <span class="status-toggle repair-class-toggle ${isCorrected ? 'status-dispatched' : 'status-pending'}" onclick="toggleRepairClassCorrected('${safeRo}'); event.stopPropagation();">${isCorrected ? 'CORRECTED' : 'PENDING'}</span>
+                </div>
+            </div>`;
+        }
+
+        function setRepairClassReviewStatus(safeRo, status) {
+            updateBillingReviewStatus(safeRo, status);
+        }
+
+        function toggleRepairClassCorrected(safeRo) {
+            const current = getBillingReviewStatusForSafeRo(safeRo);
+            const next = ['Corrected','Cleared'].includes(current) ? 'Open' : 'Corrected';
+            updateBillingReviewStatus(safeRo, next);
+        }
+
+        function getBillingReviewStatusForSafeRo(safeRo) {
+            const review = globalBillingReviewState && globalBillingReviewState[safeRo] ? globalBillingReviewState[safeRo] : {};
+            return review.status || 'Open';
+        }
+
+        function getBillingIssueForRo(roNum) {
+            if (!roNum) return null;
+            const safeRo = safeFirebaseKey(roNum);
+            if (isRepairClassStatusCleared(safeRo)) return null;
+            return globalBillingIssueMap && globalBillingIssueMap[safeRo] ? globalBillingIssueMap[safeRo] : null;
+        }
+
+        function isRepairClassIssueVisibleForRo(ro, issue) {
+            if (!ro || !issue) return false;
+            if (isRepairClassStatusCleared(issue.safeRo)) return false;
+            const roQueue = normalizeQueueNameForRepairClass(ro.sourceQueue || issue.queueSource || 'VENDED REPAIR');
+            const responsible = normalizeQueueNameForRepairClass(issue.responsibleQueue || issue.queueSource || roQueue);
+
+            // PM/ERS records can appear in vended drilldowns as FYI. Do not make vended coordinators own those repair-class corrections.
+            if (roQueue !== responsible) return false;
+            return true;
+        }
+
+        function getVisibleBillingIssueForRo(ro) {
+            if (!ro || !ro.roNum) return null;
+            const issue = getBillingIssueForRo(ro.roNum);
+            return isRepairClassIssueVisibleForRo(ro, issue) ? issue : null;
+        }
+
+        function getBillingIssuePopulation(dataSet) {
+            return (dataSet || [])
+                .filter(ro => (isRealOpenRoForDailyCompliance(ro) || (ro && normalizeSpendStatus(ro.status) === 'CLOSED')))
+                .map(ro => getVisibleBillingIssueForRo(ro))
+                .filter(Boolean);
+        }
+
+        function getRepairClassComplianceSummary(dataSet, dateKey = getLocalDateKey(new Date())) {
+            const issues = getBillingIssuePopulation(dataSet);
+            const openIssues = issues.filter(issue => getBillingReviewStatusForSafeRo(issue.safeRo) === 'Open');
+            const todayKey = getLocalDateKey(new Date());
+            const isToday = dateKey === todayKey;
+            const touchedCount = issues.filter(issue => isToday ? roTouchedToday(issue.safeRo) : roTouchedOnDate(issue.safeRo, dateKey)).length;
+            const reviewedOrTouched = issues.length - openIssues.length + openIssues.filter(issue => isToday ? roTouchedToday(issue.safeRo) : roTouchedOnDate(issue.safeRo, dateKey)).length;
+            const score = issues.length ? Math.round((reviewedOrTouched / issues.length) * 100) : 100;
+            const colorClass = score >= 85 ? 'compliance-green' : (score >= 70 ? 'compliance-yellow' : 'compliance-red');
+            const rating = score >= 85 ? 'ON TRACK' : (score >= 70 ? 'WATCH' : 'NEEDS ACTION');
+            return { issues, openIssues, touchedCount, reviewedOrTouched, score, colorClass, rating, dateKey };
+        }
+
+        function generateBillingComplianceHtml(dataSet) {
+            const current = getRepairClassComplianceSummary(dataSet);
+            const issues = current.issues;
+            if (!issues.length) return '';
+            const prior = getRepairClassComplianceSummary(dataSet, getPriorLocalDateKey());
+            return `
+                <div class="workflow-compliance-card ${current.colorClass} compact" title="Daily repair class compliance is based on flagged VROs from Aging Repairs.xlsx. Coordinators should review, correct, or escalate these daily.">
+                    <div class="workflow-compliance-header">
+                        <div>
+                            <div class="workflow-compliance-label">Daily Repair Class Compliance</div>
+                            <div class="workflow-compliance-score">${current.score}%</div>
+                        </div>
+                        <div class="workflow-compliance-actions">
+                            <div class="workflow-compliance-prior ${prior.colorClass}" title="Prior day repair class score (${prior.dateKey}) based on repair-class review activity">
+                                <div class="prior-title">Prior Day</div>
+                                <div class="prior-score">${prior.score}%</div>
+                            </div>
+                            <div class="workflow-compliance-rating">${current.rating}</div>
+                        </div>
+                    </div>
+                    <div class="workflow-compliance-grid">
+                        <div class="workflow-compliance-mini clickable" onclick="openOwnerMetricDrilldown(currentOwnerView, currentParentView, 'REPAIR_CLASS', event)" title="Show repair class issue ROs"><div class="mini-title">RO Review</div><div class="mini-num">${issues.length}</div></div>
+                        <div class="workflow-compliance-mini clickable" onclick="openOwnerMetricDrilldown(currentOwnerView, currentParentView, 'TOUCHED', event)" title="Show repair class ROs touched today"><div class="mini-title">Touched</div><div class="mini-num">${current.touchedCount}/${issues.length}</div></div>
+                        <div class="workflow-compliance-mini clickable" onclick="openOwnerMetricDrilldown(currentOwnerView, currentParentView, 'REPAIR_CLASS_REVIEW_NEEDED', event)" title="Show repair class ROs needing review"><div class="mini-title">Review Needed</div><div class="mini-num">${current.openIssues.length}</div></div>
+                        <div class="workflow-compliance-mini clickable" onclick="openOwnerMetricDrilldown(currentOwnerView, currentParentView, 'REPAIR_CLASS', event)" title="Show repair class issue ROs"><div class="mini-title">Corrected</div><div class="mini-num">${issues.length - current.openIssues.length}</div></div>
+                    </div>
+                </div>`;
+        }
+
+        function setBillingFilter(val, btn) {
+            currentBillingFilter = val || 'ALL';
+            document.querySelectorAll('.billing-filter-pill').forEach(b => b.classList.remove('active'));
+            if (btn) btn.classList.add('active');
+            renderBillingQueue();
+        }
+
+        function updateBillingReviewStatus(safeRo, status) {
+            const nowIso = new Date().toISOString();
+            const updates = {
+                status: status || 'Open',
+                updatedAt: nowIso
+            };
+            if (db) db.ref(`billingReviewStatus/${safeRo}`).update(updates);
+            else {
+                globalBillingReviewState[safeRo] = Object.assign(globalBillingReviewState[safeRo] || {}, updates);
+                try { localStorage.setItem('workflow_billing_review_status', JSON.stringify(globalBillingReviewState)); } catch(e) {}
+                renderBillingQueue();
+            }
+        }
+
+        function renderBillingOwnerTiles(allRows) {
+            const kpi = document.getElementById('billing-kpi-strip');
+            if (!kpi) return;
+            const unresolved = (allRows || []).filter(isBillingRowUnresolved);
+            const byOwner = {};
+            unresolved.forEach(r => {
+                const owner = r.coordinator || 'Unassigned';
+                if (!byOwner[owner]) byOwner[owner] = [];
+                byOwner[owner].push(r);
+            });
+            const owners = Object.keys(byOwner).sort();
+            if (!owners.length) {
+                kpi.innerHTML = '<div class="no-data-msg" style="padding:16px;">No active billing / repair class issues.</div>';
+                return;
+            }
+            kpi.className = 'billing-owner-grid';
+            kpi.innerHTML = owners.map(owner => {
+                const rows = byOwner[owner];
+                const openRows = rows.filter(r => !isBillingClosedStatus(r.currentStatus));
+                const completedRows = rows.filter(r => isBillingClosedStatus(r.currentStatus));
+                const reviewNeeded = rows.filter(isBillingRowReviewNeeded);
+                const fixed = rows.filter(r => ['Reviewed','Corrected','Cleared'].includes(getBillingReviewStatus(r)));
+                const score = rows.length ? Math.round((fixed.length / rows.length) * 100) : 100;
+                const safeOwner = String(owner).replace(/'/g, "\\'");
+                const color = score >= 85 ? '#16a34a' : (score >= 70 ? '#d97706' : '#dc2626');
+                return `<div class="billing-owner-tile">
+                    <div class="billing-owner-name">${escapeHtml(owner)}</div>
+                    <div class="billing-owner-metrics">
+                        <div class="billing-owner-metric" onclick="setBillingOwnerMetricFilter('${safeOwner}', 'OPEN', event)"><div class="label">Open ROs</div><div class="value">${openRows.length}</div></div>
+                        <div class="billing-owner-metric" onclick="setBillingOwnerMetricFilter('${safeOwner}', 'COMPLETED', event)"><div class="label">Completed ROs</div><div class="value">${completedRows.length}</div></div>
+                        <div class="billing-owner-metric" onclick="setBillingOwnerMetricFilter('${safeOwner}', 'NEEDS_FIX', event)"><div class="label">Need Fix</div><div class="value">${rows.length}</div></div>
+                        <div class="billing-owner-metric" onclick="setBillingOwnerMetricFilter('${safeOwner}', 'REVIEW_NEEDED', event)"><div class="label">Review Needed</div><div class="value">${reviewNeeded.length}</div></div>
+                        <div class="billing-owner-metric" onclick="setBillingOwnerMetricFilter('${safeOwner}', 'COMPLIANCE', event)"><div class="label">Compliance</div><div class="value" style="color:${color};">${score}%</div></div>
+                        <div class="billing-owner-metric" onclick="setBillingOwnerMetricFilter('${safeOwner}', 'NEEDS_FIX', event)"><div class="label">Orders</div><div class="value">${rows.length}</div></div>
+                    </div>
+                </div>`;
+            }).join('');
+        }
+
+        function renderBillingQueue() {
+            const body = document.getElementById('billing-queue-body');
+            if (!body) return;
+            const search = (document.getElementById('billing-search')?.value || '').toLowerCase().trim();
+            const baseRows = (globalBillingRows || []).map(r => Object.assign({}, r, { reviewStatus: getBillingReviewStatusForSafeRo(r.safeRo) }));
+            renderBillingOwnerTiles(baseRows);
+
+            let rows = filterBillingRowsByMetric(baseRows, currentBillingOwnerFilter, currentBillingMetricFilter);
+            if (search) {
+                rows = rows.filter(r => [r.roNumber, r.unitNo, r.branch, r.coordinator, r.queueSource, r.currentStatus, r.repClass, r.suggestedService, r.recommendedClass, r.flags.join(' '), r.reasons.join(' ')].join(' ').toLowerCase().includes(search));
+            }
+
+            const statusEl = document.getElementById('billing-load-status');
+            if (statusEl) {
+                const filterText = currentBillingOwnerFilter !== 'ALL' || currentBillingMetricFilter !== 'ALL'
+                    ? `<span class="billing-active-filter">Filtered to ${escapeHtml(currentBillingOwnerFilter)} / ${escapeHtml(currentBillingMetricFilter.replace(/_/g,' '))} <button onclick="clearBillingOwnerMetricFilter()">CLEAR</button></span>`
+                    : '';
+                statusEl.innerHTML = filterText;
+            }
+
+            if (!globalBillingRows.length) {
+                body.innerHTML = `<tr><td colspan="10" style="text-align:center; color:#64748b; font-weight:800; padding:20px;">No billing flags loaded. Confirm Aging Repairs.xlsx exists in Firebase Storage.</td></tr>`;
+                return;
+            }
+            if (!rows.length) {
+                body.innerHTML = `<tr><td colspan="10" style="text-align:center; color:#64748b; font-weight:800; padding:20px;">No billing flags match the current filter.</td></tr>`;
+                return;
+            }
+            body.innerHTML = rows.map(r => {
+                const flagHtml = r.flags.map(flag => `<span class="billing-badge ${flag.includes('DEF') || flag.includes('DRIVER') || flag.includes('ACCIDENT') || flag.includes('TOWING') || flag.includes('SPECIAL') || flag.includes('MERCHANT') || flag.includes('4+') ? 'excludable-review' : flag.includes('REP') || flag.includes('PM') || flag.includes('GARDA') ? 'repclass-review' : 'billing-review'}">${escapeHtml(flag)}</span>`).join(' ');
+                const reasons = r.reasons.map(x => `<div>• ${escapeHtml(x)}</div>`).join('');
+                const noteBtn = `<button class="${roHasMeaningfulNote(r.safeRo) ? 'note-btn has-note' : 'note-btn'}" onclick="openNoteModal('${r.safeRo}', '${escapeHtml(r.roNumber)}')" title="Billing review note">📝</button>`;
+                return `<tr>
+                    <td><a class="ro-link" href="${getBillingRoUrl(r.roNumber)}" target="_blank">${escapeHtml(r.roNumber)}</a> ${noteBtn}</td>
+                    <td>${escapeHtml(r.unitNo)}</td>
+                    <td><strong>${escapeHtml(r.branch || 'Unknown')}</strong><br><span style="font-size:10px;color:#64748b;font-weight:800;">${escapeHtml(r.queueSource || '')}</span><br><span style="font-size:10px;color:#64748b;">${escapeHtml(r.coordinator || '')}</span></td>
+                    <td>${escapeHtml(r.currentStatus || '')}</td>
+                    <td>${escapeHtml(r.repClass || '')}</td>
+                    <td>${escapeHtml(r.recommendedClass || r.suggestedService || '')}</td>
+                    <td style="text-align:right; font-weight:800;">${formatCurrency(r.spend || 0)}</td>
+                    <td>${flagHtml}</td>
+                    <td class="billing-reasons">${reasons}<div style="margin-top:5px;color:#64748b;">Lines reviewed: ${r.lineCount}${r.tireQty ? ` · Tire qty: ${r.tireQty}` : ''}</div></td>
+                    <td class="review-col"><select class="billing-status-select" onchange="updateBillingReviewStatus('${r.safeRo}', this.value)">
+                        ${['Open','Reviewed','Correction Needed','Corrected','Escalated','Cleared'].map(st => `<option value="${st}" ${String(r.reviewStatus || 'Open') === st ? 'selected' : ''}>${st}</option>`).join('')}
+                    </select></td>
+                </tr>`;
+            }).join('');
+        }
+
+        function exportBillingQueueToExcel() {
+            const rows = (globalBillingRows || []).map(r => ({
+                'RO Number': r.roNumber,
+                'Unit': r.unitNo,
+                'Location': r.branch,
+                'Queue Source': r.queueSource,
+                'Current Status': r.currentStatus,
+                'Rep Class': r.repClass,
+                'Recommended Repair Class': r.recommendedClass || r.suggestedService,
+                'Spend': r.spend,
+                'Flags': r.flags.join('; '),
+                'Why Flagged': r.reasons.join(' | '),
+                'Coordinator': r.coordinator,
+                'Review Status': r.reviewStatus,
+                'Line Count': r.lineCount,
+                'Tire Qty': r.tireQty
+            }));
+            const wb = XLSX.utils.book_new();
+            const ws = XLSX.utils.json_to_sheet(rows);
+            XLSX.utils.book_append_sheet(wb, ws, 'Billing Queue');
+            XLSX.writeFile(wb, `workFLOW_billing_queue_${new Date().toISOString().slice(0,10)}.xlsx`);
         }
 
         function processExcelData(vroRaw, roDetailRaw, resourceRawAOA, oosRawAOA, usefulRawAOA, dodRawAOA) {
@@ -4066,6 +5176,7 @@
                     unitNo: getHeaderIndexFromMap(roDetailHeaderMap, ['UnitNumber', 'Unit No', 'Vehicle Unit No']),
                     task: getHeaderIndexFromMap(roDetailHeaderMap, ['CompCodeDesc', 'Task']),
                     message: getHeaderIndexFromMap(roDetailHeaderMap, ['LastMessageBody', 'Message']),
+                    repClass: getHeaderIndexFromMap(roDetailHeaderMap, ['RepClass', 'Repair Class', 'RepairClass', 'Type']),
                     customer: getHeaderIndexFromMap(roDetailHeaderMap, ['Customer']),
                     customerLocation: getHeaderIndexFromMap(roDetailHeaderMap, ['CustomerLocation', 'Customer Location'])
                 };
@@ -4089,6 +5200,7 @@
                     const unitNo = String(getAoAValue(row, h.unitNo) || '').toUpperCase().trim();
                     const vendor = String(getAoAValue(row, h.vendor) || '').trim();
                     const contact = String(getAoAValue(row, h.contact) || '').trim();
+                    const repClass = String(getAoAValue(row, h.repClass) || '').trim();
                     const customer = String(getAoAValue(row, h.customer) || '').trim();
                     const customerLocation = String(getAoAValue(row, h.customerLocation) || '').trim();
 
@@ -4104,6 +5216,7 @@
                             unitNo: unitNo,
                             vendor: vendor,
                             contact: contact,
+                            repClass: repClass,
                             customer: customer,
                             customerLocation: customerLocation,
                             source: 'NEW_RO_DETAIL',
@@ -4133,6 +5246,7 @@
                     if (unitNo && !orderFin[roNum].unitNo) orderFin[roNum].unitNo = unitNo;
                     if (vendor && !orderFin[roNum].vendor) orderFin[roNum].vendor = vendor;
                     if (contact && !orderFin[roNum].contact) orderFin[roNum].contact = contact;
+                    if (repClass && !orderFin[roNum].repClass) orderFin[roNum].repClass = repClass;
                     if (customer && !orderFin[roNum].customer) orderFin[roNum].customer = customer;
                     if (customerLocation && !orderFin[roNum].customerLocation) orderFin[roNum].customerLocation = customerLocation;
                 }
@@ -4319,6 +5433,7 @@
                 let dedicatedShopOwners = new Set();
                 const creatorIsVended = creatorInfo && creatorInfo.team === 'VENDED REPAIR' && creatorInfo.name;
                 const finShop = orderFin[roNum] && orderFin[roNum].shop ? String(orderFin[roNum].shop).trim() : '';
+                const roDetailRepClass = orderFin[roNum] && orderFin[roNum].repClass ? String(orderFin[roNum].repClass).trim() : '';
                 // Dedicated Shop Work Orders should only be routed to the creator/owner when the unit/site
                 // is explicitly marked DEDICATED in the unit/source data. Normal vended branch work must stay
                 // with the regional/subregion coordinator assignment, even when another vended coordinator
@@ -4397,7 +5512,8 @@
                     createdByTeam: creatorInfo && creatorInfo.team ? creatorInfo.team : '',
                     isDedicatedShopWorkOrder: isDedicatedShopWorkOrder,
                     dedicatedShopOwners: Array.from(dedicatedShopOwners),
-                    financialShop: finShop
+                    financialShop: finShop,
+                    repClass: roDetailRepClass
                 };
 
                 if (isOpen) {
@@ -4985,13 +6101,11 @@
             document.getElementById('summary-table-body').innerHTML = html || '<tr><td colspan="7" style="text-align:center; padding: 20px;">No data available</td></tr>';
         }
 
-        function generateTileHTML(name, dataSet, chartId = null, isPM = false) {
-            
+        function generateTileHTML(name, dataSet, chartId = null, isPM = false, parentViewId = '') {
             let globalTotal = getSpendGovernorAuthorizedTotal();
             let lockActive = isSpendGovernorLocked();
-            
             let filteredOpen = getTileOpenRoPopulation(dataSet, isPM);
-            
+
             let completedOrders = dataSet.filter(ro => ro.isCompletedKPI);
             let compCount = completedOrders.length;
             let onTimeCount = completedOrders.filter(ro => ro.isOnTimeKPI).length;
@@ -5004,16 +6118,18 @@
                 chartHTML = `<div class="chart-box"><canvas id="${chartId}" data-comp="${compPct}" data-late="${latePct}"></canvas></div>`;
             }
 
+            const ownerArg = String(name).replace(/'/g, "\\'");
+            const parentArg = String(parentViewId || '').replace(/'/g, "\\'");
             let oosAndPriorityHtml = '';
             if (!isPM) {
                 let oosCount = filteredOpen.filter(ro => ro.isOOS).length;
                 let priorityCount = filteredOpen.filter(ro => isPriority(ro)).length;
                 oosAndPriorityHtml = `
-                    <div class="highlight-box oos-box">
+                    <div class="highlight-box oos-box clickable" onclick="openOwnerMetricDrilldown('${ownerArg}', '${parentArg}', 'OOS', event)" title="Show OOS ROs">
                         <div class="title">OOS ROs</div>
                         <div class="num">${oosCount}</div>
                     </div>
-                    <div class="highlight-box urgent-box">
+                    <div class="highlight-box urgent-box clickable" onclick="openOwnerMetricDrilldown('${ownerArg}', '${parentArg}', 'PRIORITY', event)" title="Show Priority ROs">
                         <div class="title">Priority ROs</div>
                         <div class="num">${priorityCount}</div>
                     </div>
@@ -5021,36 +6137,20 @@
             }
 
             let workflowComplianceHtml = chartId ? '' : generateWorkflowComplianceHtml(filteredOpen);
+            let billingComplianceHtml = chartId ? '' : generateBillingComplianceHtml(filteredOpen);
 
             let innerHtml = `
                 <div class="kpi-name">${name}</div>
                 <div class="kpi-top-metrics">
-                    <div class="highlight-box">
+                    <div class="highlight-box clickable" onclick="openOwnerMetricDrilldown('${ownerArg}', '${parentArg}', 'OPEN', event)" title="Show open ROs">
                         <div class="title">Open ROs</div>
                         <div class="num">${filteredOpen.length}</div>
                     </div>
                     ${oosAndPriorityHtml}
                     ${chartHTML}
                 </div>
-                <div class="kpi-stats-grid">
-                    <div class="stat-box">
-                        <div class="title">Completed</div>
-                        <div class="num">${compCount}</div>
-                    </div>
-                    <div class="stat-box">
-                        <div class="title">On-Time</div>
-                        <div class="num">${onTimeCount}</div>
-                    </div>
-                    <div class="stat-box">
-                        <div class="title">% Compliance</div>
-                        <div class="num good">${compPct}%</div>
-                    </div>
-                    <div class="stat-box">
-                        <div class="title">% Late</div>
-                        <div class="num urgent">${latePct}%</div>
-                    </div>
-                </div>
                 ${workflowComplianceHtml}
+                ${billingComplianceHtml}
             `;
             return innerHtml;
         }
@@ -5149,8 +6249,8 @@
                     tile.style.backgroundColor = '#fef2f2';
                 }
 
-                tile.onclick = () => loadPersonDrilldown(owner, parentViewId);
-                tile.innerHTML = generateTileHTML(owner, ownerDataAll, null, isPM);
+                tile.onclick = () => { currentDrilldownMetricFilter = 'ALL'; loadPersonDrilldown(owner, parentViewId); };
+                tile.innerHTML = generateTileHTML(owner, ownerDataAll, null, isPM, parentViewId);
                 container.appendChild(tile);
             });
         }
@@ -5168,6 +6268,15 @@
                 }
                 return ro;
             });
+
+            const completedRepairClassReviewData = ownerDataAll
+                .filter(ro => ro && !ro.isOpen && normalizeSpendStatus(ro.status) === 'CLOSED' && getVisibleBillingIssueForRo(ro))
+                .map(ro => Object.assign({}, ro, {
+                    isRepairClassCompletedReview: true,
+                    isOpen: true
+                }));
+
+            baseOpenData = baseOpenData.concat(completedRepairClassReviewData);
 
             let branchUsefulVals = {};
             let subUsefulMap = {};
@@ -5291,6 +6400,8 @@
                                     openedDates: [],
                                     statuses: [],
                                     ecdCells: [],
+                                    repairClassCells: [],
+                                    completedRepairClassReviewFlags: [],
                                     dupFlags: [],
                                     queueSources: [],
                                     otherQueueOrders: [],
@@ -5325,6 +6436,8 @@
                                     unitsMap[ro.unitNo].openedDates.push(ro.openedFormatted);
                                     unitsMap[ro.unitNo].statuses.push(ro.status);
                                     unitsMap[ro.unitNo].ecdCells.push(ecdCell);
+                                    unitsMap[ro.unitNo].repairClassCells.push(getRepairClassCellHtml(actualRoNum));
+                                    unitsMap[ro.unitNo].completedRepairClassReviewFlags.push(!!ro.isRepairClassCompletedReview);
                                 });
                                 return;
                             }
@@ -5354,6 +6467,8 @@
                             unitsMap[ro.unitNo].openedDates.push(ro.openedFormatted);
                             unitsMap[ro.unitNo].statuses.push(ro.status);
                             unitsMap[ro.unitNo].ecdCells.push(ecdCell);
+                            unitsMap[ro.unitNo].repairClassCells.push(getRepairClassCellHtml(ro));
+                            unitsMap[ro.unitNo].completedRepairClassReviewFlags.push(!!ro.isRepairClassCompletedReview);
                         });
 
                         let groupedUnits = Object.values(unitsMap);
@@ -5361,7 +6476,7 @@
                             return (b.isOOS === true ? 1 : 0) - (a.isOOS === true ? 1 : 0);
                         });
 
-                        let tableHTML = `<div class="table-wrapper"><table><colgroup><col style="width:23%;"><col style="width:11%;">${isPM ? '' : '<col style="width:11%;">'}<col style="width:9%;"><col style="width:11%;"><col style="width:21%;"><col style="width:14%;"></colgroup><thead><tr><th>AFS RO # & Dispatch</th><th>Unit No</th>${isPM ? '' : '<th>Priority Status</th>'}<th>OOS Status</th><th>Opened Date</th><th>Status</th><th>ECD</th></tr></thead><tbody>`;
+                        let tableHTML = `<div class="table-wrapper"><table><colgroup><col style="width:21%;"><col style="width:10%;">${isPM ? '' : '<col style="width:10%;">'}<col style="width:8%;"><col style="width:10%;"><col style="width:18%;"><col style="width:13%;"><col style="width:10%;"></colgroup><thead><tr><th>AFS RO # & Dispatch</th><th>Unit No</th>${isPM ? '' : '<th>Priority Status</th>'}<th>OOS Status</th><th>Opened Date</th><th>Status</th><th>Repair Class</th><th>ECD</th></tr></thead><tbody>`;
                         
                         let visibleRowsCount = 0;
                         let lockedCount = 0;
@@ -5387,21 +6502,34 @@
                                 let roNum = u.roNums[idx];
                                 let safeRo = roNum.replace(/[.#$\[\]]/g, '_');
                                 let isPreWipLocked = shouldLockPreWipRow(u.statuses[idx]);
+                                let isCompletedRepairClassReview = !!(u.completedRepairClassReviewFlags && u.completedRepairClassReviewFlags[idx]);
                                 let isDispatched = !!globalRoCheckState[safeRo];
-                                let statusToggleHtml = getDispatchToggleHtml(safeRo, isDispatched, isPreWipLocked);
+                                let statusToggleHtml = isCompletedRepairClassReview
+                                    ? '<span class="badge" style="background:#e5e7eb;color:#475569;border:1px solid #cbd5e1;">REPAIR CLASS ONLY</span>'
+                                    : getDispatchToggleHtml(safeRo, isDispatched, isPreWipLocked);
 
-                                let latestNote = getLatestMeaningfulNote(safeRo);
-                                let hasNote = isMeaningfulNote(latestNote);
-                                let noteClass = hasNote ? 'note-btn has-note' : 'note-btn';
-                                let noteTitle = hasNote ? escapeHtml(latestNote).replace(/"/g, '&quot;') : 'Needs Update';
-                                let noteBtnHtml = `<button class="${noteClass}" data-ro="${safeRo}" title="${noteTitle}" onclick="openNoteModal('${safeRo}', '${roNum}')">📝</button>`;
+                                let noteBtnHtml = '';
+                                if (!isCompletedRepairClassReview) {
+                                    let latestNote = getLatestMeaningfulNote(safeRo);
+                                    let hasNote = isMeaningfulNote(latestNote);
+                                    let noteClass = hasNote ? 'note-btn has-note' : 'note-btn';
+                                    let noteTitle = hasNote ? escapeHtml(latestNote).replace(/"/g, '&quot;') : 'Needs Update';
+                                    noteBtnHtml = `<button class="${noteClass}" data-ro="${safeRo}" title="${noteTitle}" onclick="openNoteModal('${safeRo}', '${roNum}')">📝</button>`;
+                                }
 
                                 let sourcePillHtml = getQueueSourcePillHtml(u.queueSources[idx], isVendedQueue);
                                 let roLinkDisplayHtml = isPreWipLocked ? getLockedRoDisplayFromHtml(u.roLinks[idx], roNum) : u.roLinks[idx];
                                 let lockTooltipHtml = isPreWipLocked ? getLockTooltipHtml() : '';
                                 let roHtml = `<div style="display:flex; align-items:center; gap: 4px; flex-wrap: wrap;">${statusToggleHtml} ${roLinkDisplayHtml} ${noteBtnHtml} ${sourcePillHtml} ${lockTooltipHtml}</div>`;
 
-                                tableHTML += `<tr class="ro-row${isPreWipLocked ? ' locked-prewip-row' : ''}" data-oos="${u.isOOS}" data-priority="${isPri}" title="${isPreWipLocked ? PRE_WIP_LOCK_MESSAGE : ''}">`;
+                                const rowSafeRo = safeRo;
+                                const rowTouched = roTouchedToday(rowSafeRo);
+                                const rowHasNote = roHasMeaningfulNote(rowSafeRo);
+                                const rowDispatched = !!globalRoCheckState[rowSafeRo];
+                                const rowStale = !rowTouched;
+                                const rowRepairIssue = !!getRepairClassIssueForSafeRo(rowSafeRo);
+                                const rowRepairCorrected = getBillingReviewStatusForSafeRo(rowSafeRo) === 'Corrected' || getBillingReviewStatusForSafeRo(rowSafeRo) === 'Cleared';
+                                tableHTML += `<tr class="ro-row${isPreWipLocked ? ' locked-prewip-row' : ''}" data-oos="${u.isOOS}" data-priority="${isPri}" data-open="${!isCompletedRepairClassReview}" data-completed-review="${isCompletedRepairClassReview}" data-touched="${rowTouched}" data-note="${rowHasNote}" data-dispatched="${rowDispatched}" data-stale="${rowStale}" data-repair-class-issue="${rowRepairIssue}" data-repair-class-corrected="${rowRepairCorrected}" title="${isPreWipLocked ? PRE_WIP_LOCK_MESSAGE : ''}">`;
                                 tableHTML += `<td style="vertical-align:top; padding-top:15px; border-bottom: ${localIdx === rowCount - 1 ? '1px solid var(--border)' : '1px dashed #eee'};">${roHtml}</td>`;
                                 
                                 let safeUnitType = u.unitType || 'UNKNOWN';
@@ -5420,6 +6548,7 @@
                                 let od = u.openedDates[idx] || '';
                                 let st = u.statuses[idx] || '';
                                 let ec = u.ecdCells[idx] || '';
+                                let repairClassCell = (u.repairClassCells && u.repairClassCells[idx]) ? u.repairClassCells[idx] : '<span class="repair-class-pill clean">OK</span>';
 
                                 if (st.toUpperCase().includes('UNASSIGNED')) {
                                     st = `<span style="background-color: var(--urgent-red); color: white; font-weight: 800; padding: 2px 6px; border-radius: 4px; display: inline-block; font-size: 10px; letter-spacing: 0.5px;">${st}</span>`;
@@ -5427,7 +6556,8 @@
 
                                 tableHTML += `<td style="vertical-align:top; padding-top:15px; border-bottom: ${localIdx === rowCount - 1 ? '1px solid var(--border)' : '1px dashed #eee'}; font-size:12px; font-weight: 700; color: #555;">${od}</td>`;
                                 tableHTML += `<td style="vertical-align:top; padding-top:15px; border-bottom: ${localIdx === rowCount - 1 ? '1px solid var(--border)' : '1px dashed #eee'}; font-size:11px; line-height:1.4;"><b>Status:</b> ${st}</td>`;
-                                tableHTML += `<td style="vertical-align:top; padding-top:15px; border-bottom: ${localIdx === rowCount - 1 ? '1px solid var(--border)' : '1px dashed #eee'};">${ec}</td>`;
+                                tableHTML += `<td style="vertical-align:top; padding-top:15px; border-bottom: ${localIdx === rowCount - 1 ? '1px solid var(--border)' : '1px dashed #eee'};">${repairClassCell}</td>`;
+                                tableHTML += `<td style="vertical-align:top; padding-top:15px; border-bottom: ${localIdx === rowCount - 1 ? '1px solid var(--border)' : '1px dashed #eee'};">${isCompletedRepairClassReview ? '<span style="font-size:11px;color:#64748b;font-weight:800;">No workflow note/dispatch required</span>' : ec}</td>`;
                                 tableHTML += `</tr>`;
                             });
                         });
@@ -5470,6 +6600,7 @@
                     if (currentFilter === 'OOS' && row.dataset.oos !== 'true') show = false;
                     if (currentFilter === 'PRIORITY' && row.dataset.priority !== 'true') show = false;
                 }
+                if (!rowMatchesMetricFilter(row)) show = false;
                 row.style.display = show ? '' : 'none';
             });
 
@@ -5582,7 +6713,8 @@
                 }
             }
 
-            document.getElementById('drilldown-body').innerHTML = budgetHeaderHtml + generateRoDrilldownHtml(ownerDataAll, isPM);
+            const metricFilterBanner = currentDrilldownMetricFilter && currentDrilldownMetricFilter !== 'ALL' ? `<div class="billing-active-filter" style="margin-bottom:12px;">Filtered to: ${getMetricFilterLabel()} <button onclick="clearOwnerMetricFilter()">CLEAR</button></div>` : '';
+            document.getElementById('drilldown-body').innerHTML = budgetHeaderHtml + metricFilterBanner + generateRoDrilldownHtml(ownerDataAll, isPM);
             updateAllNoteButtons(); 
             applyDrilldownFilters(); 
         }
