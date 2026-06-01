@@ -1670,7 +1670,52 @@
 
         function getRepairClassIssueForSafeRo(safeRo) {
             if (!safeRo || !globalBillingRows) return null;
-            return globalBillingRows.find(r => r.safeRo === safeRo && isBillingRowUnresolved(Object.assign({}, r, { reviewStatus: getBillingReviewStatusForSafeRo(r.safeRo) }))) || null;
+            return globalBillingRows.find(r => r.safeRo === safeRo && getBillingReviewStatusForSafeRo(r.safeRo) === 'Open') || null;
+        }
+
+        function getVisibleRepairClassIssueForDrilldown(ro) {
+            if (!ro || !ro.roNum) return null;
+            const issue = getVisibleBillingIssueForRo(ro);
+            if (!issue) return null;
+            return getBillingReviewStatusForSafeRo(issue.safeRo) === 'Open' ? issue : null;
+        }
+
+        function isRoLeftForWorkflowMetric(ro, metricFilter) {
+            if (!isComplianceEligibleRo(ro)) return false;
+            const safeRo = safeFirebaseKey(ro.roNum);
+            if (metricFilter === 'TOUCHED') return roTouchedToday(safeRo);
+            if (metricFilter === 'NOT_TOUCHED') return !roTouchedToday(safeRo);
+            if (metricFilter === 'NOTES') return roHasMeaningfulNote(safeRo);
+            if (metricFilter === 'NO_NOTES') return !roHasMeaningfulNote(safeRo);
+            if (metricFilter === 'DISPATCHED') return !!globalRoCheckState[safeRo];
+            if (metricFilter === 'NOT_DISPATCHED') return !globalRoCheckState[safeRo];
+            if (metricFilter === 'STALE') return !roTouchedToday(safeRo);
+            return true;
+        }
+
+        function roMatchesMetricObject(ro, metricFilter) {
+            const f = metricFilter || currentDrilldownMetricFilter || 'ALL';
+            if (f === 'ALL') return true;
+            if (f === 'OPEN') return isRealOpenRoForDailyCompliance(ro);
+            if (f === 'COMPLETED') return normalizeSpendStatus(ro && ro.status) === 'CLOSED' || !!(ro && ro.isRepairClassCompletedReview);
+            if (f === 'OOS') return !!(ro && ro.isOOS);
+            if (f === 'PRIORITY') return !!(ro && ro.isOOS && isPriority({isOOS: ro.isOOS, usefulPctObj: ro.usefulPctObj, unitType: ro.unitType}));
+
+            if (['TOUCHED','NOT_TOUCHED','NOTES','NO_NOTES','DISPATCHED','NOT_DISPATCHED','STALE'].includes(f)) {
+                return isRoLeftForWorkflowMetric(ro, f);
+            }
+
+            const issue = getVisibleRepairClassIssueForDrilldown(ro);
+            const safeRo = issue ? issue.safeRo : (ro && ro.roNum ? safeFirebaseKey(ro.roNum) : '');
+            const touchedToday = safeRo ? roTouchedToday(safeRo) : false;
+            const cleared = safeRo ? ['Corrected','Cleared'].includes(getBillingReviewStatusForSafeRo(safeRo)) : false;
+
+            if (f === 'REPAIR_CLASS') return !!issue;
+            if (f === 'REPAIR_CLASS_REVIEW_NEEDED') return !!issue;
+            if (f === 'REPAIR_CLASS_REVIEW_REMAINING') return !!issue && !touchedToday;
+            if (f === 'REPAIR_CLASS_NOT_TOUCHED') return !!issue && !touchedToday;
+            if (f === 'REPAIR_CLASS_CORRECTED') return cleared;
+            return true;
         }
 
         function rowMatchesMetricFilter(row) {
@@ -1690,9 +1735,9 @@
             if (f === 'NOT_DISPATCHED') return isComplianceRow && row.dataset.dispatched !== 'true';
             if (f === 'STALE') return isComplianceRow && row.dataset.stale === 'true';
 
-            if (f === 'REPAIR_CLASS') return row.dataset.repairClassIssue === 'true' || row.dataset.repairClassCorrected === 'true';
-            if (f === 'REPAIR_CLASS_REVIEW_NEEDED') return row.dataset.repairClassIssue === 'true' && row.dataset.repairClassCorrected !== 'true';
-            if (f === 'REPAIR_CLASS_REVIEW_REMAINING') return row.dataset.repairClassIssue === 'true' && row.dataset.repairClassCorrected !== 'true' && row.dataset.touched !== 'true';
+            if (f === 'REPAIR_CLASS') return row.dataset.repairClassIssue === 'true';
+            if (f === 'REPAIR_CLASS_REVIEW_NEEDED') return row.dataset.repairClassIssue === 'true';
+            if (f === 'REPAIR_CLASS_REVIEW_REMAINING') return row.dataset.repairClassIssue === 'true' && row.dataset.touched !== 'true';
             if (f === 'REPAIR_CLASS_NOT_TOUCHED') return row.dataset.repairClassIssue === 'true' && row.dataset.touched !== 'true';
             if (f === 'REPAIR_CLASS_CORRECTED') return row.dataset.repairClassCorrected === 'true';
             return true;
@@ -6539,9 +6584,10 @@
                                 const rowHasNote = roHasMeaningfulNote(rowSafeRo);
                                 const rowDispatched = !!globalRoCheckState[rowSafeRo];
                                 const rowStale = !rowTouched;
-                                const rowRepairIssue = !!getRepairClassIssueForSafeRo(rowSafeRo);
+                                const rowRepairIssueObj = getVisibleRepairClassIssueForDrilldown({ roNum: roNum, sourceQueue: u.queueSources[idx] });
+                                const rowRepairIssue = !!rowRepairIssueObj;
                                 const rowRepairCorrected = getBillingReviewStatusForSafeRo(rowSafeRo) === 'Corrected' || getBillingReviewStatusForSafeRo(rowSafeRo) === 'Cleared';
-                                const rowComplianceEligible = !isCompletedRepairClassReview && (!isSpendGovernorLocked() || !isPreWipLocked);
+                                const rowComplianceEligible = isComplianceEligibleRo({ roNum: roNum, status: u.statuses[idx], isOpen: !isCompletedRepairClassReview });
                                 tableHTML += `<tr class="ro-row${isPreWipLocked ? ' locked-prewip-row' : ''}" data-oos="${u.isOOS}" data-priority="${isPri}" data-open="${!isCompletedRepairClassReview}" data-completed-review="${isCompletedRepairClassReview}" data-compliance-eligible="${rowComplianceEligible}" data-touched="${rowTouched}" data-note="${rowHasNote}" data-dispatched="${rowDispatched}" data-stale="${rowStale}" data-repair-class-issue="${rowRepairIssue}" data-repair-class-corrected="${rowRepairCorrected}" title="${isPreWipLocked ? PRE_WIP_LOCK_MESSAGE : ''}">`;
                                 tableHTML += `<td style="vertical-align:top; padding-top:15px; border-bottom: ${localIdx === rowCount - 1 ? '1px solid var(--border)' : '1px dashed #eee'};">${roHtml}</td>`;
                                 
@@ -6610,13 +6656,14 @@
             const metricActive = currentDrilldownMetricFilter && currentDrilldownMetricFilter !== 'ALL';
             const standardFilterActive = currentFilter && currentFilter !== 'ALL';
             const shouldAutoExpandFilteredResults = metricActive || standardFilterActive;
+            const metricPrefiltered = container.dataset.metricPrefiltered === 'true';
             rows.forEach(row => {
                 let show = true;
                 if (!isPM) {
                     if (currentFilter === 'OOS' && row.dataset.oos !== 'true') show = false;
                     if (currentFilter === 'PRIORITY' && row.dataset.priority !== 'true') show = false;
                 }
-                if (!rowMatchesMetricFilter(row)) show = false;
+                if (!metricPrefiltered && !rowMatchesMetricFilter(row)) show = false;
                 row.style.display = show ? '' : 'none';
             });
 
@@ -6691,6 +6738,11 @@
                 ownerDataAll = ownerDataAll.filter(ro => ro.custKey === currentCustomerFilter);
             }
 
+            const metricFilterActiveForRender = currentDrilldownMetricFilter && currentDrilldownMetricFilter !== 'ALL';
+            if (metricFilterActiveForRender) {
+                ownerDataAll = ownerDataAll.filter(ro => roMatchesMetricObject(ro, currentDrilldownMetricFilter));
+            }
+
             let globalTotal = getSpendGovernorAuthorizedTotal();
             let globalRem = WEEKLY_WIP_AUTH_CAP - globalTotal;
             let pctUtilized = Math.min(100, (globalTotal / WEEKLY_WIP_AUTH_CAP) * 100);
@@ -6744,7 +6796,9 @@
             }
 
             const metricFilterBanner = currentDrilldownMetricFilter && currentDrilldownMetricFilter !== 'ALL' ? `<div class="billing-active-filter" style="margin-bottom:12px;">Filtered to: ${getMetricFilterLabel()} <button onclick="clearOwnerMetricFilter()">CLEAR</button></div>` : '';
-            document.getElementById('drilldown-body').innerHTML = budgetHeaderHtml + metricFilterBanner + generateRoDrilldownHtml(ownerDataAll, isPM);
+            const drilldownEl = document.getElementById('drilldown-body');
+            drilldownEl.dataset.metricPrefiltered = metricFilterActiveForRender ? 'true' : 'false';
+            drilldownEl.innerHTML = budgetHeaderHtml + metricFilterBanner + generateRoDrilldownHtml(ownerDataAll, isPM);
             updateAllNoteButtons(); 
             applyDrilldownFilters(); 
         }
