@@ -1700,6 +1700,219 @@
             renderBillingQueue();
         }
 
+        function normalizeRepairClassForBridge(value) {
+            return String(value || '')
+                .toUpperCase()
+                .replace(/&AMP;/g, '&')
+                .replace(/[^A-Z0-9]+/g, ' ')
+                .replace(/\s+/g, ' ')
+                .trim();
+        }
+
+        function getWeeklyEffectiveTransferClass(row) {
+            if (!row) return 'Not Available';
+            return getWeeklyTransferAllocationClass(row.currentRepairClass || 'Not Available', row.transferRepairClass || 'No Transfer');
+        }
+
+        function isWeeklyTransferDifference(row) {
+            if (!row) return false;
+            const current = normalizeRepairClassForBridge(row.currentRepairClass || 'Not Available');
+            const transfer = normalizeRepairClassForBridge(getWeeklyEffectiveTransferClass(row));
+            if (!current || !transfer) return false;
+            if (transfer === 'NO TRANSFER' || transfer === 'REVIEW') return false;
+            return current !== transfer;
+        }
+
+        function getProcessedRoContextByRoNumber(roNumber) {
+            const target = String(roNumber || '').toUpperCase().trim();
+            if (!target) return null;
+            return (processedData || []).find(ro => String(ro && ro.roNum || '').toUpperCase().trim() === target) || null;
+        }
+
+        function getWeeklyTransferBridgeRowsForWeek(weekKey) {
+            return (globalWeeklySpendHistoryRows || [])
+                .filter(row => row && row.weekKey === weekKey)
+                .filter(row => getWeeklySpendChannel(row) === 'Vended')
+                .filter(isWeeklyTransferDifference)
+                .sort((a, b) => Number(b.spend || 0) - Number(a.spend || 0));
+        }
+
+        function getCurrentWeekTransferBridgeRows() {
+            return getWeeklyTransferBridgeRowsForWeek(getWeekKey(new Date()));
+        }
+
+        function createWeeklyBridgeIssue(row) {
+            if (!row || !row.roNumber) return null;
+            const safeRo = row.safeRo || safeFirebaseKey(row.roNumber);
+            if (isRepairClassStatusCleared(safeRo)) return null;
+            const existing = globalBillingIssueMap && globalBillingIssueMap[safeRo] ? globalBillingIssueMap[safeRo] : null;
+            const transferClass = getWeeklyEffectiveTransferClass(row);
+            const currentClass = row.currentRepairClass || (existing && existing.repClass) || 'Not Available';
+            const context = getProcessedRoContextByRoNumber(row.roNumber) || {};
+            const review = globalBillingReviewState[safeRo] || { status: 'Open' };
+            const baseReason = row.aiRepairClassReasons || (existing && existing.reasons && existing.reasons.length ? existing.reasons.join(' | ') : '') || `Weekly Table Summary bridge: current repair class ${currentClass} should transfer to ${transferClass}.`;
+            const issue = Object.assign({}, existing || {}, {
+                safeRo,
+                roNumber: row.roNumber,
+                unitNo: row.unitNo || context.unitNo || '',
+                branch: row.branch || context.branch || '',
+                coordinator: (context.kpiOwners && context.kpiOwners.length ? context.kpiOwners.join(', ') : '') || row.owner || (existing && existing.coordinator) || 'Unassigned',
+                queueSource: (context.sourceQueue || row.queueSource || 'VENDED REPAIR'),
+                currentStatus: row.currentStatus || context.status || (existing && existing.currentStatus) || '',
+                repClass: currentClass,
+                suggestedService: transferClass,
+                recommendedClass: transferClass,
+                responsibleQueue: context.sourceQueue || row.queueSource || 'VENDED REPAIR',
+                spend: Number(row.spend || (existing && existing.spend) || 0),
+                flags: [getFriendlyRepairClassLabel(transferClass, 'REPAIR CLASS REVIEW')],
+                reasons: [baseReason],
+                reviewStatus: review.status || 'Open',
+                reviewReason: review.reason || '',
+                weeklyBridgeAction: true,
+                weekKey: row.weekKey,
+                bridgeBasis: 'Weekly Table Summary transfer gap'
+            });
+            return issue;
+        }
+
+        function getWeeklyBridgeIssueBySafeRo(safeRo) {
+            const key = String(safeRo || '');
+            if (!key || isRepairClassStatusCleared(key)) return null;
+            const row = getCurrentWeekTransferBridgeRows().find(r => String(r.safeRo || safeFirebaseKey(r.roNumber)) === key);
+            return row ? createWeeklyBridgeIssue(row) : null;
+        }
+
+        function rowOrContextMatchesOwnerForBridge(row, owner) {
+            const ownerName = String(owner || '').trim();
+            if (!ownerName) return false;
+            const context = getProcessedRoContextByRoNumber(row && row.roNumber);
+            if (ownerName === 'ALL_VENDED') return getWeeklySpendChannel(row) === 'Vended';
+            if (ownerName === 'ALL_PM') return !!(context && context.kpiOwners && context.kpiOwners.some(o => pmOwners.includes(o)));
+            if (ownerName === 'ALL_ERS') return !!(context && context.kpiOwners && context.kpiOwners.some(o => ersOwners.includes(o)));
+            if (isNonOscOwnerKey(ownerName)) return !!(context && roMatchesNonOscLocation(context, ownerName));
+            if (context) {
+                if ((context.kpiOwners || []).includes(ownerName)) return true;
+                if ((context.drilldownOwners || []).includes(ownerName)) return true;
+                if (hasDedicatedShopOwner(context, ownerName)) return true;
+            }
+            const rowOwner = String(row && row.owner || '').trim();
+            return !!rowOwner && rowOwner === ownerName;
+        }
+
+        function getWeeklyBridgeIssuesForOwner(owner, baseRows) {
+            const existingSafeRos = new Set((baseRows || []).map(ro => safeFirebaseKey(ro && ro.roNum || '')).filter(Boolean));
+            const issues = [];
+            const seen = new Set();
+            getCurrentWeekTransferBridgeRows().forEach(row => {
+                if (!rowOrContextMatchesOwnerForBridge(row, owner)) return;
+                const issue = createWeeklyBridgeIssue(row);
+                if (!issue || !issue.safeRo) return;
+                if (seen.has(issue.safeRo)) return;
+                seen.add(issue.safeRo);
+                issues.push(issue);
+            });
+            return issues;
+        }
+
+        function createWeeklyBridgeVirtualRo(row, owner) {
+            const context = getProcessedRoContextByRoNumber(row && row.roNumber) || {};
+            const branch = row.branch || context.branch || 'Weekly Spend Bridge';
+            const custKey = context.custKey || getCustKey(branch);
+            return Object.assign({}, context, {
+                roNum: row.roNumber,
+                customer: branch,
+                custKey: custKey,
+                drillTopLevel: context.drillTopLevel || `${custKey} Weekly Spend Bridge`,
+                owner: owner || row.owner || context.owner || '',
+                kpiOwners: context.kpiOwners && context.kpiOwners.length ? context.kpiOwners : [owner || row.owner || 'Unassigned'].filter(Boolean),
+                drilldownOwners: context.drilldownOwners && context.drilldownOwners.length ? context.drilldownOwners : [owner || row.owner || 'Unassigned'].filter(Boolean),
+                tileOwners: context.tileOwners && context.tileOwners.length ? context.tileOwners : [owner || row.owner || 'Unassigned'].filter(Boolean),
+                unitNo: row.unitNo || context.unitNo || row.roNumber,
+                unitType: context.unitType || '',
+                status: row.currentStatus || context.status || 'REPAIR CLASS REVIEW',
+                vmrs: context.vmrs || row.aiRepairClassReasons || '',
+                isOOS: !!context.isOOS,
+                isOpen: true,
+                isCompletedKPI: false,
+                isOnTimeKPI: false,
+                isLateKPI: false,
+                subregion: context.subregion || 'Weekly Spend Bridge',
+                branch: branch,
+                ecdState: 'green',
+                ecdFormatted: context.ecdFormatted || '',
+                ecdMs: context.ecdMs || 0,
+                openedFormatted: context.openedFormatted || row.openedDate || (row.capturedAt ? new Date(row.capturedAt).toLocaleDateString() : ''),
+                usefulPct: context.usefulPct || null,
+                usefulPctObj: context.usefulPctObj || null,
+                region: context.region || 'Weekly Spend Bridge',
+                possibleDuplicate: false,
+                sourceQueue: context.sourceQueue || 'VENDED REPAIR',
+                createdByName: context.createdByName || '',
+                createdByTeam: context.createdByTeam || '',
+                isDedicatedShopWorkOrder: !!context.isDedicatedShopWorkOrder,
+                dedicatedShopOwners: context.dedicatedShopOwners || [],
+                financialShop: context.financialShop || '',
+                repClass: row.currentRepairClass || context.repClass || '',
+                roType: row.roWorkType || context.roType || '',
+                roWorkType: row.roWorkType || context.roWorkType || 'VENDOR RO',
+                isRepairClassCompletedReview: true,
+                weeklyBridgeAction: true
+            });
+        }
+
+        function getWeeklyBridgeVirtualRowsForOwner(owner, baseRows) {
+            const existing = new Set((baseRows || []).map(ro => String(ro && ro.roNum || '').toUpperCase().trim()).filter(Boolean));
+            const out = [];
+            getCurrentWeekTransferBridgeRows().forEach(row => {
+                const roNum = String(row.roNumber || '').toUpperCase().trim();
+                if (!roNum || existing.has(roNum)) return;
+                if (!rowOrContextMatchesOwnerForBridge(row, owner)) return;
+                const issue = createWeeklyBridgeIssue(row);
+                if (!issue || isRepairClassStatusCleared(issue.safeRo)) return;
+                out.push(createWeeklyBridgeVirtualRo(row, owner));
+            });
+            return out;
+        }
+
+        function renderWeeklyTransferBridgeTable(weekKey, rows) {
+            const bridgeRows = rows || [];
+            if (!bridgeRows.length) return '';
+            const maxRows = bridgeRows.slice(0, 120);
+            const body = maxRows.map(row => {
+                const issue = createWeeklyBridgeIssue(row) || {};
+                const roLink = row.roUrl ? `<a class="ro-link" href="${escapeHtml(row.roUrl)}" target="_blank">${escapeHtml(row.roNumber || '')}</a>` : escapeHtml(row.roNumber || '');
+                const status = getBillingReviewStatusForSafeRo(issue.safeRo || row.safeRo || safeFirebaseKey(row.roNumber));
+                const action = ['Corrected','Cleared'].includes(status) ? 'CLEARED' : 'NEEDS REVIEW';
+                return `<tr>
+                    <td>${roLink}</td>
+                    <td>${escapeHtml(row.unitNo || '')}</td>
+                    <td>${escapeHtml(row.owner || issue.coordinator || 'Unassigned')}</td>
+                    <td>${escapeHtml(row.currentStatus || '')}</td>
+                    <td>${escapeHtml(row.currentRepairClass || 'Not Available')}</td>
+                    <td>${escapeHtml(getWeeklyEffectiveTransferClass(row))}</td>
+                    <td class="weekly-pivot-money">${formatWeeklyHistoryMoney(row.spend || 0)}</td>
+                    <td><span class="weekly-history-status-pill ${action === 'CLEARED' ? 'locked' : 'live'}">${action}</span></td>
+                    <td>${escapeHtml((issue.reasons || []).join(' | '))}</td>
+                </tr>`;
+            }).join('');
+            return `<details class="weekly-transfer-bridge" open>
+                <summary>Transfer Class Action Bridge · ${bridgeRows.length} current-vs-transfer gap${bridgeRows.length === 1 ? '' : 's'}</summary>
+                <div class="weekly-history-detail-panel" style="margin-top:10px;">
+                    <table class="weekly-history-detail-table weekly-transfer-bridge-table"><thead><tr>
+                        <th style="width:105px;">AFS RO #</th>
+                        <th style="width:90px;">Unit No</th>
+                        <th style="width:120px;">Owner</th>
+                        <th style="width:110px;">Status</th>
+                        <th style="width:120px;">Current Class</th>
+                        <th style="width:120px;">Transfer Class</th>
+                        <th style="width:90px;">Spend</th>
+                        <th style="width:90px;">Action</th>
+                        <th>AI Reason</th>
+                    </tr></thead><tbody>${body}</tbody></table>
+                </div>
+            </details>`;
+        }
+
         function getBillingReviewStatus(r) {
             return String((r && (r.reviewStatus || getBillingReviewStatusForSafeRo(r.safeRo))) || 'Open');
         }
@@ -1774,10 +1987,12 @@
             let rows = ownerRows || [];
 
             // Tile-square clicks must use the same population that created the tile number.
-            // Open/OOS/Priority, Daily Workflow Compliance, and Daily Repair Class Compliance
-            // are all calculated from current real open ROs only. This prevents closed
-            // repair-class history rows from appearing when a square says only 2 items remain.
-            if (isOpenTileMetricFilter(f) || isWorkflowComplianceMetricFilter(f) || isRepairClassComplianceMetricFilter(f)) {
+            // Workflow tiles use real open ROs only. Repair-class tiles also include the
+            // current-week Weekly Table Summary transfer bridge so transfer gaps become action items.
+            if (isRepairClassComplianceMetricFilter(f)) {
+                const openRows = getTileOpenRoPopulation(rows, isPM);
+                rows = openRows.concat(getWeeklyBridgeVirtualRowsForOwner(currentOwnerView, rows));
+            } else if (isOpenTileMetricFilter(f) || isWorkflowComplianceMetricFilter(f)) {
                 rows = getTileOpenRoPopulation(rows, isPM);
             }
 
@@ -3296,7 +3511,6 @@
 
         function addWeeklyRepairClassAmount(model, repairClass, row, spend) {
             const amount = Number(spend || 0);
-            if (!amount) return;
             const cls = String(repairClass || 'Not Available').trim() || 'Not Available';
             const budgetIncluded = isBudgetIncludedRepairClass(cls);
             const budgetKey = budgetIncluded ? 'In-Budget' : 'Out-of-Budget';
@@ -3367,9 +3581,9 @@
                 addWeeklyRepairClassAmount(group.transfer, getWeeklyTransferAllocationClass(row.currentRepairClass || 'Not Available', row.transferRepairClass || 'No Transfer'), row, spend);
             });
             return Object.values(map).map(group => {
-                group.vroCount = group.vroSet.size;
                 group.original = finalizeWeeklyRepairClassBucket(group.original);
                 group.transfer = finalizeWeeklyRepairClassBucket(group.transfer);
+                group.vroCount = Math.max(group.original.grandVroCount || 0, group.transfer.grandVroCount || 0, group.vroSet ? group.vroSet.size : 0);
                 delete group.vroSet;
                 return group;
             }).sort((a, b) => getWeekSortValue(b.weekKey) - getWeekSortValue(a.weekKey));
@@ -3443,22 +3657,26 @@
                 return;
             }
             let html = `<div class="weekly-table-summary-shell">
-                <div class="weekly-table-summary-note">Original / Pre-AI uses the current repair class. Transfer / After AI uses the AI transfer repair class when one exists, otherwise it keeps the current repair class. This summary only shows vended spend. In-Budget includes SCHEDULED, OSC PM, and DEF MAINT; every other repair class is Out-of-Budget.</div>`;
+                <div class="weekly-table-summary-note">Original / Pre-AI uses the current repair class. Transfer / After AI uses the AI transfer repair class when one exists, otherwise it keeps the current repair class. This summary only shows vended spend and now bridges current-week transfer gaps into coordinator Repair Class Compliance so they stay visible until reviewed or corrected. In-Budget includes SCHEDULED, OSC PM, and DEF MAINT; every other repair class is Out-of-Budget.</div>`;
             groups.forEach(group => {
                 const totalSpend = Number(group.transfer.grandTotal || group.original.grandTotal || 0);
+                const totalVros = Math.max(group.transfer.grandVroCount || 0, group.original.grandVroCount || 0, group.vroCount || 0);
+                const bridgeRows = getWeeklyTransferBridgeRowsForWeek(group.weekKey);
                 html += `<div class="weekly-table-summary-card">
                     <div class="weekly-table-summary-header">
                         <div class="weekly-table-summary-week">${escapeHtml(group.weekKey)} Weekly Table Summary</div>
                         <div class="weekly-table-summary-meta">
                             <span>Week End: ${escapeHtml(group.weekEndDate || '')}</span>
-                            <span>${group.vroCount || 0} Vended VROs</span>
+                            <span>${totalVros} Vended VROs</span>
                             <span>Vended Total: ${formatWeeklyHistoryMoney(totalSpend)}</span>
+                            <span>${bridgeRows.length} Transfer Gap${bridgeRows.length === 1 ? '' : 's'}</span>
                         </div>
                     </div>
                     <div class="weekly-table-summary-grid">
                         ${renderWeeklySpendPivotTable(`${group.weekKey} Original`, 'Pre-AI Model · Current Repair Class', group.original)}
                         ${renderWeeklySpendPivotTable(`${group.weekKey} Transfer`, 'After AI Model · Transfer Repair Class', group.transfer)}
                     </div>
+                    ${renderWeeklyTransferBridgeTable(group.weekKey, bridgeRows)}
                 </div>`;
             });
             html += `</div>`;
@@ -5553,12 +5771,13 @@
             if (!roNum) return null;
             const safeRo = safeFirebaseKey(roNum);
             if (isRepairClassStatusCleared(safeRo)) return null;
-            return globalBillingIssueMap && globalBillingIssueMap[safeRo] ? globalBillingIssueMap[safeRo] : null;
+            return (globalBillingIssueMap && globalBillingIssueMap[safeRo] ? globalBillingIssueMap[safeRo] : null) || getWeeklyBridgeIssueBySafeRo(safeRo);
         }
 
         function isRepairClassIssueVisibleForRo(ro, issue) {
             if (!ro || !issue) return false;
             if (isRepairClassStatusCleared(issue.safeRo)) return false;
+            if (issue.weeklyBridgeAction) return true;
             const roQueue = normalizeQueueNameForRepairClass(ro.sourceQueue || issue.queueSource || 'VENDED REPAIR');
             const responsible = normalizeQueueNameForRepairClass(issue.responsibleQueue || issue.queueSource || roQueue);
 
@@ -5580,8 +5799,11 @@
                 .filter(Boolean);
         }
 
-        function getRepairClassComplianceSummary(dataSet, dateKey = getLocalDateKey(new Date())) {
-            const issues = getBillingIssuePopulation(dataSet);
+        function getRepairClassComplianceSummary(dataSet, dateKey = getLocalDateKey(new Date()), owner = currentOwnerView) {
+            const issueMap = {};
+            getBillingIssuePopulation(dataSet).forEach(issue => { if (issue && issue.safeRo) issueMap[issue.safeRo] = issue; });
+            getWeeklyBridgeIssuesForOwner(owner, dataSet).forEach(issue => { if (issue && issue.safeRo) issueMap[issue.safeRo] = issue; });
+            const issues = Object.values(issueMap);
             const openIssues = issues.filter(issue => getBillingReviewStatusForSafeRo(issue.safeRo) === 'Open');
             const todayKey = getLocalDateKey(new Date());
             const isToday = dateKey === todayKey;
@@ -5594,13 +5816,13 @@
         }
 
         function generateBillingComplianceHtml(dataSet, owner = currentOwnerView, parentViewId = currentParentView) {
-            const current = getRepairClassComplianceSummary(dataSet);
+            const current = getRepairClassComplianceSummary(dataSet, getLocalDateKey(new Date()), owner);
             const ownerArg = String(owner || currentOwnerView || '').replace(/'/g, "\\'");
             const parentArg = String(parentViewId || currentParentView || '').replace(/'/g, "\\'");
             const issues = current.issues;
             const openRoCount = (dataSet || []).filter(ro => isRealOpenRoForDailyCompliance(ro)).length;
             if (!issues.length && !openRoCount) return '';
-            const prior = getRepairClassComplianceSummary(dataSet, getPriorLocalDateKey());
+            const prior = getRepairClassComplianceSummary(dataSet, getPriorLocalDateKey(), owner);
             const reviewTotal = issues.length;
             const reviewDisplay = reviewTotal ? `${current.reviewedOrTouched}/${reviewTotal}` : '0/0';
             const touchedDisplay = reviewTotal ? `${current.touchedCount}/${reviewTotal}` : '0/0';
@@ -7116,7 +7338,7 @@
         function generateRoDrilldownHtml(ownerDataAll, isPM) {
             let isVendedQueue = currentOwnerView === 'ALL_VENDED' || vendedOwners.includes(currentOwnerView) || isNonOscOwnerKey(currentOwnerView);
             let canShowDedicatedShopSection = currentOwnerView === 'ALL_VENDED' || currentOwnerView === 'ALL_PM' || currentOwnerView === 'ALL_ERS' || vendedOwners.includes(currentOwnerView) || pmOwners.includes(currentOwnerView) || ersOwners.includes(currentOwnerView);
-            let baseOpenData = ownerDataAll.filter(ro => ro.isOpen).map(ro => {
+            let baseOpenData = ownerDataAll.filter(ro => ro.isOpen || ro.weeklyBridgeAction).map(ro => {
                 if (canShowDedicatedShopSection && shouldDisplayAsDedicatedShopWork(ro, currentOwnerView)) {
                     return Object.assign({}, ro, {
                         drillTopLevel: 'Dedicated Shop Work Orders',
@@ -7130,6 +7352,10 @@
 
             const completedRepairClassReviewData = ownerDataAll
                 .filter(ro => ro && !ro.isOpen && normalizeSpendStatus(ro.status) === 'CLOSED' && getVisibleBillingIssueForRo(ro))
+                .filter(ro => {
+                    const issue = getVisibleBillingIssueForRo(ro);
+                    return issue && issue.weeklyBridgeAction;
+                })
                 .map(ro => Object.assign({}, ro, {
                     isRepairClassCompletedReview: true,
                     isOpen: true
