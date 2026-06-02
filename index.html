@@ -150,7 +150,7 @@
         .weekly-history-expand-btn { min-width: 30px; height: 26px; padding: 0 8px !important; border-radius: 6px; display: inline-flex; align-items: center; justify-content: center; margin: 0 auto; }
         .weekly-history-detail-cell { padding: 0 !important; background: #f8fafc !important; }
         .weekly-history-detail-panel { width: 100%; max-width: 100%; overflow-x: auto; overflow-y: visible; padding: 12px; background: #f8fafc; border-top: 1px solid #e2e8f0; box-shadow: inset 8px 0 12px -14px rgba(15,23,42,0.35), inset -8px 0 12px -14px rgba(15,23,42,0.35); }
-        .weekly-history-detail-table { width: 100%; min-width: 1320px; table-layout: fixed; border-collapse: collapse; background: #fff; border: 1px solid #e2e8f0; border-radius: 6px; overflow: hidden; }
+        .weekly-history-detail-table { width: 100%; min-width: 1400px; table-layout: fixed; border-collapse: collapse; background: #fff; border: 1px solid #e2e8f0; border-radius: 6px; overflow: hidden; }
         .weekly-history-detail-table th, .weekly-history-detail-table td { text-align: center; vertical-align: middle; font-size: 11px; }
         .weekly-history-detail-table th { position: sticky; top: 0; z-index: 1; background: #f1f5f9; white-space: normal; line-height: 1.15; padding: 10px 6px; word-break: normal; overflow-wrap: break-word; }
         .weekly-history-detail-table td { line-height: 1.25; padding: 9px 6px; }
@@ -173,6 +173,30 @@
             .weekly-history-vros, .weekly-history-split { grid-column: span 1; }
         }
 
+
+
+        .weekly-table-summary-shell { width: 100%; max-width: 100%; }
+        .weekly-table-summary-note { font-size: 12px; color: #64748b; font-weight: 800; line-height: 1.35; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 10px 12px; margin-bottom: 14px; }
+        .weekly-table-summary-card { border: 1px solid #e2e8f0; border-radius: 10px; background: #fff; box-shadow: 0 1px 3px rgba(15,23,42,0.08); margin-bottom: 16px; overflow: hidden; }
+        .weekly-table-summary-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 14px; background: #f8fafc; border-bottom: 1px solid #e2e8f0; }
+        .weekly-table-summary-week { font-size: 16px; font-weight: 900; color: #334155; }
+        .weekly-table-summary-meta { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; justify-content: flex-end; font-size: 11px; font-weight: 900; color: #64748b; }
+        .weekly-table-summary-grid { display: grid; grid-template-columns: repeat(2, minmax(320px, 1fr)); gap: 14px; padding: 14px; }
+        .weekly-pivot-box { border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden; background: #fff; }
+        .weekly-pivot-title { padding: 10px 12px; background: #111827; color: #fff; text-align: center; font-weight: 900; font-size: 13px; letter-spacing: 0.3px; }
+        .weekly-pivot-subtitle { padding: 6px 10px; background: #f8fafc; color: #64748b; text-align: center; font-size: 10px; font-weight: 900; text-transform: uppercase; border-bottom: 1px solid #e2e8f0; }
+        .weekly-pivot-table { width: 100%; min-width: 0; table-layout: fixed; border-collapse: collapse; font-size: 12px; }
+        .weekly-pivot-table th, .weekly-pivot-table td { text-align: center; vertical-align: middle; padding: 9px 7px; border-bottom: 1px solid #e2e8f0; }
+        .weekly-pivot-table th { background: #f1f5f9; color: #334155; font-weight: 900; text-transform: uppercase; font-size: 10px; line-height: 1.15; white-space: normal; }
+        .weekly-pivot-table td { font-weight: 900; color: #334155; }
+        .weekly-pivot-row-label { text-align: left !important; color: #475569 !important; }
+        .weekly-pivot-row-in td:first-child { border-left: 4px solid #2563eb; }
+        .weekly-pivot-row-out td:first-child { border-left: 4px solid #7c3aed; }
+        .weekly-pivot-grand td { background: #fee2e2; color: #991b1b; font-size: 13px; }
+        .weekly-pivot-money { white-space: nowrap; font-variant-numeric: tabular-nums; }
+        @media (max-width: 1200px) {
+            .weekly-table-summary-grid { grid-template-columns: 1fr; }
+        }
 
         .spend-log-sort-btn { background: transparent; border: none; color: inherit; font: inherit; font-size: inherit; font-weight: 800; text-transform: uppercase; cursor: pointer; padding: 0; display: inline-flex; align-items: center; gap: 4px; }
         .spend-log-sort-btn:hover { color: var(--gold-hover); }
@@ -564,6 +588,7 @@
                 <button class="sub-tab active" onclick="switchSpendTab('sub-weekly-spend', this)">Weekly Spend Matrix</button>
                 <button class="sub-tab" onclick="switchSpendTab('sub-spend-change-log', this)">Spend / Status Change Log</button>
                 <button class="sub-tab" onclick="switchSpendTab('sub-weekly-history', this)">Weekly History</button>
+                <button class="sub-tab" onclick="switchSpendTab('sub-weekly-table-summary', this)">Weekly Table Summary</button>
             </div>
             <div id="sub-weekly-spend" class="sub-section active">
                 <div id="spend-dashboard-widget"></div>
@@ -626,6 +651,20 @@
                         Shows weekly captured spend totals from Firebase and lets you expand each week to see the VROs locked into spend for that week.
                     </div>
                     <div id="weekly-spend-history-body"></div>
+                </div>
+            </div>
+            <div id="sub-weekly-table-summary" class="sub-section">
+                <div class="drilldown-container">
+                    <div class="view-title" style="margin-bottom: 10px;">
+                        <span style="font-weight:700;">Weekly Table Summary</span>
+                        <div class="controls-group" style="display:flex; align-items:center;">
+                            <button class="btn-green" onclick="exportWeeklySpendTableSummaryToExcel()">&#11139; Export to XLSX</button>
+                        </div>
+                    </div>
+                    <div style="font-size:12px; color:#64748b; font-weight:700; margin-bottom:12px;">
+                        Summarizes each spend week before and after AI transfer logic. In-Budget is limited to SCHEDULED and OSC PM. DEDICATED = STANDARD RO; VENDED = VENDOR RO.
+                    </div>
+                    <div id="weekly-spend-table-summary-body"></div>
                 </div>
             </div>
         </div>
@@ -2468,7 +2507,39 @@
             return ro.drilldownOwners && ro.drilldownOwners.some(o => vendedOwners.includes(o));
         }
 
+        function getCurrentWeekHistoryGovernorSummary() {
+            const weekKey = getWeekKey(new Date());
+            const rows = (globalWeeklySpendHistoryRows || []).filter(row => row && row.weekKey === weekKey);
+            if (!rows.length) return null;
+            const uniqueRos = new Set();
+            let totalSpend = 0;
+            rows.forEach(row => {
+                const roKey = row.roNumber || row.safeRo || '';
+                if (roKey) uniqueRos.add(roKey);
+                totalSpend += Number(row.spend || 0);
+            });
+            return { weekKey, totalSpend, vroCount: uniqueRos.size };
+        }
+
+        function syncGlobalAppFinFromWeeklyHistoryRows() {
+            const summary = getCurrentWeekHistoryGovernorSummary();
+            if (!summary || summary.totalSpend <= 0) return;
+            window.globalAppFin = window.globalAppFin || {};
+            const forecastInfo = getWeeklyRunRateForecast(summary.totalSpend, new Date());
+            window.globalAppFin.wipRev = summary.totalSpend;
+            window.globalAppFin.authorizedRev = summary.totalSpend;
+            window.globalAppFin.projectedWeekEndRev = forecastInfo.projectedWeekEndSpend;
+            window.globalAppFin.elapsedWeekPct = forecastInfo.elapsedPct;
+            window.globalAppFin.remaining = Math.max(0, WEEKLY_WIP_AUTH_CAP - summary.totalSpend);
+            window.globalAppFin.remainingToReleaseThreshold = Math.max(0, WEEKLY_WIP_RELEASE_THRESHOLD - summary.totalSpend);
+            window.globalAppFin.weekKey = summary.weekKey;
+            window.globalAppFin.currentWeekHistoryVroCount = summary.vroCount;
+            window.globalAppFin.source = window.globalAppFin.source || 'firebase-weekly-history-sync';
+        }
+
         function getSpendGovernorAuthorizedTotal() {
+            const historySummary = getCurrentWeekHistoryGovernorSummary();
+            if (historySummary && historySummary.totalSpend > 0) return Number(historySummary.totalSpend || 0);
             const fin = window.globalAppFin || {};
             const val = fin.authorizedRev !== undefined ? fin.authorizedRev : fin.wipRev;
             return Number(val || 0);
@@ -2681,6 +2752,9 @@
             } else if (subId === 'sub-weekly-history') {
                 renderWeeklySpendHistory();
                 refreshWeeklySpendHistoryRows();
+            } else if (subId === 'sub-weekly-table-summary') {
+                renderWeeklySpendTableSummary();
+                refreshWeeklySpendHistoryRows();
             } else {
                 renderSpendQueue();
             }
@@ -2735,11 +2809,32 @@
             return String(value || '').toUpperCase().replace(/[_-]/g, ' ').replace(/\s+/g, ' ').trim();
         }
 
-        function isBudgetExcludedRepairClass(repairClass) {
+        function isBudgetIncludedRepairClass(repairClass) {
             const r = normalizeRepairClassForBudget(repairClass);
-            if (!r || r === 'NO TRANSFER' || r === 'REVIEW' || r === 'NOT AVAILABLE') return false;
-            const excluded = ['DEF MAINT', 'DRIVER ABUSE', 'ACCIDENT DAMAGE', 'TOWING', 'SPECIAL PROJ', 'MERCHANT'];
-            return excluded.some(cls => r.includes(cls));
+            return r === 'SCHEDULED' || r === 'OSC PM';
+        }
+
+        function isBudgetExcludedRepairClass(repairClass) {
+            return !isBudgetIncludedRepairClass(repairClass);
+        }
+
+        function getWeeklyTransferAllocationClass(currentRepairClass, transferRepairClass) {
+            const rawTransfer = String(transferRepairClass || '').trim();
+            const normalizedTransfer = normalizeRepairClassForBudget(rawTransfer);
+            if (!normalizedTransfer || normalizedTransfer === 'NO TRANSFER' || normalizedTransfer === 'REVIEW' || normalizedTransfer === 'NOT AVAILABLE') {
+                return currentRepairClass || 'Not Available';
+            }
+            return rawTransfer;
+        }
+
+        function getWeeklyBudgetAllocationForClass(repairClass, spend) {
+            const amount = Number(spend || 0);
+            const included = isBudgetIncludedRepairClass(repairClass);
+            return {
+                budgetBucket: included ? 'Budget Included' : 'Budget Excluded',
+                budgetIncludedSpend: included ? amount : 0,
+                budgetExcludedSpend: included ? 0 : amount
+            };
         }
 
         function getWeeklyBudgetSnapshot(auth) {
@@ -2757,19 +2852,60 @@
             }) || null;
         }
 
+        function normalizeWeeklyRoWorkType(value) {
+            const raw = String(value || '').toUpperCase().replace(/[_-]/g, ' ').replace(/\s+/g, ' ').trim();
+            if (!raw) return '';
+            if (raw.includes('STANDARD')) return 'STANDARD';
+            if (raw.includes('VENDOR')) return 'VENDOR RO';
+            if (raw.includes('VRO')) return 'VENDOR RO';
+            if (raw.includes('DEDICATED')) return 'STANDARD';
+            if (raw.includes('VENDED')) return 'VENDOR RO';
+            return raw;
+        }
+
+        function getWeeklyRoWorkType(rowLike) {
+            const roNumber = String((rowLike && (rowLike.roNumber || rowLike.roNum)) || '').toUpperCase().trim();
+            const candidates = [
+                rowLike && rowLike.roWorkType,
+                rowLike && rowLike.orderType,
+                rowLike && rowLike.roType,
+                rowLike && rowLike.repairOrderType,
+                rowLike && rowLike.workOrderType,
+                rowLike && rowLike.sourceType
+            ];
+            const fin = window.globalOrderFin && roNumber ? window.globalOrderFin[roNumber] : null;
+            if (fin) candidates.push(fin.roWorkType, fin.orderType, fin.roType, fin.repairOrderType, fin.workOrderType);
+            const roContext = findProcessedRoForWeeklySpend(rowLike || {});
+            if (roContext) {
+                candidates.push(roContext.roWorkType, roContext.orderType, roContext.roType, roContext.repairOrderType, roContext.workOrderType);
+                if (roContext.isDedicatedShopWorkOrder) candidates.push('STANDARD');
+            }
+            for (const val of candidates) {
+                const normalized = normalizeWeeklyRoWorkType(val);
+                if (normalized === 'STANDARD' || normalized === 'VENDOR RO') return normalized;
+            }
+            return 'VENDOR RO';
+        }
+
+        function getWeeklySpendChannel(rowLike) {
+            return getWeeklyRoWorkType(rowLike) === 'STANDARD' ? 'Dedicated' : 'Vended';
+        }
+
         function getRepairClassInfoForWeeklySpend(rowLike, preferLockedSnapshot = true) {
             const snapshot = preferLockedSnapshot ? getWeeklyBudgetSnapshot(rowLike) : null;
             const spend = Number(snapshot && snapshot.spend !== undefined ? snapshot.spend : (rowLike && (rowLike.spend !== undefined ? rowLike.spend : rowLike.currentSpend)) || 0);
 
             if (snapshot) {
-                const included = Number(snapshot.budgetIncludedSpend || 0);
-                const excluded = Number(snapshot.budgetExcludedSpend || 0);
+                const currentRepairClass = snapshot.currentRepairClass || 'Not Available';
+                const transferRepairClass = snapshot.transferRepairClass || 'No Transfer';
+                const allocationClass = getWeeklyTransferAllocationClass(currentRepairClass, transferRepairClass);
+                const allocation = getWeeklyBudgetAllocationForClass(allocationClass, spend);
                 return {
-                    currentRepairClass: snapshot.currentRepairClass || 'Not Available',
-                    transferRepairClass: snapshot.transferRepairClass || 'No Transfer',
-                    budgetBucket: snapshot.budgetBucket || (excluded > 0 ? 'Budget Excluded' : 'Budget Included'),
-                    budgetIncludedSpend: included,
-                    budgetExcludedSpend: excluded,
+                    currentRepairClass: currentRepairClass,
+                    transferRepairClass: transferRepairClass,
+                    budgetBucket: allocation.budgetBucket,
+                    budgetIncludedSpend: allocation.budgetIncludedSpend,
+                    budgetExcludedSpend: allocation.budgetExcludedSpend,
                     budgetAllocationBasis: snapshot.allocationBasis || 'Locked End-of-Week snapshot',
                     budgetSnapshotLocked: true,
                     budgetSnapshotLockedAt: snapshot.lockedAt || '',
@@ -2794,15 +2930,15 @@
                 (rowLike && (rowLike.transferRepairClass || rowLike.recommendedRepairClass || rowLike.recommendedClass)) ||
                 '';
             const transferRepairClass = rawTransfer && !/^review$/i.test(String(rawTransfer).trim()) ? rawTransfer : 'No Transfer';
-            const allocationClass = transferRepairClass !== 'No Transfer' ? transferRepairClass : currentRepairClass;
-            const excluded = isBudgetExcludedRepairClass(allocationClass);
+            const allocationClass = getWeeklyTransferAllocationClass(currentRepairClass, transferRepairClass);
+            const allocation = getWeeklyBudgetAllocationForClass(allocationClass, spend);
 
             return {
                 currentRepairClass,
                 transferRepairClass,
-                budgetBucket: excluded ? 'Budget Excluded' : 'Budget Included',
-                budgetIncludedSpend: excluded ? 0 : spend,
-                budgetExcludedSpend: excluded ? spend : 0,
+                budgetBucket: allocation.budgetBucket,
+                budgetIncludedSpend: allocation.budgetIncludedSpend,
+                budgetExcludedSpend: allocation.budgetExcludedSpend,
                 budgetAllocationBasis: issue ? 'AI repair-class transfer logic' : 'Current repair class / no transfer',
                 budgetSnapshotLocked: false,
                 budgetSnapshotLockedAt: '',
@@ -2824,13 +2960,14 @@
                 roNumber,
                 currentRepairClass: info.currentRepairClass || 'Not Available',
                 transferRepairClass: info.transferRepairClass || 'No Transfer',
-                budgetBucket: info.budgetBucket || 'Budget Included',
+                budgetBucket: info.budgetBucket || 'Budget Excluded',
                 budgetIncludedSpend: Number(info.budgetIncludedSpend || 0),
                 budgetExcludedSpend: Number(info.budgetExcludedSpend || 0),
                 spend,
                 allocationBasis: info.budgetAllocationBasis || 'End-of-Week repair class allocation',
                 aiRepairClassReasons: info.aiRepairClassReasons || '',
-                snapshotVersion: 1
+                budgetPolicy: 'Included only when repair class is SCHEDULED or OSC PM',
+                snapshotVersion: 2
             };
         }
 
@@ -2891,6 +3028,8 @@
                         spendSource: auth.spendSource || '',
                         roUrl: getAuthRowRoUrl(roNumber)
                     };
+                    baseRow.roWorkType = getWeeklyRoWorkType(Object.assign({}, auth, baseRow));
+                    baseRow.spendChannel = getWeeklySpendChannel(Object.assign({}, auth, baseRow));
                     const repairClassInfo = getRepairClassInfoForWeeklySpend(Object.assign({}, auth, baseRow), true);
                     rows.push(Object.assign(baseRow, repairClassInfo));
                 });
@@ -2945,11 +3084,14 @@
                     }
                 }
                 globalWeeklySpendHistoryRows = buildWeeklySpendHistoryRows(authData);
+                syncGlobalAppFinFromWeeklyHistoryRows();
             } catch (err) {
                 console.warn('Weekly spend history load failed:', err);
                 globalWeeklySpendHistoryRows = globalWeeklySpendHistoryRows || [];
             }
             renderWeeklySpendHistory();
+            renderWeeklySpendTableSummary();
+            triggerViewUpdate();
             return globalWeeklySpendHistoryRows;
         }
 
@@ -2978,7 +3120,7 @@
                     <span style="color:#64748b;">Weekly Cap: $${Number(WEEKLY_WIP_AUTH_CAP || 0).toLocaleString('en-US', {maximumFractionDigits:0})}</span>
                 </div>
                 <div class="weekly-history-note">
-                    Weekly History bridges end-of-week spend to current repair class, AI transfer repair class, and Budget Included / Budget Excluded allocation. Closed weeks are locked as an End-of-Week snapshot once Aging Repairs review logic is loaded.
+                    Weekly History bridges end-of-week spend to current repair class, AI transfer repair class, and Budget Included / Budget Excluded allocation. In-Budget is limited to SCHEDULED and OSC PM; all other repair classes are Budget Excluded. Closed weeks are locked as an End-of-Week snapshot once Aging Repairs review logic is loaded.
                 </div>
                 <div class="weekly-history-rollup">`;
 
@@ -3045,6 +3187,7 @@
                         <th style="width:142px;">Branch / Site</th>
                         <th style="width:112px;">Owner</th>
                         <th style="width:98px;">Capture Type</th>
+                        <th style="width:82px;">RO Type</th>
                         <th style="width:118px;">Current Repair Class</th>
                         <th style="width:118px;">Transfer Repair Class</th>
                         <th style="width:88px;">Budget Bucket</th>
@@ -3066,6 +3209,7 @@
                             <td>${escapeHtml(row.branch || '')}</td>
                             <td>${escapeHtml(row.owner || '')}</td>
                             <td>${escapeHtml(row.captureType || '')}</td>
+                            <td>${escapeHtml(row.roWorkType || '')}</td>
                             <td>${escapeHtml(row.currentRepairClass || 'Not Available')}</td>
                             <td>${escapeHtml(row.transferRepairClass || 'No Transfer')}</td>
                             <td><span class="weekly-budget-pill ${isExcludedBucket ? 'excluded' : 'included'}" title="${escapeHtml(lockTitle)}">${bucketShort}</span></td>
@@ -3082,6 +3226,150 @@
 
             html += `</tbody></table></div></div>`;
             container.innerHTML = html;
+        }
+
+        function buildWeeklySpendTableSummaryGroups(rows) {
+            const map = {};
+            (rows || []).forEach(row => {
+                const week = row.weekKey || 'UNKNOWN';
+                if (!map[week]) {
+                    map[week] = {
+                        weekKey: week,
+                        weekEndDate: getWeekEndLabel(week),
+                        vroSet: new Set(),
+                        original: createWeeklySpendModelBucket(),
+                        transfer: createWeeklySpendModelBucket()
+                    };
+                }
+                const group = map[week];
+                const roKey = row.roNumber || row.safeRo || '';
+                if (roKey) group.vroSet.add(roKey);
+                const spend = Number(row.spend || 0);
+                const channel = getWeeklySpendChannel(row);
+                addWeeklySpendModelAmount(group.original, row.currentRepairClass || 'Not Available', channel, spend);
+                addWeeklySpendModelAmount(group.transfer, getWeeklyTransferAllocationClass(row.currentRepairClass || 'Not Available', row.transferRepairClass || 'No Transfer'), channel, spend);
+            });
+            return Object.values(map).map(group => {
+                group.vroCount = group.vroSet.size;
+                delete group.vroSet;
+                return group;
+            }).sort((a, b) => getWeekSortValue(b.weekKey) - getWeekSortValue(a.weekKey));
+        }
+
+        function createWeeklySpendModelBucket() {
+            return {
+                inBudget: { dedicated: 0, vended: 0, total: 0 },
+                outBudget: { dedicated: 0, vended: 0, total: 0 },
+                grand: { dedicated: 0, vended: 0, total: 0 }
+            };
+        }
+
+        function addWeeklySpendModelAmount(model, repairClass, channel, spend) {
+            const amount = Number(spend || 0);
+            const key = channel === 'Dedicated' ? 'dedicated' : 'vended';
+            const budgetKey = isBudgetIncludedRepairClass(repairClass) ? 'inBudget' : 'outBudget';
+            model[budgetKey][key] += amount;
+            model[budgetKey].total += amount;
+            model.grand[key] += amount;
+            model.grand.total += amount;
+        }
+
+        function renderWeeklySpendPivotTable(title, subtitle, model) {
+            const rows = [
+                { label: 'In-Budget', cls: 'weekly-pivot-row-in', data: model.inBudget },
+                { label: 'Out-of-Budget', cls: 'weekly-pivot-row-out', data: model.outBudget },
+                { label: 'Grand Total', cls: 'weekly-pivot-grand', data: model.grand }
+            ];
+            return `<div class="weekly-pivot-box">
+                <div class="weekly-pivot-title">${escapeHtml(title)}</div>
+                <div class="weekly-pivot-subtitle">${escapeHtml(subtitle)}</div>
+                <table class="weekly-pivot-table">
+                    <thead><tr><th></th><th>Dedicated</th><th>Vended</th><th>Total</th></tr></thead>
+                    <tbody>
+                        ${rows.map(r => `<tr class="${r.cls}">
+                            <td class="weekly-pivot-row-label">${escapeHtml(r.label)}</td>
+                            <td class="weekly-pivot-money">${formatWeeklyHistoryMoney(r.data.dedicated || 0)}</td>
+                            <td class="weekly-pivot-money">${formatWeeklyHistoryMoney(r.data.vended || 0)}</td>
+                            <td class="weekly-pivot-money">${formatWeeklyHistoryMoney(r.data.total || 0)}</td>
+                        </tr>`).join('')}
+                    </tbody>
+                </table>
+            </div>`;
+        }
+
+        function renderWeeklySpendTableSummary() {
+            const container = document.getElementById('weekly-spend-table-summary-body');
+            if (!container) return;
+            const groups = buildWeeklySpendTableSummaryGroups(globalWeeklySpendHistoryRows || []);
+            if (groups.length === 0) {
+                container.innerHTML = `<div style="padding:18px; text-align:center; color:#64748b; font-weight:800; background:#f8fafc; border:1px solid #e2e8f0; border-radius:6px;">No weekly table summary is available yet. Weekly totals will appear once Firebase governor authorizations are loaded.</div>`;
+                return;
+            }
+            let html = `<div class="weekly-table-summary-shell">
+                <div class="weekly-table-summary-note">Original / Pre-AI uses the current repair class. Transfer / After AI uses the AI transfer repair class when one exists, otherwise it keeps the current repair class. In-Budget only includes SCHEDULED and OSC PM.</div>`;
+            groups.forEach(group => {
+                html += `<div class="weekly-table-summary-card">
+                    <div class="weekly-table-summary-header">
+                        <div class="weekly-table-summary-week">${escapeHtml(group.weekKey)} Weekly Table Summary</div>
+                        <div class="weekly-table-summary-meta">
+                            <span>Week End: ${escapeHtml(group.weekEndDate || '')}</span>
+                            <span>${group.vroCount || 0} VROs</span>
+                            <span>Total: ${formatWeeklyHistoryMoney(group.transfer.grand.total || group.original.grand.total || 0)}</span>
+                        </div>
+                    </div>
+                    <div class="weekly-table-summary-grid">
+                        ${renderWeeklySpendPivotTable(`${group.weekKey} Original`, 'Pre-AI Model · Current Repair Class', group.original)}
+                        ${renderWeeklySpendPivotTable(`${group.weekKey} Transfer`, 'After AI Model · Transfer Repair Class', group.transfer)}
+                    </div>
+                </div>`;
+            });
+            html += `</div>`;
+            container.innerHTML = html;
+        }
+
+        function buildWeeklySpendTableSummaryExportRows(rows) {
+            const groups = buildWeeklySpendTableSummaryGroups(rows || []);
+            const out = [];
+            groups.forEach(group => {
+                [
+                    { modelName: 'Original / Pre-AI Model', key: 'original' },
+                    { modelName: 'Transfer / After AI Model', key: 'transfer' }
+                ].forEach(modelInfo => {
+                    const model = group[modelInfo.key];
+                    [
+                        ['In-Budget', model.inBudget],
+                        ['Out-of-Budget', model.outBudget],
+                        ['Grand Total', model.grand]
+                    ].forEach(([bucket, data]) => {
+                        out.push({
+                            'Week': group.weekKey,
+                            'Week End': group.weekEndDate || '',
+                            'Model': modelInfo.modelName,
+                            'Budget Bucket': bucket,
+                            'Dedicated / Standard RO': Number(data.dedicated || 0),
+                            'Vended / Vendor RO': Number(data.vended || 0),
+                            'Total': Number(data.total || 0),
+                            'VRO Count': group.vroCount || 0
+                        });
+                    });
+                });
+            });
+            return out;
+        }
+
+        function exportWeeklySpendTableSummaryToExcel() {
+            const rows = globalWeeklySpendHistoryRows || [];
+            if (rows.length === 0) {
+                alert('No weekly table summary available to export.');
+                return;
+            }
+            const exportRows = buildWeeklySpendTableSummaryExportRows(rows);
+            const wb = XLSX.utils.book_new();
+            const ws = XLSX.utils.json_to_sheet(exportRows);
+            autoFitColumns(ws, exportRows);
+            styleExcelHeaders(ws);
+            XLSX.utils.book_append_sheet(wb, ws, 'Weekly Table Summary');
+            XLSX.writeFile(wb, `weekly_table_summary_${getLocalDateKey(new Date())}.xlsx`);
         }
 
         function exportWeeklySpendHistoryToExcel() {
@@ -3111,6 +3399,8 @@
                 'Branch / Site': r.branch || '',
                 'Owner': r.owner || '',
                 'Capture Type': r.captureType || '',
+                'RO Type': r.roWorkType || '',
+                'Spend Channel': r.spendChannel || getWeeklySpendChannel(r),
                 'Current Repair Class': r.currentRepairClass || 'Not Available',
                 'Transfer Repair Class': r.transferRepairClass || 'No Transfer',
                 'Budget Bucket': r.budgetBucket || '',
@@ -3139,6 +3429,12 @@
             autoFitColumns(wsDetail, detailRows);
             styleExcelHeaders(wsDetail);
             XLSX.utils.book_append_sheet(wb, wsDetail, 'Weekly VRO Detail');
+
+            const tableSummaryRows = buildWeeklySpendTableSummaryExportRows(rows);
+            const wsTableSummary = XLSX.utils.json_to_sheet(tableSummaryRows);
+            autoFitColumns(wsTableSummary, tableSummaryRows);
+            styleExcelHeaders(wsTableSummary);
+            XLSX.utils.book_append_sheet(wb, wsTableSummary, 'Weekly Table Summary');
 
             XLSX.writeFile(wb, `weekly_spend_history_${getLocalDateKey(new Date())}.xlsx`);
         }
@@ -3892,6 +4188,7 @@
 
             const refreshedAllAuthSnap = await db.ref('spendGovernor/authorizations').once('value');
             const refreshedAllAuthorizations = refreshedAllAuthSnap.val() || {};
+            globalWeeklySpendHistoryRows = buildWeeklySpendHistoryRows(refreshedAllAuthorizations);
             const weeklyAuthorizations = refreshedAllAuthorizations[weekKey] || {};
 
             let weeklyAuthorizedTotal = 0;
@@ -3933,6 +4230,7 @@
                 source: 'firebase-transition-live-ro-detail'
             };
 
+            syncGlobalAppFinFromWeeklyHistoryRows();
             await refreshSpendChangeLogRows();
             applySpendGovernorFinancials(branchAuthorized);
             triggerViewUpdate();
@@ -5269,7 +5567,8 @@
                     message: getHeaderIndexFromMap(roDetailHeaderMap, ['LastMessageBody', 'Message']),
                     repClass: getHeaderIndexFromMap(roDetailHeaderMap, ['RepClass', 'Repair Class', 'RepairClass', 'Type']),
                     customer: getHeaderIndexFromMap(roDetailHeaderMap, ['Customer']),
-                    customerLocation: getHeaderIndexFromMap(roDetailHeaderMap, ['CustomerLocation', 'Customer Location'])
+                    customerLocation: getHeaderIndexFromMap(roDetailHeaderMap, ['CustomerLocation', 'Customer Location']),
+                    roType: getHeaderIndexFromMap(roDetailHeaderMap, ['ROType', 'RO Type', 'OrderType', 'Order Type', 'RepairOrderType', 'Repair Order Type', 'WorkOrderType', 'Work Order Type', 'WOType', 'WO Type', 'VRO Type'])
                 };
 
                 for (let i = roDetailHeaderIdx + 1; i < roDetailRaw.length; i++) {
@@ -5294,6 +5593,7 @@
                     const repClass = String(getAoAValue(row, h.repClass) || '').trim();
                     const customer = String(getAoAValue(row, h.customer) || '').trim();
                     const customerLocation = String(getAoAValue(row, h.customerLocation) || '').trim();
+                    const roType = String(getAoAValue(row, h.roType) || '').trim();
 
                     if (!orderFin[roNum]) {
                         orderFin[roNum] = {
@@ -5310,6 +5610,8 @@
                             repClass: repClass,
                             customer: customer,
                             customerLocation: customerLocation,
+                            roType: roType,
+                            roWorkType: normalizeWeeklyRoWorkType(roType),
                             source: 'NEW_RO_DETAIL',
                             lineCount: 0
                         };
@@ -5340,6 +5642,10 @@
                     if (repClass && !orderFin[roNum].repClass) orderFin[roNum].repClass = repClass;
                     if (customer && !orderFin[roNum].customer) orderFin[roNum].customer = customer;
                     if (customerLocation && !orderFin[roNum].customerLocation) orderFin[roNum].customerLocation = customerLocation;
+                    if (roType && !orderFin[roNum].roType) {
+                        orderFin[roNum].roType = roType;
+                        orderFin[roNum].roWorkType = normalizeWeeklyRoWorkType(roType);
+                    }
                 }
             } else {
                 // Legacy RO Detail fallback: prior export layout used fixed indexes: RO in Q, spend in CA.
@@ -5604,7 +5910,9 @@
                     isDedicatedShopWorkOrder: isDedicatedShopWorkOrder,
                     dedicatedShopOwners: Array.from(dedicatedShopOwners),
                     financialShop: finShop,
-                    repClass: roDetailRepClass
+                    repClass: roDetailRepClass,
+                    roType: orderFin[roNum] && orderFin[roNum].roType ? orderFin[roNum].roType : '',
+                    roWorkType: orderFin[roNum] && orderFin[roNum].roWorkType ? orderFin[roNum].roWorkType : (isDedicatedShopWorkOrder ? 'STANDARD' : 'VENDOR RO')
                 };
 
                 if (isOpen) {
