@@ -4905,10 +4905,16 @@
             const ownerArg = String(owner || currentOwnerView || '').replace(/'/g, "\\'");
             const parentArg = String(parentViewId || currentParentView || '').replace(/'/g, "\\'");
             const issues = current.issues;
-            if (!issues.length) return '';
+            const openRoCount = (dataSet || []).filter(ro => isRealOpenRoForDailyCompliance(ro)).length;
+            if (!issues.length && !openRoCount) return '';
             const prior = getRepairClassComplianceSummary(dataSet, getPriorLocalDateKey());
+            const reviewTotal = issues.length;
+            const reviewDisplay = reviewTotal ? `${current.reviewedOrTouched}/${reviewTotal}` : '0/0';
+            const touchedDisplay = reviewTotal ? `${current.touchedCount}/${reviewTotal}` : '0/0';
+            const correctedDisplay = reviewTotal ? `${reviewTotal - current.openIssues.length}` : '0';
+            const zeroStateTitle = reviewTotal ? 'Daily repair class compliance is based on flagged VROs from Aging Repairs.xlsx. Coordinators should review, correct, or escalate these daily.' : 'Daily repair class compliance is visible for this coordinator. No repair-class review items are currently flagged for action.';
             return `
-                <div class="workflow-compliance-card ${current.colorClass} compact" title="Daily repair class compliance is based on flagged VROs from Aging Repairs.xlsx. Coordinators should review, correct, or escalate these daily.">
+                <div class="workflow-compliance-card ${current.colorClass} compact" title="${zeroStateTitle}">
                     <div class="workflow-compliance-header">
                         <div>
                             <div class="workflow-compliance-label">Daily Repair Class Compliance</div>
@@ -4923,10 +4929,10 @@
                         </div>
                     </div>
                     <div class="workflow-compliance-grid">
-                        <div class="workflow-compliance-mini clickable" onclick="openOwnerMetricDrilldown('${ownerArg}', '${parentArg}', 'REPAIR_CLASS_REVIEW_REMAINING', event)" title="Show repair class ROs still left to review today"><div class="mini-title">RO Review</div><div class="mini-num">${current.reviewedOrTouched}/${issues.length}</div></div>
-                        <div class="workflow-compliance-mini clickable" onclick="openOwnerMetricDrilldown('${ownerArg}', '${parentArg}', 'REPAIR_CLASS_NOT_TOUCHED', event)" title="Show repair class ROs still not touched today"><div class="mini-title">Touched</div><div class="mini-num">${current.touchedCount}/${issues.length}</div></div>
+                        <div class="workflow-compliance-mini clickable" onclick="openOwnerMetricDrilldown('${ownerArg}', '${parentArg}', 'REPAIR_CLASS_REVIEW_REMAINING', event)" title="Show repair class ROs still left to review today"><div class="mini-title">RO Review</div><div class="mini-num">${reviewDisplay}</div></div>
+                        <div class="workflow-compliance-mini clickable" onclick="openOwnerMetricDrilldown('${ownerArg}', '${parentArg}', 'REPAIR_CLASS_NOT_TOUCHED', event)" title="Show repair class ROs still not touched today"><div class="mini-title">Touched</div><div class="mini-num">${touchedDisplay}</div></div>
                         <div class="workflow-compliance-mini clickable" onclick="openOwnerMetricDrilldown('${ownerArg}', '${parentArg}', 'REPAIR_CLASS_REVIEW_NEEDED', event)" title="Show repair class ROs needing review"><div class="mini-title">Review Needed</div><div class="mini-num">${current.openIssues.length}</div></div>
-                        <div class="workflow-compliance-mini clickable" onclick="openOwnerMetricDrilldown('${ownerArg}', '${parentArg}', 'REPAIR_CLASS_CORRECTED', event)" title="Show repair class ROs already corrected/cleared"><div class="mini-title">Corrected</div><div class="mini-num">${issues.length - current.openIssues.length}</div></div>
+                        <div class="workflow-compliance-mini clickable" onclick="openOwnerMetricDrilldown('${ownerArg}', '${parentArg}', 'REPAIR_CLASS_CORRECTED', event)" title="Show repair class ROs already corrected/cleared"><div class="mini-title">Corrected</div><div class="mini-num">${correctedDisplay}</div></div>
                     </div>
                 </div>`;
         }
