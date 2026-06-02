@@ -5558,6 +5558,18 @@
             if (hits.specialProjectCameraSystem && !isAlready('SPECIAL')) {
                 return { recommendedClass: 'SPECIAL PROJECT', reason: 'Component code 036-014 with Driver Risk Management Camera System in Component Description requires SPECIAL PROJECT.' };
             }
+            const driverAbuseHits = Array.isArray(hits.driverAbuseHits) && hits.driverAbuseHits.length
+                ? hits.driverAbuseHits
+                : billingContainsAny(text, ['DRIVER ABUSE','DRIVER CAUSED','OPERATOR ERROR','ROAD HAZARD','SIDEWALL','LOCKOUT','LOST KEY','MISFUEL','DEF IN FUEL','FUEL CONTAMINATION','OUT OF FUEL','IGNORED WARNING','IGNORED REGEN','PARKED REGEN','REGEN','DERATE','DERATED','DE-RATE','DE RATE']);
+            const hasDerateSignal = driverAbuseHits.some(hit => /DERAT|DE-RATE|DE RATE/i.test(String(hit || '')));
+            if (driverAbuseHits.length && !isAlready('ABUSE')) {
+                return {
+                    recommendedClass: 'DRIVER ABUSE',
+                    reason: hasDerateSignal
+                        ? 'Notes/complaint/3Cs indicate derate/derated condition. Derate is treated as a strong driver-abuse signal unless stronger precedence applies, because it is typically caused by ignored warnings/regen issues.'
+                        : `Driver-abuse signal(s) from notes/3Cs/line detail (${driverAbuseHits.slice(0, 4).join(', ')}) support DRIVER ABUSE review.`
+                };
+            }
             const hasMajorEvidence = !!(hits.majorHits && hits.majorHits.length);
             const complexity = hits.orderComplexity || {};
             const hasComplexPartsRepair = !!(complexity.hasComplexPartsRepair || complexity.hasMultiSectionPartsSignal || complexity.hasMajorComponentSignal);
@@ -5608,8 +5620,8 @@
             if (hasAny(['ACCIDENT','COLLISION','CRASH','STRUCK','IMPACT','DEER','BODY DAMAGE','VANDAL','WINDSHIELD IMPACT']) && !isAlready('ACC')) {
                 return { recommendedClass: 'ACCIDENT DAMAGE', reason: 'Accident/impact/physical damage language supports ACCIDENT DAMAGE review.' };
             }
-            if (hasAny(['DRIVER ABUSE','DRIVER CAUSED','OPERATOR ERROR','ROAD HAZARD','SIDEWALL','LOCKOUT','LOST KEY','MISFUEL','DEF IN FUEL','FUEL CONTAMINATION','OUT OF FUEL','REGEN','DERATE']) && !isAlready('ABUSE')) {
-                return { recommendedClass: 'DRIVER ABUSE', reason: 'Driver-caused indicators support DRIVER ABUSE review.' };
+            if (hasAny(['DRIVER ABUSE','DRIVER CAUSED','OPERATOR ERROR','ROAD HAZARD','SIDEWALL','LOCKOUT','LOST KEY','MISFUEL','DEF IN FUEL','FUEL CONTAMINATION','OUT OF FUEL','IGNORED WARNING','IGNORED REGEN','PARKED REGEN','REGEN','DERATE','DERATED','DE-RATE','DE RATE']) && !isAlready('ABUSE')) {
+                return { recommendedClass: 'DRIVER ABUSE', reason: 'Driver-caused indicators, especially derate/regen/ignored-warning evidence, support DRIVER ABUSE review.' };
             }
             if (hasAny(['SAMSARA','CAMERA INSTALL','TELEMATICS INSTALL','RETROFIT','UPFIT']) && !isAlready('SPECIAL')) {
                 return { recommendedClass: 'SPECIAL PROJ', reason: 'Project/install language supports SPECIAL PROJ review.' };
@@ -5719,6 +5731,7 @@
             const ersKeywords = ['roadside', 'road call', 'no start', 'jump start', 'tow', 'towing', 'breakdown', 'disabled', 'emergency', 'unit down roadside', 'mobile rescue', 'tire blowout', 'locked out'];
             const majorRepairKeywords = ['engine', 'engine replacement', 'replace engine', 'transmission', 'transmission replacement', 'aftertreatment', 'dpf', 'diesel particulate filter', 'scr', 'doc', 'nox', 'emissions', 'regen', 'def system', 'turbo', 'injector', 'egr', 'egr cooler', 'radiator', 'coolant', 'powertrain', 'drivetrain', 'differential', 'rear end', 'axle', 'transfer case', 'overhaul', 'rebuild', 'failed', 'failure', 'derate', 'large brake overhaul', 'brake overhaul', 'front and rear brake'];
             const excludableKeywords = ['accident', 'collision', 'driver abuse', 'misuse', 'vandalism', 'damage', 'deferred maintenance', 'deferred', 'engine replacement', 'transmission', 'aftertreatment', 'dpf', 'emissions', 'regen', 'def in fuel', 'fuel contamination', 'road hazard', 'sidewall', 'lockout', 'lost key', 'customer direct', 'cust direct', 'customer used', 'branch sent', 'not dispatched by amerit', 'samsara', 'camera install', 'retrofit', 'upfit', 'merchant'];
+            const driverAbuseKeywords = ['driver abuse', 'driver caused', 'operator error', 'road hazard', 'sidewall', 'lockout', 'lost key', 'misfuel', 'def in fuel', 'fuel contamination', 'out of fuel', 'ignored warning', 'ignored regen', 'parked regen', 'regen', 'derate', 'derated', 'de-rate', 'de rate'];
 
             Object.values(groups).forEach(g => {
                 const roContext = roLookup[g.roNumber] || null;
@@ -5745,6 +5758,7 @@
                 const majorHits = billingContainsAny(combinedText, majorRepairKeywords);
                 const ersHits = billingContainsAny(combinedText, ersKeywords);
                 const exHits = billingContainsAny(combinedText, excludableKeywords);
+                const driverAbuseHits = billingContainsAny(combinedText, driverAbuseKeywords);
                 const primaryRepUpper = String(primaryRepClass || '').toUpperCase();
                 const hasDriverRiskCameraOverride = g.specialProjectCameraSystem || g.componentCodes.some(code => isDriverRiskManagementCameraSystemEvidence(code, combinedText, combinedText));
                 if (hasDriverRiskCameraOverride && primaryRepUpper.includes('SPECIAL')) return;
@@ -5761,7 +5775,7 @@
                 let recommendedClass = '';
                 let responsibleQueue = normalizeQueueNameForRepairClass(queueSource);
 
-                const explicitRecommendation = determineRecommendedRepairClassFromEvidence(primaryRepClass, combinedText, spend, g.tireQty, { majorHits, specialProjectCameraSystem: hasDriverRiskCameraOverride, brakeDiagnosticsScheduled: hasBrakeDiagnosticsScheduled, hvacDiagnostics, aggressiveNotesReview, orderComplexity });
+                const explicitRecommendation = determineRecommendedRepairClassFromEvidence(primaryRepClass, combinedText, spend, g.tireQty, { majorHits, driverAbuseHits, specialProjectCameraSystem: hasDriverRiskCameraOverride, brakeDiagnosticsScheduled: hasBrakeDiagnosticsScheduled, hvacDiagnostics, aggressiveNotesReview, orderComplexity });
                 if (explicitRecommendation) {
                     recommendedClass = explicitRecommendation.recommendedClass;
                     responsibleQueue = getResponsibleQueueForRecommendation(recommendedClass, queueSource);
