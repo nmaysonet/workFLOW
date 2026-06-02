@@ -1895,7 +1895,7 @@
                     <td>${escapeHtml((issue.reasons || []).join(' | '))}</td>
                 </tr>`;
             }).join('');
-            return `<details class="weekly-transfer-bridge" open>
+            return `<details class="weekly-transfer-bridge">
                 <summary>Transfer Class Action Bridge · ${bridgeRows.length} current-vs-transfer gap${bridgeRows.length === 1 ? '' : 's'}</summary>
                 <div class="weekly-history-detail-panel" style="margin-top:10px;">
                     <table class="weekly-history-detail-table weekly-transfer-bridge-table"><thead><tr>
@@ -5259,6 +5259,86 @@
             return (phrases || []).some(p => normalized.includes(normalizeRepairEvidenceText(p)));
         }
 
+
+        function getAgingOrderComplexitySignals(g, combinedText) {
+            const norm = v => normalizeRepairEvidenceText(v);
+            const lineTypes = Array.isArray(g && g.lineTypes) ? g.lineTypes.map(norm) : [];
+            const lineDescriptions = Array.isArray(g && g.lineDescriptions) ? g.lineDescriptions.map(norm) : [];
+            const sectionComments = Array.isArray(g && g.sectionComments) ? g.sectionComments.map(norm) : [];
+            const additionalNotes = Array.isArray(g && g.additionalNotes) ? g.additionalNotes.map(norm) : [];
+            const componentDescriptions = Array.isArray(g && g.componentDescriptions) ? g.componentDescriptions.map(norm) : [];
+            const familyComponents = Array.isArray(g && g.familyComponents) ? g.familyComponents.map(norm) : [];
+            const componentCodes = Array.isArray(g && g.componentCodes)
+                ? g.componentCodes.map(v => String(v || '').toUpperCase().replace(/[^0-9A-Z]/g, '')).filter(Boolean)
+                : [];
+            const evidenceText = norm([
+                combinedText || '',
+                lineDescriptions.join(' '),
+                sectionComments.join(' '),
+                additionalNotes.join(' '),
+                componentDescriptions.join(' '),
+                familyComponents.join(' ')
+            ].join(' | '));
+            const distinct = arr => Array.from(new Set((arr || []).map(norm).filter(v => v && v !== 'N/A' && v !== 'NA' && v !== 'NONE')));
+            const distinctVmrsCodes = Array.from(new Set(componentCodes)).length;
+            const distinctComponentDescriptions = distinct(componentDescriptions).length;
+            const distinctFamilySections = distinct(familyComponents).length;
+            const distinctSectionComments = distinct(sectionComments).length;
+
+            const partLineCount = lineTypes.filter(t => /(^|\s)(PART|PARTS|MATERIAL|MATERIALS)(\s|$)/.test(t)).length;
+            const laborLineCount = lineTypes.filter(t => /(^|\s)(LABOR|SERVICE|REPAIR)(\s|$)/.test(t)).length;
+            const partKeywords = [
+                'PART', 'PARTS', 'KIT', 'ASSEMBLY', 'ASSY', 'MODULE', 'SENSOR', 'SWITCH', 'HARNESS', 'WIRE', 'WIRING',
+                'BATTERY', 'ALTERNATOR', 'STARTER', 'BELT', 'TENSIONER', 'PULLEY', 'PUMP', 'WATER PUMP', 'FUEL PUMP',
+                'BLOWER MOTOR', 'MOTOR', 'COMPRESSOR', 'CONDENSER', 'EVAPORATOR', 'FAN', 'RADIATOR', 'HOSE', 'LINE',
+                'CALIPER', 'ROTOR', 'DRUM', 'PAD', 'PADS', 'SHOE', 'SHOES', 'MASTER CYLINDER', 'BOOSTER',
+                'TIRE', 'TYRE', 'WHEEL', 'GLASS', 'MIRROR', 'LATCH', 'LOCK', 'REGULATOR'
+            ];
+            const majorComponentKeywords = [
+                'ENGINE', 'ENGINE REPLACEMENT', 'REPLACE ENGINE', 'TRANSMISSION', 'TRANSMISSION REPLACEMENT', 'REPLACE TRANSMISSION',
+                'AFTERTREATMENT', 'DPF', 'DIESEL PARTICULATE FILTER', 'SCR', 'DOC', 'NOX', 'DEF SYSTEM', 'EGR', 'EGR COOLER',
+                'TURBO', 'TURBOCHARGER', 'INJECTOR', 'POWERTRAIN', 'DRIVETRAIN', 'DIFFERENTIAL', 'REAR DIFFERENTIAL',
+                'REAR END', 'AXLE', 'TRANSFER CASE', 'OVERHAUL', 'REBUILD', 'LARGE BRAKE OVERHAUL', 'BRAKE OVERHAUL',
+                'FULL BRAKE', 'FRONT AND REAR BRAKE'
+            ];
+            const partKeywordHits = partKeywords.filter(k => evidenceText.includes(norm(k)));
+            const majorComponentHits = majorComponentKeywords.filter(k => evidenceText.includes(norm(k)));
+            const dollarMatches = String(combinedText || '').match(/\$\s*\d[\d,]*(?:\.\d{2})?/g) || [];
+            const explicitPartsPricingSignal = dollarMatches.length >= 2 && (partLineCount >= 2 || partKeywordHits.length >= 2);
+
+            const numerousPartLines = partLineCount >= 4 || partKeywordHits.length >= 5;
+            const multipleVmrsSections = distinctVmrsCodes >= 3 || distinctComponentDescriptions >= 4 || distinctFamilySections >= 3;
+            const multiSectionPartsSignal = (partLineCount >= 3 || partKeywordHits.length >= 4) && (distinctVmrsCodes >= 2 || distinctComponentDescriptions >= 3 || distinctFamilySections >= 2);
+            const majorComponentSignal = majorComponentHits.length > 0;
+            const complexPartsRepair = majorComponentSignal || multiSectionPartsSignal || (numerousPartLines && multipleVmrsSections) || (explicitPartsPricingSignal && multipleVmrsSections);
+
+            const reasonPieces = [];
+            if (majorComponentSignal) reasonPieces.push(`major component signal(s): ${majorComponentHits.slice(0, 4).join(', ')}`);
+            if (multiSectionPartsSignal) reasonPieces.push(`${partLineCount || partKeywordHits.length} parts/part signals across multiple VMRS/component sections`);
+            if (numerousPartLines && multipleVmrsSections) reasonPieces.push('numerous parts across a multi-section VRO');
+            if (explicitPartsPricingSignal && multipleVmrsSections) reasonPieces.push('parts pricing/cost text appears across a multi-section VRO');
+            if (distinctVmrsCodes >= 3) reasonPieces.push(`${distinctVmrsCodes} distinct VMRS/component codes`);
+
+            return {
+                partLineCount,
+                laborLineCount,
+                partKeywordHits,
+                majorComponentHits,
+                distinctVmrsCodes,
+                distinctComponentDescriptions,
+                distinctFamilySections,
+                distinctSectionComments,
+                dollarSignalCount: dollarMatches.length,
+                hasNumerousPartLines: numerousPartLines,
+                hasMultipleVmrsSections: multipleVmrsSections,
+                hasMultiSectionPartsSignal: multiSectionPartsSignal,
+                hasMajorComponentSignal: majorComponentSignal,
+                hasComplexPartsRepair: complexPartsRepair,
+                hasExplicitPartsPricingSignal: explicitPartsPricingSignal,
+                reason: reasonPieces.join('; ')
+            };
+        }
+
         function classifyAggressiveNotesRepairClass(g, combinedText, spend) {
             const notesText = normalizeRepairEvidenceText([
                 ...(Array.isArray(g && g.sectionComments) ? g.sectionComments : []),
@@ -5272,8 +5352,6 @@
             ].join(' | '));
             const lineTypes = Array.isArray(g && g.lineTypes) ? g.lineTypes.map(normalizeRepairEvidenceText) : [];
             const lineDescriptions = Array.isArray(g && g.lineDescriptions) ? g.lineDescriptions.map(normalizeRepairEvidenceText) : [];
-            const amount = Number(spend || 0);
-
             const hasPowerplantDiagnostics = !!(g && g.powerplantDiagnostics) ||
                 (Array.isArray(g && g.componentCodes) && g.componentCodes.some(code => isPowerplantDiagnosticsEvidence(code, componentText, notesText))) ||
                 allText.includes('POWERPLANT DIAGNOSTICS');
@@ -5286,21 +5364,30 @@
             const hasInspectionPmNotes = hasRepairEvidencePhrase(notesText, pmInspectionPhrases);
 
             const hasPartsLine = lineTypes.some(t => /(^|\s)(PART|PARTS|MATERIAL|MATERIALS)(\s|$)/.test(t));
-            const partsPhrases = [
+            const routinePartsPhrases = [
                 'PART ON ORDER', 'PARTS ON ORDER', 'PART ORDERED', 'PARTS ORDERED', 'ORDERED PART', 'ORDERED PARTS',
                 'PART NEEDED', 'PARTS NEEDED', 'PART REQUIRED', 'PARTS REQUIRED', 'PART RECEIVED', 'PARTS RECEIVED',
-                'WAITING ON PART', 'WAITING ON PARTS', 'PART ETA', 'PARTS ETA', 'REPLACE', 'REPLACED', 'REPLACEMENT',
-                'INSTALL PART', 'INSTALLED PART', 'INSTALLATION OF', 'BLOWER MOTOR', 'ALTERNATOR', 'STARTER', 'BATTERY',
-                'COMPRESSOR', 'CONDENSER', 'EVAPORATOR', 'RADIATOR', 'WATER PUMP', 'FUEL PUMP', 'SENSOR', 'CALIPER',
-                'ROTOR', 'DRUM', 'PAD', 'SHOE', 'TIRE', 'AXLE', 'DIFFERENTIAL', 'TURBO', 'INJECTOR', 'EGR', 'DPF'
+                'WAITING ON PART', 'WAITING ON PARTS', 'PART ETA', 'PARTS ETA', 'INSTALL PART', 'INSTALLED PART',
+                'BLOWER MOTOR', 'ALTERNATOR', 'STARTER', 'BATTERY', 'COMPRESSOR', 'CONDENSER', 'EVAPORATOR',
+                'WATER PUMP', 'FUEL PUMP', 'SENSOR', 'CALIPER', 'ROTOR', 'DRUM', 'PAD', 'SHOE'
             ];
-            const hasPartsText = hasRepairEvidencePhrase(`${notesText} ${lineDescriptions.join(' ')}`, partsPhrases);
-            const hasPartsEvidence = hasPartsLine || hasPartsText;
+            const majorPartsPhrases = [
+                'ENGINE REPLACEMENT', 'REPLACE ENGINE', 'TRANSMISSION REPLACEMENT', 'REPLACE TRANSMISSION',
+                'AFTERTREATMENT', 'DPF', 'DIESEL PARTICULATE FILTER', 'SCR', 'DOC', 'NOX', 'DEF SYSTEM', 'TURBO', 'INJECTOR', 'EGR', 'EGR COOLER', 'RADIATOR',
+                'COOLANT SYSTEM', 'POWERTRAIN', 'AXLE', 'REAR END', 'DIFFERENTIAL', 'DRIVETRAIN', 'TRANSFER CASE', 'OVERHAUL', 'REBUILD', 'LARGE BRAKE OVERHAUL', 'BRAKE OVERHAUL', 'FULL BRAKE', 'FRONT AND REAR BRAKE'
+            ];
+            const evidenceText = `${notesText} ${lineDescriptions.join(' ')}`;
+            const hasRoutinePartsText = hasRepairEvidencePhrase(evidenceText, routinePartsPhrases);
+            const hasMajorPartsText = hasRepairEvidencePhrase(evidenceText, majorPartsPhrases);
+            const complexity = getAgingOrderComplexitySignals(g, combinedText);
+            const hasComplexPartsRepair = !!(complexity && complexity.hasComplexPartsRepair);
+            const hasPartsEvidence = hasPartsLine || hasRoutinePartsText || hasMajorPartsText || hasComplexPartsRepair || !!(complexity && (complexity.partLineCount || (complexity.partKeywordHits || []).length));
 
             const specialOrExcludedPhrases = [
                 'ACCIDENT', 'COLLISION', 'CRASH', 'STRUCK', 'IMPACT', 'DRIVER ABUSE', 'OPERATOR ERROR',
                 'ROAD HAZARD', 'SIDEWALL', 'LOCKOUT', 'LOST KEY', 'DEF IN FUEL', 'FUEL CONTAMINATION',
                 'TOW', 'TOWED', 'TOWING', 'WRECKER', 'ROADSIDE', 'ROAD CALL', 'EMERGENCY', 'BREAKDOWN',
+                'CUSTOMER DIRECT', 'CUST DIRECT', 'CUSTOMER USED', 'BRANCH SENT', 'NOT DISPATCHED BY AMERIT',
                 'SAMSARA', 'CAMERA INSTALL', 'TELEMATICS', 'RETROFIT', 'UPFIT'
             ];
             const hasExcludedSpecialEvidence = hasRepairEvidencePhrase(`${notesText} ${componentText}`, specialOrExcludedPhrases);
@@ -5311,12 +5398,9 @@
                 'CHECK ENGINE', 'DTC', 'FAULT CODE', 'FAULT', 'BAD', 'WORN', 'SEIZED', 'NOT WORKING', 'WILL NOT START'
             ];
             const hasRepairActionEvidence = hasRepairEvidencePhrase(notesText, repairActionPhrases);
-            const inspectionPmSpendLimit = 1200;
-            const diagnosticRepairSpendLimit = 750;
-
             // Notes are allowed to beat a bad VMRS/component selection. If the notes clearly say inspection-only / PM-type work
             // and there is no parts evidence, keep/recommend OSC PM even when the VMRS says Powerplant Diagnostics.
-            if (hasInspectionPmNotes && !hasPartsEvidence && (hasPowerplantDiagnostics || !hasRepairActionEvidence || amount <= inspectionPmSpendLimit)) {
+            if (hasInspectionPmNotes && !hasPartsEvidence && (hasPowerplantDiagnostics || !hasRepairActionEvidence)) {
                 return {
                     recommendedClass: 'OSC PM',
                     reason: hasPowerplantDiagnostics
@@ -5325,26 +5409,40 @@
                 };
             }
 
-            // A generic diagnostics VMRS should not be treated as PM if the notes, parts, or spend indicate actual repair work.
-            // Do not override accident/driver abuse/towing/special-project evidence here; those downstream rules still decide those classes.
+            // A generic diagnostics VMRS should not be treated as PM or Scheduled by default.
+            // Only classify when notes, 3Cs, component descriptions, or parts give a clear signal.
             if (hasPowerplantDiagnostics && !hasExcludedSpecialEvidence) {
-                if (hasPartsEvidence || hasRepairActionEvidence || amount > diagnosticRepairSpendLimit) {
+                if (hasMajorPartsText || hasComplexPartsRepair) {
                     return {
-                        recommendedClass: 'SCHEDULED',
-                        reason: 'Powerplant Diagnostics 045-045-999 has notes/parts/spend evidence of repair work, so it should be SCHEDULED rather than defaulting to OSC PM.'
+                        recommendedClass: 'DEF MAINT',
+                        signalStrength: 'HIGH',
+                        reason: `Powerplant Diagnostics 045-045-999 has non-routine repair evidence (${(complexity && complexity.reason) || 'major/multi-section parts evidence'}), so it should be DEF MAINT instead of routine Scheduled or OSC PM.`
                     };
                 }
-                return {
-                    recommendedClass: 'SCHEDULED',
-                    reason: 'Powerplant Diagnostics 045-045-999 is repair/diagnostic work unless notes clearly prove inspection-only PM work.'
-                };
+                if ((hasRoutinePartsText || hasPartsLine || hasRepairActionEvidence) && !hasComplexPartsRepair) {
+                    return {
+                        recommendedClass: 'SCHEDULED',
+                        signalStrength: 'HIGH',
+                        reason: 'Powerplant Diagnostics 045-045-999 has clear simple repair evidence in notes/3Cs/parts, so it should be SCHEDULED rather than defaulting to OSC PM.'
+                    };
+                }
+                return null;
             }
 
-            // Parts on a normal non-excludable order are routine repair, not PM.
-            if (hasPartsEvidence && !hasExcludedSpecialEvidence && !hasInspectionPmNotes) {
+            // Parts on a normal non-excludable order are routine repair only when the parts/3Cs are clear and simple.
+            // Numerous parts across multiple VMRS/component sections is a non-routine/complex repair signal, not a Scheduled shortcut.
+            if ((hasMajorPartsText || hasComplexPartsRepair) && !hasExcludedSpecialEvidence && !hasInspectionPmNotes) {
+                return {
+                    recommendedClass: 'DEF MAINT',
+                    signalStrength: 'HIGH',
+                    reason: `Notes/3Cs/parts show non-routine repair evidence (${(complexity && complexity.reason) || 'major or multi-section parts evidence'}), so this should be DEF MAINT rather than routine Scheduled.`
+                };
+            }
+            if ((hasRoutinePartsText || hasPartsLine) && !hasExcludedSpecialEvidence && !hasInspectionPmNotes && !hasComplexPartsRepair) {
                 return {
                     recommendedClass: 'SCHEDULED',
-                    reason: 'Order notes or line details show parts/repair evidence; routine repair should be SCHEDULED instead of OSC PM.'
+                    signalStrength: 'HIGH',
+                    reason: 'Order notes/3Cs/line details show simple routine parts or repair evidence, so this should be SCHEDULED instead of OSC PM.'
                 };
             }
 
@@ -5356,7 +5454,7 @@
             if (['OSC PM', 'AFS PM', 'OSC HO', 'SAFETY INS', 'STATE INS'].includes(r)) return 'PM';
             if (['OSC RD', 'BRINKS ERSA', 'GARDA ERSA', 'US FOODS ERSA', 'BRINKSROSID', 'EMERGENCY', 'ROAD CALL'].includes(r)) return 'ERS';
             if (r === 'SCHEDULED') return 'VENDED REPAIR';
-            if (['DEF MAINT', 'DRIVER ABUSE', 'ACCIDENT DAMAGE', 'ACCIDENT DAM', 'ACC DAM', 'TOWING', 'SPECIAL PROJ', 'SPECIAL PROJECT', 'MERCHANT PM'].includes(r)) return 'EXCLUDABLE / SPECIAL REVIEW';
+            if (['DEF MAINT', 'DRIVER ABUSE', 'ACCIDENT DAMAGE', 'ACCIDENT DAM', 'ACC DAM', 'TOWING', 'SPECIAL PROJ', 'SPECIAL PROJECT', 'MERCHANT PM', 'CUST DIRECT', 'CUSTOMER DIRECT'].includes(r)) return 'EXCLUDABLE / SPECIAL REVIEW';
             return 'VENDED REPAIR';
         }
 
@@ -5434,6 +5532,7 @@
             if (r.includes('ACCIDENT')) return 'ACCIDENT DAMAGE REVIEW';
             if (r.includes('TOW')) return 'TOWING REVIEW';
             if (r.includes('SPECIAL')) return 'SPECIAL PROJECT REVIEW';
+            if (r.includes('CUST DIRECT') || r.includes('CUSTOMER DIRECT')) return 'CUST DIRECT REVIEW';
             if (r.includes('MERCHANT')) return 'MERCHANT PM REVIEW';
             return fallback || 'REPAIR CLASS REVIEW';
         }
@@ -5459,9 +5558,26 @@
             if (hits.specialProjectCameraSystem && !isAlready('SPECIAL')) {
                 return { recommendedClass: 'SPECIAL PROJECT', reason: 'Component code 036-014 with Driver Risk Management Camera System in Component Description requires SPECIAL PROJECT.' };
             }
-            if (hits.brakeDiagnosticsScheduled && !isAlready('SCHEDULED')) {
-                return { recommendedClass: 'SCHEDULED', reason: 'Component code 013-013-999 with BRAKE DIAGNOSTICS is a repair and should be SCHEDULED, not OSC PM.' };
+            const hasMajorEvidence = !!(hits.majorHits && hits.majorHits.length);
+            const complexity = hits.orderComplexity || {};
+            const hasComplexPartsRepair = !!(complexity.hasComplexPartsRepair || complexity.hasMultiSectionPartsSignal || complexity.hasMajorComponentSignal);
+
+            // Do not use dollar value as a shortcut. Classify major/non-routine repairs from notes, 3Cs, component descriptions,
+            // line detail, parts lines, parts pricing text, and multi-section VMRS/component signals. If signals are not clear, leave current class alone.
+            if ((hasMajorEvidence || hasComplexPartsRepair) && isAlready('DEF')) {
+                return null;
             }
+            if ((hasMajorEvidence || hasComplexPartsRepair) && !isAlready('DEF') && !isAlready('SPECIAL') && !isAlready('ABUSE') && !isAlready('ACC') && !isAlready('TOW') && !isAlready('ERSA')) {
+                const complexityReason = complexity.reason ? `; ${complexity.reason}` : '';
+                return { recommendedClass: 'DEF MAINT', reason: `Major/non-routine repair signal(s) from notes/3Cs/parts (${(hits.majorHits || []).slice(0,4).join(', ') || 'multi-section parts evidence'}${complexityReason}) support DEF MAINT. Dollar value is not used as the trigger.` };
+            }
+            if (hits.brakeDiagnosticsScheduled && hasComplexPartsRepair && !isAlready('DEF')) {
+                return { recommendedClass: 'DEF MAINT', reason: `Brake diagnostics has complex/multi-section parts evidence (${complexity.reason || 'multiple parts/sections'}), so this should be DEF MAINT rather than simple Scheduled.` };
+            }
+            if (hits.brakeDiagnosticsScheduled && !isAlready('SCHEDULED')) {
+                return { recommendedClass: 'SCHEDULED', reason: 'Component code 013-013-999 with BRAKE DIAGNOSTICS is a simple repair signal and should be SCHEDULED when no major/complex brake evidence exists.' };
+            }
+
             if (hits.hvacDiagnostics && hits.hvacDiagnostics.recommendedClass) {
                 const hvacClass = String(hits.hvacDiagnostics.recommendedClass || '').toUpperCase();
                 if (hvacClass === 'SCHEDULED' && !isAlready('SCHEDULED')) {
@@ -5476,12 +5592,18 @@
                 if (notesClass === 'OSC PM' && !(isAlready('OSC PM') || current === 'PM')) {
                     return { recommendedClass: 'OSC PM', reason: hits.aggressiveNotesReview.reason || 'Notes indicate PM/inspection-only work and should override a bad VMRS or repair-class selection.' };
                 }
+                if (notesClass === 'DEF MAINT' && !isAlready('DEF')) {
+                    return { recommendedClass: 'DEF MAINT', reason: hits.aggressiveNotesReview.reason || 'Notes/3Cs/parts indicate major repair work and should be DEF MAINT.' };
+                }
                 if (notesClass === 'SCHEDULED' && !isAlready('SCHEDULED')) {
-                    return { recommendedClass: 'SCHEDULED', reason: hits.aggressiveNotesReview.reason || 'Notes/parts/spend indicate actual repair work and should be SCHEDULED.' };
+                    return { recommendedClass: 'SCHEDULED', reason: hits.aggressiveNotesReview.reason || 'Notes/3Cs/parts indicate actual routine repair work and should be SCHEDULED.' };
                 }
             }
             if (tireQty >= 4 && !isAlready('DEF')) {
                 return { recommendedClass: 'DEF MAINT', reason: `Tire quantity across billed lines is ${tireQty}; 4+ tires should be reviewed as DEF MAINT.` };
+            }
+            if (hasAny(['CUSTOMER DIRECT','CUST DIRECT','CUSTOMER USED','BRANCH SENT','NOT DISPATCHED BY AMERIT','VENDOR WAS NOT DISPATCHED','AMERIT DID NOT DISPATCH']) && !(isAlready('CUST') || isAlready('CUSTOMER DIRECT'))) {
+                return { recommendedClass: 'CUST DIRECT', reason: 'Notes indicate the customer/branch used or directed the vendor without Amerit dispatch/coordination, supporting CUST DIRECT review.' };
             }
             if (hasAny(['ACCIDENT','COLLISION','CRASH','STRUCK','IMPACT','DEER','BODY DAMAGE','VANDAL','WINDSHIELD IMPACT']) && !isAlready('ACC')) {
                 return { recommendedClass: 'ACCIDENT DAMAGE', reason: 'Accident/impact/physical damage language supports ACCIDENT DAMAGE review.' };
@@ -5499,8 +5621,8 @@
                 return { recommendedClass: 'TOWING', reason: 'Tow/wrecker/recovery language supports TOWING review unless this was emergency roadside.' };
             }
             const major = hits.majorHits && hits.majorHits.length;
-            if ((major || (current.includes('DEF') && spend > 1500)) && !isAlready('DEF')) {
-                return { recommendedClass: 'DEF MAINT', reason: `Major repair evidence (${(hits.majorHits || []).slice(0,4).join(', ') || 'high-dollar major repair'}) supports DEF MAINT review.` };
+            if (major && !isAlready('DEF')) {
+                return { recommendedClass: 'DEF MAINT', reason: `Major repair evidence from notes/3Cs/parts (${(hits.majorHits || []).slice(0,4).join(', ')}) supports DEF MAINT review.` };
             }
             return null;
         }
@@ -5595,8 +5717,8 @@
             const explicitPmKeywords = ['preventive maintenance', 'preventative maintenance', 'pm service', 'pm inspection', 'dot inspection', 'bit inspection', 'annual inspection', 'safety inspection', 'state inspection', 'oil change', 'oil and filter service', 'lube service', 'service interval', 'scheduled pm'];
             const weakPmKeywords = ['filter', 'oil', 'inspection', 'service', 'lube'];
             const ersKeywords = ['roadside', 'road call', 'no start', 'jump start', 'tow', 'towing', 'breakdown', 'disabled', 'emergency', 'unit down roadside', 'mobile rescue', 'tire blowout', 'locked out'];
-            const majorRepairKeywords = ['engine', 'engine replacement', 'transmission', 'aftertreatment', 'dpf', 'emissions', 'regen', 'def', 'def system', 'turbo', 'injector', 'egr', 'radiator', 'coolant', 'drivetrain', 'differential', 'axle', 'overhaul', 'replace engine', 'replacement', 'failed', 'failure', 'derate'];
-            const excludableKeywords = ['accident', 'collision', 'driver abuse', 'misuse', 'vandalism', 'damage', 'deferred maintenance', 'deferred', 'engine replacement', 'transmission', 'aftertreatment', 'dpf', 'emissions', 'regen', 'def in fuel', 'fuel contamination', 'road hazard', 'sidewall', 'lockout', 'lost key', 'samsara', 'camera install', 'retrofit', 'upfit', 'merchant'];
+            const majorRepairKeywords = ['engine', 'engine replacement', 'replace engine', 'transmission', 'transmission replacement', 'aftertreatment', 'dpf', 'diesel particulate filter', 'scr', 'doc', 'nox', 'emissions', 'regen', 'def system', 'turbo', 'injector', 'egr', 'egr cooler', 'radiator', 'coolant', 'powertrain', 'drivetrain', 'differential', 'rear end', 'axle', 'transfer case', 'overhaul', 'rebuild', 'failed', 'failure', 'derate', 'large brake overhaul', 'brake overhaul', 'front and rear brake'];
+            const excludableKeywords = ['accident', 'collision', 'driver abuse', 'misuse', 'vandalism', 'damage', 'deferred maintenance', 'deferred', 'engine replacement', 'transmission', 'aftertreatment', 'dpf', 'emissions', 'regen', 'def in fuel', 'fuel contamination', 'road hazard', 'sidewall', 'lockout', 'lost key', 'customer direct', 'cust direct', 'customer used', 'branch sent', 'not dispatched by amerit', 'samsara', 'camera install', 'retrofit', 'upfit', 'merchant'];
 
             Object.values(groups).forEach(g => {
                 const roContext = roLookup[g.roNumber] || null;
@@ -5629,17 +5751,17 @@
                 const hasBrakeDiagnosticsScheduled = g.brakeDiagnosticsScheduled || g.componentCodes.some(code => isBrakeDiagnosticsScheduledEvidence(code, combinedText, combinedText));
                 const hvacDiagnostics = classifyHvacDiagnosticsRepair(g, combinedText);
                 const aggressiveNotesReview = classifyAggressiveNotesRepairClass(g, combinedText, spend);
+                const orderComplexity = getAgingOrderComplexitySignals(g, combinedText);
                 const isDefMaint = primaryRepUpper.includes('DEF');
-                const isHighDollarDef = isDefMaint && spend > 1500;
                 const hasExplicitPmSignal = explicitPmHits.length > 0 || /(^|\s)PM(\s|$)/i.test(combinedText);
-                const hasMajorRepairSignal = majorHits.length > 0 || isHighDollarDef;
+                const hasMajorRepairSignal = majorHits.length > 0;
                 const flags = [];
                 const reasons = [];
                 const suggested = new Set();
                 let recommendedClass = '';
                 let responsibleQueue = normalizeQueueNameForRepairClass(queueSource);
 
-                const explicitRecommendation = determineRecommendedRepairClassFromEvidence(primaryRepClass, combinedText, spend, g.tireQty, { majorHits, specialProjectCameraSystem: hasDriverRiskCameraOverride, brakeDiagnosticsScheduled: hasBrakeDiagnosticsScheduled, hvacDiagnostics, aggressiveNotesReview });
+                const explicitRecommendation = determineRecommendedRepairClassFromEvidence(primaryRepClass, combinedText, spend, g.tireQty, { majorHits, specialProjectCameraSystem: hasDriverRiskCameraOverride, brakeDiagnosticsScheduled: hasBrakeDiagnosticsScheduled, hvacDiagnostics, aggressiveNotesReview, orderComplexity });
                 if (explicitRecommendation) {
                     recommendedClass = explicitRecommendation.recommendedClass;
                     responsibleQueue = getResponsibleQueueForRecommendation(recommendedClass, queueSource);
@@ -5660,21 +5782,21 @@
                     reasons.push(`This RO is in the ERS queue but current REPCLASS is ${primaryRepClass || 'blank'}.`);
                 }
 
-                if (!recommendedClass && hasExplicitPmSignal && repService !== 'PM' && !hasMajorRepairSignal) {
+                if (!recommendedClass && hasExplicitPmSignal && repService !== 'PM' && !hasMajorRepairSignal && !(orderComplexity && orderComplexity.hasComplexPartsRepair)) {
                     recommendedClass = 'OSC PM';
                     responsibleQueue = 'PM';
                     flags.push(getFriendlyRepairClassLabel(recommendedClass));
                     suggested.add(recommendedClass);
                     const hits = explicitPmHits.length ? explicitPmHits : ['PM'];
                     reasons.push(`Explicit PM signal(s): ${hits.slice(0, 4).join(', ')}.`);
-                } else if (hasExplicitPmSignal && repService !== 'PM' && hasMajorRepairSignal) {
+                } else if (hasExplicitPmSignal && repService !== 'PM' && (hasMajorRepairSignal || (orderComplexity && orderComplexity.hasComplexPartsRepair))) {
                     // PM-like work can occur as part of a major repair. Do not recommend PM when major repair evidence is present.
                     if (!String(primaryRepClass).toUpperCase().match(/DEF|ABUSE|ACC|TOW|ERSA|SPECIAL|MERCHANT/)) {
                         recommendedClass = 'DEF MAINT';
                         responsibleQueue = normalizeQueueNameForRepairClass(queueSource);
                         flags.push(getFriendlyRepairClassLabel(recommendedClass));
                         suggested.add(recommendedClass);
-                        reasons.push(`PM-related work appears to be part of a major repair (${majorHits.slice(0, 4).join(', ') || 'high-dollar repair'}); classify based on the major repair, not the PM line.`);
+                        reasons.push(`PM-related work appears to be part of a major/non-routine repair (${(majorHits && majorHits.length ? majorHits.slice(0, 4).join(', ') : (orderComplexity && orderComplexity.reason) || 'multi-section parts evidence')}); classify based on the repair scope, not the PM line.`);
                     }
                 } else if (weakPmHits.length && repService !== 'PM') {
                     // Weak words like filter/oil/service are supporting context only and never create a PM recommendation alone.
