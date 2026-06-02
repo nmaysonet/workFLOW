@@ -440,6 +440,24 @@
         .modal-close:hover { color: #333; }
         .modal-textarea { width: 100%; height: 120px; padding: 10px; border: 1px solid #ccc; border-radius: 4px; resize: vertical; font-size: 14px; margin-bottom: 15px; font-family: 'Raleway', sans-serif;}
         .modal-actions { display: flex; justify-content: flex-end; gap: 10px; }
+        .repair-class-review-modal { background: rgba(15,23,42,0.72); }
+        .repair-class-review-box { width: 680px; max-width: 94%; border-top: 5px solid var(--gold); }
+        .repair-class-review-warning { background:#fff7ed; border:1px solid #f59e0b; color:#7c2d12; border-radius:6px; padding:10px; font-size:12px; font-weight:800; line-height:1.35; margin-bottom:12px; }
+        .repair-class-review-details { background:#f8fafc; border:1px solid #e2e8f0; border-radius:6px; padding:12px; margin-bottom:12px; }
+        .repair-class-review-grid { display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:8px; margin-bottom:10px; }
+        .repair-class-review-field { background:#fff; border:1px solid #e5e7eb; border-radius:5px; padding:8px; }
+        .repair-class-review-field .label { font-size:9px; font-weight:900; color:#64748b; text-transform:uppercase; letter-spacing:0.4px; margin-bottom:3px; }
+        .repair-class-review-field .value { font-size:13px; font-weight:800; color:#334155; line-height:1.25; word-break:break-word; }
+        .repair-class-review-ai-reason { background:#fff; border-left:4px solid var(--gold); padding:9px; font-size:12px; line-height:1.35; color:#334155; font-weight:650; max-height:145px; overflow:auto; }
+        .repair-class-review-history { margin-top:8px; background:#fff1f2; border:1px solid #fecdd3; color:#7f1d1d; border-radius:5px; padding:8px; font-size:11px; font-weight:800; line-height:1.35; }
+        .repair-class-review-memo { width:100%; min-height:105px; padding:10px; border:1px solid #cbd5e1; border-radius:5px; resize:vertical; font-size:13px; font-family:'Raleway', sans-serif; margin-bottom:8px; }
+        .repair-class-review-error { display:none; color:#b91c1c; font-size:12px; font-weight:900; margin-bottom:10px; }
+        .btn-accept-reasoning, .btn-decline-reasoning { border:none; border-radius:4px; padding:10px 12px; font-size:11px; font-weight:900; cursor:pointer; letter-spacing:0.35px; }
+        .btn-accept-reasoning { background:#16a34a; color:white; }
+        .btn-accept-reasoning:hover { background:#15803d; }
+        .btn-decline-reasoning { background:#334155; color:white; }
+        .btn-decline-reasoning:hover { background:#1e293b; }
+        .repair-class-review-status-note { font-size:10px; color:#64748b; font-weight:800; margin-top:5px; line-height:1.25; }
         .grouped-ro-item { margin-bottom: 8px; }
         .grouped-ro-item:last-child { margin-bottom: 0; }
     </style>
@@ -843,6 +861,22 @@
         </div>
     </div>
 
+    <div id="repair-class-review-modal" class="modal-overlay repair-class-review-modal">
+        <div class="modal-box repair-class-review-box">
+            <div class="modal-header">
+                <span>Repair Class Review Required</span>
+            </div>
+            <div class="repair-class-review-warning">This review cannot be closed silently. The VRO has been opened in a new tab. Confirm whether you accepted the AI reasoning and changed the repair class, or declined the AI reasoning and left the current REPCLASS unchanged. A memo is required either way.</div>
+            <div id="repair-class-review-details" class="repair-class-review-details"></div>
+            <textarea id="repair-class-review-memo" class="repair-class-review-memo" placeholder="Required memo. Examples: Agreed with AI and updated VRO repair class. / Current REPCLASS acceptable because..."></textarea>
+            <div id="repair-class-review-error" class="repair-class-review-error">Memo is required before this review can be cleared.</div>
+            <div class="modal-actions">
+                <button class="btn-accept-reasoning" onclick="submitRepairClassReviewDecision('accepted')">ACCEPTED REASONING</button>
+                <button class="btn-decline-reasoning" onclick="submitRepairClassReviewDecision('declined')">DECLINED REASONING</button>
+            </div>
+        </div>
+    </div>
+
     <div id="vendor-map-portal-modal" class="portal-modal-overlay">
         <div class="portal-modal-box">
             <div class="portal-modal-header">
@@ -1057,12 +1091,20 @@
                     const storageRef = bucket === configuredBucket
                         ? firebase.storage().ref().child(workbookPath)
                         : firebase.storage().refFromURL(`gs://${bucket}/${workbookPath}`);
+                    let agingSignature = '';
+                    try {
+                        const meta = await storageRef.getMetadata();
+                        agingSignature = [meta.generation, meta.updated, meta.size].filter(Boolean).join('|');
+                    } catch (metaErr) {
+                        console.warn('Aging Repairs metadata unavailable:', metaErr);
+                    }
                     const downloadUrl = await storageRef.getDownloadURL();
                     const response = await fetch(downloadUrl + (downloadUrl.includes('?') ? '&' : '?') + `_=${Date.now()}`, { cache: 'no-store' });
                     if (!response.ok) throw new Error(`HTTP ${response.status}`);
                     const data = await response.arrayBuffer();
                     const sig = new Uint8Array(data.slice(0, 2));
                     if (!(sig[0] === 0x50 && sig[1] === 0x4B)) throw new Error('Aging Repairs response is not a valid XLSX file.');
+                    globalAgingRepairsFileSignature = agingSignature || globalAgingRepairsFileSignature || `loaded-${Date.now()}`;
                     return data;
                 } catch (err) {
                     lastError = err;
@@ -1311,6 +1353,9 @@
         let globalBillingRows = [];
         let globalBillingIssueMap = {};
         let globalBillingReviewState = {};
+        let globalPendingRepairClassReview = null;
+        let globalAgingRepairsFileSignature = '';
+        let globalRepairClassReopenInFlight = {};
         let currentBillingFilter = 'ALL';
         let globalWeeklySpendHistoryRows = [];
         let expandedWeeklySpendWeeks = {};
@@ -1777,9 +1822,11 @@
 
         function getWeeklyBridgeIssueBySafeRo(safeRo) {
             const key = String(safeRo || '');
-            if (!key || isRepairClassStatusCleared(key)) return null;
+            if (!key) return null;
             const row = getCurrentWeekTransferBridgeRows().find(r => String(r.safeRo || safeFirebaseKey(r.roNumber)) === key);
-            return row ? createWeeklyBridgeIssue(row) : null;
+            const issue = row ? createWeeklyBridgeIssue(row) : null;
+            if (!issue) return null;
+            return isRepairClassStatusClearedForIssue(key, issue) ? null : issue;
         }
 
         function rowOrContextMatchesOwnerForBridge(row, owner) {
@@ -1868,7 +1915,7 @@
                 if (!roNum || existing.has(roNum)) return;
                 if (!rowOrContextMatchesOwnerForBridge(row, owner)) return;
                 const issue = createWeeklyBridgeIssue(row);
-                if (!issue || isRepairClassStatusCleared(issue.safeRo)) return;
+                if (!issue || isRepairClassStatusClearedForIssue(issue.safeRo, issue)) return;
                 out.push(createWeeklyBridgeVirtualRo(row, owner));
             });
             return out;
@@ -1881,8 +1928,10 @@
             const body = maxRows.map(row => {
                 const issue = createWeeklyBridgeIssue(row) || {};
                 const roLink = row.roUrl ? `<a class="ro-link" href="${escapeHtml(row.roUrl)}" target="_blank">${escapeHtml(row.roNumber || '')}</a>` : escapeHtml(row.roNumber || '');
-                const status = getBillingReviewStatusForSafeRo(issue.safeRo || row.safeRo || safeFirebaseKey(row.roNumber));
-                const action = ['Corrected','Cleared'].includes(status) ? 'CLEARED' : 'NEEDS REVIEW';
+                const safeRo = issue.safeRo || row.safeRo || safeFirebaseKey(row.roNumber);
+                const status = getBillingReviewStatusForSafeRo(safeRo);
+                const isCleared = isRepairClassStatusClearedForIssue(safeRo, issue);
+                const action = isCleared ? (status === 'Declined Reasoning' ? 'DECLINED' : status === 'Accepted Reasoning' ? 'ACCEPTED' : 'CLEARED') : 'NEEDS REVIEW';
                 return `<tr>
                     <td>${roLink}</td>
                     <td>${escapeHtml(row.unitNo || '')}</td>
@@ -1923,7 +1972,7 @@
 
         function isBillingRowUnresolved(r) {
             const st = getBillingReviewStatus(r);
-            return !['Corrected','Cleared'].includes(st);
+            return !isRepairClassClearedStatus(st);
         }
 
         function isBillingRowReviewNeeded(r) {
@@ -1946,14 +1995,15 @@
 
         function getRepairClassIssueForSafeRo(safeRo) {
             if (!safeRo || !globalBillingRows) return null;
-            return globalBillingRows.find(r => r.safeRo === safeRo && getBillingReviewStatusForSafeRo(r.safeRo) === 'Open') || null;
+            const issue = getRepairClassReviewIssueBySafeRo(safeRo);
+            return issue && !isRepairClassStatusClearedForIssue(safeRo, issue) ? issue : null;
         }
 
         function getVisibleRepairClassIssueForDrilldown(ro) {
             if (!ro || !ro.roNum) return null;
             const issue = getVisibleBillingIssueForRo(ro);
             if (!issue) return null;
-            return getBillingReviewStatusForSafeRo(issue.safeRo) === 'Open' ? issue : null;
+            return !isRepairClassStatusClearedForIssue(issue.safeRo, issue) ? issue : null;
         }
 
         function isRoLeftForWorkflowMetric(ro, metricFilter) {
@@ -2014,7 +2064,7 @@
             const issue = getVisibleRepairClassIssueForDrilldown(ro);
             const safeRo = issue ? issue.safeRo : (ro && ro.roNum ? safeFirebaseKey(ro.roNum) : '');
             const touchedToday = safeRo ? roTouchedToday(safeRo) : false;
-            const cleared = safeRo ? ['Corrected','Cleared'].includes(getBillingReviewStatusForSafeRo(safeRo)) : false;
+            const cleared = safeRo ? isRepairClassClearedStatus(getBillingReviewStatusForSafeRo(safeRo)) : false;
 
             if (f === 'REPAIR_CLASS') return !!issue;
             if (f === 'REPAIR_CLASS_REVIEW_NEEDED') return !!issue;
@@ -5519,7 +5569,7 @@
 
         function isRepairClassStatusCleared(safeRo) {
             const status = getBillingReviewStatusForSafeRo(safeRo);
-            return ['Corrected','Cleared'].includes(status);
+            return isRepairClassClearedStatus(status);
         }
 
         function getFriendlyRepairClassLabel(recommendedClass, fallback) {
@@ -5878,41 +5928,149 @@
             const cls = label.includes('DEF') || label.includes('DRIVER') || label.includes('ACCIDENT') || label.includes('TOWING') || label.includes('SPECIAL') || label.includes('MERCHANT') ? 'excludable' : 'review';
             const reasonText = `${label}. Current repair class: ${issue.repClass || 'blank'}. Recommended: ${issue.recommendedClass || issue.suggestedService || 'Review'}. ${(issue.reasons || []).join(' ')}`;
             const title = escapeHtml(reasonText).replace(/"/g, '&quot;');
-            const isCorrected = ['Corrected','Cleared'].includes(reviewStatus);
+            const isCorrected = isRepairClassStatusClearedForIssue(safeRo, issue);
             return `<div class="repair-class-cell" title="${title}">
                 <div class="repair-class-name">${escapeHtml(issue.repClass || 'Review')}</div>
                 <span class="repair-class-pill ${cls}">${escapeHtml(label)}</span>
                 <div class="repair-class-actions">
-                    <span class="status-toggle repair-class-toggle ${isCorrected ? 'status-dispatched' : 'status-pending'}" onclick="toggleRepairClassCorrected('${safeRo}'); event.stopPropagation();">${isCorrected ? 'CORRECTED' : 'PENDING'}</span>
+                    <span class="status-toggle repair-class-toggle ${isCorrected ? 'status-dispatched' : 'status-pending'}" onclick="toggleRepairClassCorrected('${safeRo}'); event.stopPropagation();" title="Open VRO and record repair-class reasoning">${isCorrected ? 'CORRECTED' : 'PENDING'}</span>
                 </div>
             </div>`;
         }
 
         function setRepairClassReviewStatus(safeRo, status) {
-            updateBillingReviewStatus(safeRo, status);
+            if (isRepairClassClosingStatus(status)) openRepairClassReviewModal(safeRo);
+            else updateBillingReviewStatus(safeRo, status);
         }
 
         function toggleRepairClassCorrected(safeRo) {
-            const current = getBillingReviewStatusForSafeRo(safeRo);
-            const next = ['Corrected','Cleared'].includes(current) ? 'Open' : 'Corrected';
-            updateBillingReviewStatus(safeRo, next);
+            openRepairClassReviewModal(safeRo);
+        }
+
+        function getBillingReviewRecordForSafeRo(safeRo) {
+            return globalBillingReviewState && globalBillingReviewState[safeRo] ? globalBillingReviewState[safeRo] : {};
         }
 
         function getBillingReviewStatusForSafeRo(safeRo) {
-            const review = globalBillingReviewState && globalBillingReviewState[safeRo] ? globalBillingReviewState[safeRo] : {};
+            const review = getBillingReviewRecordForSafeRo(safeRo);
             return review.status || 'Open';
+        }
+
+        function isRepairClassClosingStatus(status) {
+            return ['Corrected','Cleared','Accepted Reasoning','Declined Reasoning','Verified'].includes(String(status || ''));
+        }
+
+        function isRepairClassClearedStatus(status) {
+            return ['Corrected','Cleared','Accepted Reasoning','Declined Reasoning','Verified'].includes(String(status || ''));
+        }
+
+        function normalizeRepairClassForVerification(value) {
+            return String(value || '')
+                .toUpperCase()
+                .replace(/&AMP;/g, '&')
+                .replace(/SPECIAL\s+PROJ/g, 'SPECIAL PROJECT')
+                .replace(/DEF\s+MAINTENANCE/g, 'DEF MAINT')
+                .replace(/PREVENTATIVE\s+MAINTENANCE|PREVENTIVE\s+MAINTENANCE/g, 'OSC PM')
+                .replace(/[^A-Z0-9]+/g, ' ')
+                .replace(/\s+/g, ' ')
+                .trim();
+        }
+
+        function repairClassMatchesExpected(currentClass, expectedClass) {
+            const current = normalizeRepairClassForVerification(currentClass);
+            const expected = normalizeRepairClassForVerification(expectedClass);
+            if (!current || !expected || expected === 'REVIEW' || expected === 'NO TRANSFER' || expected === 'NOT AVAILABLE') return false;
+            if (current === expected) return true;
+            if (expected === 'SPECIAL PROJECT') return current.includes('SPECIAL PROJECT');
+            if (expected === 'OSC PM') return current === 'OSC PM' || current === 'PM' || current.includes('OSC PM');
+            if (expected === 'DEF MAINT') return current.includes('DEF MAINT') || current.includes('DEFERRED MAINT');
+            return current.split(',').some(part => normalizeRepairClassForVerification(part) === expected) || current.includes(expected);
+        }
+
+        function getRepairClassReviewIssueBySafeRo(safeRo) {
+            const key = String(safeRo || '');
+            if (!key) return null;
+            let issue = globalBillingIssueMap && globalBillingIssueMap[key] ? globalBillingIssueMap[key] : null;
+            if (!issue && globalBillingRows) issue = globalBillingRows.find(r => r.safeRo === key) || null;
+            if (!issue) {
+                const row = getCurrentWeekTransferBridgeRows().find(r => String(r.safeRo || safeFirebaseKey(r.roNumber)) === key);
+                if (row) issue = createWeeklyBridgeIssue(row);
+            }
+            return issue;
+        }
+
+        function reopenAcceptedRepairClassReview(safeRo, review, issue) {
+            const signature = globalAgingRepairsFileSignature || 'unknown-file-signature';
+            const inFlightKey = `${safeRo}|${signature}`;
+            if (globalRepairClassReopenInFlight[inFlightKey]) return;
+            if (review && review.verificationFailedFileSignature === signature && String(review.status || '') === 'Open') return;
+            globalRepairClassReopenInFlight[inFlightKey] = true;
+            const expectedClass = review.expectedClass || review.recommendedClassAtReview || issue.recommendedClass || issue.suggestedService || '';
+            const currentClass = issue.repClass || '';
+            const memo = review.reason || review.memo || '';
+            const verificationNote = `Accepted repair-class change was not reflected on the next Aging Repairs file refresh. Expected ${expectedClass || 'recommended class'} but current class is ${currentClass || 'blank'}. Prior memo: ${memo}`;
+            updateBillingReviewStatus(safeRo, 'Open', {
+                forceReviewUpdate: true,
+                verificationFailed: true,
+                verificationFailedAt: new Date().toISOString(),
+                verificationFailedFileSignature: signature,
+                previousAcceptedReason: memo,
+                expectedClass,
+                currentClassOnVerification: currentClass,
+                verificationNote,
+                historyAction: 'ACCEPTED_CHANGE_NOT_VERIFIED',
+                historyNote: verificationNote,
+                issue
+            });
+        }
+
+        function isRepairClassStatusClearedForIssue(safeRo, issue) {
+            const review = getBillingReviewRecordForSafeRo(safeRo);
+            const status = String(review.status || 'Open');
+            if (!isRepairClassClearedStatus(status)) return false;
+            if (status === 'Accepted Reasoning') {
+                const acceptedSignature = review.reviewFileSignature || review.agingRepairsFileSignature || '';
+                const currentSignature = globalAgingRepairsFileSignature || '';
+                const expectedClass = review.expectedClass || review.recommendedClassAtReview || (issue && (issue.recommendedClass || issue.suggestedService)) || '';
+                const currentClass = issue && issue.repClass ? issue.repClass : '';
+                if (currentSignature && acceptedSignature && currentSignature !== acceptedSignature) {
+                    if (repairClassMatchesExpected(currentClass, expectedClass)) {
+                        if (status !== 'Verified' && !review.verifiedAt) {
+                            updateBillingReviewStatus(safeRo, 'Verified', {
+                                forceReviewUpdate: true,
+                                verifiedAt: new Date().toISOString(),
+                                verifiedClass: currentClass,
+                                historyAction: 'ACCEPTED_CHANGE_VERIFIED',
+                                historyNote: `Accepted repair-class change verified. Current class is ${currentClass}.`,
+                                issue
+                            });
+                        }
+                        return true;
+                    }
+                    reopenAcceptedRepairClassReview(safeRo, review, issue || {});
+                    return false;
+                }
+            }
+            return true;
+        }
+
+        function isRepairClassStatusCleared(safeRo) {
+            const issue = getRepairClassReviewIssueBySafeRo(safeRo);
+            return isRepairClassStatusClearedForIssue(safeRo, issue);
         }
 
         function getBillingIssueForRo(roNum) {
             if (!roNum) return null;
             const safeRo = safeFirebaseKey(roNum);
-            if (isRepairClassStatusCleared(safeRo)) return null;
-            return (globalBillingIssueMap && globalBillingIssueMap[safeRo] ? globalBillingIssueMap[safeRo] : null) || getWeeklyBridgeIssueBySafeRo(safeRo);
+            const issue = (globalBillingIssueMap && globalBillingIssueMap[safeRo] ? globalBillingIssueMap[safeRo] : null) || getWeeklyBridgeIssueBySafeRo(safeRo);
+            if (!issue) return null;
+            if (isRepairClassStatusClearedForIssue(safeRo, issue)) return null;
+            return issue;
         }
 
         function isRepairClassIssueVisibleForRo(ro, issue) {
             if (!ro || !issue) return false;
-            if (isRepairClassStatusCleared(issue.safeRo)) return false;
+            if (isRepairClassStatusClearedForIssue(issue.safeRo, issue)) return false;
             if (issue.weeklyBridgeAction) return true;
             const roQueue = normalizeQueueNameForRepairClass(ro.sourceQueue || issue.queueSource || 'VENDED REPAIR');
             const responsible = normalizeQueueNameForRepairClass(issue.responsibleQueue || issue.queueSource || roQueue);
@@ -5995,18 +6153,129 @@
             renderBillingQueue();
         }
 
-        function updateBillingReviewStatus(safeRo, status) {
+        function openRepairClassReviewModal(safeRo) {
+            const issue = getRepairClassReviewIssueBySafeRo(safeRo);
+            if (!issue) {
+                alert('No repair-class review details were found for this RO. Refresh the file and try again.');
+                return;
+            }
+            globalPendingRepairClassReview = Object.assign({}, issue, { safeRo: safeRo || issue.safeRo });
+            const roUrl = getBillingRoUrl(issue.roNumber);
+            if (roUrl) window.open(roUrl, '_blank');
+
+            const review = getBillingReviewRecordForSafeRo(safeRo || issue.safeRo);
+            const modal = document.getElementById('repair-class-review-modal');
+            const details = document.getElementById('repair-class-review-details');
+            const memo = document.getElementById('repair-class-review-memo');
+            const err = document.getElementById('repair-class-review-error');
+            if (err) err.style.display = 'none';
+            if (memo) {
+                memo.value = '';
+                memo.placeholder = review && review.verificationFailed ? `Previous memo: ${review.previousAcceptedReason || review.reason || ''}` : 'Required memo. Examples: Agreed with AI and updated VRO repair class. / Current REPCLASS acceptable because...';
+            }
+            const aiReason = (issue.reasons || []).join(' | ') || 'No AI reason was captured.';
+            const verificationHtml = review && review.verificationFailed ? `<div class="repair-class-review-history">${escapeHtml(review.verificationNote || 'Prior accepted change was not verified on the next file refresh. Please review again.')}</div>` : '';
+            if (details) {
+                details.innerHTML = `
+                    <div class="repair-class-review-grid">
+                        <div class="repair-class-review-field"><div class="label">AFS RO #</div><div class="value">${escapeHtml(issue.roNumber || '')}</div></div>
+                        <div class="repair-class-review-field"><div class="label">Unit</div><div class="value">${escapeHtml(issue.unitNo || '')}</div></div>
+                        <div class="repair-class-review-field"><div class="label">Owner / Queue</div><div class="value">${escapeHtml(issue.coordinator || 'Unassigned')} · ${escapeHtml(issue.queueSource || '')}</div></div>
+                        <div class="repair-class-review-field"><div class="label">Status</div><div class="value">${escapeHtml(issue.currentStatus || '')}</div></div>
+                        <div class="repair-class-review-field"><div class="label">Current REPCLASS</div><div class="value">${escapeHtml(issue.repClass || 'Blank')}</div></div>
+                        <div class="repair-class-review-field"><div class="label">AI Transfer REPCLASS</div><div class="value">${escapeHtml(issue.recommendedClass || issue.suggestedService || 'Review')}</div></div>
+                    </div>
+                    <div class="repair-class-review-ai-reason"><strong>AI Reason:</strong><br>${escapeHtml(aiReason)}</div>
+                    ${verificationHtml}
+                `;
+            }
+            if (modal) modal.style.display = 'flex';
+        }
+
+        function submitRepairClassReviewDecision(decision) {
+            const issue = globalPendingRepairClassReview;
+            if (!issue || !issue.safeRo) return;
+            const memoEl = document.getElementById('repair-class-review-memo');
+            const err = document.getElementById('repair-class-review-error');
+            const memo = String(memoEl && memoEl.value || '').trim();
+            if (memo.length < 8) {
+                if (err) {
+                    err.innerText = 'Memo is required before this repair-class review can be cleared.';
+                    err.style.display = 'block';
+                }
+                if (memoEl) memoEl.focus();
+                return;
+            }
+            const accepted = decision === 'accepted';
+            const status = accepted ? 'Accepted Reasoning' : 'Declined Reasoning';
+            const recommendedClass = issue.recommendedClass || issue.suggestedService || '';
+            const aiReason = (issue.reasons || []).join(' | ');
+            updateBillingReviewStatus(issue.safeRo, status, {
+                forceReviewUpdate: true,
+                roNumber: issue.roNumber || '',
+                unitNo: issue.unitNo || '',
+                owner: issue.coordinator || '',
+                queueSource: issue.queueSource || '',
+                currentStatus: issue.currentStatus || '',
+                currentClassAtReview: issue.repClass || '',
+                expectedClass: recommendedClass,
+                recommendedClassAtReview: recommendedClass,
+                aiReason,
+                reason: memo,
+                disposition: accepted ? 'ACCEPTED_AI_REASONING' : 'DECLINED_AI_REASONING',
+                reviewFileSignature: globalAgingRepairsFileSignature || '',
+                verificationRequired: accepted,
+                verificationFailed: false,
+                reviewedAt: new Date().toISOString(),
+                reviewedBy: (firebase && firebase.auth && firebase.auth().currentUser && firebase.auth().currentUser.email) ? firebase.auth().currentUser.email : MASTER_EMAIL,
+                historyAction: accepted ? 'ACCEPTED_REASONING' : 'DECLINED_REASONING',
+                historyNote: memo,
+                issue
+            });
+            globalPendingRepairClassReview = null;
+            const modal = document.getElementById('repair-class-review-modal');
+            if (modal) modal.style.display = 'none';
+        }
+
+        function updateBillingReviewStatus(safeRo, status, extra = {}) {
+            if (!safeRo) return;
+            if (isRepairClassClosingStatus(status) && !extra.forceReviewUpdate) {
+                openRepairClassReviewModal(safeRo);
+                return;
+            }
             const nowIso = new Date().toISOString();
-            const updates = {
+            const issue = extra.issue || getRepairClassReviewIssueBySafeRo(safeRo) || {};
+            const updates = Object.assign({}, extra || {}, {
                 status: status || 'Open',
                 updatedAt: nowIso
+            });
+            delete updates.forceReviewUpdate;
+            delete updates.issue;
+            const historyAction = updates.historyAction || `STATUS_${String(status || 'Open').toUpperCase().replace(/[^A-Z0-9]+/g, '_')}`;
+            const historyEntry = {
+                action: historyAction,
+                status: updates.status,
+                note: updates.historyNote || updates.reason || updates.verificationNote || '',
+                memo: updates.reason || updates.memo || '',
+                roNumber: updates.roNumber || issue.roNumber || '',
+                unitNo: updates.unitNo || issue.unitNo || '',
+                currentClass: updates.currentClassAtReview || updates.currentClassOnVerification || issue.repClass || '',
+                recommendedClass: updates.expectedClass || updates.recommendedClassAtReview || issue.recommendedClass || issue.suggestedService || '',
+                aiReason: updates.aiReason || ((issue.reasons || []).join(' | ')),
+                fileSignature: updates.reviewFileSignature || globalAgingRepairsFileSignature || '',
+                updatedAt: nowIso,
+                updatedBy: (firebase && firebase.auth && firebase.auth().currentUser && firebase.auth().currentUser.email) ? firebase.auth().currentUser.email : MASTER_EMAIL
             };
-            if (db) db.ref(`billingReviewStatus/${safeRo}`).update(updates);
-            else {
-                globalBillingReviewState[safeRo] = Object.assign(globalBillingReviewState[safeRo] || {}, updates);
-                try { localStorage.setItem('workflow_billing_review_status', JSON.stringify(globalBillingReviewState)); } catch(e) {}
-                renderBillingQueue();
+            delete updates.historyAction;
+            delete updates.historyNote;
+            globalBillingReviewState[safeRo] = Object.assign(globalBillingReviewState[safeRo] || {}, updates);
+            try { localStorage.setItem('workflow_billing_review_status', JSON.stringify(globalBillingReviewState)); } catch(e) {}
+            if (db) {
+                db.ref(`billingReviewStatus/${safeRo}`).update(updates);
+                db.ref(`billingReviewStatus/${safeRo}/history`).push(historyEntry);
             }
+            renderBillingQueue();
+            if (processedData && processedData.length > 0) refreshActiveViewPreservingDrilldown();
         }
 
         function renderBillingOwnerTiles(allRows) {
@@ -6030,7 +6299,7 @@
                 const openRows = rows.filter(r => !isBillingClosedStatus(r.currentStatus));
                 const completedRows = rows.filter(r => isBillingClosedStatus(r.currentStatus));
                 const reviewNeeded = rows.filter(isBillingRowReviewNeeded);
-                const fixed = rows.filter(r => ['Reviewed','Corrected','Cleared'].includes(getBillingReviewStatus(r)));
+                const fixed = rows.filter(r => isRepairClassClearedStatus(getBillingReviewStatus(r)));
                 const score = rows.length ? Math.round((fixed.length / rows.length) * 100) : 100;
                 const safeOwner = String(owner).replace(/'/g, "\\'");
                 const color = score >= 85 ? '#16a34a' : (score >= 70 ? '#d97706' : '#dc2626');
@@ -6091,7 +6360,7 @@
                     <td>${flagHtml}</td>
                     <td class="billing-reasons">${reasons}<div style="margin-top:5px;color:#64748b;">Lines reviewed: ${r.lineCount}${r.tireQty ? ` · Tire qty: ${r.tireQty}` : ''}</div></td>
                     <td class="review-col"><select class="billing-status-select" onchange="updateBillingReviewStatus('${r.safeRo}', this.value)">
-                        ${['Open','Reviewed','Correction Needed','Corrected','Escalated','Cleared'].map(st => `<option value="${st}" ${String(r.reviewStatus || 'Open') === st ? 'selected' : ''}>${st}</option>`).join('')}
+                        ${['Open','Reviewed','Correction Needed','Escalated','Accepted Reasoning','Declined Reasoning','Verified','Corrected','Cleared'].map(st => `<option value="${st}" ${String(r.reviewStatus || 'Open') === st ? 'selected' : ''}>${st}</option>`).join('')}
                     </select></td>
                 </tr>`;
             }).join('');
