@@ -673,7 +673,7 @@
                         </div>
                     </div>
                     <div style="font-size:12px; color:#64748b; font-weight:700; margin-bottom:12px;">
-                        Summarizes vended spend by week before and after AI transfer logic. In-Budget is limited to SCHEDULED and OSC PM; every other repair class is Out-of-Budget.
+                        Summarizes vended spend by week before and after AI transfer logic. In-Budget includes SCHEDULED, OSC PM, and DEF MAINT; every other repair class is Out-of-Budget.
                     </div>
                     <div id="weekly-spend-table-summary-body"></div>
                 </div>
@@ -2822,7 +2822,7 @@
 
         function isBudgetIncludedRepairClass(repairClass) {
             const r = normalizeRepairClassForBudget(repairClass);
-            return r === 'SCHEDULED' || r === 'OSC PM';
+            return r === 'SCHEDULED' || r === 'OSC PM' || r === 'DEF MAINT';
         }
 
         function isBudgetExcludedRepairClass(repairClass) {
@@ -2977,8 +2977,8 @@
                 spend,
                 allocationBasis: info.budgetAllocationBasis || 'End-of-Week repair class allocation',
                 aiRepairClassReasons: info.aiRepairClassReasons || '',
-                budgetPolicy: 'Included only when repair class is SCHEDULED or OSC PM',
-                snapshotVersion: 2
+                budgetPolicy: 'Included only when repair class is SCHEDULED, OSC PM, or DEF MAINT',
+                snapshotVersion: 3
             };
         }
 
@@ -3131,7 +3131,7 @@
                     <span style="color:#64748b;">Weekly Cap: $${Number(WEEKLY_WIP_AUTH_CAP || 0).toLocaleString('en-US', {maximumFractionDigits:0})}</span>
                 </div>
                 <div class="weekly-history-note">
-                    Weekly History bridges end-of-week spend to current repair class, AI transfer repair class, and Budget Included / Budget Excluded allocation. In-Budget is limited to SCHEDULED and OSC PM; all other repair classes are Budget Excluded. Closed weeks are locked as an End-of-Week snapshot once Aging Repairs review logic is loaded.
+                    Weekly History bridges end-of-week spend to current repair class, AI transfer repair class, and Budget Included / Budget Excluded allocation. In-Budget includes SCHEDULED, OSC PM, and DEF MAINT; all other repair classes are Budget Excluded. Closed weeks are locked as an End-of-Week snapshot once Aging Repairs review logic is loaded.
                 </div>
                 <div class="weekly-history-rollup">`;
 
@@ -3400,7 +3400,7 @@
                 return;
             }
             let html = `<div class="weekly-table-summary-shell">
-                <div class="weekly-table-summary-note">Original / Pre-AI uses the current repair class. Transfer / After AI uses the AI transfer repair class when one exists, otherwise it keeps the current repair class. This summary only shows vended spend. In-Budget only includes SCHEDULED and OSC PM; every other repair class is Out-of-Budget.</div>`;
+                <div class="weekly-table-summary-note">Original / Pre-AI uses the current repair class. Transfer / After AI uses the AI transfer repair class when one exists, otherwise it keeps the current repair class. This summary only shows vended spend. In-Budget includes SCHEDULED, OSC PM, and DEF MAINT; every other repair class is Out-of-Budget.</div>`;
             groups.forEach(group => {
                 const totalSpend = Number(group.transfer.grandTotal || group.original.grandTotal || 0);
                 html += `<div class="weekly-table-summary-card">
@@ -3448,7 +3448,7 @@
                         'Week End': group.weekEndDate || '',
                         'Model': modelInfo.modelName,
                         'Budget Bucket': 'In-Budget Total',
-                        'Repair Class': 'SCHEDULED + OSC PM',
+                        'Repair Class': 'SCHEDULED + OSC PM + DEF MAINT',
                         'Vended Spend': Number(model.inBudgetTotal || 0),
                         'VRO Count': model.inBudgetVroCount || 0,
                         'Percent of Vended Spend': formatWeeklySpendPercent(model.inBudgetTotal || 0, model.grandTotal || 0)
@@ -4939,7 +4939,7 @@
             if (['OSC PM', 'AFS PM', 'OSC HO', 'SAFETY INS', 'STATE INS'].includes(r)) return 'PM';
             if (['OSC RD', 'BRINKS ERSA', 'GARDA ERSA', 'US FOODS ERSA', 'BRINKSROSID', 'EMERGENCY', 'ROAD CALL'].includes(r)) return 'ERS';
             if (r === 'SCHEDULED') return 'VENDED REPAIR';
-            if (['DEF MAINT', 'DRIVER ABUSE', 'ACCIDENT DAMAGE', 'ACCIDENT DAM', 'ACC DAM', 'TOWING', 'SPECIAL PROJ', 'MERCHANT PM'].includes(r)) return 'EXCLUDABLE / SPECIAL REVIEW';
+            if (['DEF MAINT', 'DRIVER ABUSE', 'ACCIDENT DAMAGE', 'ACCIDENT DAM', 'ACC DAM', 'TOWING', 'SPECIAL PROJ', 'SPECIAL PROJECT', 'MERCHANT PM'].includes(r)) return 'EXCLUDABLE / SPECIAL REVIEW';
             return 'VENDED REPAIR';
         }
 
@@ -5001,6 +5001,9 @@
             if (isGardaErsaRepairClass(primaryRepClass)) return null;
 
             if (isAlready('MERCHANT')) return null;
+            if (hits.specialProjectCameraSystem && !isAlready('SPECIAL')) {
+                return { recommendedClass: 'SPECIAL PROJECT', reason: 'Component code 036-014 with Driver Risk Management Camera System in Component Description requires SPECIAL PROJECT.' };
+            }
             if (tireQty >= 4 && !isAlready('DEF')) {
                 return { recommendedClass: 'DEF MAINT', reason: `Tire quantity across billed lines is ${tireQty}; 4+ tires should be reviewed as DEF MAINT.` };
             }
@@ -5069,6 +5072,7 @@
                         lineTypes: [],
                         lineDescriptions: [],
                         additionalNotes: [],
+                        specialProjectCameraSystem: false,
                         tireQty: 0,
                         lineCount: 0
                     };
@@ -5090,6 +5094,11 @@
                 if (lineType) g.lineTypes.push(lineType);
                 if (lineDesc) g.lineDescriptions.push(lineDesc);
                 if (notes) g.additionalNotes.push(notes);
+                const normalizedCompCode = String(compCode || '').toUpperCase().replace(/\s+/g, '').trim();
+                const normalizedCompDesc = String(compDesc || '').toUpperCase().replace(/\s+/g, ' ').trim();
+                if (normalizedCompCode === '036-014' && normalizedCompDesc.includes('DRIVER RISK MANAGEMENT CAMERA SYSTEM')) {
+                    g.specialProjectCameraSystem = true;
+                }
                 const tireText = `${family} ${compDesc} ${lineDesc}`.toLowerCase();
                 if (tireText.includes('tire') || tireText.includes('tyre')) g.tireQty += parseQty(row[IDX.quantity]) || 1;
                 g.lineCount += 1;
@@ -5143,7 +5152,7 @@
                 let recommendedClass = '';
                 let responsibleQueue = normalizeQueueNameForRepairClass(queueSource);
 
-                const explicitRecommendation = determineRecommendedRepairClassFromEvidence(primaryRepClass, combinedText, spend, g.tireQty, { majorHits });
+                const explicitRecommendation = determineRecommendedRepairClassFromEvidence(primaryRepClass, combinedText, spend, g.tireQty, { majorHits, specialProjectCameraSystem: g.specialProjectCameraSystem });
                 if (explicitRecommendation) {
                     recommendedClass = explicitRecommendation.recommendedClass;
                     responsibleQueue = getResponsibleQueueForRecommendation(recommendedClass, queueSource);
