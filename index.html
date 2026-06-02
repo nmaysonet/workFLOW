@@ -4446,18 +4446,18 @@
         function roMatchesOwnerForDrilldown(ro, owner) {
             if (isNonOscOwnerKey(owner)) return roMatchesNonOscLocation(ro, owner);
             if (!ro || !ro.drilldownOwners) return false;
-            if (owner === 'ALL_PM') return ro.drilldownOwners.some(o => pmOwners.includes(o));
+            if (owner === 'ALL_PM') return ro.drilldownOwners.some(o => pmOwners.includes(o)) || (ro.dedicatedShopOwners || []).some(o => pmOwners.includes(o));
             if (owner === 'ALL_VENDED') return ro.drilldownOwners.some(o => vendedOwners.includes(o)) || hasDedicatedShopOwner(ro, 'ALL_VENDED');
-            if (owner === 'ALL_ERS') return ro.drilldownOwners.some(o => ersOwners.includes(o));
+            if (owner === 'ALL_ERS') return ro.drilldownOwners.some(o => ersOwners.includes(o)) || (ro.dedicatedShopOwners || []).some(o => ersOwners.includes(o));
             if (ro.drilldownOwners.includes(String(owner))) return true;
-            return vendedOwners.includes(String(owner)) && hasDedicatedShopOwner(ro, owner);
+            return hasDedicatedShopOwner(ro, owner);
         }
 
         function shouldDisplayAsDedicatedShopWork(ro, owner) {
             if (!ro || !hasDedicatedShopOwner(ro, owner)) return false;
-            if (owner === 'ALL_VENDED') {
-                return !ro.drilldownOwners.some(o => vendedOwners.includes(o));
-            }
+            if (owner === 'ALL_VENDED') return !ro.drilldownOwners.some(o => vendedOwners.includes(o));
+            if (owner === 'ALL_PM') return !ro.drilldownOwners.some(o => pmOwners.includes(o));
+            if (owner === 'ALL_ERS') return !ro.drilldownOwners.some(o => ersOwners.includes(o));
             return !ro.drilldownOwners.includes(String(owner));
         }
 
@@ -6215,25 +6215,40 @@
 
                 let unitOwner = mUnit.owner;
                 let validBranchOwner = mUnit.isDedicatedShop ? '' : (unitOwner || 'Unassigned');
-                const nonOscLocationKey = mUnit.isDedicatedShop ? buildNonOscLocationKey(mUnit.region, mUnit.subregion, mUnit.branch) : '';
-                const nonOscLocationLabel = mUnit.isDedicatedShop ? buildNonOscLocationLabel(mUnit.region, mUnit.subregion, mUnit.branch) : '';
 
                 let creatorInfo = resourceMap[ownerEmail];
+                if (!creatorInfo && ownerEmail) {
+                    const emailMatch = String(ownerEmail).match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i);
+                    if (emailMatch && resourceMap[emailMatch[0].toLowerCase()]) {
+                        creatorInfo = resourceMap[emailMatch[0].toLowerCase()];
+                    } else {
+                        const ownerKeyHit = Object.keys(resourceMap).find(emailKey => ownerEmail.includes(emailKey));
+                        if (ownerKeyHit) creatorInfo = resourceMap[ownerKeyHit];
+                    }
+                }
+
                 const isKevinCreated = ownerEmail.includes('kanguzza') || ownerEmail.includes('kevin anguzza');
+                const creatorTeam = isKevinCreated ? 'PM' : (creatorInfo && creatorInfo.team ? String(creatorInfo.team).trim().toUpperCase() : '');
+                const creatorName = isKevinCreated ? 'Kevin Anguzza' : (creatorInfo && creatorInfo.name ? String(creatorInfo.name).trim() : '');
+                const creatorIsAssignedQueueOwner = !!creatorName && (creatorTeam === 'VENDED REPAIR' || creatorTeam === 'ERS' || creatorTeam === 'PM');
+
                 let sourceQueue = 'VENDED REPAIR';
-                if (isKevinCreated) sourceQueue = 'PM';
-                else if (creatorInfo && creatorInfo.team === 'PM') sourceQueue = 'PM';
-                else if (creatorInfo && creatorInfo.team === 'ERS') sourceQueue = 'ERS';
+                if (creatorTeam === 'PM') sourceQueue = 'PM';
+                else if (creatorTeam === 'ERS') sourceQueue = 'ERS';
 
                 let dedicatedShopOwners = new Set();
-                const creatorIsVended = creatorInfo && creatorInfo.team === 'VENDED REPAIR' && creatorInfo.name;
                 const finShop = orderFin[roNum] && orderFin[roNum].shop ? String(orderFin[roNum].shop).trim() : '';
                 const roDetailRepClass = orderFin[roNum] && orderFin[roNum].repClass ? String(orderFin[roNum].repClass).trim() : '';
-                // Dedicated locations are now owned by the Non-OSC Queue as location tiles.
-                // Do not route these ROs to a person tile just because of who created the VRO.
                 const isDedicatedShopWorkOrder = !!mUnit.isDedicatedShop;
+                const routeDedicatedToCoordinator = isDedicatedShopWorkOrder && creatorIsAssignedQueueOwner;
+                const nonOscLocationKey = (isDedicatedShopWorkOrder && !routeDedicatedToCoordinator) ? buildNonOscLocationKey(mUnit.region, mUnit.subregion, mUnit.branch) : '';
+                const nonOscLocationLabel = (isDedicatedShopWorkOrder && !routeDedicatedToCoordinator) ? buildNonOscLocationLabel(mUnit.region, mUnit.subregion, mUnit.branch) : '';
 
-                if (!mUnit.isDedicatedShop && isKevinCreated) {
+                if (routeDedicatedToCoordinator) {
+                    kpiOwners.add(creatorName);
+                    dedicatedShopOwners.add(creatorName);
+                }
+                else if (!mUnit.isDedicatedShop && isKevinCreated) {
                     kpiOwners.add('Kevin Anguzza');
                     drilldownOwners.add('Kevin Anguzza');
                 } 
@@ -7032,7 +7047,7 @@
             let isPM = containerId === 'pm-kpi-container';
 
             ownersList.forEach(owner => {
-                let ownerDataAll = processedData.filter(ro => ro.kpiOwners.includes(owner) || (containerId === 'vended-kpi-container' && hasDedicatedShopOwner(ro, owner)));
+                let ownerDataAll = processedData.filter(ro => ro.kpiOwners.includes(owner) || hasDedicatedShopOwner(ro, owner));
                 
                 if (currentCustomerFilter !== 'ALL') {
                     ownerDataAll = ownerDataAll.filter(ro => ro.custKey === currentCustomerFilter);
@@ -7100,8 +7115,9 @@
 
         function generateRoDrilldownHtml(ownerDataAll, isPM) {
             let isVendedQueue = currentOwnerView === 'ALL_VENDED' || vendedOwners.includes(currentOwnerView) || isNonOscOwnerKey(currentOwnerView);
+            let canShowDedicatedShopSection = currentOwnerView === 'ALL_VENDED' || currentOwnerView === 'ALL_PM' || currentOwnerView === 'ALL_ERS' || vendedOwners.includes(currentOwnerView) || pmOwners.includes(currentOwnerView) || ersOwners.includes(currentOwnerView);
             let baseOpenData = ownerDataAll.filter(ro => ro.isOpen).map(ro => {
-                if (isVendedQueue && shouldDisplayAsDedicatedShopWork(ro, currentOwnerView)) {
+                if (canShowDedicatedShopSection && shouldDisplayAsDedicatedShopWork(ro, currentOwnerView)) {
                     return Object.assign({}, ro, {
                         drillTopLevel: 'Dedicated Shop Work Orders',
                         subregion: 'Dedicated Shop Work Orders',
