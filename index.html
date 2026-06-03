@@ -631,7 +631,6 @@
                 <button class="sub-tab" onclick="switchSpendTab('sub-spend-change-log', this)">Spend / Status Change Log</button>
                 <button class="sub-tab" onclick="switchSpendTab('sub-weekly-history', this)">Weekly History</button>
                 <button class="sub-tab" onclick="switchSpendTab('sub-weekly-table-summary', this)">Weekly Table Summary</button>
-                <button class="sub-tab" onclick="switchSpendTab('sub-weekly-table-summary-dedicated', this)">Weekly Table Summary (Dedicated)</button>
             </div>
             <div id="sub-weekly-spend" class="sub-section active">
                 <div id="spend-dashboard-widget"></div>
@@ -708,20 +707,6 @@
                         Summarizes vended spend by week before and after AI transfer logic. In-Budget includes SCHEDULED, OSC PM, and DEF MAINT; every other repair class is Out-of-Budget.
                     </div>
                     <div id="weekly-spend-table-summary-body"></div>
-                </div>
-            </div>
-            <div id="sub-weekly-table-summary-dedicated" class="sub-section">
-                <div class="drilldown-container">
-                    <div class="view-title" style="margin-bottom: 10px;">
-                        <span style="font-weight:700;">Weekly Table Summary (Dedicated)</span>
-                        <div class="controls-group" style="display:flex; align-items:center;">
-                            <button class="btn-green" onclick="exportWeeklySpendDedicatedTableSummaryToExcel()">&#11139; Export to XLSX</button>
-                        </div>
-                    </div>
-                    <div style="font-size:12px; color:#64748b; font-weight:700; margin-bottom:12px;">
-                        Summarizes dedicated STANDARD RO spend by week before and after AI transfer logic. In-Budget includes SCHEDULED, OSC PM, and DEF MAINT; every other repair class is Out-of-Budget.
-                    </div>
-                    <div id="weekly-spend-table-summary-dedicated-body"></div>
                 </div>
             </div>
         </div>
@@ -1789,10 +1774,10 @@
             return (processedData || []).find(ro => String(ro && ro.roNum || '').toUpperCase().trim() === target) || null;
         }
 
-        function getWeeklyTransferBridgeRowsForWeek(weekKey, spendChannel = 'Vended') {
+        function getWeeklyTransferBridgeRowsForWeek(weekKey) {
             return (globalWeeklySpendHistoryRows || [])
                 .filter(row => row && row.weekKey === weekKey)
-                .filter(row => getWeeklySpendChannel(row) === spendChannel)
+                .filter(row => getWeeklySpendChannel(row) === 'Vended')
                 .filter(isWeeklyTransferDifference)
                 .sort((a, b) => Number(b.spend || 0) - Number(a.spend || 0));
         }
@@ -3089,9 +3074,6 @@
             } else if (subId === 'sub-weekly-table-summary') {
                 renderWeeklySpendTableSummary();
                 refreshWeeklySpendHistoryRows();
-            } else if (subId === 'sub-weekly-table-summary-dedicated') {
-                renderWeeklySpendDedicatedTableSummary();
-                refreshWeeklySpendHistoryRows();
             } else {
                 renderSpendQueue();
             }
@@ -3428,7 +3410,6 @@
             }
             renderWeeklySpendHistory();
             renderWeeklySpendTableSummary();
-            renderWeeklySpendDedicatedTableSummary();
             triggerViewUpdate();
             return globalWeeklySpendHistoryRows;
         }
@@ -3628,10 +3609,10 @@
             };
         }
 
-        function buildWeeklySpendTableSummaryGroups(rows, spendChannel = 'Vended') {
+        function buildWeeklySpendTableSummaryGroups(rows) {
             const map = {};
             (rows || []).forEach(row => {
-                if (getWeeklySpendChannel(row) !== spendChannel) return;
+                if (getWeeklySpendChannel(row) !== 'Vended') return;
                 const week = row.weekKey || 'UNKNOWN';
                 if (!map[week]) {
                     map[week] = {
@@ -3690,7 +3671,7 @@
             </tr>`;
         }
 
-        function renderWeeklySpendPivotTable(title, subtitle, model, spendLabel = 'Vended Spend') {
+        function renderWeeklySpendPivotTable(title, subtitle, model) {
             return `<div class="weekly-pivot-box">
                 <div class="weekly-pivot-title">${escapeHtml(title)}</div>
                 <div class="weekly-pivot-subtitle">${escapeHtml(subtitle)}</div>
@@ -3698,7 +3679,7 @@
                     <thead><tr>
                         <th class="weekly-rc-col-bucket">Budget</th>
                         <th class="weekly-rc-col-class">Repair Class</th>
-                        <th class="weekly-rc-col-money">${escapeHtml(spendLabel)}</th>
+                        <th class="weekly-rc-col-money">Vended Spend</th>
                         <th class="weekly-rc-col-count">VROs</th>
                         <th class="weekly-rc-col-pct">Split</th>
                     </tr></thead>
@@ -3718,64 +3699,32 @@
         }
 
         function renderWeeklySpendTableSummary() {
-            renderWeeklySpendTableSummaryForChannel({
-                spendChannel: 'Vended',
-                containerId: 'weekly-spend-table-summary-body',
-                emptyLabel: 'vended weekly table summary',
-                notePrefix: 'This summary only shows vended spend and now bridges current-week transfer gaps into coordinator Repair Class Compliance so they stay visible until reviewed or corrected.',
-                roLabel: 'Vended VROs',
-                totalLabel: 'Vended Total',
-                spendLabel: 'Vended Spend',
-                titleSuffix: 'Weekly Table Summary'
-            });
-        }
-
-        function renderWeeklySpendDedicatedTableSummary() {
-            renderWeeklySpendTableSummaryForChannel({
-                spendChannel: 'Dedicated',
-                containerId: 'weekly-spend-table-summary-dedicated-body',
-                emptyLabel: 'dedicated weekly table summary',
-                notePrefix: 'This summary only shows dedicated STANDARD RO spend. It uses the same Original / Transfer model structure as the vended weekly table summary so dedicated shop work can be reviewed separately without mixing into vended spend.',
-                roLabel: 'Standard ROs',
-                totalLabel: 'Dedicated Total',
-                spendLabel: 'Dedicated Spend',
-                titleSuffix: 'Weekly Table Summary (Dedicated)'
-            });
-        }
-
-        function renderWeeklySpendTableSummaryForChannel(options) {
-            const opts = options || {};
-            const spendChannel = opts.spendChannel || 'Vended';
-            const container = document.getElementById(opts.containerId || 'weekly-spend-table-summary-body');
+            const container = document.getElementById('weekly-spend-table-summary-body');
             if (!container) return;
-            const groups = buildWeeklySpendTableSummaryGroups(globalWeeklySpendHistoryRows || [], spendChannel);
+            const groups = buildWeeklySpendTableSummaryGroups(globalWeeklySpendHistoryRows || []);
             if (groups.length === 0) {
-                container.innerHTML = `<div style="padding:18px; text-align:center; color:#64748b; font-weight:800; background:#f8fafc; border:1px solid #e2e8f0; border-radius:6px;">No ${escapeHtml(opts.emptyLabel || 'weekly table summary')} is available yet. Weekly totals will appear once Firebase governor authorizations are loaded.</div>`;
+                container.innerHTML = `<div style="padding:18px; text-align:center; color:#64748b; font-weight:800; background:#f8fafc; border:1px solid #e2e8f0; border-radius:6px;">No vended weekly table summary is available yet. Weekly totals will appear once Firebase governor authorizations are loaded.</div>`;
                 return;
             }
-            const spendLabel = opts.spendLabel || (spendChannel === 'Dedicated' ? 'Dedicated Spend' : 'Vended Spend');
-            const roLabel = opts.roLabel || (spendChannel === 'Dedicated' ? 'Standard ROs' : 'Vended VROs');
-            const totalLabel = opts.totalLabel || (spendChannel === 'Dedicated' ? 'Dedicated Total' : 'Vended Total');
-            const titleSuffix = opts.titleSuffix || (spendChannel === 'Dedicated' ? 'Weekly Table Summary (Dedicated)' : 'Weekly Table Summary');
             let html = `<div class="weekly-table-summary-shell">
-                <div class="weekly-table-summary-note">Original / Pre-AI uses the current repair class. Transfer / After AI uses the AI transfer repair class when one exists, otherwise it keeps the current repair class. ${escapeHtml(opts.notePrefix || '')} In-Budget includes SCHEDULED, OSC PM, and DEF MAINT; every other repair class is Out-of-Budget.</div>`;
+                <div class="weekly-table-summary-note">Original / Pre-AI uses the current repair class. Transfer / After AI uses the AI transfer repair class when one exists, otherwise it keeps the current repair class. This summary only shows vended spend and now bridges current-week transfer gaps into coordinator Repair Class Compliance so they stay visible until reviewed or corrected. In-Budget includes SCHEDULED, OSC PM, and DEF MAINT; every other repair class is Out-of-Budget.</div>`;
             groups.forEach(group => {
                 const totalSpend = Number(group.transfer.grandTotal || group.original.grandTotal || 0);
                 const totalVros = Math.max(group.transfer.grandVroCount || 0, group.original.grandVroCount || 0, group.vroCount || 0);
-                const bridgeRows = getWeeklyTransferBridgeRowsForWeek(group.weekKey, spendChannel);
+                const bridgeRows = getWeeklyTransferBridgeRowsForWeek(group.weekKey);
                 html += `<div class="weekly-table-summary-card">
                     <div class="weekly-table-summary-header">
-                        <div class="weekly-table-summary-week">${escapeHtml(group.weekKey)} ${escapeHtml(titleSuffix)}</div>
+                        <div class="weekly-table-summary-week">${escapeHtml(group.weekKey)} Weekly Table Summary</div>
                         <div class="weekly-table-summary-meta">
                             <span>Week End: ${escapeHtml(group.weekEndDate || '')}</span>
-                            <span>${totalVros} ${escapeHtml(roLabel)}</span>
-                            <span>${escapeHtml(totalLabel)}: ${formatWeeklyHistoryMoney(totalSpend)}</span>
+                            <span>${totalVros} Vended VROs</span>
+                            <span>Vended Total: ${formatWeeklyHistoryMoney(totalSpend)}</span>
                             <span>${bridgeRows.length} Transfer Gap${bridgeRows.length === 1 ? '' : 's'}</span>
                         </div>
                     </div>
                     <div class="weekly-table-summary-grid">
-                        ${renderWeeklySpendPivotTable(`${group.weekKey} Original`, 'Pre-AI Model · Current Repair Class', group.original, spendLabel)}
-                        ${renderWeeklySpendPivotTable(`${group.weekKey} Transfer`, 'After AI Model · Transfer Repair Class', group.transfer, spendLabel)}
+                        ${renderWeeklySpendPivotTable(`${group.weekKey} Original`, 'Pre-AI Model · Current Repair Class', group.original)}
+                        ${renderWeeklySpendPivotTable(`${group.weekKey} Transfer`, 'After AI Model · Transfer Repair Class', group.transfer)}
                     </div>
                     ${renderWeeklyTransferBridgeTable(group.weekKey, bridgeRows)}
                 </div>`;
@@ -3784,10 +3733,9 @@
             container.innerHTML = html;
         }
 
-        function buildWeeklySpendTableSummaryExportRows(rows, spendChannel = 'Vended') {
-            const groups = buildWeeklySpendTableSummaryGroups(rows || [], spendChannel);
+        function buildWeeklySpendTableSummaryExportRows(rows) {
+            const groups = buildWeeklySpendTableSummaryGroups(rows || []);
             const out = [];
-            const spendColumn = spendChannel === 'Dedicated' ? 'Dedicated Spend' : 'Vended Spend';
             groups.forEach(group => {
                 [
                     { modelName: 'Original / Pre-AI Model', key: 'original' },
@@ -3795,55 +3743,47 @@
                 ].forEach(modelInfo => {
                     const model = group[modelInfo.key];
                     (model.repairClasses || []).forEach(item => {
-                        const row = {
+                        out.push({
                             'Week': group.weekKey,
                             'Week End': group.weekEndDate || '',
-                            'Spend Channel': spendChannel,
                             'Model': modelInfo.modelName,
                             'Budget Bucket': item.budgetBucket,
                             'Repair Class': item.repairClass || 'Not Available',
+                            'Vended Spend': Number(item.spend || 0),
                             'VRO Count': item.vroCount || 0,
-                            [`Percent of ${spendColumn}`]: formatWeeklySpendPercent(item.spend || 0, model.grandTotal || 0)
-                        };
-                        row[spendColumn] = Number(item.spend || 0);
-                        out.push(row);
+                            'Percent of Vended Spend': formatWeeklySpendPercent(item.spend || 0, model.grandTotal || 0)
+                        });
                     });
-                    let rowIn = {
+                    out.push({
                         'Week': group.weekKey,
                         'Week End': group.weekEndDate || '',
-                        'Spend Channel': spendChannel,
                         'Model': modelInfo.modelName,
                         'Budget Bucket': 'In-Budget Total',
                         'Repair Class': 'SCHEDULED + OSC PM + DEF MAINT',
+                        'Vended Spend': Number(model.inBudgetTotal || 0),
                         'VRO Count': model.inBudgetVroCount || 0,
-                        [`Percent of ${spendColumn}`]: formatWeeklySpendPercent(model.inBudgetTotal || 0, model.grandTotal || 0)
-                    };
-                    rowIn[spendColumn] = Number(model.inBudgetTotal || 0);
-                    out.push(rowIn);
-                    let rowOut = {
+                        'Percent of Vended Spend': formatWeeklySpendPercent(model.inBudgetTotal || 0, model.grandTotal || 0)
+                    });
+                    out.push({
                         'Week': group.weekKey,
                         'Week End': group.weekEndDate || '',
-                        'Spend Channel': spendChannel,
                         'Model': modelInfo.modelName,
                         'Budget Bucket': 'Out-of-Budget Total',
                         'Repair Class': 'All Other Repair Classes',
+                        'Vended Spend': Number(model.outBudgetTotal || 0),
                         'VRO Count': model.outBudgetVroCount || 0,
-                        [`Percent of ${spendColumn}`]: formatWeeklySpendPercent(model.outBudgetTotal || 0, model.grandTotal || 0)
-                    };
-                    rowOut[spendColumn] = Number(model.outBudgetTotal || 0);
-                    out.push(rowOut);
-                    let rowGrand = {
+                        'Percent of Vended Spend': formatWeeklySpendPercent(model.outBudgetTotal || 0, model.grandTotal || 0)
+                    });
+                    out.push({
                         'Week': group.weekKey,
                         'Week End': group.weekEndDate || '',
-                        'Spend Channel': spendChannel,
                         'Model': modelInfo.modelName,
                         'Budget Bucket': 'Grand Total',
-                        'Repair Class': spendChannel === 'Dedicated' ? 'Dedicated STANDARD RO Spend Only' : 'Vended Spend Only',
+                        'Repair Class': 'Vended Spend Only',
+                        'Vended Spend': Number(model.grandTotal || 0),
                         'VRO Count': model.grandVroCount || 0,
-                        [`Percent of ${spendColumn}`]: '100.0%'
-                    };
-                    rowGrand[spendColumn] = Number(model.grandTotal || 0);
-                    out.push(rowGrand);
+                        'Percent of Vended Spend': '100.0%'
+                    });
                 });
             });
             return out;
@@ -3855,28 +3795,13 @@
                 alert('No weekly table summary available to export.');
                 return;
             }
-            const exportRows = buildWeeklySpendTableSummaryExportRows(rows, 'Vended');
+            const exportRows = buildWeeklySpendTableSummaryExportRows(rows);
             const wb = XLSX.utils.book_new();
             const ws = XLSX.utils.json_to_sheet(exportRows);
             autoFitColumns(ws, exportRows);
             styleExcelHeaders(ws);
             XLSX.utils.book_append_sheet(wb, ws, 'Weekly Table Summary');
             XLSX.writeFile(wb, `weekly_table_summary_${getLocalDateKey(new Date())}.xlsx`);
-        }
-
-        function exportWeeklySpendDedicatedTableSummaryToExcel() {
-            const rows = globalWeeklySpendHistoryRows || [];
-            if (rows.length === 0) {
-                alert('No dedicated weekly table summary available to export.');
-                return;
-            }
-            const exportRows = buildWeeklySpendTableSummaryExportRows(rows, 'Dedicated');
-            const wb = XLSX.utils.book_new();
-            const ws = XLSX.utils.json_to_sheet(exportRows);
-            autoFitColumns(ws, exportRows);
-            styleExcelHeaders(ws);
-            XLSX.utils.book_append_sheet(wb, ws, 'Weekly Dedicated Summary');
-            XLSX.writeFile(wb, `weekly_table_summary_dedicated_${getLocalDateKey(new Date())}.xlsx`);
         }
 
         function exportWeeklySpendHistoryToExcel() {
@@ -3937,17 +3862,11 @@
             styleExcelHeaders(wsDetail);
             XLSX.utils.book_append_sheet(wb, wsDetail, 'Weekly VRO Detail');
 
-            const tableSummaryRows = buildWeeklySpendTableSummaryExportRows(rows, 'Vended');
+            const tableSummaryRows = buildWeeklySpendTableSummaryExportRows(rows);
             const wsTableSummary = XLSX.utils.json_to_sheet(tableSummaryRows);
             autoFitColumns(wsTableSummary, tableSummaryRows);
             styleExcelHeaders(wsTableSummary);
             XLSX.utils.book_append_sheet(wb, wsTableSummary, 'Weekly Table Summary');
-
-            const dedicatedTableSummaryRows = buildWeeklySpendTableSummaryExportRows(rows, 'Dedicated');
-            const wsDedicatedTableSummary = XLSX.utils.json_to_sheet(dedicatedTableSummaryRows);
-            autoFitColumns(wsDedicatedTableSummary, dedicatedTableSummaryRows);
-            styleExcelHeaders(wsDedicatedTableSummary);
-            XLSX.utils.book_append_sheet(wb, wsDedicatedTableSummary, 'Weekly Dedicated Summary');
 
             XLSX.writeFile(wb, `weekly_spend_history_${getLocalDateKey(new Date())}.xlsx`);
         }
