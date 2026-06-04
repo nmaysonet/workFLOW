@@ -246,38 +246,6 @@
         .note-btn.has-note { background: #f0fdf4; color: #15803d; border-color: #22c55e; opacity: 1; box-shadow: 0 1px 3px rgba(34,197,94,0.22); }
         .note-btn.has-note:hover { background: #dcfce7; }
 
-        .billing-badge { display:inline-block; padding:3px 7px; border-radius:999px; font-size:9px; font-weight:900; letter-spacing:0.35px; text-transform:uppercase; color:#7f1d1d; background:#fee2e2; border:1px solid #fca5a5; white-space:nowrap; }
-        .billing-badge.billing-review { color:#92400e; background:#fef3c7; border-color:#f59e0b; }
-        .billing-badge.repclass-review { color:#7f1d1d; background:#fee2e2; border-color:#ef4444; }
-        .billing-badge.excludable-review { color:#581c87; background:#f3e8ff; border-color:#a855f7; }
-        .billing-kpi-strip { display:grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap:12px; margin-bottom:16px; }
-        .billing-kpi { background:#fff; border:1px solid var(--border); border-top:4px solid var(--gold); border-radius:8px; padding:14px; box-shadow:0 1px 3px rgba(0,0,0,0.06); }
-        .billing-kpi .label { font-size:10px; font-weight:900; color:#64748b; text-transform:uppercase; letter-spacing:0.5px; }
-        .billing-kpi .value { font-size:24px; font-weight:900; color:#334155; margin-top:4px; }
-        .billing-filter-pill { padding:8px 12px; border:1px solid #cbd5e1; border-radius:999px; background:#fff; cursor:pointer; font-size:12px; font-weight:900; color:#334155; }
-        .billing-filter-pill.active { background:var(--gold); border-color:var(--gold); color:#222; }
-        .billing-reasons { font-size:11px; line-height:1.35; color:#334155; }
-        .billing-reasons strong { color:#111827; }
-        .billing-status-select { padding:6px 8px; border:1px solid #cbd5e1; border-radius:4px; font-size:12px; font-weight:700; background:#fff; }
-        .billing-table th { background:#1f2937; color:#fff; }
-        .billing-table td { font-size:12px; }
-
-        .repair-class-cell { display:flex; flex-direction:column; gap:5px; min-width:120px; }
-        .repair-class-name { font-size:11px; font-weight:900; color:#334155; line-height:1.2; }
-        .repair-class-pill { display:inline-block; width:max-content; max-width:100%; padding:3px 7px; border-radius:999px; font-size:9px; font-weight:900; letter-spacing:0.3px; text-transform:uppercase; white-space:normal; line-height:1.15; }
-        .repair-class-pill.clean { color:#166534; background:#dcfce7; border:1px solid #86efac; }
-        .repair-class-pill.review { color:#7f1d1d; background:#fee2e2; border:1px solid #fca5a5; }
-        .repair-class-pill.excludable { color:#581c87; background:#f3e8ff; border:1px solid #c084fc; }
-        .repair-class-actions { display:flex; gap:5px; flex-wrap:wrap; margin-top:2px; }
-        .repair-class-toggle { min-width:86px; margin-right:0; padding:4px 7px; border-radius:12px; font-size:10px; font-weight:900; text-transform:uppercase; }
-        .repair-class-toggle.status-pending::before { content:'! '; }
-        .repair-class-toggle.status-dispatched::before { content:'✓ '; }
-        .billing-table { table-layout: fixed; min-width: 1320px; }
-        .billing-table th, .billing-table td { vertical-align: top; }
-        .billing-table .review-col { width: 150px; min-width:150px; }
-        .billing-status-select { max-width:135px; width:135px; }
-
-
 
         .locked-prewip-row td { background: #f1f5f9 !important; color: #64748b !important; }
         .locked-prewip-row:hover td { background: #e2e8f0 !important; }
@@ -372,7 +340,6 @@
             <div class="menu-item" id="menu-vended" onclick="navigate('vended-view', this)">Vended Repair Queue</div>
             <div class="menu-item" id="menu-pm" onclick="navigate('pm-view', this)">PM Queue</div>
             <div class="menu-item" id="menu-ers" onclick="navigate('ers-view', this)">ERS Queue</div>
-            <div class="menu-item" id="menu-billing" onclick="navigate('billing-view', this)">Billing Queue</div>
         </div>
         <div class="menu-item" onclick="window.location.href='vendor.html'">Vendor Search</div>
         <div class="menu-item" id="menu-spend" onclick="navigate('spend-view', this)">Weekly Spend Matrix</div>
@@ -654,36 +621,6 @@
             </div>
         </div>
 
-
-
-        <div id="billing-view" class="view-section">
-            <div class="view-title">
-                <span style="font-weight: 700;">Billing Queue</span>
-                <div class="controls-group" style="display:flex; align-items:center;">
-                    <button class="btn-green" onclick="exportBillingQueueToExcel()">&#11139; Export to XLSX</button>
-                </div>
-            </div>
-            <div class="billing-kpi-strip" id="billing-kpi-strip"></div>
-            <div class="filter-bar" style="align-items:center;">
-                <input id="billing-search" class="filter-select" style="max-width:420px;" placeholder="Search RO, unit, branch, rep class, flag..." oninput="renderBillingQueue()">
-                <button class="filter-btn" onclick="loadAgingRepairsFromFirebase(true)">Reload Aging Repairs</button>
-                <span id="billing-load-status" style="font-size:12px; color:#64748b; font-weight:800;"></span>
-            </div>
-            <div class="drilldown-container table-wrapper">
-                <table class="billing-table">
-                    <colgroup>
-                        <col style="width:9%;"><col style="width:9%;"><col style="width:14%;"><col style="width:9%;"><col style="width:8%;"><col style="width:9%;"><col style="width:9%;"><col style="width:8%;"><col style="width:17%;"><col style="width:8%;">
-                    </colgroup>
-                    <thead>
-                        <tr>
-                            <th>RO #</th><th>Unit</th><th>Location / Queue</th><th>Status</th><th>Rep Class</th><th>Suggested</th><th>Spend</th><th>Flags</th><th>Why Flagged</th><th class="review-col">Review</th>
-                        </tr>
-                    </thead>
-                    <tbody id="billing-queue-body"><tr><td colspan="10" style="text-align:center; color:#64748b; font-weight:800; padding:20px;">Billing Queue has not loaded yet.</td></tr></tbody>
-                </table>
-            </div>
-        </div>
-
         <div id="search-view" class="view-section">
             <div class="view-title">
                 <div style="display:flex; align-items:center; gap: 20px;">
@@ -931,72 +868,6 @@
             throw new Error(`Firebase Storage fetch failed: ${lastError ? lastError.message : 'Unknown error'}`);
         }
 
-
-        async function fetchAgingRepairsBuffer() {
-            const workbookPath = 'Aging Repairs.xlsx';
-            const configuredBucket = firebase.app && firebase.app().options ? firebase.app().options.storageBucket : '';
-            const bucketCandidates = Array.from(new Set([
-                configuredBucket,
-                'workflow-dashboard-e6134.firebasestorage.app',
-                'workflow-dashboard-e6134.appspot.com'
-            ].filter(Boolean)));
-            let lastError = null;
-            for (let bucket of bucketCandidates) {
-                try {
-                    const storageRef = bucket === configuredBucket
-                        ? firebase.storage().ref().child(workbookPath)
-                        : firebase.storage().refFromURL(`gs://${bucket}/${workbookPath}`);
-                    const downloadUrl = await storageRef.getDownloadURL();
-                    const response = await fetch(downloadUrl + (downloadUrl.includes('?') ? '&' : '?') + `_=${Date.now()}`, { cache: 'no-store' });
-                    if (!response.ok) throw new Error(`HTTP ${response.status}`);
-                    const data = await response.arrayBuffer();
-                    const sig = new Uint8Array(data.slice(0, 2));
-                    if (!(sig[0] === 0x50 && sig[1] === 0x4B)) throw new Error('Aging Repairs response is not a valid XLSX file.');
-                    return data;
-                } catch (err) {
-                    lastError = err;
-                    console.warn(`Aging Repairs fetch failed for bucket ${bucket}:`, err);
-                }
-            }
-            throw new Error(lastError ? lastError.message : 'Aging Repairs.xlsx not found.');
-        }
-
-        async function loadAgingRepairsFromFirebase(showWarnings = false) {
-            const statusEl = document.getElementById('billing-load-status');
-            if (statusEl) {
-                statusEl.innerText = 'Loading Aging Repairs.xlsx...';
-                statusEl.style.color = '#64748b';
-            }
-            try {
-                const data = await fetchAgingRepairsBuffer();
-                const workbook = XLSX.read(data, { type: 'array' });
-                let selectedAoa = [];
-                workbook.SheetNames.forEach(sheetName => {
-                    const aoa = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], { header: 1, defval: '' });
-                    if (!selectedAoa.length && aoa && aoa.length > 0) selectedAoa = aoa;
-                    const name = String(sheetName || '').toLowerCase();
-                    if (name.includes('aging') || name.includes('repair')) selectedAoa = aoa;
-                });
-                processAgingRepairsData(selectedAoa || []);
-                if (statusEl) {
-                    statusEl.innerText = `Loaded ${globalBillingRows.length} billing exception${globalBillingRows.length === 1 ? '' : 's'}.`;
-                    statusEl.style.color = '#15803d';
-                }
-                refreshActiveViewPreservingDrilldown();
-                return true;
-            } catch (err) {
-                if (showWarnings) console.warn('Aging Repairs billing queue source not loaded:', err);
-                globalBillingRows = [];
-                globalBillingIssueMap = {};
-                if (statusEl) {
-                    statusEl.innerText = `Aging Repairs.xlsx not loaded: ${err.message || err}`;
-                    statusEl.style.color = '#dc2626';
-                }
-                renderBillingQueue();
-                return false;
-            }
-        }
-
         async function fetchData() {
             const statusEl = document.getElementById('upload-status');
             const uploadBox = document.getElementById('upload-box');
@@ -1082,12 +953,6 @@
                     console.warn('Spend governor Firebase sync failed:', syncError);
                 }
 
-                try {
-                    await loadAgingRepairsFromFirebase(true);
-                } catch (billingLoadError) {
-                    console.warn('Aging Repairs billing load failed:', billingLoadError);
-                }
-
                 statusEl.innerText = 'Dashboard loaded.';
                 statusEl.style.color = '#2e7d32';
                 setTimeout(applyExternalNavigationRequest, 0);
@@ -1169,12 +1034,6 @@
                     console.warn('Spend governor Firebase sync failed:', syncError);
                 }
 
-                try {
-                    await loadAgingRepairsFromFirebase(true);
-                } catch (billingLoadError) {
-                    console.warn('Aging Repairs billing load failed:', billingLoadError);
-                }
-
                 statusEl.innerText = `Loaded ${file.name}`;
                 statusEl.style.color = '#2e7d32';
                 setTimeout(applyExternalNavigationRequest, 0);
@@ -1190,10 +1049,6 @@
         let globalRoNotesState = {};
         let globalWorkflowActivityState = {};
         let globalSpendChangeLogRows = [];
-        let globalBillingRows = [];
-        let globalBillingIssueMap = {};
-        let globalBillingReviewState = {};
-        let currentBillingFilter = 'ALL';
         let globalWeeklySpendHistoryRows = [];
         let expandedWeeklySpendWeeks = {};
         let globalManualGovernorLockState = {};
@@ -1205,7 +1060,6 @@
             globalRoCheckState = JSON.parse(localStorage.getItem('workflow_checks') || '{}');
             globalRoNotesState = JSON.parse(localStorage.getItem('workflow_notes') || '{}');
             globalWorkflowActivityState = JSON.parse(localStorage.getItem('workflow_activity') || '{}');
-            globalBillingReviewState = JSON.parse(localStorage.getItem('workflow_billing_review_status') || '{}');
             globalUnlimitedSpendState = JSON.parse(localStorage.getItem('unlimited_spend_mode') || '{}');
             globalManualGovernorLockState = JSON.parse(localStorage.getItem('manual_governor_lock') || '{}');
         } catch(e) {}
@@ -1234,13 +1088,6 @@
                         if (processedData && processedData.length > 0) {
                             refreshActiveViewPreservingDrilldown();
                         }
-                    });
-
-                    db.ref('billingReviewStatus').on('value', (snapshot) => {
-                        globalBillingReviewState = snapshot.val() || {};
-                        try { localStorage.setItem('workflow_billing_review_status', JSON.stringify(globalBillingReviewState)); } catch(e) {}
-                        renderBillingQueue();
-                        if (processedData && processedData.length > 0) refreshActiveViewPreservingDrilldown();
                     });
 
                     db.ref('spendGovernor/manualLock').on('value', (snapshot) => {
@@ -3900,7 +3747,6 @@
             else if(activeView === 'vended-view') renderKPITiles(vendedOwners, 'vended-kpi-container', 'vended-view');
             else if(activeView === 'ers-view') renderKPITiles(ersOwners, 'ers-kpi-container', 'ers-view');
             else if(activeView === 'spend-view') renderSpendQueue();
-            else if(activeView === 'billing-view') renderBillingQueue();
             else if(activeView === 'person-view') { if(currentOwnerView) loadPersonDrilldown(currentOwnerView, currentParentView, true); }
             else if(activeView === 'summary-view') {
                 renderSummary();
@@ -3947,8 +3793,7 @@
                 'pm-view': 'menu-pm',
                 'ers-view': 'menu-ers',
                 'spend-view': 'menu-spend',
-                'summary-view': 'menu-summary',
-                'billing-view': 'menu-billing'
+                'summary-view': 'menu-summary'
             };
 
             const menuId = target.menuId || viewToMenu[target.viewId] || null;
@@ -4021,498 +3866,6 @@
 
         function preserveCurrentDrilldownStateAndRefresh() {
             refreshActiveViewPreservingDrilldown();
-        }
-
-
-        function formatCurrency(value) {
-            const n = Number(String(value ?? '').replace(/[$,]/g, ''));
-            const amount = isNaN(n) ? 0 : n;
-            return '$' + amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-        }
-
-        function normalizeBillingText(value) {
-            return String(value || '').toUpperCase().trim();
-        }
-
-        function getBillingServiceFromRepClass(repClass) {
-            const r = normalizeBillingText(repClass).replace(/[_-]/g, ' ');
-            if (['OSC PM', 'AFS PM', 'OSC HO', 'SAFETY INS', 'STATE INS'].includes(r)) return 'PM';
-            if (['OSC RD', 'BRINKS ERSA', 'GARDA ERSA', 'US FOODS ERSA', 'BRINKSROSID', 'EMERGENCY', 'ROAD CALL'].includes(r)) return 'ERS';
-            if (r === 'SCHEDULED') return 'VENDED REPAIR';
-            if (['DEF MAINT', 'DRIVER ABUSE', 'ACCIDENT DAMAGE', 'ACCIDENT DAM', 'ACC DAM', 'TOWING', 'SPECIAL PROJ', 'MERCHANT PM'].includes(r)) return 'EXCLUDABLE / SPECIAL REVIEW';
-            return 'VENDED REPAIR';
-        }
-
-        function billingContainsAny(text, words) {
-            const t = String(text || '').toLowerCase();
-            return words.filter(w => t.includes(String(w).toLowerCase()));
-        }
-
-        function getBillingRoUrl(roNum) {
-            return `https://afshub.azurewebsites.net/Vendors/VendedRepairOrder/Estimate/${encodeURIComponent(roNum || '')}`;
-        }
-
-        function normalizeQueueNameForRepairClass(value) {
-            const s = String(value || '').toUpperCase();
-            if (s.includes('PM')) return 'PM';
-            if (s.includes('ERS') || s.includes('RESCUE') || s.includes('ROAD')) return 'ERS';
-            if (s.includes('VENDED')) return 'VENDED REPAIR';
-            return s || 'VENDED REPAIR';
-        }
-
-        function isRepairClassStatusCleared(safeRo) {
-            const status = getBillingReviewStatusForSafeRo(safeRo);
-            return ['Corrected','Cleared'].includes(status);
-        }
-
-        function getFriendlyRepairClassLabel(recommendedClass, fallback) {
-            const r = String(recommendedClass || '').toUpperCase();
-            if (r.includes('DRIVER')) return 'DRIVER ABUSE REVIEW';
-            if (r.includes('GARDA') || r.includes('ERSA')) return 'GARDA ERSA RECOMMENDATION';
-            if (r.includes('OSC PM') || r === 'PM') return 'OSC PM RECOMMENDATION';
-            if (r.includes('DEF')) return 'DEF MAINT REVIEW';
-            if (r.includes('ACCIDENT')) return 'ACCIDENT DAMAGE REVIEW';
-            if (r.includes('TOW')) return 'TOWING REVIEW';
-            if (r.includes('SPECIAL')) return 'SPECIAL PROJECT REVIEW';
-            if (r.includes('MERCHANT')) return 'MERCHANT PM REVIEW';
-            return fallback || 'REPAIR CLASS REVIEW';
-        }
-
-        function getResponsibleQueueForRecommendation(recommendedClass, queueSource) {
-            const r = String(recommendedClass || '').toUpperCase();
-            if (r.includes('OSC PM') || r === 'PM') return 'PM';
-            if (r.includes('GARDA') || r.includes('ERSA')) return 'ERS';
-            return normalizeQueueNameForRepairClass(queueSource);
-        }
-
-        function determineRecommendedRepairClassFromEvidence(primaryRepClass, combinedText, spend, tireQty, hits) {
-            const current = String(primaryRepClass || '').toUpperCase();
-            const text = String(combinedText || '').toUpperCase();
-            const hasAny = arr => arr.some(x => text.includes(String(x).toUpperCase()));
-            const isAlready = needle => current.includes(needle);
-
-            if (isAlready('MERCHANT')) return null;
-            if (tireQty >= 4 && !isAlready('DEF')) {
-                return { recommendedClass: 'DEF MAINT', reason: `Tire quantity across billed lines is ${tireQty}; 4+ tires should be reviewed as DEF MAINT.` };
-            }
-            if (hasAny(['ACCIDENT','COLLISION','CRASH','STRUCK','IMPACT','DEER','BODY DAMAGE','VANDAL','WINDSHIELD IMPACT']) && !isAlready('ACC')) {
-                return { recommendedClass: 'ACCIDENT DAMAGE', reason: 'Accident/impact/physical damage language supports ACCIDENT DAMAGE review.' };
-            }
-            if (hasAny(['DRIVER ABUSE','DRIVER CAUSED','OPERATOR ERROR','ROAD HAZARD','SIDEWALL','LOCKOUT','LOST KEY','MISFUEL','DEF IN FUEL','FUEL CONTAMINATION','OUT OF FUEL','REGEN','DERATE']) && !isAlready('ABUSE')) {
-                return { recommendedClass: 'DRIVER ABUSE', reason: 'Driver-caused indicators support DRIVER ABUSE review.' };
-            }
-            if (hasAny(['SAMSARA','CAMERA INSTALL','TELEMATICS INSTALL','RETROFIT','UPFIT']) && !isAlready('SPECIAL')) {
-                return { recommendedClass: 'SPECIAL PROJ', reason: 'Project/install language supports SPECIAL PROJ review.' };
-            }
-            if (hasAny(['ROAD CALL','ROADSIDE','EMERGENCY','BREAKDOWN','NO START','UNIT DOWN','MOBILE RESCUE']) && !(isAlready('ERSA') || current.includes('ROAD CALL'))) {
-                return { recommendedClass: 'GARDA ERSA', reason: 'Roadside/emergency language supports GARDA ERSA review.' };
-            }
-            if (hasAny(['TOW','TOWED','TOWING','WRECKER','ROLLBACK','WINCH','RECOVERY']) && !(isAlready('TOW') || isAlready('ERSA'))) {
-                return { recommendedClass: 'TOWING', reason: 'Tow/wrecker/recovery language supports TOWING review unless this was emergency roadside.' };
-            }
-            const major = hits.majorHits && hits.majorHits.length;
-            if ((major || (current.includes('DEF') && spend > 1500)) && !isAlready('DEF')) {
-                return { recommendedClass: 'DEF MAINT', reason: `Major repair evidence (${(hits.majorHits || []).slice(0,4).join(', ') || 'high-dollar major repair'}) supports DEF MAINT review.` };
-            }
-            return null;
-        }
-
-        function processAgingRepairsData(agingRawAOA) {
-            globalBillingRows = [];
-            globalBillingIssueMap = {};
-            if (!agingRawAOA || !agingRawAOA.length) {
-                renderBillingQueue();
-                return;
-            }
-
-            const groups = {};
-            const IDX = {
-                ro: 9, unit: 18,
-                familyComponentDescription: 33,
-                componentCode: 34,
-                componentDescription: 35,
-                repClass: 39,
-                sectionComment: 40,
-                lineType: 41,
-                lineDescription: 42,
-                quantity: 43,
-                additionalNotes: 67
-            };
-
-            function parseQty(v) {
-                const n = parseFloat(String(v || '').replace(/,/g, '').trim());
-                return isNaN(n) ? 0 : n;
-            }
-
-            for (let i = 0; i < agingRawAOA.length; i++) {
-                const row = agingRawAOA[i] || [];
-                const ro = String(row[IDX.ro] || '').toUpperCase().trim();
-                if (!ro || ro === 'RONUM' || ro === 'RO NUMBER' || !/\d/.test(ro)) continue;
-                if (!groups[ro]) {
-                    groups[ro] = {
-                        roNumber: ro,
-                        unitNo: String(row[IDX.unit] || '').toUpperCase().trim(),
-                        repClasses: new Set(),
-                        familyComponents: [],
-                        componentCodes: [],
-                        componentDescriptions: [],
-                        sectionComments: [],
-                        lineTypes: [],
-                        lineDescriptions: [],
-                        additionalNotes: [],
-                        tireQty: 0,
-                        lineCount: 0
-                    };
-                }
-                const g = groups[ro];
-                const repClass = String(row[IDX.repClass] || '').trim();
-                if (repClass) g.repClasses.add(repClass);
-                const family = String(row[IDX.familyComponentDescription] || '').trim();
-                const compCode = String(row[IDX.componentCode] || '').trim();
-                const compDesc = String(row[IDX.componentDescription] || '').trim();
-                const section = String(row[IDX.sectionComment] || '').trim();
-                const lineType = String(row[IDX.lineType] || '').trim();
-                const lineDesc = String(row[IDX.lineDescription] || '').trim();
-                const notes = String(row[IDX.additionalNotes] || '').trim();
-                if (family) g.familyComponents.push(family);
-                if (compCode) g.componentCodes.push(compCode);
-                if (compDesc) g.componentDescriptions.push(compDesc);
-                if (section) g.sectionComments.push(section);
-                if (lineType) g.lineTypes.push(lineType);
-                if (lineDesc) g.lineDescriptions.push(lineDesc);
-                if (notes) g.additionalNotes.push(notes);
-                const tireText = `${family} ${compDesc} ${lineDesc}`.toLowerCase();
-                if (tireText.includes('tire') || tireText.includes('tyre')) g.tireQty += parseQty(row[IDX.quantity]) || 1;
-                g.lineCount += 1;
-                if (!g.unitNo && row[IDX.unit]) g.unitNo = String(row[IDX.unit]).toUpperCase().trim();
-            }
-
-            const roLookup = {};
-            (processedData || []).forEach(ro => { if (ro && ro.roNum) roLookup[String(ro.roNum).toUpperCase()] = ro; });
-            // Repair-class detection must be conservative. Weak words like "filter", "oil",
-            // "inspection", or "service" can appear inside major repairs and should not flip
-            // a repair to PM by themselves. Major repair / excludable evidence overrides weak PM signals.
-            const explicitPmKeywords = ['preventive maintenance', 'preventative maintenance', 'pm service', 'pm inspection', 'dot inspection', 'bit inspection', 'annual inspection', 'safety inspection', 'state inspection', 'oil change', 'oil and filter service', 'lube service', 'service interval', 'scheduled pm'];
-            const weakPmKeywords = ['filter', 'oil', 'inspection', 'service', 'lube'];
-            const ersKeywords = ['roadside', 'road call', 'no start', 'jump start', 'tow', 'towing', 'breakdown', 'disabled', 'emergency', 'unit down roadside', 'mobile rescue', 'tire blowout', 'locked out'];
-            const majorRepairKeywords = ['engine', 'engine replacement', 'transmission', 'aftertreatment', 'dpf', 'emissions', 'regen', 'def', 'def system', 'turbo', 'injector', 'egr', 'radiator', 'coolant', 'drivetrain', 'differential', 'axle', 'overhaul', 'replace engine', 'replacement', 'failed', 'failure', 'derate'];
-            const excludableKeywords = ['accident', 'collision', 'driver abuse', 'misuse', 'vandalism', 'damage', 'deferred maintenance', 'deferred', 'engine replacement', 'transmission', 'aftertreatment', 'dpf', 'emissions', 'regen', 'def in fuel', 'fuel contamination', 'road hazard', 'sidewall', 'lockout', 'lost key', 'samsara', 'camera install', 'retrofit', 'upfit', 'merchant'];
-
-            Object.values(groups).forEach(g => {
-                const roContext = roLookup[g.roNumber] || null;
-                const fin = window.globalOrderFin && window.globalOrderFin[g.roNumber] ? window.globalOrderFin[g.roNumber] : {};
-                const currentStatus = (roContext && roContext.status) || fin.status || '';
-                const queueSource = (roContext && roContext.sourceQueue) || getBillingServiceFromRepClass(Array.from(g.repClasses)[0] || '');
-                const branch = (roContext && roContext.branch) || fin.customerLocation || fin.shop || '';
-                const coordinator = (roContext && roContext.owner) || fin.contact || '';
-                const spend = Number(fin.total || 0);
-                const combinedText = [
-                    ...g.familyComponents, ...g.componentDescriptions, ...g.sectionComments,
-                    ...g.lineDescriptions, ...g.additionalNotes
-                ].join(' | ');
-                const repClassList = Array.from(g.repClasses);
-                const primaryRepClass = repClassList[0] || '';
-                const repService = getBillingServiceFromRepClass(primaryRepClass);
-                const explicitPmHits = billingContainsAny(combinedText, explicitPmKeywords);
-                const weakPmHits = billingContainsAny(combinedText, weakPmKeywords);
-                const majorHits = billingContainsAny(combinedText, majorRepairKeywords);
-                const ersHits = billingContainsAny(combinedText, ersKeywords);
-                const exHits = billingContainsAny(combinedText, excludableKeywords);
-                const primaryRepUpper = String(primaryRepClass || '').toUpperCase();
-                const isDefMaint = primaryRepUpper.includes('DEF');
-                const isHighDollarDef = isDefMaint && spend > 1500;
-                const hasExplicitPmSignal = explicitPmHits.length > 0 || /(^|\s)PM(\s|$)/i.test(combinedText);
-                const hasMajorRepairSignal = majorHits.length > 0 || isHighDollarDef;
-                const flags = [];
-                const reasons = [];
-                const suggested = new Set();
-                let recommendedClass = '';
-                let responsibleQueue = normalizeQueueNameForRepairClass(queueSource);
-
-                const explicitRecommendation = determineRecommendedRepairClassFromEvidence(primaryRepClass, combinedText, spend, g.tireQty, { majorHits });
-                if (explicitRecommendation) {
-                    recommendedClass = explicitRecommendation.recommendedClass;
-                    responsibleQueue = getResponsibleQueueForRecommendation(recommendedClass, queueSource);
-                    const label = getFriendlyRepairClassLabel(recommendedClass, 'REPAIR CLASS REVIEW');
-                    flags.push(label);
-                    suggested.add(recommendedClass);
-                    reasons.push(explicitRecommendation.reason);
-                }
-
-                if (!recommendedClass && queueSource === 'PM' && repService !== 'PM') {
-                    recommendedClass = 'OSC PM';
-                    responsibleQueue = 'PM';
-                    flags.push(getFriendlyRepairClassLabel(recommendedClass));
-                    suggested.add(recommendedClass);
-                    reasons.push(`This RO is in the PM queue but current REPCLASS is ${primaryRepClass || 'blank'}.`);
-                }
-                if (!recommendedClass && queueSource === 'ERS' && repService !== 'ERS') {
-                    recommendedClass = 'GARDA ERSA';
-                    responsibleQueue = 'ERS';
-                    flags.push(getFriendlyRepairClassLabel(recommendedClass));
-                    suggested.add(recommendedClass);
-                    reasons.push(`This RO is in the ERS queue but current REPCLASS is ${primaryRepClass || 'blank'}.`);
-                }
-
-                if (!recommendedClass && hasExplicitPmSignal && repService !== 'PM' && !hasMajorRepairSignal) {
-                    recommendedClass = 'OSC PM';
-                    responsibleQueue = 'PM';
-                    flags.push(getFriendlyRepairClassLabel(recommendedClass));
-                    suggested.add(recommendedClass);
-                    const hits = explicitPmHits.length ? explicitPmHits : ['PM'];
-                    reasons.push(`Explicit PM signal(s): ${hits.slice(0, 4).join(', ')}.`);
-                } else if (hasExplicitPmSignal && repService !== 'PM' && hasMajorRepairSignal) {
-                    // PM-like work can occur as part of a major repair. Do not recommend PM when major repair evidence is present.
-                    if (!String(primaryRepClass).toUpperCase().match(/DEF|ABUSE|ACC|TOW|ERSA|SPECIAL|MERCHANT/)) {
-                        recommendedClass = 'DEF MAINT';
-                        responsibleQueue = normalizeQueueNameForRepairClass(queueSource);
-                        flags.push(getFriendlyRepairClassLabel(recommendedClass));
-                        suggested.add(recommendedClass);
-                        reasons.push(`PM-related work appears to be part of a major repair (${majorHits.slice(0, 4).join(', ') || 'high-dollar repair'}); classify based on the major repair, not the PM line.`);
-                    }
-                } else if (weakPmHits.length && repService !== 'PM') {
-                    // Weak words like filter/oil/service are supporting context only and never create a PM recommendation alone.
-                }
-                const uniqueFlags = Array.from(new Set(flags));
-                if (!uniqueFlags.length) return;
-                const safeRo = safeFirebaseKey(g.roNumber);
-                const review = globalBillingReviewState[safeRo] || { status: 'Open' };
-                const row = {
-                    safeRo,
-                    roNumber: g.roNumber,
-                    unitNo: g.unitNo || (roContext && roContext.unitNo) || fin.unitNo || '',
-                    branch,
-                    coordinator,
-                    queueSource,
-                    currentStatus,
-                    repClass: repClassList.join(', '),
-                    suggestedService: Array.from(suggested).join(', ') || 'Review',
-                    recommendedClass: recommendedClass || Array.from(suggested)[0] || 'Review',
-                    responsibleQueue: responsibleQueue || normalizeQueueNameForRepairClass(queueSource),
-                    spend,
-                    flags: uniqueFlags,
-                    reasons,
-                    tireQty: g.tireQty,
-                    lineCount: g.lineCount,
-                    reviewStatus: review.status || 'Open',
-                    reviewReason: review.reason || ''
-                };
-                globalBillingRows.push(row);
-                globalBillingIssueMap[safeRo] = row;
-            });
-
-            globalBillingRows.sort((a, b) => {
-                const aOpen = String(a.reviewStatus || 'Open') === 'Open' ? 0 : 1;
-                const bOpen = String(b.reviewStatus || 'Open') === 'Open' ? 0 : 1;
-                if (aOpen !== bOpen) return aOpen - bOpen;
-                return (b.spend || 0) - (a.spend || 0);
-            });
-            renderBillingQueue();
-            if (processedData && processedData.length > 0) {
-                setTimeout(() => refreshActiveViewPreservingDrilldown(), 0);
-            }
-        }
-
-        function getBillingBadgesHtml(roNum) {
-            const issue = globalBillingIssueMap && globalBillingIssueMap[safeFirebaseKey(roNum)] ? globalBillingIssueMap[safeFirebaseKey(roNum)] : null;
-            if (!issue) return '';
-            return issue.flags.slice(0, 2).map(flag => {
-                let cls = 'billing-review';
-                if (flag.includes('REP') || flag.includes('PM') || flag.includes('GARDA')) cls = 'repclass-review';
-                if (flag.includes('DEF') || flag.includes('DRIVER') || flag.includes('ACCIDENT') || flag.includes('TOWING') || flag.includes('SPECIAL') || flag.includes('MERCHANT') || flag.includes('4+')) cls = 'excludable-review';
-                return `<span class="billing-badge ${cls}" title="${escapeHtml(issue.reasons.join(' ')).replace(/"/g, '&quot;')}">${escapeHtml(flag)}</span>`;
-            }).join(' ');
-        }
-
-
-        function getRepairClassCellHtml(roOrNum) {
-            const roObj = typeof roOrNum === 'object' ? roOrNum : null;
-            const roNum = roObj ? roObj.roNum : roOrNum;
-            const issue = roObj ? getVisibleBillingIssueForRo(roObj) : getBillingIssueForRo(roNum);
-            if (!issue) return `<div class="repair-class-cell"><span class="repair-class-pill clean">OK</span></div>`;
-            const safeRo = issue.safeRo || safeFirebaseKey(roNum);
-            const reviewStatus = getBillingReviewStatusForSafeRo(safeRo);
-            const label = getFriendlyRepairClassLabel(issue.recommendedClass || issue.suggestedService, 'REPAIR CLASS REVIEW');
-            const cls = label.includes('DEF') || label.includes('DRIVER') || label.includes('ACCIDENT') || label.includes('TOWING') || label.includes('SPECIAL') || label.includes('MERCHANT') ? 'excludable' : 'review';
-            const reasonText = `${label}. Current repair class: ${issue.repClass || 'blank'}. Recommended: ${issue.recommendedClass || issue.suggestedService || 'Review'}. ${(issue.reasons || []).join(' ')}`;
-            const title = escapeHtml(reasonText).replace(/"/g, '&quot;');
-            const isCorrected = ['Corrected','Cleared'].includes(reviewStatus);
-            return `<div class="repair-class-cell" title="${title}">
-                <div class="repair-class-name">${escapeHtml(issue.repClass || 'Review')}</div>
-                <span class="repair-class-pill ${cls}">${escapeHtml(label)}</span>
-                <div class="repair-class-actions">
-                    <span class="status-toggle repair-class-toggle ${isCorrected ? 'status-dispatched' : 'status-pending'}" onclick="toggleRepairClassCorrected('${safeRo}'); event.stopPropagation();">${isCorrected ? 'CORRECTED' : 'PENDING'}</span>
-                </div>
-            </div>`;
-        }
-
-        function setRepairClassReviewStatus(safeRo, status) {
-            updateBillingReviewStatus(safeRo, status);
-        }
-
-        function toggleRepairClassCorrected(safeRo) {
-            const current = getBillingReviewStatusForSafeRo(safeRo);
-            const next = ['Corrected','Cleared'].includes(current) ? 'Open' : 'Corrected';
-            updateBillingReviewStatus(safeRo, next);
-        }
-
-        function getBillingReviewStatusForSafeRo(safeRo) {
-            const review = globalBillingReviewState && globalBillingReviewState[safeRo] ? globalBillingReviewState[safeRo] : {};
-            return review.status || 'Open';
-        }
-
-        function getBillingIssueForRo(roNum) {
-            if (!roNum) return null;
-            const safeRo = safeFirebaseKey(roNum);
-            if (isRepairClassStatusCleared(safeRo)) return null;
-            return globalBillingIssueMap && globalBillingIssueMap[safeRo] ? globalBillingIssueMap[safeRo] : null;
-        }
-
-        function isRepairClassIssueVisibleForRo(ro, issue) {
-            if (!ro || !issue) return false;
-            if (isRepairClassStatusCleared(issue.safeRo)) return false;
-            const roQueue = normalizeQueueNameForRepairClass(ro.sourceQueue || issue.queueSource || 'VENDED REPAIR');
-            const responsible = normalizeQueueNameForRepairClass(issue.responsibleQueue || issue.queueSource || roQueue);
-
-            // PM/ERS records can appear in vended drilldowns as FYI. Do not make vended coordinators own those repair-class corrections.
-            if (roQueue !== responsible) return false;
-            return true;
-        }
-
-        function getVisibleBillingIssueForRo(ro) {
-            if (!ro || !ro.roNum) return null;
-            const issue = getBillingIssueForRo(ro.roNum);
-            return isRepairClassIssueVisibleForRo(ro, issue) ? issue : null;
-        }
-
-        function getBillingIssuePopulation(dataSet) {
-            return (dataSet || [])
-                .filter(ro => (isRealOpenRoForDailyCompliance(ro) || (ro && normalizeSpendStatus(ro.status) === 'CLOSED')))
-                .map(ro => getVisibleBillingIssueForRo(ro))
-                .filter(Boolean);
-        }
-
-        function generateBillingComplianceHtml(dataSet) {
-            const issues = getBillingIssuePopulation(dataSet);
-            if (!issues.length) return '';
-            const openIssues = issues.filter(issue => getBillingReviewStatusForSafeRo(issue.safeRo) === 'Open');
-            const touchedToday = issues.filter(issue => roTouchedToday(issue.safeRo)).length;
-            const reviewedOrTouched = issues.length - openIssues.length + openIssues.filter(issue => roTouchedToday(issue.safeRo)).length;
-            const pct = issues.length ? Math.round((reviewedOrTouched / issues.length) * 100) : 100;
-            const cls = pct >= 85 ? 'compliance-green' : (pct >= 70 ? 'compliance-yellow' : 'compliance-red');
-            const rating = pct >= 85 ? 'ON TRACK' : (pct >= 70 ? 'WATCH' : 'NEEDS ACTION');
-            return `
-                <div class="workflow-compliance-card ${cls} compact" title="Daily repair class compliance is based on flagged VROs from Aging Repairs.xlsx. Coordinators should review, correct, or escalate these daily.">
-                    <div class="workflow-compliance-header">
-                        <div>
-                            <div class="workflow-compliance-label">Daily Repair Class Compliance</div>
-                            <div class="workflow-compliance-score">${pct}%</div>
-                        </div>
-                        <div class="workflow-compliance-rating">${rating}</div>
-                    </div>
-                    <div class="workflow-compliance-grid">
-                        <div class="workflow-compliance-mini"><div class="mini-title">Repair Class ROs</div><div class="mini-num">${issues.length}</div></div>
-                        <div class="workflow-compliance-mini"><div class="mini-title">Touched</div><div class="mini-num">${touchedToday}/${issues.length}</div></div>
-                        <div class="workflow-compliance-mini"><div class="mini-title">Open</div><div class="mini-num">${openIssues.length}</div></div>
-                        <div class="workflow-compliance-mini"><div class="mini-title">Cleared</div><div class="mini-num">${issues.length - openIssues.length}</div></div>
-                    </div>
-                </div>`;
-        }
-
-        function setBillingFilter(val, btn) {
-            currentBillingFilter = val || 'ALL';
-            document.querySelectorAll('.billing-filter-pill').forEach(b => b.classList.remove('active'));
-            if (btn) btn.classList.add('active');
-            renderBillingQueue();
-        }
-
-        function updateBillingReviewStatus(safeRo, status) {
-            const nowIso = new Date().toISOString();
-            const updates = {
-                status: status || 'Open',
-                updatedAt: nowIso
-            };
-            if (db) db.ref(`billingReviewStatus/${safeRo}`).update(updates);
-            else {
-                globalBillingReviewState[safeRo] = Object.assign(globalBillingReviewState[safeRo] || {}, updates);
-                try { localStorage.setItem('workflow_billing_review_status', JSON.stringify(globalBillingReviewState)); } catch(e) {}
-                renderBillingQueue();
-            }
-        }
-
-        function renderBillingQueue() {
-            const body = document.getElementById('billing-queue-body');
-            const kpi = document.getElementById('billing-kpi-strip');
-            if (!body) return;
-            const search = (document.getElementById('billing-search')?.value || '').toLowerCase().trim();
-            let rows = (globalBillingRows || []).map(r => Object.assign({}, r, { reviewStatus: getBillingReviewStatusForSafeRo(r.safeRo) })).filter(r => !['Corrected','Cleared'].includes(r.reviewStatus));
-            if (search) {
-                rows = rows.filter(r => [r.roNumber, r.unitNo, r.branch, r.coordinator, r.queueSource, r.currentStatus, r.repClass, r.suggestedService, r.flags.join(' '), r.reasons.join(' ')].join(' ').toLowerCase().includes(search));
-            }
-
-            const allBillingRowsWithStatus = (globalBillingRows || []).map(r => Object.assign({}, r, { reviewStatus: getBillingReviewStatusForSafeRo(r.safeRo) })).filter(r => !['Corrected','Cleared'].includes(r.reviewStatus));
-            const total = allBillingRowsWithStatus.length;
-            const open = allBillingRowsWithStatus.filter(r => (r.reviewStatus || 'Open') === 'Open').length;
-            const rep = allBillingRowsWithStatus.filter(r => r.flags.some(f => f.includes('REP') || f.includes('PM') || f.includes('ERS'))).length;
-            const ex = allBillingRowsWithStatus.filter(r => r.flags.some(f => f.includes('EXCLUDABLE') || f.includes('4+'))).length;
-            if (kpi) {
-                kpi.innerHTML = `
-                    <div class="billing-kpi"><div class="label">Billing Flags</div><div class="value">${total}</div></div>
-                    <div class="billing-kpi"><div class="label">Open Review</div><div class="value">${open}</div></div>
-                    <div class="billing-kpi"><div class="label">Rep Class Risk</div><div class="value">${rep}</div></div>
-                    <div class="billing-kpi"><div class="label">Budget Class Review</div><div class="value">${ex}</div></div>`;
-            }
-
-            if (!globalBillingRows.length) {
-                body.innerHTML = `<tr><td colspan="10" style="text-align:center; color:#64748b; font-weight:800; padding:20px;">No billing flags loaded. Confirm Aging Repairs.xlsx exists in Firebase Storage.</td></tr>`;
-                return;
-            }
-            if (!rows.length) {
-                body.innerHTML = `<tr><td colspan="10" style="text-align:center; color:#64748b; font-weight:800; padding:20px;">No billing flags match the current filter.</td></tr>`;
-                return;
-            }
-            body.innerHTML = rows.map(r => {
-                const flagHtml = r.flags.map(flag => `<span class="billing-badge ${flag.includes('DEF') || flag.includes('DRIVER') || flag.includes('ACCIDENT') || flag.includes('TOWING') || flag.includes('SPECIAL') || flag.includes('MERCHANT') || flag.includes('4+') ? 'excludable-review' : flag.includes('REP') || flag.includes('PM') || flag.includes('GARDA') ? 'repclass-review' : 'billing-review'}">${escapeHtml(flag)}</span>`).join(' ');
-                const reasons = r.reasons.map(x => `<div>• ${escapeHtml(x)}</div>`).join('');
-                const noteBtn = `<button class="${roHasMeaningfulNote(r.safeRo) ? 'note-btn has-note' : 'note-btn'}" onclick="openNoteModal('${r.safeRo}', '${escapeHtml(r.roNumber)}')" title="Billing review note">📝</button>`;
-                return `<tr>
-                    <td><a class="ro-link" href="${getBillingRoUrl(r.roNumber)}" target="_blank">${escapeHtml(r.roNumber)}</a> ${noteBtn}</td>
-                    <td>${escapeHtml(r.unitNo)}</td>
-                    <td><strong>${escapeHtml(r.branch || 'Unknown')}</strong><br><span style="font-size:10px;color:#64748b;font-weight:800;">${escapeHtml(r.queueSource || '')}</span></td>
-                    <td>${escapeHtml(r.currentStatus || '')}</td>
-                    <td>${escapeHtml(r.repClass || '')}</td>
-                    <td>${escapeHtml(r.recommendedClass || r.suggestedService || '')}</td>
-                    <td style="text-align:right; font-weight:800;">${formatCurrency(r.spend || 0)}</td>
-                    <td>${flagHtml}</td>
-                    <td class="billing-reasons">${reasons}<div style="margin-top:5px;color:#64748b;">Lines reviewed: ${r.lineCount}${r.tireQty ? ` · Tire qty: ${r.tireQty}` : ''}</div></td>
-                    <td class="review-col"><select class="billing-status-select" onchange="updateBillingReviewStatus('${r.safeRo}', this.value)">
-                        ${['Open','Reviewed','Correction Needed','Corrected','Escalated','Cleared'].map(st => `<option value="${st}" ${String(r.reviewStatus || 'Open') === st ? 'selected' : ''}>${st}</option>`).join('')}
-                    </select></td>
-                </tr>`;
-            }).join('');
-        }
-
-        function exportBillingQueueToExcel() {
-            const rows = (globalBillingRows || []).map(r => ({
-                'RO Number': r.roNumber,
-                'Unit': r.unitNo,
-                'Location': r.branch,
-                'Queue Source': r.queueSource,
-                'Current Status': r.currentStatus,
-                'Rep Class': r.repClass,
-                'Recommended Repair Class': r.recommendedClass || r.suggestedService,
-                'Spend': r.spend,
-                'Flags': r.flags.join('; '),
-                'Why Flagged': r.reasons.join(' | '),
-                'Coordinator': r.coordinator,
-                'Review Status': r.reviewStatus,
-                'Line Count': r.lineCount,
-                'Tire Qty': r.tireQty
-            }));
-            const wb = XLSX.utils.book_new();
-            const ws = XLSX.utils.json_to_sheet(rows);
-            XLSX.utils.book_append_sheet(wb, ws, 'Billing Queue');
-            XLSX.writeFile(wb, `workFLOW_billing_queue_${new Date().toISOString().slice(0,10)}.xlsx`);
         }
 
         function processExcelData(vroRaw, roDetailRaw, resourceRawAOA, oosRawAOA, usefulRawAOA, dodRawAOA) {
@@ -5668,7 +5021,6 @@
             }
 
             let workflowComplianceHtml = chartId ? '' : generateWorkflowComplianceHtml(filteredOpen);
-            let billingComplianceHtml = chartId ? '' : generateBillingComplianceHtml(filteredOpen);
 
             let innerHtml = `
                 <div class="kpi-name">${name}</div>
@@ -5699,7 +5051,6 @@
                     </div>
                 </div>
                 ${workflowComplianceHtml}
-                ${billingComplianceHtml}
             `;
             return innerHtml;
         }
@@ -5817,15 +5168,6 @@
                 }
                 return ro;
             });
-
-            const completedRepairClassReviewData = ownerDataAll
-                .filter(ro => ro && !ro.isOpen && normalizeSpendStatus(ro.status) === 'CLOSED' && getVisibleBillingIssueForRo(ro))
-                .map(ro => Object.assign({}, ro, {
-                    isRepairClassCompletedReview: true,
-                    isOpen: true
-                }));
-
-            baseOpenData = baseOpenData.concat(completedRepairClassReviewData);
 
             let branchUsefulVals = {};
             let subUsefulMap = {};
@@ -5949,8 +5291,6 @@
                                     openedDates: [],
                                     statuses: [],
                                     ecdCells: [],
-                                    repairClassCells: [],
-                                    completedRepairClassReviewFlags: [],
                                     dupFlags: [],
                                     queueSources: [],
                                     otherQueueOrders: [],
@@ -5985,8 +5325,6 @@
                                     unitsMap[ro.unitNo].openedDates.push(ro.openedFormatted);
                                     unitsMap[ro.unitNo].statuses.push(ro.status);
                                     unitsMap[ro.unitNo].ecdCells.push(ecdCell);
-                                    unitsMap[ro.unitNo].repairClassCells.push(getRepairClassCellHtml(actualRoNum));
-                                    unitsMap[ro.unitNo].completedRepairClassReviewFlags.push(!!ro.isRepairClassCompletedReview);
                                 });
                                 return;
                             }
@@ -6016,8 +5354,6 @@
                             unitsMap[ro.unitNo].openedDates.push(ro.openedFormatted);
                             unitsMap[ro.unitNo].statuses.push(ro.status);
                             unitsMap[ro.unitNo].ecdCells.push(ecdCell);
-                            unitsMap[ro.unitNo].repairClassCells.push(getRepairClassCellHtml(ro));
-                            unitsMap[ro.unitNo].completedRepairClassReviewFlags.push(!!ro.isRepairClassCompletedReview);
                         });
 
                         let groupedUnits = Object.values(unitsMap);
@@ -6025,7 +5361,7 @@
                             return (b.isOOS === true ? 1 : 0) - (a.isOOS === true ? 1 : 0);
                         });
 
-                        let tableHTML = `<div class="table-wrapper"><table><colgroup><col style="width:21%;"><col style="width:10%;">${isPM ? '' : '<col style="width:10%;">'}<col style="width:8%;"><col style="width:10%;"><col style="width:18%;"><col style="width:13%;"><col style="width:10%;"></colgroup><thead><tr><th>AFS RO # & Dispatch</th><th>Unit No</th>${isPM ? '' : '<th>Priority Status</th>'}<th>OOS Status</th><th>Opened Date</th><th>Status</th><th>Repair Class</th><th>ECD</th></tr></thead><tbody>`;
+                        let tableHTML = `<div class="table-wrapper"><table><colgroup><col style="width:23%;"><col style="width:11%;">${isPM ? '' : '<col style="width:11%;">'}<col style="width:9%;"><col style="width:11%;"><col style="width:21%;"><col style="width:14%;"></colgroup><thead><tr><th>AFS RO # & Dispatch</th><th>Unit No</th>${isPM ? '' : '<th>Priority Status</th>'}<th>OOS Status</th><th>Opened Date</th><th>Status</th><th>ECD</th></tr></thead><tbody>`;
                         
                         let visibleRowsCount = 0;
                         let lockedCount = 0;
@@ -6051,20 +5387,14 @@
                                 let roNum = u.roNums[idx];
                                 let safeRo = roNum.replace(/[.#$\[\]]/g, '_');
                                 let isPreWipLocked = shouldLockPreWipRow(u.statuses[idx]);
-                                let isCompletedRepairClassReview = !!(u.completedRepairClassReviewFlags && u.completedRepairClassReviewFlags[idx]);
                                 let isDispatched = !!globalRoCheckState[safeRo];
-                                let statusToggleHtml = isCompletedRepairClassReview
-                                    ? '<span class="badge" style="background:#e5e7eb;color:#475569;border:1px solid #cbd5e1;">REPAIR CLASS ONLY</span>'
-                                    : getDispatchToggleHtml(safeRo, isDispatched, isPreWipLocked);
+                                let statusToggleHtml = getDispatchToggleHtml(safeRo, isDispatched, isPreWipLocked);
 
-                                let noteBtnHtml = '';
-                                if (!isCompletedRepairClassReview) {
-                                    let latestNote = getLatestMeaningfulNote(safeRo);
-                                    let hasNote = isMeaningfulNote(latestNote);
-                                    let noteClass = hasNote ? 'note-btn has-note' : 'note-btn';
-                                    let noteTitle = hasNote ? escapeHtml(latestNote).replace(/"/g, '&quot;') : 'Needs Update';
-                                    noteBtnHtml = `<button class="${noteClass}" data-ro="${safeRo}" title="${noteTitle}" onclick="openNoteModal('${safeRo}', '${roNum}')">📝</button>`;
-                                }
+                                let latestNote = getLatestMeaningfulNote(safeRo);
+                                let hasNote = isMeaningfulNote(latestNote);
+                                let noteClass = hasNote ? 'note-btn has-note' : 'note-btn';
+                                let noteTitle = hasNote ? escapeHtml(latestNote).replace(/"/g, '&quot;') : 'Needs Update';
+                                let noteBtnHtml = `<button class="${noteClass}" data-ro="${safeRo}" title="${noteTitle}" onclick="openNoteModal('${safeRo}', '${roNum}')">📝</button>`;
 
                                 let sourcePillHtml = getQueueSourcePillHtml(u.queueSources[idx], isVendedQueue);
                                 let roLinkDisplayHtml = isPreWipLocked ? getLockedRoDisplayFromHtml(u.roLinks[idx], roNum) : u.roLinks[idx];
@@ -6090,7 +5420,6 @@
                                 let od = u.openedDates[idx] || '';
                                 let st = u.statuses[idx] || '';
                                 let ec = u.ecdCells[idx] || '';
-                                let repairClassCell = (u.repairClassCells && u.repairClassCells[idx]) ? u.repairClassCells[idx] : '<span class="repair-class-pill clean">OK</span>';
 
                                 if (st.toUpperCase().includes('UNASSIGNED')) {
                                     st = `<span style="background-color: var(--urgent-red); color: white; font-weight: 800; padding: 2px 6px; border-radius: 4px; display: inline-block; font-size: 10px; letter-spacing: 0.5px;">${st}</span>`;
@@ -6098,8 +5427,7 @@
 
                                 tableHTML += `<td style="vertical-align:top; padding-top:15px; border-bottom: ${localIdx === rowCount - 1 ? '1px solid var(--border)' : '1px dashed #eee'}; font-size:12px; font-weight: 700; color: #555;">${od}</td>`;
                                 tableHTML += `<td style="vertical-align:top; padding-top:15px; border-bottom: ${localIdx === rowCount - 1 ? '1px solid var(--border)' : '1px dashed #eee'}; font-size:11px; line-height:1.4;"><b>Status:</b> ${st}</td>`;
-                                tableHTML += `<td style="vertical-align:top; padding-top:15px; border-bottom: ${localIdx === rowCount - 1 ? '1px solid var(--border)' : '1px dashed #eee'};">${repairClassCell}</td>`;
-                                tableHTML += `<td style="vertical-align:top; padding-top:15px; border-bottom: ${localIdx === rowCount - 1 ? '1px solid var(--border)' : '1px dashed #eee'};">${isCompletedRepairClassReview ? '<span style="font-size:11px;color:#64748b;font-weight:800;">No workflow note/dispatch required</span>' : ec}</td>`;
+                                tableHTML += `<td style="vertical-align:top; padding-top:15px; border-bottom: ${localIdx === rowCount - 1 ? '1px solid var(--border)' : '1px dashed #eee'};">${ec}</td>`;
                                 tableHTML += `</tr>`;
                             });
                         });
@@ -6431,7 +5759,6 @@
             else if (viewId === 'ers-view') renderKPITiles(ersOwners, 'ers-kpi-container', 'ers-view');
             else if (viewId === 'home-view') renderHomeDashboard();
             else if (viewId === 'spend-view') renderSpendQueue();
-            else if (viewId === 'billing-view') renderBillingQueue();
             else if (viewId === 'summary-view') {
                 renderSummary();
                 renderAmeritOos();
