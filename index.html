@@ -440,24 +440,6 @@
         .modal-close:hover { color: #333; }
         .modal-textarea { width: 100%; height: 120px; padding: 10px; border: 1px solid #ccc; border-radius: 4px; resize: vertical; font-size: 14px; margin-bottom: 15px; font-family: 'Raleway', sans-serif;}
         .modal-actions { display: flex; justify-content: flex-end; gap: 10px; }
-        .repair-class-review-modal { background: rgba(15,23,42,0.72); }
-        .repair-class-review-box { width: 680px; max-width: 94%; border-top: 5px solid var(--gold); }
-        .repair-class-review-warning { background:#fff7ed; border:1px solid #f59e0b; color:#7c2d12; border-radius:6px; padding:10px; font-size:12px; font-weight:800; line-height:1.35; margin-bottom:12px; }
-        .repair-class-review-details { background:#f8fafc; border:1px solid #e2e8f0; border-radius:6px; padding:12px; margin-bottom:12px; }
-        .repair-class-review-grid { display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:8px; margin-bottom:10px; }
-        .repair-class-review-field { background:#fff; border:1px solid #e5e7eb; border-radius:5px; padding:8px; }
-        .repair-class-review-field .label { font-size:9px; font-weight:900; color:#64748b; text-transform:uppercase; letter-spacing:0.4px; margin-bottom:3px; }
-        .repair-class-review-field .value { font-size:13px; font-weight:800; color:#334155; line-height:1.25; word-break:break-word; }
-        .repair-class-review-ai-reason { background:#fff; border-left:4px solid var(--gold); padding:9px; font-size:12px; line-height:1.35; color:#334155; font-weight:650; max-height:145px; overflow:auto; }
-        .repair-class-review-history { margin-top:8px; background:#fff1f2; border:1px solid #fecdd3; color:#7f1d1d; border-radius:5px; padding:8px; font-size:11px; font-weight:800; line-height:1.35; }
-        .repair-class-review-memo { width:100%; min-height:105px; padding:10px; border:1px solid #cbd5e1; border-radius:5px; resize:vertical; font-size:13px; font-family:'Raleway', sans-serif; margin-bottom:8px; }
-        .repair-class-review-error { display:none; color:#b91c1c; font-size:12px; font-weight:900; margin-bottom:10px; }
-        .btn-accept-reasoning, .btn-decline-reasoning { border:none; border-radius:4px; padding:10px 12px; font-size:11px; font-weight:900; cursor:pointer; letter-spacing:0.35px; }
-        .btn-accept-reasoning { background:#16a34a; color:white; }
-        .btn-accept-reasoning:hover { background:#15803d; }
-        .btn-decline-reasoning { background:#334155; color:white; }
-        .btn-decline-reasoning:hover { background:#1e293b; }
-        .repair-class-review-status-note { font-size:10px; color:#64748b; font-weight:800; margin-top:5px; line-height:1.25; }
         .grouped-ro-item { margin-bottom: 8px; }
         .grouped-ro-item:last-child { margin-bottom: 0; }
     </style>
@@ -631,7 +613,6 @@
                 <button class="sub-tab" onclick="switchSpendTab('sub-spend-change-log', this)">Spend / Status Change Log</button>
                 <button class="sub-tab" onclick="switchSpendTab('sub-weekly-history', this)">Weekly History</button>
                 <button class="sub-tab" onclick="switchSpendTab('sub-weekly-table-summary', this)">Weekly Table Summary</button>
-                <button class="sub-tab" onclick="switchSpendTab('sub-weekly-table-summary-dedicated', this)">Weekly Table Summary (Dedicated)</button>
             </div>
             <div id="sub-weekly-spend" class="sub-section active">
                 <div id="spend-dashboard-widget"></div>
@@ -708,20 +689,6 @@
                         Summarizes vended spend by week before and after AI transfer logic. In-Budget includes SCHEDULED, OSC PM, and DEF MAINT; every other repair class is Out-of-Budget.
                     </div>
                     <div id="weekly-spend-table-summary-body"></div>
-                </div>
-            </div>
-            <div id="sub-weekly-table-summary-dedicated" class="sub-section">
-                <div class="drilldown-container">
-                    <div class="view-title" style="margin-bottom: 10px;">
-                        <span style="font-weight:700;">Weekly Table Summary (Dedicated)</span>
-                        <div class="controls-group" style="display:flex; align-items:center;">
-                            <button class="btn-green" onclick="exportWeeklySpendDedicatedTableSummaryToExcel()">&#11139; Export to XLSX</button>
-                        </div>
-                    </div>
-                    <div style="font-size:12px; color:#64748b; font-weight:700; margin-bottom:12px;">
-                        Summarizes dedicated STANDARD RO spend by week before and after AI transfer logic. In-Budget includes SCHEDULED, OSC PM, and DEF MAINT; every other repair class is Out-of-Budget.
-                    </div>
-                    <div id="weekly-spend-table-summary-dedicated-body"></div>
                 </div>
             </div>
         </div>
@@ -872,22 +839,6 @@
             <div class="modal-actions">
                 <button class="btn-cancel" onclick="closeNoteModal()">Cancel</button>
                 <button class="btn-save" onclick="saveNote()">Save Update</button>
-            </div>
-        </div>
-    </div>
-
-    <div id="repair-class-review-modal" class="modal-overlay repair-class-review-modal">
-        <div class="modal-box repair-class-review-box">
-            <div class="modal-header">
-                <span>Repair Class Review Required</span>
-            </div>
-            <div class="repair-class-review-warning">This review cannot be closed silently. The VRO has been opened in a new tab. Confirm whether you accepted the AI reasoning and changed the repair class, or declined the AI reasoning and left the current REPCLASS unchanged. A memo is required either way.</div>
-            <div id="repair-class-review-details" class="repair-class-review-details"></div>
-            <textarea id="repair-class-review-memo" class="repair-class-review-memo" placeholder="Required memo. Examples: Agreed with AI and updated VRO repair class. / Current REPCLASS acceptable because..."></textarea>
-            <div id="repair-class-review-error" class="repair-class-review-error">Memo is required before this review can be cleared.</div>
-            <div class="modal-actions">
-                <button class="btn-accept-reasoning" onclick="submitRepairClassReviewDecision('accepted')">ACCEPTED REASONING</button>
-                <button class="btn-decline-reasoning" onclick="submitRepairClassReviewDecision('declined')">DECLINED REASONING</button>
             </div>
         </div>
     </div>
@@ -1106,20 +1057,12 @@
                     const storageRef = bucket === configuredBucket
                         ? firebase.storage().ref().child(workbookPath)
                         : firebase.storage().refFromURL(`gs://${bucket}/${workbookPath}`);
-                    let agingSignature = '';
-                    try {
-                        const meta = await storageRef.getMetadata();
-                        agingSignature = [meta.generation, meta.updated, meta.size].filter(Boolean).join('|');
-                    } catch (metaErr) {
-                        console.warn('Aging Repairs metadata unavailable:', metaErr);
-                    }
                     const downloadUrl = await storageRef.getDownloadURL();
                     const response = await fetch(downloadUrl + (downloadUrl.includes('?') ? '&' : '?') + `_=${Date.now()}`, { cache: 'no-store' });
                     if (!response.ok) throw new Error(`HTTP ${response.status}`);
                     const data = await response.arrayBuffer();
                     const sig = new Uint8Array(data.slice(0, 2));
                     if (!(sig[0] === 0x50 && sig[1] === 0x4B)) throw new Error('Aging Repairs response is not a valid XLSX file.');
-                    globalAgingRepairsFileSignature = agingSignature || globalAgingRepairsFileSignature || `loaded-${Date.now()}`;
                     return data;
                 } catch (err) {
                     lastError = err;
@@ -1146,9 +1089,6 @@
                     if (name.includes('aging') || name.includes('repair')) selectedAoa = aoa;
                 });
                 processAgingRepairsData(selectedAoa || []);
-                globalRepairClassDataVersion++;
-                markWeeklySpendHistoryDirty();
-                invalidateComplianceCaches('aging-repairs-loaded');
                 window.__agingRepairsReviewLoaded = true;
                 try {
                     await lockClosedWeeklySpendAllocationSnapshotsFromFirebase();
@@ -1159,7 +1099,7 @@
                     statusEl.innerText = `Loaded ${globalBillingRows.length} billing exception${globalBillingRows.length === 1 ? '' : 's'}.`;
                     statusEl.style.color = '#15803d';
                 }
-                scheduleActiveViewRefresh('aging-repairs-loaded', 100);
+                refreshActiveViewPreservingDrilldown();
                 return true;
             } catch (err) {
                 if (showWarnings) console.warn('Aging Repairs billing queue source not loaded:', err);
@@ -1371,21 +1311,10 @@
         let globalBillingRows = [];
         let globalBillingIssueMap = {};
         let globalBillingReviewState = {};
-        let globalPendingRepairClassReview = null;
-        let globalAgingRepairsFileSignature = '';
-        let globalRepairClassReopenInFlight = {};
         let currentBillingFilter = 'ALL';
         let globalWeeklySpendHistoryRows = [];
         let expandedWeeklySpendWeeks = {};
         let globalWeeklySpendAllocationSnapshotWriteInFlight = false;
-        let globalWeeklySpendHistoryLoadPromise = null;
-        let globalWeeklySpendHistoryLoadedAt = 0;
-        let globalWeeklySpendHistoryDirty = true;
-        let globalWeeklySpendHistoryVersion = 0;
-        let globalRepairClassDataVersion = 0;
-        let globalFirebaseStateVersion = 0;
-        let globalComplianceSummaryCache = {};
-        let globalActiveViewRefreshTimer = null;
         window.__agingRepairsReviewLoaded = false;
         let globalManualGovernorLockState = {};
         let manualGovernorResetWriteInFlight = false;
@@ -1401,37 +1330,6 @@
             globalManualGovernorLockState = JSON.parse(localStorage.getItem('manual_governor_lock') || '{}');
         } catch(e) {}
 
-        function invalidateComplianceCaches(reason = '') {
-            globalComplianceSummaryCache = {};
-        }
-
-        function scheduleActiveViewRefresh(reason = '', delayMs = 350) {
-            if (!(processedData && processedData.length > 0)) return;
-            if (globalActiveViewRefreshTimer) clearTimeout(globalActiveViewRefreshTimer);
-            globalActiveViewRefreshTimer = setTimeout(() => {
-                globalActiveViewRefreshTimer = null;
-                refreshActiveViewPreservingDrilldown();
-            }, delayMs);
-        }
-
-        function getActiveSpendSubTabId() {
-            const active = document.querySelector('#spend-view .sub-section.active');
-            return active ? active.id : 'sub-weekly-spend';
-        }
-
-        function renderActiveWeeklySpendTab() {
-            const activeId = getActiveSpendSubTabId();
-            if (activeId === 'sub-weekly-history') renderWeeklySpendHistory();
-            else if (activeId === 'sub-weekly-table-summary') renderWeeklySpendTableSummary();
-            else if (activeId === 'sub-weekly-table-summary-dedicated') renderWeeklySpendDedicatedTableSummary();
-        }
-
-        function markWeeklySpendHistoryDirty() {
-            globalWeeklySpendHistoryDirty = true;
-            globalWeeklySpendHistoryVersion++;
-            invalidateComplianceCaches('weekly-spend-history-dirty');
-        }
-
         function initFirebaseSync() {
             try {
                 if (typeof firebase !== 'undefined') {
@@ -1439,54 +1337,48 @@
 
                     db.ref('roChecks').on('value', (snapshot) => {
                         globalRoCheckState = snapshot.val() || {};
-                        globalFirebaseStateVersion++;
-                        invalidateComplianceCaches('ro-checks');
                         try { localStorage.setItem('workflow_checks', JSON.stringify(globalRoCheckState)); } catch(e) {}
                         updateAllStatusBadges();
                     });
 
                     db.ref('roNotes').on('value', (snapshot) => {
                         globalRoNotesState = snapshot.val() || {};
-                        globalFirebaseStateVersion++;
-                        invalidateComplianceCaches('ro-notes');
                         try { localStorage.setItem('workflow_notes', JSON.stringify(globalRoNotesState)); } catch(e) {}
                         updateAllNoteButtons();
                     });
 
                     db.ref('workflowActivity').on('value', (snapshot) => {
                         globalWorkflowActivityState = snapshot.val() || {};
-                        globalFirebaseStateVersion++;
-                        invalidateComplianceCaches('workflow-activity');
                         try { localStorage.setItem('workflow_activity', JSON.stringify(globalWorkflowActivityState)); } catch(e) {}
                         updateAllNoteButtons();
-                        scheduleActiveViewRefresh('workflow-activity');
+                        if (processedData && processedData.length > 0) {
+                            refreshActiveViewPreservingDrilldown();
+                        }
                     });
 
                     db.ref('billingReviewStatus').on('value', (snapshot) => {
                         globalBillingReviewState = snapshot.val() || {};
-                        globalFirebaseStateVersion++;
-                        invalidateComplianceCaches('billing-review-status');
-                        markWeeklySpendHistoryDirty();
                         try { localStorage.setItem('workflow_billing_review_status', JSON.stringify(globalBillingReviewState)); } catch(e) {}
-                        const billingView = document.getElementById('billing-view');
-                        if (billingView && billingView.classList.contains('active')) renderBillingQueue();
-                        scheduleActiveViewRefresh('billing-review-status');
+                        renderBillingQueue();
+                        if (processedData && processedData.length > 0) refreshActiveViewPreservingDrilldown();
                     });
 
                     db.ref('spendGovernor/manualLock').on('value', (snapshot) => {
                         globalManualGovernorLockState = snapshot.val() || {};
-                        globalFirebaseStateVersion++;
                         try { localStorage.setItem('manual_governor_lock', JSON.stringify(globalManualGovernorLockState)); } catch(e) {}
                         checkAndAutoResetManualGovernorLock();
-                        scheduleActiveViewRefresh('manual-governor-lock');
+                        if (processedData && processedData.length > 0) {
+                            refreshActiveViewPreservingDrilldown();
+                        }
                     });
 
                     db.ref('spendGovernor/unlimitedSpendMode').on('value', (snapshot) => {
                         globalUnlimitedSpendState = snapshot.val() || {};
-                        globalFirebaseStateVersion++;
                         try { localStorage.setItem('unlimited_spend_mode', JSON.stringify(globalUnlimitedSpendState)); } catch(e) {}
                         checkAndAutoResetUnlimitedSpendMode();
-                        scheduleActiveViewRefresh('unlimited-spend-mode');
+                        if (processedData && processedData.length > 0) {
+                            refreshActiveViewPreservingDrilldown();
+                        }
                     });
 
                     if (!window.__manualGovernorResetTimer) {
@@ -1837,10 +1729,10 @@
             return (processedData || []).find(ro => String(ro && ro.roNum || '').toUpperCase().trim() === target) || null;
         }
 
-        function getWeeklyTransferBridgeRowsForWeek(weekKey, spendChannel = 'Vended') {
+        function getWeeklyTransferBridgeRowsForWeek(weekKey) {
             return (globalWeeklySpendHistoryRows || [])
                 .filter(row => row && row.weekKey === weekKey)
-                .filter(row => getWeeklySpendChannel(row) === spendChannel)
+                .filter(row => getWeeklySpendChannel(row) === 'Vended')
                 .filter(isWeeklyTransferDifference)
                 .sort((a, b) => Number(b.spend || 0) - Number(a.spend || 0));
         }
@@ -1885,11 +1777,9 @@
 
         function getWeeklyBridgeIssueBySafeRo(safeRo) {
             const key = String(safeRo || '');
-            if (!key) return null;
+            if (!key || isRepairClassStatusCleared(key)) return null;
             const row = getCurrentWeekTransferBridgeRows().find(r => String(r.safeRo || safeFirebaseKey(r.roNumber)) === key);
-            const issue = row ? createWeeklyBridgeIssue(row) : null;
-            if (!issue) return null;
-            return isRepairClassStatusClearedForIssue(key, issue) ? null : issue;
+            return row ? createWeeklyBridgeIssue(row) : null;
         }
 
         function rowOrContextMatchesOwnerForBridge(row, owner) {
@@ -1978,7 +1868,7 @@
                 if (!roNum || existing.has(roNum)) return;
                 if (!rowOrContextMatchesOwnerForBridge(row, owner)) return;
                 const issue = createWeeklyBridgeIssue(row);
-                if (!issue || isRepairClassStatusClearedForIssue(issue.safeRo, issue)) return;
+                if (!issue || isRepairClassStatusCleared(issue.safeRo)) return;
                 out.push(createWeeklyBridgeVirtualRo(row, owner));
             });
             return out;
@@ -1991,10 +1881,8 @@
             const body = maxRows.map(row => {
                 const issue = createWeeklyBridgeIssue(row) || {};
                 const roLink = row.roUrl ? `<a class="ro-link" href="${escapeHtml(row.roUrl)}" target="_blank">${escapeHtml(row.roNumber || '')}</a>` : escapeHtml(row.roNumber || '');
-                const safeRo = issue.safeRo || row.safeRo || safeFirebaseKey(row.roNumber);
-                const status = getBillingReviewStatusForSafeRo(safeRo);
-                const isCleared = isRepairClassStatusClearedForIssue(safeRo, issue);
-                const action = isCleared ? (status === 'Declined Reasoning' ? 'DECLINED' : status === 'Accepted Reasoning' ? 'ACCEPTED' : 'CLEARED') : 'NEEDS REVIEW';
+                const status = getBillingReviewStatusForSafeRo(issue.safeRo || row.safeRo || safeFirebaseKey(row.roNumber));
+                const action = ['Corrected','Cleared'].includes(status) ? 'CLEARED' : 'NEEDS REVIEW';
                 return `<tr>
                     <td>${roLink}</td>
                     <td>${escapeHtml(row.unitNo || '')}</td>
@@ -2035,7 +1923,7 @@
 
         function isBillingRowUnresolved(r) {
             const st = getBillingReviewStatus(r);
-            return !isRepairClassClearedStatus(st);
+            return !['Corrected','Cleared'].includes(st);
         }
 
         function isBillingRowReviewNeeded(r) {
@@ -2058,15 +1946,14 @@
 
         function getRepairClassIssueForSafeRo(safeRo) {
             if (!safeRo || !globalBillingRows) return null;
-            const issue = getRepairClassReviewIssueBySafeRo(safeRo);
-            return issue && !isRepairClassStatusClearedForIssue(safeRo, issue) ? issue : null;
+            return globalBillingRows.find(r => r.safeRo === safeRo && getBillingReviewStatusForSafeRo(r.safeRo) === 'Open') || null;
         }
 
         function getVisibleRepairClassIssueForDrilldown(ro) {
             if (!ro || !ro.roNum) return null;
             const issue = getVisibleBillingIssueForRo(ro);
             if (!issue) return null;
-            return !isRepairClassStatusClearedForIssue(issue.safeRo, issue) ? issue : null;
+            return getBillingReviewStatusForSafeRo(issue.safeRo) === 'Open' ? issue : null;
         }
 
         function isRoLeftForWorkflowMetric(ro, metricFilter) {
@@ -2127,7 +2014,7 @@
             const issue = getVisibleRepairClassIssueForDrilldown(ro);
             const safeRo = issue ? issue.safeRo : (ro && ro.roNum ? safeFirebaseKey(ro.roNum) : '');
             const touchedToday = safeRo ? roTouchedToday(safeRo) : false;
-            const cleared = safeRo ? isRepairClassClearedStatus(getBillingReviewStatusForSafeRo(safeRo)) : false;
+            const cleared = safeRo ? ['Corrected','Cleared'].includes(getBillingReviewStatusForSafeRo(safeRo)) : false;
 
             if (f === 'REPAIR_CLASS') return !!issue;
             if (f === 'REPAIR_CLASS_REVIEW_NEEDED') return !!issue;
@@ -3137,9 +3024,6 @@
             } else if (subId === 'sub-weekly-table-summary') {
                 renderWeeklySpendTableSummary();
                 refreshWeeklySpendHistoryRows();
-            } else if (subId === 'sub-weekly-table-summary-dedicated') {
-                renderWeeklySpendDedicatedTableSummary();
-                refreshWeeklySpendHistoryRows();
             } else {
                 renderSpendQueue();
             }
@@ -3452,52 +3336,32 @@
             return Object.values(map).sort((a, b) => getWeekSortValue(b.weekKey) - getWeekSortValue(a.weekKey));
         }
 
-        async function refreshWeeklySpendHistoryRows(force = false) {
-            if (globalWeeklySpendHistoryLoadPromise) return globalWeeklySpendHistoryLoadPromise;
-            const hasRecentRows = globalWeeklySpendHistoryLoadedAt && (Date.now() - globalWeeklySpendHistoryLoadedAt < 45000);
-            if (!force && !globalWeeklySpendHistoryDirty && hasRecentRows && (globalWeeklySpendHistoryRows || []).length) {
-                renderActiveWeeklySpendTab();
-                return Promise.resolve(globalWeeklySpendHistoryRows);
-            }
-
-            globalWeeklySpendHistoryLoadPromise = (async () => {
-                if (!db) {
-                    globalWeeklySpendHistoryRows = [];
-                    renderActiveWeeklySpendTab();
-                    return globalWeeklySpendHistoryRows;
-                }
-                try {
-                    let authSnap = await db.ref('spendGovernor/authorizations').once('value');
-                    let authData = authSnap.val() || {};
-                    if (window.__agingRepairsReviewLoaded) {
-                        const wroteSnapshots = await lockClosedWeeklySpendAllocationSnapshots(authData);
-                        if (wroteSnapshots) {
-                            authSnap = await db.ref('spendGovernor/authorizations').once('value');
-                            authData = authSnap.val() || {};
-                        }
-                    }
-                    globalWeeklySpendHistoryRows = buildWeeklySpendHistoryRows(authData);
-                    globalWeeklySpendHistoryLoadedAt = Date.now();
-                    globalWeeklySpendHistoryDirty = false;
-                    globalWeeklySpendHistoryVersion++;
-                    invalidateComplianceCaches('weekly-spend-history-loaded');
-                    syncGlobalAppFinFromWeeklyHistoryRows();
-                } catch (err) {
-                    console.warn('Weekly spend history load failed:', err);
-                    globalWeeklySpendHistoryRows = globalWeeklySpendHistoryRows || [];
-                }
-                renderActiveWeeklySpendTab();
-                if (document.querySelector('.view-section.active') && document.querySelector('.view-section.active').id === 'spend-view' && getActiveSpendSubTabId() === 'sub-weekly-spend') {
-                    renderSpendQueue();
-                }
+        async function refreshWeeklySpendHistoryRows() {
+            if (!db) {
+                globalWeeklySpendHistoryRows = [];
+                renderWeeklySpendHistory();
                 return globalWeeklySpendHistoryRows;
-            })();
-
-            try {
-                return await globalWeeklySpendHistoryLoadPromise;
-            } finally {
-                globalWeeklySpendHistoryLoadPromise = null;
             }
+            try {
+                let authSnap = await db.ref('spendGovernor/authorizations').once('value');
+                let authData = authSnap.val() || {};
+                if (window.__agingRepairsReviewLoaded) {
+                    const wroteSnapshots = await lockClosedWeeklySpendAllocationSnapshots(authData);
+                    if (wroteSnapshots) {
+                        authSnap = await db.ref('spendGovernor/authorizations').once('value');
+                        authData = authSnap.val() || {};
+                    }
+                }
+                globalWeeklySpendHistoryRows = buildWeeklySpendHistoryRows(authData);
+                syncGlobalAppFinFromWeeklyHistoryRows();
+            } catch (err) {
+                console.warn('Weekly spend history load failed:', err);
+                globalWeeklySpendHistoryRows = globalWeeklySpendHistoryRows || [];
+            }
+            renderWeeklySpendHistory();
+            renderWeeklySpendTableSummary();
+            triggerViewUpdate();
+            return globalWeeklySpendHistoryRows;
         }
 
         function toggleWeeklySpendWeek(weekKey) {
@@ -3695,10 +3559,10 @@
             };
         }
 
-        function buildWeeklySpendTableSummaryGroups(rows, spendChannel = 'Vended') {
+        function buildWeeklySpendTableSummaryGroups(rows) {
             const map = {};
             (rows || []).forEach(row => {
-                if (getWeeklySpendChannel(row) !== spendChannel) return;
+                if (getWeeklySpendChannel(row) !== 'Vended') return;
                 const week = row.weekKey || 'UNKNOWN';
                 if (!map[week]) {
                     map[week] = {
@@ -3757,7 +3621,7 @@
             </tr>`;
         }
 
-        function renderWeeklySpendPivotTable(title, subtitle, model, spendLabel = 'Vended Spend') {
+        function renderWeeklySpendPivotTable(title, subtitle, model) {
             return `<div class="weekly-pivot-box">
                 <div class="weekly-pivot-title">${escapeHtml(title)}</div>
                 <div class="weekly-pivot-subtitle">${escapeHtml(subtitle)}</div>
@@ -3765,7 +3629,7 @@
                     <thead><tr>
                         <th class="weekly-rc-col-bucket">Budget</th>
                         <th class="weekly-rc-col-class">Repair Class</th>
-                        <th class="weekly-rc-col-money">${escapeHtml(spendLabel)}</th>
+                        <th class="weekly-rc-col-money">Vended Spend</th>
                         <th class="weekly-rc-col-count">VROs</th>
                         <th class="weekly-rc-col-pct">Split</th>
                     </tr></thead>
@@ -3785,64 +3649,32 @@
         }
 
         function renderWeeklySpendTableSummary() {
-            renderWeeklySpendTableSummaryForChannel({
-                spendChannel: 'Vended',
-                containerId: 'weekly-spend-table-summary-body',
-                emptyLabel: 'vended weekly table summary',
-                notePrefix: 'This summary only shows vended spend and now bridges current-week transfer gaps into coordinator Repair Class Compliance so they stay visible until reviewed or corrected.',
-                roLabel: 'Vended VROs',
-                totalLabel: 'Vended Total',
-                spendLabel: 'Vended Spend',
-                titleSuffix: 'Weekly Table Summary'
-            });
-        }
-
-        function renderWeeklySpendDedicatedTableSummary() {
-            renderWeeklySpendTableSummaryForChannel({
-                spendChannel: 'Dedicated',
-                containerId: 'weekly-spend-table-summary-dedicated-body',
-                emptyLabel: 'dedicated weekly table summary',
-                notePrefix: 'This summary only shows dedicated STANDARD RO spend. It uses the same Original / Transfer model structure as the vended weekly table summary so dedicated shop work can be reviewed separately without mixing into vended spend.',
-                roLabel: 'Standard ROs',
-                totalLabel: 'Dedicated Total',
-                spendLabel: 'Dedicated Spend',
-                titleSuffix: 'Weekly Table Summary (Dedicated)'
-            });
-        }
-
-        function renderWeeklySpendTableSummaryForChannel(options) {
-            const opts = options || {};
-            const spendChannel = opts.spendChannel || 'Vended';
-            const container = document.getElementById(opts.containerId || 'weekly-spend-table-summary-body');
+            const container = document.getElementById('weekly-spend-table-summary-body');
             if (!container) return;
-            const groups = buildWeeklySpendTableSummaryGroups(globalWeeklySpendHistoryRows || [], spendChannel);
+            const groups = buildWeeklySpendTableSummaryGroups(globalWeeklySpendHistoryRows || []);
             if (groups.length === 0) {
-                container.innerHTML = `<div style="padding:18px; text-align:center; color:#64748b; font-weight:800; background:#f8fafc; border:1px solid #e2e8f0; border-radius:6px;">No ${escapeHtml(opts.emptyLabel || 'weekly table summary')} is available yet. Weekly totals will appear once Firebase governor authorizations are loaded.</div>`;
+                container.innerHTML = `<div style="padding:18px; text-align:center; color:#64748b; font-weight:800; background:#f8fafc; border:1px solid #e2e8f0; border-radius:6px;">No vended weekly table summary is available yet. Weekly totals will appear once Firebase governor authorizations are loaded.</div>`;
                 return;
             }
-            const spendLabel = opts.spendLabel || (spendChannel === 'Dedicated' ? 'Dedicated Spend' : 'Vended Spend');
-            const roLabel = opts.roLabel || (spendChannel === 'Dedicated' ? 'Standard ROs' : 'Vended VROs');
-            const totalLabel = opts.totalLabel || (spendChannel === 'Dedicated' ? 'Dedicated Total' : 'Vended Total');
-            const titleSuffix = opts.titleSuffix || (spendChannel === 'Dedicated' ? 'Weekly Table Summary (Dedicated)' : 'Weekly Table Summary');
             let html = `<div class="weekly-table-summary-shell">
-                <div class="weekly-table-summary-note">Original / Pre-AI uses the current repair class. Transfer / After AI uses the AI transfer repair class when one exists, otherwise it keeps the current repair class. ${escapeHtml(opts.notePrefix || '')} In-Budget includes SCHEDULED, OSC PM, and DEF MAINT; every other repair class is Out-of-Budget.</div>`;
+                <div class="weekly-table-summary-note">Original / Pre-AI uses the current repair class. Transfer / After AI uses the AI transfer repair class when one exists, otherwise it keeps the current repair class. This summary only shows vended spend and now bridges current-week transfer gaps into coordinator Repair Class Compliance so they stay visible until reviewed or corrected. In-Budget includes SCHEDULED, OSC PM, and DEF MAINT; every other repair class is Out-of-Budget.</div>`;
             groups.forEach(group => {
                 const totalSpend = Number(group.transfer.grandTotal || group.original.grandTotal || 0);
                 const totalVros = Math.max(group.transfer.grandVroCount || 0, group.original.grandVroCount || 0, group.vroCount || 0);
-                const bridgeRows = getWeeklyTransferBridgeRowsForWeek(group.weekKey, spendChannel);
+                const bridgeRows = getWeeklyTransferBridgeRowsForWeek(group.weekKey);
                 html += `<div class="weekly-table-summary-card">
                     <div class="weekly-table-summary-header">
-                        <div class="weekly-table-summary-week">${escapeHtml(group.weekKey)} ${escapeHtml(titleSuffix)}</div>
+                        <div class="weekly-table-summary-week">${escapeHtml(group.weekKey)} Weekly Table Summary</div>
                         <div class="weekly-table-summary-meta">
                             <span>Week End: ${escapeHtml(group.weekEndDate || '')}</span>
-                            <span>${totalVros} ${escapeHtml(roLabel)}</span>
-                            <span>${escapeHtml(totalLabel)}: ${formatWeeklyHistoryMoney(totalSpend)}</span>
+                            <span>${totalVros} Vended VROs</span>
+                            <span>Vended Total: ${formatWeeklyHistoryMoney(totalSpend)}</span>
                             <span>${bridgeRows.length} Transfer Gap${bridgeRows.length === 1 ? '' : 's'}</span>
                         </div>
                     </div>
                     <div class="weekly-table-summary-grid">
-                        ${renderWeeklySpendPivotTable(`${group.weekKey} Original`, 'Pre-AI Model · Current Repair Class', group.original, spendLabel)}
-                        ${renderWeeklySpendPivotTable(`${group.weekKey} Transfer`, 'After AI Model · Transfer Repair Class', group.transfer, spendLabel)}
+                        ${renderWeeklySpendPivotTable(`${group.weekKey} Original`, 'Pre-AI Model · Current Repair Class', group.original)}
+                        ${renderWeeklySpendPivotTable(`${group.weekKey} Transfer`, 'After AI Model · Transfer Repair Class', group.transfer)}
                     </div>
                     ${renderWeeklyTransferBridgeTable(group.weekKey, bridgeRows)}
                 </div>`;
@@ -3851,10 +3683,9 @@
             container.innerHTML = html;
         }
 
-        function buildWeeklySpendTableSummaryExportRows(rows, spendChannel = 'Vended') {
-            const groups = buildWeeklySpendTableSummaryGroups(rows || [], spendChannel);
+        function buildWeeklySpendTableSummaryExportRows(rows) {
+            const groups = buildWeeklySpendTableSummaryGroups(rows || []);
             const out = [];
-            const spendColumn = spendChannel === 'Dedicated' ? 'Dedicated Spend' : 'Vended Spend';
             groups.forEach(group => {
                 [
                     { modelName: 'Original / Pre-AI Model', key: 'original' },
@@ -3862,55 +3693,47 @@
                 ].forEach(modelInfo => {
                     const model = group[modelInfo.key];
                     (model.repairClasses || []).forEach(item => {
-                        const row = {
+                        out.push({
                             'Week': group.weekKey,
                             'Week End': group.weekEndDate || '',
-                            'Spend Channel': spendChannel,
                             'Model': modelInfo.modelName,
                             'Budget Bucket': item.budgetBucket,
                             'Repair Class': item.repairClass || 'Not Available',
+                            'Vended Spend': Number(item.spend || 0),
                             'VRO Count': item.vroCount || 0,
-                            [`Percent of ${spendColumn}`]: formatWeeklySpendPercent(item.spend || 0, model.grandTotal || 0)
-                        };
-                        row[spendColumn] = Number(item.spend || 0);
-                        out.push(row);
+                            'Percent of Vended Spend': formatWeeklySpendPercent(item.spend || 0, model.grandTotal || 0)
+                        });
                     });
-                    let rowIn = {
+                    out.push({
                         'Week': group.weekKey,
                         'Week End': group.weekEndDate || '',
-                        'Spend Channel': spendChannel,
                         'Model': modelInfo.modelName,
                         'Budget Bucket': 'In-Budget Total',
                         'Repair Class': 'SCHEDULED + OSC PM + DEF MAINT',
+                        'Vended Spend': Number(model.inBudgetTotal || 0),
                         'VRO Count': model.inBudgetVroCount || 0,
-                        [`Percent of ${spendColumn}`]: formatWeeklySpendPercent(model.inBudgetTotal || 0, model.grandTotal || 0)
-                    };
-                    rowIn[spendColumn] = Number(model.inBudgetTotal || 0);
-                    out.push(rowIn);
-                    let rowOut = {
+                        'Percent of Vended Spend': formatWeeklySpendPercent(model.inBudgetTotal || 0, model.grandTotal || 0)
+                    });
+                    out.push({
                         'Week': group.weekKey,
                         'Week End': group.weekEndDate || '',
-                        'Spend Channel': spendChannel,
                         'Model': modelInfo.modelName,
                         'Budget Bucket': 'Out-of-Budget Total',
                         'Repair Class': 'All Other Repair Classes',
+                        'Vended Spend': Number(model.outBudgetTotal || 0),
                         'VRO Count': model.outBudgetVroCount || 0,
-                        [`Percent of ${spendColumn}`]: formatWeeklySpendPercent(model.outBudgetTotal || 0, model.grandTotal || 0)
-                    };
-                    rowOut[spendColumn] = Number(model.outBudgetTotal || 0);
-                    out.push(rowOut);
-                    let rowGrand = {
+                        'Percent of Vended Spend': formatWeeklySpendPercent(model.outBudgetTotal || 0, model.grandTotal || 0)
+                    });
+                    out.push({
                         'Week': group.weekKey,
                         'Week End': group.weekEndDate || '',
-                        'Spend Channel': spendChannel,
                         'Model': modelInfo.modelName,
                         'Budget Bucket': 'Grand Total',
-                        'Repair Class': spendChannel === 'Dedicated' ? 'Dedicated STANDARD RO Spend Only' : 'Vended Spend Only',
+                        'Repair Class': 'Vended Spend Only',
+                        'Vended Spend': Number(model.grandTotal || 0),
                         'VRO Count': model.grandVroCount || 0,
-                        [`Percent of ${spendColumn}`]: '100.0%'
-                    };
-                    rowGrand[spendColumn] = Number(model.grandTotal || 0);
-                    out.push(rowGrand);
+                        'Percent of Vended Spend': '100.0%'
+                    });
                 });
             });
             return out;
@@ -3922,28 +3745,13 @@
                 alert('No weekly table summary available to export.');
                 return;
             }
-            const exportRows = buildWeeklySpendTableSummaryExportRows(rows, 'Vended');
+            const exportRows = buildWeeklySpendTableSummaryExportRows(rows);
             const wb = XLSX.utils.book_new();
             const ws = XLSX.utils.json_to_sheet(exportRows);
             autoFitColumns(ws, exportRows);
             styleExcelHeaders(ws);
             XLSX.utils.book_append_sheet(wb, ws, 'Weekly Table Summary');
             XLSX.writeFile(wb, `weekly_table_summary_${getLocalDateKey(new Date())}.xlsx`);
-        }
-
-        function exportWeeklySpendDedicatedTableSummaryToExcel() {
-            const rows = globalWeeklySpendHistoryRows || [];
-            if (rows.length === 0) {
-                alert('No dedicated weekly table summary available to export.');
-                return;
-            }
-            const exportRows = buildWeeklySpendTableSummaryExportRows(rows, 'Dedicated');
-            const wb = XLSX.utils.book_new();
-            const ws = XLSX.utils.json_to_sheet(exportRows);
-            autoFitColumns(ws, exportRows);
-            styleExcelHeaders(ws);
-            XLSX.utils.book_append_sheet(wb, ws, 'Weekly Dedicated Summary');
-            XLSX.writeFile(wb, `weekly_table_summary_dedicated_${getLocalDateKey(new Date())}.xlsx`);
         }
 
         function exportWeeklySpendHistoryToExcel() {
@@ -4004,17 +3812,11 @@
             styleExcelHeaders(wsDetail);
             XLSX.utils.book_append_sheet(wb, wsDetail, 'Weekly VRO Detail');
 
-            const tableSummaryRows = buildWeeklySpendTableSummaryExportRows(rows, 'Vended');
+            const tableSummaryRows = buildWeeklySpendTableSummaryExportRows(rows);
             const wsTableSummary = XLSX.utils.json_to_sheet(tableSummaryRows);
             autoFitColumns(wsTableSummary, tableSummaryRows);
             styleExcelHeaders(wsTableSummary);
             XLSX.utils.book_append_sheet(wb, wsTableSummary, 'Weekly Table Summary');
-
-            const dedicatedTableSummaryRows = buildWeeklySpendTableSummaryExportRows(rows, 'Dedicated');
-            const wsDedicatedTableSummary = XLSX.utils.json_to_sheet(dedicatedTableSummaryRows);
-            autoFitColumns(wsDedicatedTableSummary, dedicatedTableSummaryRows);
-            styleExcelHeaders(wsDedicatedTableSummary);
-            XLSX.utils.book_append_sheet(wb, wsDedicatedTableSummary, 'Weekly Dedicated Summary');
 
             XLSX.writeFile(wb, `weekly_spend_history_${getLocalDateKey(new Date())}.xlsx`);
         }
@@ -4769,10 +4571,6 @@
             const refreshedAllAuthSnap = await db.ref('spendGovernor/authorizations').once('value');
             const refreshedAllAuthorizations = refreshedAllAuthSnap.val() || {};
             globalWeeklySpendHistoryRows = buildWeeklySpendHistoryRows(refreshedAllAuthorizations);
-            globalWeeklySpendHistoryLoadedAt = Date.now();
-            globalWeeklySpendHistoryDirty = false;
-            globalWeeklySpendHistoryVersion++;
-            invalidateComplianceCaches('weekly-authorizations-refreshed');
             const weeklyAuthorizations = refreshedAllAuthorizations[weekKey] || {};
 
             let weeklyAuthorizedTotal = 0;
@@ -5266,11 +5064,7 @@
             else if(activeView === 'vended-view') renderKPITiles(vendedOwners, 'vended-kpi-container', 'vended-view');
             else if(activeView === 'ers-view') renderKPITiles(ersOwners, 'ers-kpi-container', 'ers-view');
             else if(activeView === 'nonosc-view') renderNonOscLocationTiles();
-            else if(activeView === 'spend-view') {
-                const activeSpendSub = getActiveSpendSubTabId();
-                if (activeSpendSub === 'sub-weekly-spend') renderSpendQueue();
-                else renderActiveWeeklySpendTab();
-            }
+            else if(activeView === 'spend-view') renderSpendQueue();
             else if(activeView === 'person-view') { if(currentOwnerView) loadPersonDrilldown(currentOwnerView, currentParentView, true); }
             else if(activeView === 'summary-view') {
                 renderSummary();
@@ -5371,10 +5165,6 @@
         }
 
         function refreshActiveViewPreservingDrilldown() {
-            if (globalActiveViewRefreshTimer) {
-                clearTimeout(globalActiveViewRefreshTimer);
-                globalActiveViewRefreshTimer = null;
-            }
             const mainContent = document.querySelector('.main-content');
             const activeView = document.querySelector('.view-section.active');
             const isDrilldownView = activeView && activeView.id === 'person-view';
@@ -5729,7 +5519,7 @@
 
         function isRepairClassStatusCleared(safeRo) {
             const status = getBillingReviewStatusForSafeRo(safeRo);
-            return isRepairClassClearedStatus(status);
+            return ['Corrected','Cleared'].includes(status);
         }
 
         function getFriendlyRepairClassLabel(recommendedClass, fallback) {
@@ -6088,149 +5878,41 @@
             const cls = label.includes('DEF') || label.includes('DRIVER') || label.includes('ACCIDENT') || label.includes('TOWING') || label.includes('SPECIAL') || label.includes('MERCHANT') ? 'excludable' : 'review';
             const reasonText = `${label}. Current repair class: ${issue.repClass || 'blank'}. Recommended: ${issue.recommendedClass || issue.suggestedService || 'Review'}. ${(issue.reasons || []).join(' ')}`;
             const title = escapeHtml(reasonText).replace(/"/g, '&quot;');
-            const isCorrected = isRepairClassStatusClearedForIssue(safeRo, issue);
+            const isCorrected = ['Corrected','Cleared'].includes(reviewStatus);
             return `<div class="repair-class-cell" title="${title}">
                 <div class="repair-class-name">${escapeHtml(issue.repClass || 'Review')}</div>
                 <span class="repair-class-pill ${cls}">${escapeHtml(label)}</span>
                 <div class="repair-class-actions">
-                    <span class="status-toggle repair-class-toggle ${isCorrected ? 'status-dispatched' : 'status-pending'}" onclick="toggleRepairClassCorrected('${safeRo}'); event.stopPropagation();" title="Open VRO and record repair-class reasoning">${isCorrected ? 'CORRECTED' : 'PENDING'}</span>
+                    <span class="status-toggle repair-class-toggle ${isCorrected ? 'status-dispatched' : 'status-pending'}" onclick="toggleRepairClassCorrected('${safeRo}'); event.stopPropagation();">${isCorrected ? 'CORRECTED' : 'PENDING'}</span>
                 </div>
             </div>`;
         }
 
         function setRepairClassReviewStatus(safeRo, status) {
-            if (isRepairClassClosingStatus(status)) openRepairClassReviewModal(safeRo);
-            else updateBillingReviewStatus(safeRo, status);
+            updateBillingReviewStatus(safeRo, status);
         }
 
         function toggleRepairClassCorrected(safeRo) {
-            openRepairClassReviewModal(safeRo);
-        }
-
-        function getBillingReviewRecordForSafeRo(safeRo) {
-            return globalBillingReviewState && globalBillingReviewState[safeRo] ? globalBillingReviewState[safeRo] : {};
+            const current = getBillingReviewStatusForSafeRo(safeRo);
+            const next = ['Corrected','Cleared'].includes(current) ? 'Open' : 'Corrected';
+            updateBillingReviewStatus(safeRo, next);
         }
 
         function getBillingReviewStatusForSafeRo(safeRo) {
-            const review = getBillingReviewRecordForSafeRo(safeRo);
+            const review = globalBillingReviewState && globalBillingReviewState[safeRo] ? globalBillingReviewState[safeRo] : {};
             return review.status || 'Open';
-        }
-
-        function isRepairClassClosingStatus(status) {
-            return ['Corrected','Cleared','Accepted Reasoning','Declined Reasoning','Verified'].includes(String(status || ''));
-        }
-
-        function isRepairClassClearedStatus(status) {
-            return ['Corrected','Cleared','Accepted Reasoning','Declined Reasoning','Verified'].includes(String(status || ''));
-        }
-
-        function normalizeRepairClassForVerification(value) {
-            return String(value || '')
-                .toUpperCase()
-                .replace(/&AMP;/g, '&')
-                .replace(/SPECIAL\s+PROJ/g, 'SPECIAL PROJECT')
-                .replace(/DEF\s+MAINTENANCE/g, 'DEF MAINT')
-                .replace(/PREVENTATIVE\s+MAINTENANCE|PREVENTIVE\s+MAINTENANCE/g, 'OSC PM')
-                .replace(/[^A-Z0-9]+/g, ' ')
-                .replace(/\s+/g, ' ')
-                .trim();
-        }
-
-        function repairClassMatchesExpected(currentClass, expectedClass) {
-            const current = normalizeRepairClassForVerification(currentClass);
-            const expected = normalizeRepairClassForVerification(expectedClass);
-            if (!current || !expected || expected === 'REVIEW' || expected === 'NO TRANSFER' || expected === 'NOT AVAILABLE') return false;
-            if (current === expected) return true;
-            if (expected === 'SPECIAL PROJECT') return current.includes('SPECIAL PROJECT');
-            if (expected === 'OSC PM') return current === 'OSC PM' || current === 'PM' || current.includes('OSC PM');
-            if (expected === 'DEF MAINT') return current.includes('DEF MAINT') || current.includes('DEFERRED MAINT');
-            return current.split(',').some(part => normalizeRepairClassForVerification(part) === expected) || current.includes(expected);
-        }
-
-        function getRepairClassReviewIssueBySafeRo(safeRo) {
-            const key = String(safeRo || '');
-            if (!key) return null;
-            let issue = globalBillingIssueMap && globalBillingIssueMap[key] ? globalBillingIssueMap[key] : null;
-            if (!issue && globalBillingRows) issue = globalBillingRows.find(r => r.safeRo === key) || null;
-            if (!issue) {
-                const row = getCurrentWeekTransferBridgeRows().find(r => String(r.safeRo || safeFirebaseKey(r.roNumber)) === key);
-                if (row) issue = createWeeklyBridgeIssue(row);
-            }
-            return issue;
-        }
-
-        function reopenAcceptedRepairClassReview(safeRo, review, issue) {
-            const signature = globalAgingRepairsFileSignature || 'unknown-file-signature';
-            const inFlightKey = `${safeRo}|${signature}`;
-            if (globalRepairClassReopenInFlight[inFlightKey]) return;
-            if (review && review.verificationFailedFileSignature === signature && String(review.status || '') === 'Open') return;
-            globalRepairClassReopenInFlight[inFlightKey] = true;
-            const expectedClass = review.expectedClass || review.recommendedClassAtReview || issue.recommendedClass || issue.suggestedService || '';
-            const currentClass = issue.repClass || '';
-            const memo = review.reason || review.memo || '';
-            const verificationNote = `Accepted repair-class change was not reflected on the next Aging Repairs file refresh. Expected ${expectedClass || 'recommended class'} but current class is ${currentClass || 'blank'}. Prior memo: ${memo}`;
-            updateBillingReviewStatus(safeRo, 'Open', {
-                forceReviewUpdate: true,
-                verificationFailed: true,
-                verificationFailedAt: new Date().toISOString(),
-                verificationFailedFileSignature: signature,
-                previousAcceptedReason: memo,
-                expectedClass,
-                currentClassOnVerification: currentClass,
-                verificationNote,
-                historyAction: 'ACCEPTED_CHANGE_NOT_VERIFIED',
-                historyNote: verificationNote,
-                issue
-            });
-        }
-
-        function isRepairClassStatusClearedForIssue(safeRo, issue) {
-            const review = getBillingReviewRecordForSafeRo(safeRo);
-            const status = String(review.status || 'Open');
-            if (!isRepairClassClearedStatus(status)) return false;
-            if (status === 'Accepted Reasoning') {
-                const acceptedSignature = review.reviewFileSignature || review.agingRepairsFileSignature || '';
-                const currentSignature = globalAgingRepairsFileSignature || '';
-                const expectedClass = review.expectedClass || review.recommendedClassAtReview || (issue && (issue.recommendedClass || issue.suggestedService)) || '';
-                const currentClass = issue && issue.repClass ? issue.repClass : '';
-                if (currentSignature && acceptedSignature && currentSignature !== acceptedSignature) {
-                    if (repairClassMatchesExpected(currentClass, expectedClass)) {
-                        if (status !== 'Verified' && !review.verifiedAt) {
-                            updateBillingReviewStatus(safeRo, 'Verified', {
-                                forceReviewUpdate: true,
-                                verifiedAt: new Date().toISOString(),
-                                verifiedClass: currentClass,
-                                historyAction: 'ACCEPTED_CHANGE_VERIFIED',
-                                historyNote: `Accepted repair-class change verified. Current class is ${currentClass}.`,
-                                issue
-                            });
-                        }
-                        return true;
-                    }
-                    reopenAcceptedRepairClassReview(safeRo, review, issue || {});
-                    return false;
-                }
-            }
-            return true;
-        }
-
-        function isRepairClassStatusCleared(safeRo) {
-            const issue = getRepairClassReviewIssueBySafeRo(safeRo);
-            return isRepairClassStatusClearedForIssue(safeRo, issue);
         }
 
         function getBillingIssueForRo(roNum) {
             if (!roNum) return null;
             const safeRo = safeFirebaseKey(roNum);
-            const issue = (globalBillingIssueMap && globalBillingIssueMap[safeRo] ? globalBillingIssueMap[safeRo] : null) || getWeeklyBridgeIssueBySafeRo(safeRo);
-            if (!issue) return null;
-            if (isRepairClassStatusClearedForIssue(safeRo, issue)) return null;
-            return issue;
+            if (isRepairClassStatusCleared(safeRo)) return null;
+            return (globalBillingIssueMap && globalBillingIssueMap[safeRo] ? globalBillingIssueMap[safeRo] : null) || getWeeklyBridgeIssueBySafeRo(safeRo);
         }
 
         function isRepairClassIssueVisibleForRo(ro, issue) {
             if (!ro || !issue) return false;
-            if (isRepairClassStatusClearedForIssue(issue.safeRo, issue)) return false;
+            if (isRepairClassStatusCleared(issue.safeRo)) return false;
             if (issue.weeklyBridgeAction) return true;
             const roQueue = normalizeQueueNameForRepairClass(ro.sourceQueue || issue.queueSource || 'VENDED REPAIR');
             const responsible = normalizeQueueNameForRepairClass(issue.responsibleQueue || issue.queueSource || roQueue);
@@ -6254,11 +5936,6 @@
         }
 
         function getRepairClassComplianceSummary(dataSet, dateKey = getLocalDateKey(new Date()), owner = currentOwnerView) {
-            const safeOwner = String(owner || currentOwnerView || 'UNKNOWN');
-            const roKey = (dataSet || []).map(ro => ro && (ro.roNum || ro.safeRo || '')).filter(Boolean).slice(0, 250).join('|');
-            const cacheKey = [safeOwner, dateKey, (dataSet || []).length, globalRepairClassDataVersion, globalFirebaseStateVersion, globalWeeklySpendHistoryVersion, roKey].join('::');
-            if (globalComplianceSummaryCache[cacheKey]) return globalComplianceSummaryCache[cacheKey];
-
             const issueMap = {};
             getBillingIssuePopulation(dataSet).forEach(issue => { if (issue && issue.safeRo) issueMap[issue.safeRo] = issue; });
             getWeeklyBridgeIssuesForOwner(owner, dataSet).forEach(issue => { if (issue && issue.safeRo) issueMap[issue.safeRo] = issue; });
@@ -6271,9 +5948,7 @@
             const score = issues.length ? Math.round((reviewedOrTouched / issues.length) * 100) : 100;
             const colorClass = score >= 85 ? 'compliance-green' : (score >= 70 ? 'compliance-yellow' : 'compliance-red');
             const rating = score >= 85 ? 'ON TRACK' : (score >= 70 ? 'WATCH' : 'NEEDS ACTION');
-            const result = { issues, openIssues, touchedCount, reviewedOrTouched, score, colorClass, rating, dateKey };
-            globalComplianceSummaryCache[cacheKey] = result;
-            return result;
+            return { issues, openIssues, touchedCount, reviewedOrTouched, score, colorClass, rating, dateKey };
         }
 
         function generateBillingComplianceHtml(dataSet, owner = currentOwnerView, parentViewId = currentParentView) {
@@ -6320,129 +5995,18 @@
             renderBillingQueue();
         }
 
-        function openRepairClassReviewModal(safeRo) {
-            const issue = getRepairClassReviewIssueBySafeRo(safeRo);
-            if (!issue) {
-                alert('No repair-class review details were found for this RO. Refresh the file and try again.');
-                return;
-            }
-            globalPendingRepairClassReview = Object.assign({}, issue, { safeRo: safeRo || issue.safeRo });
-            const roUrl = getBillingRoUrl(issue.roNumber);
-            if (roUrl) window.open(roUrl, '_blank');
-
-            const review = getBillingReviewRecordForSafeRo(safeRo || issue.safeRo);
-            const modal = document.getElementById('repair-class-review-modal');
-            const details = document.getElementById('repair-class-review-details');
-            const memo = document.getElementById('repair-class-review-memo');
-            const err = document.getElementById('repair-class-review-error');
-            if (err) err.style.display = 'none';
-            if (memo) {
-                memo.value = '';
-                memo.placeholder = review && review.verificationFailed ? `Previous memo: ${review.previousAcceptedReason || review.reason || ''}` : 'Required memo. Examples: Agreed with AI and updated VRO repair class. / Current REPCLASS acceptable because...';
-            }
-            const aiReason = (issue.reasons || []).join(' | ') || 'No AI reason was captured.';
-            const verificationHtml = review && review.verificationFailed ? `<div class="repair-class-review-history">${escapeHtml(review.verificationNote || 'Prior accepted change was not verified on the next file refresh. Please review again.')}</div>` : '';
-            if (details) {
-                details.innerHTML = `
-                    <div class="repair-class-review-grid">
-                        <div class="repair-class-review-field"><div class="label">AFS RO #</div><div class="value">${escapeHtml(issue.roNumber || '')}</div></div>
-                        <div class="repair-class-review-field"><div class="label">Unit</div><div class="value">${escapeHtml(issue.unitNo || '')}</div></div>
-                        <div class="repair-class-review-field"><div class="label">Owner / Queue</div><div class="value">${escapeHtml(issue.coordinator || 'Unassigned')} · ${escapeHtml(issue.queueSource || '')}</div></div>
-                        <div class="repair-class-review-field"><div class="label">Status</div><div class="value">${escapeHtml(issue.currentStatus || '')}</div></div>
-                        <div class="repair-class-review-field"><div class="label">Current REPCLASS</div><div class="value">${escapeHtml(issue.repClass || 'Blank')}</div></div>
-                        <div class="repair-class-review-field"><div class="label">AI Transfer REPCLASS</div><div class="value">${escapeHtml(issue.recommendedClass || issue.suggestedService || 'Review')}</div></div>
-                    </div>
-                    <div class="repair-class-review-ai-reason"><strong>AI Reason:</strong><br>${escapeHtml(aiReason)}</div>
-                    ${verificationHtml}
-                `;
-            }
-            if (modal) modal.style.display = 'flex';
-        }
-
-        function submitRepairClassReviewDecision(decision) {
-            const issue = globalPendingRepairClassReview;
-            if (!issue || !issue.safeRo) return;
-            const memoEl = document.getElementById('repair-class-review-memo');
-            const err = document.getElementById('repair-class-review-error');
-            const memo = String(memoEl && memoEl.value || '').trim();
-            if (memo.length < 8) {
-                if (err) {
-                    err.innerText = 'Memo is required before this repair-class review can be cleared.';
-                    err.style.display = 'block';
-                }
-                if (memoEl) memoEl.focus();
-                return;
-            }
-            const accepted = decision === 'accepted';
-            const status = accepted ? 'Accepted Reasoning' : 'Declined Reasoning';
-            const recommendedClass = issue.recommendedClass || issue.suggestedService || '';
-            const aiReason = (issue.reasons || []).join(' | ');
-            updateBillingReviewStatus(issue.safeRo, status, {
-                forceReviewUpdate: true,
-                roNumber: issue.roNumber || '',
-                unitNo: issue.unitNo || '',
-                owner: issue.coordinator || '',
-                queueSource: issue.queueSource || '',
-                currentStatus: issue.currentStatus || '',
-                currentClassAtReview: issue.repClass || '',
-                expectedClass: recommendedClass,
-                recommendedClassAtReview: recommendedClass,
-                aiReason,
-                reason: memo,
-                disposition: accepted ? 'ACCEPTED_AI_REASONING' : 'DECLINED_AI_REASONING',
-                reviewFileSignature: globalAgingRepairsFileSignature || '',
-                verificationRequired: accepted,
-                verificationFailed: false,
-                reviewedAt: new Date().toISOString(),
-                reviewedBy: (firebase && firebase.auth && firebase.auth().currentUser && firebase.auth().currentUser.email) ? firebase.auth().currentUser.email : MASTER_EMAIL,
-                historyAction: accepted ? 'ACCEPTED_REASONING' : 'DECLINED_REASONING',
-                historyNote: memo,
-                issue
-            });
-            globalPendingRepairClassReview = null;
-            const modal = document.getElementById('repair-class-review-modal');
-            if (modal) modal.style.display = 'none';
-        }
-
-        function updateBillingReviewStatus(safeRo, status, extra = {}) {
-            if (!safeRo) return;
-            if (isRepairClassClosingStatus(status) && !extra.forceReviewUpdate) {
-                openRepairClassReviewModal(safeRo);
-                return;
-            }
+        function updateBillingReviewStatus(safeRo, status) {
             const nowIso = new Date().toISOString();
-            const issue = extra.issue || getRepairClassReviewIssueBySafeRo(safeRo) || {};
-            const updates = Object.assign({}, extra || {}, {
+            const updates = {
                 status: status || 'Open',
                 updatedAt: nowIso
-            });
-            delete updates.forceReviewUpdate;
-            delete updates.issue;
-            const historyAction = updates.historyAction || `STATUS_${String(status || 'Open').toUpperCase().replace(/[^A-Z0-9]+/g, '_')}`;
-            const historyEntry = {
-                action: historyAction,
-                status: updates.status,
-                note: updates.historyNote || updates.reason || updates.verificationNote || '',
-                memo: updates.reason || updates.memo || '',
-                roNumber: updates.roNumber || issue.roNumber || '',
-                unitNo: updates.unitNo || issue.unitNo || '',
-                currentClass: updates.currentClassAtReview || updates.currentClassOnVerification || issue.repClass || '',
-                recommendedClass: updates.expectedClass || updates.recommendedClassAtReview || issue.recommendedClass || issue.suggestedService || '',
-                aiReason: updates.aiReason || ((issue.reasons || []).join(' | ')),
-                fileSignature: updates.reviewFileSignature || globalAgingRepairsFileSignature || '',
-                updatedAt: nowIso,
-                updatedBy: (firebase && firebase.auth && firebase.auth().currentUser && firebase.auth().currentUser.email) ? firebase.auth().currentUser.email : MASTER_EMAIL
             };
-            delete updates.historyAction;
-            delete updates.historyNote;
-            globalBillingReviewState[safeRo] = Object.assign(globalBillingReviewState[safeRo] || {}, updates);
-            try { localStorage.setItem('workflow_billing_review_status', JSON.stringify(globalBillingReviewState)); } catch(e) {}
-            if (db) {
-                db.ref(`billingReviewStatus/${safeRo}`).update(updates);
-                db.ref(`billingReviewStatus/${safeRo}/history`).push(historyEntry);
+            if (db) db.ref(`billingReviewStatus/${safeRo}`).update(updates);
+            else {
+                globalBillingReviewState[safeRo] = Object.assign(globalBillingReviewState[safeRo] || {}, updates);
+                try { localStorage.setItem('workflow_billing_review_status', JSON.stringify(globalBillingReviewState)); } catch(e) {}
+                renderBillingQueue();
             }
-            renderBillingQueue();
-            if (processedData && processedData.length > 0) refreshActiveViewPreservingDrilldown();
         }
 
         function renderBillingOwnerTiles(allRows) {
@@ -6466,7 +6030,7 @@
                 const openRows = rows.filter(r => !isBillingClosedStatus(r.currentStatus));
                 const completedRows = rows.filter(r => isBillingClosedStatus(r.currentStatus));
                 const reviewNeeded = rows.filter(isBillingRowReviewNeeded);
-                const fixed = rows.filter(r => isRepairClassClearedStatus(getBillingReviewStatus(r)));
+                const fixed = rows.filter(r => ['Reviewed','Corrected','Cleared'].includes(getBillingReviewStatus(r)));
                 const score = rows.length ? Math.round((fixed.length / rows.length) * 100) : 100;
                 const safeOwner = String(owner).replace(/'/g, "\\'");
                 const color = score >= 85 ? '#16a34a' : (score >= 70 ? '#d97706' : '#dc2626');
@@ -6527,7 +6091,7 @@
                     <td>${flagHtml}</td>
                     <td class="billing-reasons">${reasons}<div style="margin-top:5px;color:#64748b;">Lines reviewed: ${r.lineCount}${r.tireQty ? ` · Tire qty: ${r.tireQty}` : ''}</div></td>
                     <td class="review-col"><select class="billing-status-select" onchange="updateBillingReviewStatus('${r.safeRo}', this.value)">
-                        ${['Open','Reviewed','Correction Needed','Escalated','Accepted Reasoning','Declined Reasoning','Verified','Corrected','Cleared'].map(st => `<option value="${st}" ${String(r.reviewStatus || 'Open') === st ? 'selected' : ''}>${st}</option>`).join('')}
+                        ${['Open','Reviewed','Correction Needed','Corrected','Escalated','Cleared'].map(st => `<option value="${st}" ${String(r.reviewStatus || 'Open') === st ? 'selected' : ''}>${st}</option>`).join('')}
                     </select></td>
                 </tr>`;
             }).join('');
