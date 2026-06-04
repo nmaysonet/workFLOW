@@ -340,6 +340,7 @@
             <div class="menu-item" id="menu-vended" onclick="navigate('vended-view', this)">Vended Repair Queue</div>
             <div class="menu-item" id="menu-pm" onclick="navigate('pm-view', this)">PM Queue</div>
             <div class="menu-item" id="menu-ers" onclick="navigate('ers-view', this)">ERS Queue</div>
+            <div class="menu-item" id="menu-nonosc" onclick="navigate('nonosc-view', this)">Non-OSC Queue</div>
         </div>
         <div class="menu-item" onclick="window.location.href='vendor.html'">Vendor Search</div>
         <div class="menu-item" id="menu-spend" onclick="navigate('spend-view', this)">Weekly Spend Matrix</div>
@@ -447,6 +448,18 @@
                 <button class="filter-btn" data-filter="PRIORITY" onclick="setFilter('PRIORITY')">Priority</button>
             </div>
             <div class="kpi-grid" id="ers-kpi-container"></div>
+        </div>
+
+        <div id="nonosc-view" class="view-section">
+            <div class="view-title">
+                <span style="font-weight: 700;">Non-OSC Queue</span>
+            </div>
+            <div class="filter-bar">
+                <button class="filter-btn active" data-filter="ALL" onclick="setFilter('ALL')">All Units</button>
+                <button class="filter-btn" data-filter="OOS" onclick="setFilter('OOS')">Only OOS</button>
+                <button class="filter-btn" data-filter="PRIORITY" onclick="setFilter('PRIORITY')">Priority</button>
+            </div>
+            <div class="kpi-grid" id="nonosc-kpi-container"></div>
         </div>
 
         <div id="spend-view" class="view-section">
@@ -1555,6 +1568,7 @@
         let pmOwners = [];
         let vendedOwners = [];
         let ersOwners = [];
+        let nonOscLocations = [];
 
         let branchUsefulMap = {}; 
         let branchMetricsMap = {}; 
@@ -3347,7 +3361,12 @@
         }
 
         function roMatchesOwnerForDrilldown(ro, owner) {
-            if (!ro || !ro.drilldownOwners) return false;
+            if (!ro) return false;
+            if (String(owner || '').startsWith('NONOSC::')) {
+                const loc = String(owner).replace('NONOSC::', '');
+                return !!ro.isNonOscQueueWork && String(ro.nonOscLocation || '') === loc;
+            }
+            if (!ro.drilldownOwners) return false;
             if (owner === 'ALL_PM') return ro.drilldownOwners.some(o => pmOwners.includes(o));
             if (owner === 'ALL_VENDED') return ro.drilldownOwners.some(o => vendedOwners.includes(o)) || hasDedicatedShopOwner(ro, 'ALL_VENDED');
             if (owner === 'ALL_ERS') return ro.drilldownOwners.some(o => ersOwners.includes(o));
@@ -3746,6 +3765,7 @@
             else if(activeView === 'pm-view') renderKPITiles(pmOwners, 'pm-kpi-container', 'pm-view');
             else if(activeView === 'vended-view') renderKPITiles(vendedOwners, 'vended-kpi-container', 'vended-view');
             else if(activeView === 'ers-view') renderKPITiles(ersOwners, 'ers-kpi-container', 'ers-view');
+            else if(activeView === 'nonosc-view') renderNonOscTiles();
             else if(activeView === 'spend-view') renderSpendQueue();
             else if(activeView === 'person-view') { if(currentOwnerView) loadPersonDrilldown(currentOwnerView, currentParentView, true); }
             else if(activeView === 'summary-view') {
@@ -4273,6 +4293,7 @@
             let activePM = new Set();
             let activeVended = new Set();
             let activeERS = new Set();
+            let activeNonOsc = new Set();
             
             let allCustSet = new Set();
             let openROsInUnits = new Map(); 
@@ -4311,10 +4332,15 @@
 
                 let creatorInfo = resourceMap[ownerEmail];
                 const isKevinCreated = ownerEmail.includes('kanguzza') || ownerEmail.includes('kevin anguzza');
-                let sourceQueue = 'VENDED REPAIR';
-                if (isKevinCreated) sourceQueue = 'PM';
-                else if (creatorInfo && creatorInfo.team === 'PM') sourceQueue = 'PM';
-                else if (creatorInfo && creatorInfo.team === 'ERS') sourceQueue = 'ERS';
+                const ownerIsAssignedQueueCoordinator = !!(creatorInfo && creatorInfo.name && ['VENDED REPAIR', 'ERS', 'PM'].includes(String(creatorInfo.team || '').toUpperCase()));
+                const nonOscLocation = mUnit.branch || mUnit.subregion || 'Unknown Dedicated Site';
+                const isNonOscQueueWork = !!(mUnit.isDedicatedShop && !ownerIsAssignedQueueCoordinator);
+                let sourceQueue = isNonOscQueueWork ? 'NON-OSC' : 'VENDED REPAIR';
+                if (!isNonOscQueueWork) {
+                    if (isKevinCreated) sourceQueue = 'PM';
+                    else if (creatorInfo && creatorInfo.team === 'PM') sourceQueue = 'PM';
+                    else if (creatorInfo && creatorInfo.team === 'ERS') sourceQueue = 'ERS';
+                }
 
                 let dedicatedShopOwners = new Set();
                 const creatorIsVended = creatorInfo && creatorInfo.team === 'VENDED REPAIR' && creatorInfo.name;
@@ -4397,10 +4423,15 @@
                     createdByTeam: creatorInfo && creatorInfo.team ? creatorInfo.team : '',
                     isDedicatedShopWorkOrder: isDedicatedShopWorkOrder,
                     dedicatedShopOwners: Array.from(dedicatedShopOwners),
-                    financialShop: finShop
+                    financialShop: finShop,
+                    isNonOscQueueWork: isNonOscQueueWork,
+                    nonOscLocation: nonOscLocation
                 };
 
                 if (isOpen) {
+                    if (roObj.isNonOscQueueWork && roObj.nonOscLocation) {
+                        activeNonOsc.add(roObj.nonOscLocation);
+                    }
                     roObj.kpiOwners.forEach(o => {
                         let t = ownerNameToTeam[o] || 'VENDED REPAIR';
                         if (o === 'Kevin Anguzza') t = 'PM';
@@ -4503,7 +4534,9 @@
                         region: mUnit.region,
                         possibleDuplicate: false,
                         sourceQueue: hasOpenElsewhere ? Array.from(new Set(otherQueueOrders.map(o => o.sourceQueue).filter(q => q === 'PM' || q === 'ERS'))).join('/') : 'VENDED REPAIR',
-                        otherQueueOrders: otherQueueOrders
+                        otherQueueOrders: otherQueueOrders,
+                        isNonOscQueueWork: false,
+                        nonOscLocation: ''
                     };
 
                     processedData.push(roObj);
@@ -4591,6 +4624,7 @@
             pmOwners = Array.from(activePM).sort();
             vendedOwners = Array.from(activeVended).sort();
             ersOwners = Array.from(activeERS).sort();
+            nonOscLocations = Array.from(activeNonOsc).sort();
 
             let sortedAllCust = Array.from(allCustSet).sort();
             document.querySelectorAll('.customer-filter-select').forEach(dd => {
@@ -5155,9 +5189,46 @@
             });
         }
 
+        function renderNonOscTiles() {
+            const container = document.getElementById('nonosc-kpi-container');
+            if (!container) return;
+            container.innerHTML = '';
+            if (processedData.length === 0) return;
+
+            nonOscLocations.forEach(location => {
+                let locationDataAll = processedData.filter(ro => ro.isNonOscQueueWork && String(ro.nonOscLocation || '') === String(location));
+                if (currentCustomerFilter !== 'ALL') {
+                    locationDataAll = locationDataAll.filter(ro => ro.custKey === currentCustomerFilter);
+                }
+
+                let targetData = locationDataAll.filter(ro => ro.isOpen);
+                if (currentFilter === 'OOS') {
+                    targetData = targetData.filter(ro => ro.isOOS);
+                } else if (currentFilter === 'PRIORITY') {
+                    targetData = targetData.filter(ro => isPriority(ro));
+                }
+
+                if (targetData.length === 0) return;
+
+                const tile = document.createElement('div');
+                tile.className = 'kpi-tile';
+                tile.onclick = () => loadPersonDrilldown('NONOSC::' + location, 'nonosc-view');
+                tile.innerHTML = generateTileHTML(location, locationDataAll, null, false);
+                container.appendChild(tile);
+            });
+        }
+
         function generateRoDrilldownHtml(ownerDataAll, isPM) {
             let isVendedQueue = currentOwnerView === 'ALL_VENDED' || vendedOwners.includes(currentOwnerView);
+            let isNonOscQueueView = String(currentOwnerView || '').startsWith('NONOSC::');
             let baseOpenData = ownerDataAll.filter(ro => ro.isOpen).map(ro => {
+                if (isNonOscQueueView && ro.isNonOscQueueWork) {
+                    return Object.assign({}, ro, {
+                        drillTopLevel: 'Dedicated / Non-OSC Work Orders',
+                        subregion: ro.nonOscLocation || 'Dedicated Location',
+                        branch: ro.branch || ro.nonOscLocation || 'Dedicated Location'
+                    });
+                }
                 if (isVendedQueue && shouldDisplayAsDedicatedShopWork(ro, currentOwnerView)) {
                     return Object.assign({}, ro, {
                         drillTopLevel: 'Dedicated Shop Work Orders',
@@ -5505,12 +5576,15 @@
             navigate('person-view', null, true); 
             currentOwnerView = owner; currentParentView = parentViewId;
             
+            let isNonOscView = String(owner || '').startsWith('NONOSC::');
+            let nonOscLocationTitle = isNonOscView ? String(owner).replace('NONOSC::', '') : '';
             let isPM = owner === 'ALL_PM' || pmOwners.includes(owner);
 
             let titleText = `RO Hierarchy: ${owner}`;
             if (owner === 'ALL_PM') titleText = 'Overall PM Details';
             if (owner === 'ALL_VENDED') titleText = 'Overall Vended Repair Details';
             if (owner === 'ALL_ERS') titleText = 'Overall ERS Details';
+            if (isNonOscView) titleText = `Non-OSC Location: ${nonOscLocationTitle}`;
 
             document.getElementById('person-name-title').innerText = titleText;
             document.getElementById('dynamic-back-btn').onclick = () => navigate(parentViewId, null, true);
@@ -5747,7 +5821,7 @@
                 menuElement.classList.add('active');
                 const queuesSubmenu = document.getElementById('queues-submenu');
                 const queuesToggle = document.getElementById('menu-queues');
-                if (['pm-view', 'vended-view', 'ers-view'].includes(viewId) && queuesSubmenu && queuesToggle) {
+                if (['pm-view', 'vended-view', 'ers-view', 'nonosc-view'].includes(viewId) && queuesSubmenu && queuesToggle) {
                     queuesSubmenu.classList.add('open');
                     queuesToggle.classList.add('expanded');
                     queuesToggle.classList.add('active');
@@ -5757,6 +5831,7 @@
             if(viewId === 'pm-view') renderKPITiles(pmOwners, 'pm-kpi-container', 'pm-view');
             else if (viewId === 'vended-view') renderKPITiles(vendedOwners, 'vended-kpi-container', 'vended-view');
             else if (viewId === 'ers-view') renderKPITiles(ersOwners, 'ers-kpi-container', 'ers-view');
+            else if (viewId === 'nonosc-view') renderNonOscTiles();
             else if (viewId === 'home-view') renderHomeDashboard();
             else if (viewId === 'spend-view') renderSpendQueue();
             else if (viewId === 'summary-view') {
