@@ -246,6 +246,35 @@
         .note-btn.has-note { background: #f0fdf4; color: #15803d; border-color: #22c55e; opacity: 1; box-shadow: 0 1px 3px rgba(34,197,94,0.22); }
         .note-btn.has-note:hover { background: #dcfce7; }
 
+        .repair-class-cell { display:flex; flex-direction:column; gap:5px; min-width:120px; align-items:flex-start; }
+        .repair-class-name { font-size:11px; font-weight:900; color:#334155; line-height:1.2; }
+        .repair-class-pill { display:inline-block; width:max-content; max-width:100%; padding:3px 7px; border-radius:999px; font-size:9px; font-weight:900; letter-spacing:0.3px; text-transform:uppercase; white-space:normal; line-height:1.15; cursor:help; }
+        .repair-class-pill.clean { color:#166534; background:#dcfce7; border:1px solid #86efac; }
+        .repair-class-pill.review { color:#581c87; background:#f3e8ff; border:1px solid #c084fc; }
+        .repair-class-toggle { min-width:86px; margin-right:0; padding:4px 7px; border-radius:12px; font-size:10px; font-weight:900; text-transform:uppercase; cursor:pointer; border:none; box-shadow:0 1px 3px rgba(0,0,0,0.2); }
+        .repair-class-toggle.status-pending { background-color:var(--urgent-red); color:white; border:1px solid #c9302c; }
+        .repair-class-toggle.status-dispatched { background-color:var(--low-green); color:white; border:1px solid #4cae4c; cursor:default; }
+        .repair-class-toggle:hover { opacity:.9; transform:translateY(-1px); }
+
+        .repair-class-review-modal { background:rgba(15,23,42,0.72); }
+        .repair-class-review-box { width:680px; max-width:94%; border-top:5px solid var(--gold); }
+        .repair-class-review-warning { background:#fff7ed; border:1px solid #f59e0b; color:#7c2d12; border-radius:6px; padding:10px; font-size:12px; font-weight:800; line-height:1.35; margin-bottom:12px; }
+        .repair-class-review-details { background:#f8fafc; border:1px solid #e2e8f0; border-radius:6px; padding:12px; margin-bottom:12px; }
+        .repair-class-review-grid { display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:8px; margin-bottom:10px; }
+        .repair-class-review-field { background:#fff; border:1px solid #e5e7eb; border-radius:5px; padding:8px; }
+        .repair-class-review-field .label { font-size:9px; font-weight:900; color:#64748b; text-transform:uppercase; letter-spacing:0.4px; margin-bottom:3px; }
+        .repair-class-review-field .value { font-size:13px; font-weight:800; color:#334155; line-height:1.25; word-break:break-word; }
+        .repair-class-review-ai-reason { background:#fff; border-left:4px solid var(--gold); padding:9px; font-size:12px; line-height:1.35; color:#334155; font-weight:650; max-height:145px; overflow:auto; }
+        .repair-class-review-history { margin-top:8px; background:#fff1f2; border:1px solid #fecdd3; color:#7f1d1d; border-radius:5px; padding:8px; font-size:11px; font-weight:800; line-height:1.35; }
+        .repair-class-review-memo { width:100%; min-height:105px; padding:10px; border:1px solid #cbd5e1; border-radius:5px; resize:vertical; font-size:13px; font-family:'Raleway', sans-serif; margin-bottom:8px; }
+        .repair-class-review-error { display:none; color:#b91c1c; font-size:12px; font-weight:900; margin-bottom:10px; }
+        .btn-accept-reasoning, .btn-decline-reasoning { border:none; border-radius:4px; padding:10px 12px; font-size:11px; font-weight:900; cursor:pointer; letter-spacing:0.35px; }
+        .btn-accept-reasoning { background:#16a34a; color:white; }
+        .btn-accept-reasoning:hover { background:#15803d; }
+        .btn-decline-reasoning { background:#334155; color:white; }
+        .btn-decline-reasoning:hover { background:#1e293b; }
+        .repair-class-review-status-note { font-size:10px; color:#64748b; font-weight:800; margin-top:5px; line-height:1.25; }
+
 
         .locked-prewip-row td { background: #f1f5f9 !important; color: #64748b !important; }
         .locked-prewip-row:hover td { background: #e2e8f0 !important; }
@@ -682,6 +711,39 @@
         </div>
     </div>
 
+    <div id="repair-class-review-modal" class="modal-overlay repair-class-review-modal">
+        <div class="modal-box repair-class-review-box">
+            <div class="modal-header">
+                <span>Repair Class Review Required</span>
+            </div>
+            <div class="repair-class-review-warning">
+                This review cannot be closed silently. The VRO has been opened in a new tab. Confirm whether you accepted the AI recommendation and changed the repair class, or declined the recommendation and left the current REPCLASS unchanged. A memo is required either way.
+            </div>
+            <div class="repair-class-review-details">
+                <div class="repair-class-review-grid">
+                    <div class="repair-class-review-field"><div class="label">AFS RO #</div><div class="value" id="repclass-modal-ro">-</div></div>
+                    <div class="repair-class-review-field"><div class="label">Unit</div><div class="value" id="repclass-modal-unit">-</div></div>
+                    <div class="repair-class-review-field"><div class="label">Owner / Queue</div><div class="value" id="repclass-modal-owner">-</div></div>
+                    <div class="repair-class-review-field"><div class="label">Status</div><div class="value" id="repclass-modal-status">-</div></div>
+                    <div class="repair-class-review-field"><div class="label">Current REPCLASS</div><div class="value" id="repclass-modal-current">-</div></div>
+                    <div class="repair-class-review-field"><div class="label">AI Transfer REPCLASS</div><div class="value" id="repclass-modal-transfer">-</div></div>
+                </div>
+                <div class="repair-class-review-ai-reason"><strong>AI Reason:</strong><br><span id="repclass-modal-reason">-</span></div>
+                <div id="repclass-modal-history" class="repair-class-review-history" style="display:none;"></div>
+            </div>
+            <textarea id="repclass-review-memo" class="repair-class-review-memo" placeholder="Required memo. Examples: Agreed with AI and updated VRO repair class. / Current REPCLASS acceptable because..."></textarea>
+            <div id="repclass-review-error" class="repair-class-review-error">Memo is required before this review can be cleared.</div>
+            <div class="modal-actions">
+                <button class="btn-accept-reasoning" onclick="submitRepairClassReviewDecision('ACCEPTED')">ACCEPTED REASONING</button>
+                <button class="btn-decline-reasoning" onclick="submitRepairClassReviewDecision('DECLINED')">DECLINED REASONING</button>
+            </div>
+            <div class="repair-class-review-status-note">
+                Accepted items remain pending on the next refresh until the current REPCLASS equals the AI Transfer REPCLASS. Declined items clear with the saved memo.
+            </div>
+        </div>
+    </div>
+
+
     <div id="vendor-map-portal-modal" class="portal-modal-overlay">
         <div class="portal-modal-box">
             <div class="portal-modal-header">
@@ -927,8 +989,13 @@
                             let headerIdx = -1;
                             for (let i = 0; i < Math.min(20, aoa.length); i++) {
                                 const rowStr = aoa[i].join('').toLowerCase().replace(/[^a-z0-9]/g, '');
-                                if (rowStr.includes('ronumber') || rowStr.includes('order') || rowStr.includes('customer')) {
-                                    headerIdx = i; break;
+                                const looksLikeVroHeader = (rowStr.includes('ronumber') || rowStr.includes('order') || rowStr.includes('afsro')) && (rowStr.includes('status') || rowStr.includes('unit'));
+                                if (looksLikeVroHeader) { headerIdx = i; break; }
+                            }
+                            if (headerIdx === -1) {
+                                for (let i = 0; i < Math.min(20, aoa.length); i++) {
+                                    const rowStr = aoa[i].join('').toLowerCase().replace(/[^a-z0-9]/g, '');
+                                    if (rowStr.includes('ronumber') || rowStr.includes('order') || rowStr.includes('customer')) { headerIdx = i; break; }
                                 }
                             }
                             if (headerIdx !== -1) {
@@ -936,6 +1003,12 @@
                                 for (let i = headerIdx + 1; i < aoa.length; i++) {
                                     if (!aoa[i] || !Array.isArray(aoa[i])) continue;
                                     const obj = {}; let hasData = false;
+                                    // Preserve the raw VRO Export row so repair-class compliance can read
+                                    // the exact Excel columns even when header text changes or there are blank headers.
+                                    obj.__rowValues = aoa[i];
+                                    obj.__colEOriginalRepClass = aoa[i][4];   // Column E: Original Rep Class
+                                    obj.__colTTransferRepClass = aoa[i][19]; // Column T: Transfer Rep Class
+                                    obj.__colUWhyTransfer = aoa[i][20];      // Column U: Why the transfer
                                     headers.forEach((h, j) => {
                                         const key = h ? String(h).trim() : '';
                                         if (key) { obj[key] = aoa[i][j]; if (aoa[i][j] !== '') hasData = true; }
@@ -1015,8 +1088,13 @@
                             let headerIdx = -1;
                             for (let i = 0; i < Math.min(20, aoa.length); i++) {
                                 const rowStr = aoa[i].join('').toLowerCase().replace(/[^a-z0-9]/g, '');
-                                if (rowStr.includes('ronumber') || rowStr.includes('order') || rowStr.includes('customer')) {
-                                    headerIdx = i; break;
+                                const looksLikeVroHeader = (rowStr.includes('ronumber') || rowStr.includes('order') || rowStr.includes('afsro')) && (rowStr.includes('status') || rowStr.includes('unit'));
+                                if (looksLikeVroHeader) { headerIdx = i; break; }
+                            }
+                            if (headerIdx === -1) {
+                                for (let i = 0; i < Math.min(20, aoa.length); i++) {
+                                    const rowStr = aoa[i].join('').toLowerCase().replace(/[^a-z0-9]/g, '');
+                                    if (rowStr.includes('ronumber') || rowStr.includes('order') || rowStr.includes('customer')) { headerIdx = i; break; }
                                 }
                             }
                             if (headerIdx !== -1) {
@@ -1024,6 +1102,12 @@
                                 for (let i = headerIdx + 1; i < aoa.length; i++) {
                                     if (!aoa[i] || !Array.isArray(aoa[i])) continue;
                                     const obj = {}; let hasData = false;
+                                    // Preserve the raw VRO Export row so repair-class compliance can read
+                                    // the exact Excel columns even when header text changes or there are blank headers.
+                                    obj.__rowValues = aoa[i];
+                                    obj.__colEOriginalRepClass = aoa[i][4];   // Column E: Original Rep Class
+                                    obj.__colTTransferRepClass = aoa[i][19]; // Column T: Transfer Rep Class
+                                    obj.__colUWhyTransfer = aoa[i][20];      // Column U: Why the transfer
                                     headers.forEach((h, j) => {
                                         const key = h ? String(h).trim() : '';
                                         if (key) { obj[key] = aoa[i][j]; if (aoa[i][j] !== '') hasData = true; }
@@ -1061,6 +1145,8 @@
         let globalRoCheckState = {};
         let globalRoNotesState = {};
         let globalWorkflowActivityState = {};
+        let globalRepairClassReviewState = {};
+        let currentRepairClassReviewSafeRo = null;
         let globalSpendChangeLogRows = [];
         let globalWeeklySpendHistoryRows = [];
         let expandedWeeklySpendWeeks = {};
@@ -1073,6 +1159,7 @@
             globalRoCheckState = JSON.parse(localStorage.getItem('workflow_checks') || '{}');
             globalRoNotesState = JSON.parse(localStorage.getItem('workflow_notes') || '{}');
             globalWorkflowActivityState = JSON.parse(localStorage.getItem('workflow_activity') || '{}');
+            globalRepairClassReviewState = JSON.parse(localStorage.getItem('repclass_review_status') || '{}');
             globalUnlimitedSpendState = JSON.parse(localStorage.getItem('unlimited_spend_mode') || '{}');
             globalManualGovernorLockState = JSON.parse(localStorage.getItem('manual_governor_lock') || '{}');
         } catch(e) {}
@@ -1098,6 +1185,16 @@
                         globalWorkflowActivityState = snapshot.val() || {};
                         try { localStorage.setItem('workflow_activity', JSON.stringify(globalWorkflowActivityState)); } catch(e) {}
                         updateAllNoteButtons();
+                        if (processedData && processedData.length > 0) {
+                            refreshActiveViewPreservingDrilldown();
+                        }
+                    });
+
+
+                    db.ref('repClassReviewStatus').on('value', (snapshot) => {
+                        globalRepairClassReviewState = snapshot.val() || {};
+                        try { localStorage.setItem('repclass_review_status', JSON.stringify(globalRepairClassReviewState)); } catch(e) {}
+                        updateAllRepairClassBadges();
                         if (processedData && processedData.length > 0) {
                             refreshActiveViewPreservingDrilldown();
                         }
@@ -1436,6 +1533,228 @@
                     ${lockNote}
                 </div>`;
         }
+
+
+        function normalizeRepClassValue(value) {
+            return String(value || '').trim().toUpperCase().replace(/\s+/g, ' ');
+        }
+
+        function getColumnValueByIndex(row, zeroBasedIndex) {
+            if (row && Array.isArray(row.__rowValues)) {
+                const raw = row.__rowValues[zeroBasedIndex];
+                return raw === undefined || raw === null ? '' : String(raw).trim();
+            }
+            const vals = Object.values(row || {}).filter((_, idx) => idx < Object.keys(row || {}).length);
+            const v = vals[zeroBasedIndex];
+            return v === undefined || v === null ? '' : String(v).trim();
+        }
+
+        function getExactColValue(row, propName, zeroBasedIndex) {
+            if (!row) return '';
+            const direct = row[propName];
+            if (direct !== undefined && direct !== null && String(direct).trim() !== '') return String(direct).trim();
+            return getColumnValueByIndex(row, zeroBasedIndex);
+        }
+
+        function getOriginalRepClassFromVroRow(row) {
+            return getExactColValue(row, '__colEOriginalRepClass', 4) || getCol(row, ['Original REPCLASS', 'Original Rep Class', 'Original Repair Class', 'Current REPCLASS', 'Current Rep Class', 'Repair Class', 'REPCLASS']);
+        }
+
+        function getTransferRepClassFromVroRow(row) {
+            return getExactColValue(row, '__colTTransferRepClass', 19) || getCol(row, ['Transfer REPCLASS', 'Transfer Rep Class', 'AI Transfer REPCLASS', 'AI Transfer Rep Class', 'Transfer Repair Class']);
+        }
+
+        function getTransferReasonFromVroRow(row) {
+            return getExactColValue(row, '__colUWhyTransfer', 20) || getCol(row, ['Why the transfer', 'Why Transfer', 'AI Reason', 'Transfer Reason', 'Why']);
+        }
+
+        function hasRepairClassTransfer(ro) {
+            if (!ro) return false;
+            const original = normalizeRepClassValue(ro.originalRepClass);
+            const transfer = normalizeRepClassValue(ro.transferRepClass);
+            if (!original || !transfer) return false;
+            return original !== transfer;
+        }
+
+        function getRepairClassReviewRecord(safeRo) {
+            return (globalRepairClassReviewState && globalRepairClassReviewState[safeRo]) ? globalRepairClassReviewState[safeRo] : null;
+        }
+
+        function isRepairClassReviewCleared(ro) {
+            if (!ro || !hasRepairClassTransfer(ro)) return true;
+            const safeRo = safeFirebaseKey(ro.roNum);
+            const rec = getRepairClassReviewRecord(safeRo);
+            if (!rec || !rec.decision) return false;
+            const decision = String(rec.decision || '').toUpperCase();
+            if (decision === 'DECLINED') return true;
+            if (decision === 'ACCEPTED') {
+                return normalizeRepClassValue(ro.originalRepClass) === normalizeRepClassValue(ro.transferRepClass);
+            }
+            return false;
+        }
+
+        function getRepairClassReviewPopulation(dataSet) {
+            return (dataSet || []).filter(ro => ro && ro.isOpen && hasRepairClassTransfer(ro));
+        }
+
+        function calculateRepairClassCompliance(dataSet) {
+            const population = getRepairClassReviewPopulation(dataSet);
+            const total = population.length;
+            const reviewed = population.filter(ro => isRepairClassReviewCleared(ro)).length;
+            const reviewNeeded = Math.max(0, total - reviewed);
+            const accepted = population.filter(ro => {
+                const rec = getRepairClassReviewRecord(safeFirebaseKey(ro.roNum));
+                return rec && String(rec.decision || '').toUpperCase() === 'ACCEPTED';
+            }).length;
+            const score = total > 0 ? Math.round((reviewed / total) * 100) : 100;
+            let colorClass = 'compliance-green';
+            let rating = 'ON TRACK';
+            if (score < 70) { colorClass = 'compliance-red'; rating = 'NEEDS ACTION'; }
+            else if (score < 90) { colorClass = 'compliance-yellow'; rating = 'WATCH'; }
+            return { total, reviewed, reviewNeeded, accepted, score, colorClass, rating };
+        }
+
+        function generateRepairClassComplianceHtml(dataSet, compact = false) {
+            const c = calculateRepairClassCompliance(dataSet);
+            return `
+                <div class="workflow-compliance-card ${c.colorClass}${compact ? ' compact' : ''}" title="Repair class review is based on VRO Export Original REPCLASS, Transfer REPCLASS, and Why the Transfer. No AI logic is run in this HTML.">
+                    <div class="workflow-compliance-header">
+                        <div>
+                            <div class="workflow-compliance-label">Daily Repair Class Compliance</div>
+                            <div class="workflow-compliance-score">${c.score}%</div>
+                        </div>
+                        <div class="workflow-compliance-actions">
+                            <div class="workflow-compliance-rating">${c.rating}</div>
+                        </div>
+                    </div>
+                    <div class="workflow-compliance-grid">
+                        <div class="workflow-compliance-mini"><div class="mini-title">RO Review</div><div class="mini-num">${c.reviewed}/${c.total}</div></div>
+                        <div class="workflow-compliance-mini"><div class="mini-title">Touched</div><div class="mini-num">${c.reviewed}/${c.total}</div></div>
+                        <div class="workflow-compliance-mini"><div class="mini-title">Review Needed</div><div class="mini-num">${c.reviewNeeded}</div></div>
+                        <div class="workflow-compliance-mini"><div class="mini-title">Corrected</div><div class="mini-num">${c.accepted}</div></div>
+                    </div>
+                </div>`;
+        }
+
+        function getRepairClassCellHtml(ro) {
+            const original = ro && ro.originalRepClass ? ro.originalRepClass : 'Not Available';
+            if (!ro || !hasRepairClassTransfer(ro)) {
+                return `<div class="repair-class-cell"><div class="repair-class-name">${escapeHtml(original)}</div><span class="repair-class-pill clean">OK</span></div>`;
+            }
+            const safeRo = safeFirebaseKey(ro.roNum);
+            const reason = ro.transferReason || 'No transfer reason provided.';
+            const cleared = isRepairClassReviewCleared(ro);
+            const reviewTitle = escapeHtml(reason).replace(/"/g, '&quot;');
+            const transfer = escapeHtml(ro.transferRepClass || 'Review');
+            const btn = cleared
+                ? `<span class="badge repair-class-toggle status-dispatched">OK</span>`
+                : `<button class="repair-class-toggle status-pending" data-repclass-ro="${safeRo}" onclick="openRepairClassReviewModal('${safeRo}')">PENDING</button>`;
+            return `<div class="repair-class-cell">
+                <div class="repair-class-name">${escapeHtml(original)}</div>
+                <span class="repair-class-pill review" title="${reviewTitle}">${transfer} REVIEW</span>
+                ${btn}
+            </div>`;
+        }
+
+        function updateAllRepairClassBadges() {
+            document.querySelectorAll('[data-repclass-ro]').forEach(btn => {
+                const safeRo = btn.getAttribute('data-repclass-ro');
+                const ro = getRoContextBySafeRo(safeRo);
+                if (ro && isRepairClassReviewCleared(ro)) {
+                    btn.outerHTML = `<span class="badge repair-class-toggle status-dispatched">OK</span>`;
+                }
+            });
+        }
+
+        function openRepairClassReviewModal(safeRo) {
+            const ro = getRoContextBySafeRo(safeRo);
+            if (!ro) return;
+            currentRepairClassReviewSafeRo = safeRo;
+            window.open(`https://afshub.azurewebsites.net/Vendors/VendedRepairOrder/Estimate/${encodeURIComponent(ro.roNum)}`, '_blank');
+
+            const rec = getRepairClassReviewRecord(safeRo);
+            const setText = (id, value) => { const el = document.getElementById(id); if (el) el.innerText = value || '-'; };
+            setText('repclass-modal-ro', ro.roNum);
+            setText('repclass-modal-unit', ro.unitNo);
+            setText('repclass-modal-owner', `${ro.owner || ''}${ro.sourceQueue ? ' • ' + ro.sourceQueue : ''}`);
+            setText('repclass-modal-status', ro.status);
+            setText('repclass-modal-current', ro.originalRepClass || 'Not Available');
+            setText('repclass-modal-transfer', ro.transferRepClass || 'Not Available');
+            setText('repclass-modal-reason', ro.transferReason || 'No transfer reason provided.');
+
+            const memoBox = document.getElementById('repclass-review-memo');
+            if (memoBox) memoBox.value = '';
+            const err = document.getElementById('repclass-review-error');
+            if (err) err.style.display = 'none';
+
+            const hist = document.getElementById('repclass-modal-history');
+            if (hist) {
+                if (rec && rec.memo) {
+                    const decision = rec.decision || 'Previous Review';
+                    const dateText = rec.timestamp ? new Date(rec.timestamp).toLocaleString() : '';
+                    hist.innerHTML = `<strong>Prior ${escapeHtml(decision)} memo${dateText ? ' - ' + escapeHtml(dateText) : ''}:</strong><br>${escapeHtml(rec.memo)}`;
+                    hist.style.display = 'block';
+                } else {
+                    hist.style.display = 'none';
+                    hist.innerHTML = '';
+                }
+            }
+
+            const modal = document.getElementById('repair-class-review-modal');
+            if (modal) modal.style.display = 'flex';
+        }
+
+        function submitRepairClassReviewDecision(decision) {
+            const safeRo = currentRepairClassReviewSafeRo;
+            const ro = getRoContextBySafeRo(safeRo);
+            const memoEl = document.getElementById('repclass-review-memo');
+            const err = document.getElementById('repclass-review-error');
+            const memo = memoEl ? memoEl.value.trim() : '';
+            if (!safeRo || !ro) return;
+            if (!memo) {
+                if (err) err.style.display = 'block';
+                if (memoEl) memoEl.focus();
+                return;
+            }
+
+            const payload = {
+                decision: decision,
+                memo: memo,
+                roNumber: ro.roNum,
+                unitNo: ro.unitNo || '',
+                owner: ro.owner || '',
+                sourceQueue: ro.sourceQueue || '',
+                status: ro.status || '',
+                originalRepClass: ro.originalRepClass || '',
+                transferRepClass: ro.transferRepClass || '',
+                whyTransfer: ro.transferReason || '',
+                timestamp: new Date().toISOString()
+            };
+
+            const closeModal = () => {
+                const modal = document.getElementById('repair-class-review-modal');
+                if (modal) modal.style.display = 'none';
+                currentRepairClassReviewSafeRo = null;
+                updateAllRepairClassBadges();
+                refreshActiveViewPreservingDrilldown();
+            };
+
+            if (db) {
+                db.ref('repClassReviewStatus/' + safeRo).set(payload)
+                    .then(() => logWorkflowActivity(safeRo, 'REPCLASS_REVIEW_' + decision, memo, payload))
+                    .then(closeModal)
+                    .catch(errObj => {
+                        console.warn('Repair class review save failed:', errObj);
+                        alert('Could not save repair class review. Please try again.');
+                    });
+            } else {
+                globalRepairClassReviewState[safeRo] = payload;
+                try { localStorage.setItem('repclass_review_status', JSON.stringify(globalRepairClassReviewState)); } catch(e) {}
+                logWorkflowActivity(safeRo, 'REPCLASS_REVIEW_' + decision, memo, payload);
+                closeModal();
+            }
+        }
+
 
         function updateAllStatusBadges() {
             document.querySelectorAll('.status-toggle').forEach(btn => {
@@ -4313,6 +4632,9 @@
                 let openedRaw = getCol(row, ['Opened', 'ROOpenedDate']);
                 let dueRaw = getCol(row, ['Unit Due Date', 'Estimate Due Date', 'Due Date', 'L']);
                 let compRaw = getCol(row, ['Completed Date', 'Completed', 'P']);
+                let originalRepClass = getOriginalRepClassFromVroRow(row);
+                let transferRepClass = getTransferRepClassFromVroRow(row);
+                let transferReason = getTransferReasonFromVroRow(row);
                 
                 let isOpen = !excludedStatuses.includes(statusStr);
 
@@ -4424,6 +4746,9 @@
                     isDedicatedShopWorkOrder: isDedicatedShopWorkOrder,
                     dedicatedShopOwners: Array.from(dedicatedShopOwners),
                     financialShop: finShop,
+                    originalRepClass: originalRepClass,
+                    transferRepClass: transferRepClass,
+                    transferReason: transferReason,
                     isNonOscQueueWork: isNonOscQueueWork,
                     nonOscLocation: nonOscLocation
                 };
@@ -5055,6 +5380,7 @@
             }
 
             let workflowComplianceHtml = chartId ? '' : generateWorkflowComplianceHtml(filteredOpen);
+            let repairClassComplianceHtml = chartId ? '' : generateRepairClassComplianceHtml(filteredOpen);
 
             let innerHtml = `
                 <div class="kpi-name">${name}</div>
@@ -5085,6 +5411,7 @@
                     </div>
                 </div>
                 ${workflowComplianceHtml}
+                ${repairClassComplianceHtml}
             `;
             return innerHtml;
         }
@@ -5365,6 +5692,7 @@
                                     dupFlags: [],
                                     queueSources: [],
                                     otherQueueOrders: [],
+                                    repairClassCells: [],
                                     isOOS: ro.isOOS,
                                     usefulPct: ro.usefulPct,
                                     usefulPctObj: ro.usefulPctObj,
@@ -5393,6 +5721,7 @@
                                     unitsMap[ro.unitNo].queueSources.push(order.sourceQueue || ro.sourceQueue || 'VENDED REPAIR');
                                     unitsMap[ro.unitNo].otherQueueOrders.push([]);
                                     unitsMap[ro.unitNo].roLinks.push(actualRoLinkHtml);
+                                    unitsMap[ro.unitNo].repairClassCells.push(getRepairClassCellHtml(ro));
                                     unitsMap[ro.unitNo].openedDates.push(ro.openedFormatted);
                                     unitsMap[ro.unitNo].statuses.push(ro.status);
                                     unitsMap[ro.unitNo].ecdCells.push(ecdCell);
@@ -5421,6 +5750,7 @@
                             unitsMap[ro.unitNo].queueSources.push(ro.sourceQueue || 'VENDED REPAIR');
                             unitsMap[ro.unitNo].otherQueueOrders.push(ro.otherQueueOrders || []);
                             unitsMap[ro.unitNo].roLinks.push(roLinkHtml);
+                            unitsMap[ro.unitNo].repairClassCells.push(getRepairClassCellHtml(ro));
                             
                             unitsMap[ro.unitNo].openedDates.push(ro.openedFormatted);
                             unitsMap[ro.unitNo].statuses.push(ro.status);
@@ -5432,7 +5762,7 @@
                             return (b.isOOS === true ? 1 : 0) - (a.isOOS === true ? 1 : 0);
                         });
 
-                        let tableHTML = `<div class="table-wrapper"><table><colgroup><col style="width:23%;"><col style="width:11%;">${isPM ? '' : '<col style="width:11%;">'}<col style="width:9%;"><col style="width:11%;"><col style="width:21%;"><col style="width:14%;"></colgroup><thead><tr><th>AFS RO # & Dispatch</th><th>Unit No</th>${isPM ? '' : '<th>Priority Status</th>'}<th>OOS Status</th><th>Opened Date</th><th>Status</th><th>ECD</th></tr></thead><tbody>`;
+                        let tableHTML = `<div class="table-wrapper"><table><colgroup><col style="width:21%;"><col style="width:10%;">${isPM ? '' : '<col style="width:10%;">'}<col style="width:8%;"><col style="width:10%;"><col style="width:18%;"><col style="width:15%;"><col style="width:12%;"></colgroup><thead><tr><th>AFS RO # & Dispatch</th><th>Unit No</th>${isPM ? '' : '<th>Priority Status</th>'}<th>OOS Status</th><th>Opened Date</th><th>Status</th><th>Repair Class</th><th>ECD</th></tr></thead><tbody>`;
                         
                         let visibleRowsCount = 0;
                         let lockedCount = 0;
@@ -5498,6 +5828,7 @@
 
                                 tableHTML += `<td style="vertical-align:top; padding-top:15px; border-bottom: ${localIdx === rowCount - 1 ? '1px solid var(--border)' : '1px dashed #eee'}; font-size:12px; font-weight: 700; color: #555;">${od}</td>`;
                                 tableHTML += `<td style="vertical-align:top; padding-top:15px; border-bottom: ${localIdx === rowCount - 1 ? '1px solid var(--border)' : '1px dashed #eee'}; font-size:11px; line-height:1.4;"><b>Status:</b> ${st}</td>`;
+                                tableHTML += `<td style="vertical-align:top; padding-top:15px; border-bottom: ${localIdx === rowCount - 1 ? '1px solid var(--border)' : '1px dashed #eee'};">${u.repairClassCells[idx] || ''}</td>`;
                                 tableHTML += `<td style="vertical-align:top; padding-top:15px; border-bottom: ${localIdx === rowCount - 1 ? '1px solid var(--border)' : '1px dashed #eee'};">${ec}</td>`;
                                 tableHTML += `</tr>`;
                             });
