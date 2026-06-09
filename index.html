@@ -1930,18 +1930,21 @@
             return (globalRepairClassReviewState && globalRepairClassReviewState[safeRo]) ? globalRepairClassReviewState[safeRo] : null;
         }
 
+        function getRepairClassReviewDecision(roOrSafeRo) {
+            const safeRo = typeof roOrSafeRo === 'string' ? roOrSafeRo : (roOrSafeRo && roOrSafeRo.roNum ? safeFirebaseKey(roOrSafeRo.roNum) : '');
+            const rec = getRepairClassReviewRecord(safeRo);
+            return rec && rec.decision ? String(rec.decision || '').toUpperCase().trim() : '';
+        }
+
         function isRepairClassReviewCleared(ro) {
             if (!ro || !hasRepairClassTransfer(ro)) return true;
-            const safeRo = safeFirebaseKey(ro.roNum);
-            const rec = getRepairClassReviewRecord(safeRo);
-            if (!rec || !rec.decision) return false;
-            const decision = String(rec.decision || '').toUpperCase();
-            if (decision === 'DECLINED') return true;
-            if (decision === 'ACCEPTED') {
-                const rc = getRepairClassDataForRo(ro);
-                return normalizeRepClassValue(rc.originalRepClass) === normalizeRepClassValue(rc.transferRepClass);
-            }
-            return false;
+            const decision = getRepairClassReviewDecision(ro);
+
+            // A coordinator's memo decision is the compliance completion event.
+            // Previously ACCEPTED stayed PENDING until the workbook showed the class changed,
+            // which made the button look like it never registered. Both ACCEPTED and DECLINED
+            // now clear the daily compliance item once the required memo is saved.
+            return decision === 'ACCEPTED' || decision === 'DECLINED';
         }
 
         function getRepairClassReviewPopulation(dataSet) {
@@ -1998,8 +2001,10 @@
             const cleared = isRepairClassReviewCleared(ro);
             const reviewTitle = escapeHtml(reason).replace(/"/g, '&quot;');
             const transfer = escapeHtml(rc.transferRepClass || 'Review');
+            const decision = getRepairClassReviewDecision(safeRo);
+            const clearedLabel = decision === 'ACCEPTED' ? '✓ ACCEPTED' : (decision === 'DECLINED' ? 'DECLINED' : 'OK');
             const btn = cleared
-                ? `<span class="badge repair-class-toggle status-dispatched">OK</span>`
+                ? `<span class="badge repair-class-toggle status-dispatched">${clearedLabel}</span>`
                 : `<button class="repair-class-toggle status-pending" data-repclass-ro="${safeRo}" onclick="openRepairClassReviewModal('${safeRo}')">PENDING</button>`;
             return `<div class="repair-class-cell">
                 <div class="repair-class-name">${escapeHtml(original)}</div>
@@ -2013,7 +2018,9 @@
                 const safeRo = btn.getAttribute('data-repclass-ro');
                 const ro = getRoContextBySafeRo(safeRo);
                 if (ro && isRepairClassReviewCleared(ro)) {
-                    btn.outerHTML = `<span class="badge repair-class-toggle status-dispatched">OK</span>`;
+                    const decision = getRepairClassReviewDecision(safeRo);
+                    const clearedLabel = decision === 'ACCEPTED' ? '✓ ACCEPTED' : (decision === 'DECLINED' ? 'DECLINED' : 'OK');
+                    btn.outerHTML = `<span class="badge repair-class-toggle status-dispatched">${clearedLabel}</span>`;
                 }
             });
         }
@@ -2093,6 +2100,11 @@
                 refreshActiveViewPreservingDrilldown();
             };
 
+            // Update local state immediately so the modal close/refresh does not redraw the row as PENDING
+            // while Firebase is still acknowledging the write.
+            globalRepairClassReviewState = Object.assign({}, globalRepairClassReviewState || {}, { [safeRo]: payload });
+            try { localStorage.setItem('repclass_review_status', JSON.stringify(globalRepairClassReviewState)); } catch(e) {}
+
             if (db) {
                 db.ref('repClassReviewStatus/' + safeRo).set(payload)
                     .then(() => logWorkflowActivity(safeRo, 'REPCLASS_REVIEW_' + decision, memo, payload))
@@ -2102,8 +2114,6 @@
                         alert('Could not save repair class review. Please try again.');
                     });
             } else {
-                globalRepairClassReviewState[safeRo] = payload;
-                try { localStorage.setItem('repclass_review_status', JSON.stringify(globalRepairClassReviewState)); } catch(e) {}
                 logWorkflowActivity(safeRo, 'REPCLASS_REVIEW_' + decision, memo, payload);
                 closeModal();
             }
