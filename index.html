@@ -943,6 +943,104 @@
             throw new Error(`Firebase Storage fetch failed: ${lastError ? lastError.message : 'Unknown error'}`);
         }
 
+
+        async function fetchWorkbookBufferFromStorage(workbookPath, options = {}) {
+            const configuredBucket = firebase.app && firebase.app().options ? firebase.app().options.storageBucket : '';
+            const bucketCandidates = Array.from(new Set([
+                configuredBucket,
+                'workflow-dashboard-e6134.firebasestorage.app',
+                'workflow-dashboard-e6134.appspot.com'
+            ].filter(Boolean)));
+
+            async function fetchAndValidateWorkbook(downloadUrl) {
+                const controller = new AbortController();
+                const timeout = setTimeout(() => controller.abort(), 30000);
+
+                try {
+                    const url = downloadUrl + (downloadUrl.includes('?') ? '&' : '?') + `_=${Date.now()}`;
+                    const response = await fetch(url, {
+                        cache: 'no-store',
+                        signal: controller.signal
+                    });
+
+                    if (!response.ok) {
+                        throw new Error(`HTTP ${response.status}`);
+                    }
+
+                    const data = await response.arrayBuffer();
+
+                    if (!data || data.byteLength < 4) {
+                        throw new Error('Empty or invalid file response.');
+                    }
+
+                    const sig = new Uint8Array(data.slice(0, 2));
+                    const isZip = sig[0] === 0x50 && sig[1] === 0x4B;
+
+                    if (!isZip) {
+                        throw new Error('Response is not a valid XLSX file.');
+                    }
+
+                    return data;
+                } catch (err) {
+                    if (err.name === 'AbortError') {
+                        throw new Error('Firebase Storage request timed out');
+                    }
+                    throw err;
+                } finally {
+                    clearTimeout(timeout);
+                }
+            }
+
+            let lastError = null;
+
+            for (let attempt = 1; attempt <= 2; attempt++) {
+                for (let bucket of bucketCandidates) {
+                    try {
+                        const storageRef = bucket === configuredBucket
+                            ? firebase.storage().ref().child(workbookPath)
+                            : firebase.storage().refFromURL(`gs://${bucket}/${workbookPath}`);
+
+                        const downloadUrl = await storageRef.getDownloadURL();
+                        return await fetchAndValidateWorkbook(downloadUrl);
+                    } catch (err) {
+                        lastError = err;
+                        console.warn(`Workbook fetch attempt ${attempt} failed for ${workbookPath} in bucket ${bucket}:`, err);
+                    }
+                }
+
+                await new Promise(resolve => setTimeout(resolve, 750));
+            }
+
+            if (options.optional) {
+                console.warn(`${workbookPath} was not found or could not be loaded. Continuing without it.`, lastError);
+                return null;
+            }
+
+            throw new Error(`Firebase Storage fetch failed for ${workbookPath}: ${lastError ? lastError.message : 'Unknown error'}`);
+        }
+
+        async function loadAiRefFromFirebase() {
+            latestAiRefAOA = [];
+            const aiRefBuffer = await fetchWorkbookBufferFromStorage('AI Ref.xlsx', { optional: true });
+            if (!aiRefBuffer) return [];
+            try {
+                const aiWorkbook = XLSX.read(aiRefBuffer, { type: 'array' });
+                latestAiRefAOA = extractAiRefAOA(aiWorkbook);
+                console.log('workFLOW+ AI Ref loaded:', latestAiRefAOA.length, 'rows');
+                return latestAiRefAOA;
+            } catch (err) {
+                console.warn('AI Ref.xlsx could not be parsed. Repair Class Compliance will load without AI reference rows.', err);
+                latestAiRefAOA = [];
+                return [];
+            }
+        }
+
+        function extractAiRefAOA(workbook) {
+            if (!workbook || !workbook.SheetNames || !workbook.SheetNames.length) return [];
+            let targetSheet = workbook.SheetNames.find(name => String(name || '').toLowerCase().includes('ai')) || workbook.SheetNames[0];
+            return XLSX.utils.sheet_to_json(workbook.Sheets[targetSheet], { header: 1, defval: '' }) || [];
+        }
+
         async function fetchData() {
             const statusEl = document.getElementById('upload-status');
             const uploadBox = document.getElementById('upload-box');
@@ -964,6 +1062,7 @@
                 const workbook = XLSX.read(data, { type: 'array' });
                 
                 let vroRaw = [];
+                repairClassTransferByOrder = {};
                 let roDetailRaw = [];
                 let resourceRawAOA = [];
                 let oosRawAOA = [];
@@ -1000,15 +1099,22 @@
                             }
                             if (headerIdx !== -1) {
                                 const headers = aoa[headerIdx];
+                                const repClassIndexes = detectRepClassColumnIndexes(headers);
                                 for (let i = headerIdx + 1; i < aoa.length; i++) {
                                     if (!aoa[i] || !Array.isArray(aoa[i])) continue;
                                     const obj = {}; let hasData = false;
                                     // Preserve the raw VRO Export row so repair-class compliance can read
                                     // the exact Excel columns even when header text changes or there are blank headers.
                                     obj.__rowValues = aoa[i];
-                                    obj.__colEOriginalRepClass = aoa[i][4];   // Column E: Original Rep Class
-                                    obj.__colTTransferRepClass = aoa[i][19]; // Column T: Transfer Rep Class
-                                    obj.__colUWhyTransfer = aoa[i][20];      // Column U: Why the transfer
+                                    obj.__colEOriginalRepClass = aoa[i][repClassIndexes.originalIdx];   // Header match or Column E fallback
+                                    obj.__colTTransferRepClass = aoa[i][repClassIndexes.transferIdx]; // Header match or Column T fallback
+                                    obj.__colUWhyTransfer = aoa[i][repClassIndexes.whyIdx];      // Header match or Column U fallback
+                                    obj.__repClassIndexDebug = repClassIndexes;
+                                    // Repair Class Compliance no longer uses transfer values from master_workFLOW.xlsx.
+                                    // The VRO Export row only supplies Order (Column H) and Original REPCLASS/Type (Column E).
+                                    // Transfer REPCLASS and WHY TRANSFER are loaded separately from AI Ref.xlsx.
+                                    obj.__orderFromColumnH = normalizeOrderKey(aoa[i][7]);
+                                    obj.__indexedOriginalRepClass = aoa[i][4];
                                     headers.forEach((h, j) => {
                                         const key = h ? String(h).trim() : '';
                                         if (key) { obj[key] = aoa[i][j]; if (aoa[i][j] !== '') hasData = true; }
@@ -1030,6 +1136,9 @@
                         'Workbook loaded, but no expected sheets were recognized. Check tab names in master_workFLOW.xlsx.'
                     );
                 }
+
+                statusEl.innerText = 'Loading AI Ref.xlsx for Repair Class Compliance...';
+                await loadAiRefFromFirebase();
 
                 processExcelData(vroRaw, roDetailRaw, resourceRawAOA, oosRawAOA, usefulRawAOA, dodRawAOA);
                 initFirebaseSync();
@@ -1063,6 +1172,7 @@
                 const workbook = XLSX.read(data, { type: 'array' });
 
                 let vroRaw = [];
+                repairClassTransferByOrder = {};
                 let roDetailRaw = [];
                 let resourceRawAOA = [];
                 let oosRawAOA = [];
@@ -1099,15 +1209,22 @@
                             }
                             if (headerIdx !== -1) {
                                 const headers = aoa[headerIdx];
+                                const repClassIndexes = detectRepClassColumnIndexes(headers);
                                 for (let i = headerIdx + 1; i < aoa.length; i++) {
                                     if (!aoa[i] || !Array.isArray(aoa[i])) continue;
                                     const obj = {}; let hasData = false;
                                     // Preserve the raw VRO Export row so repair-class compliance can read
                                     // the exact Excel columns even when header text changes or there are blank headers.
                                     obj.__rowValues = aoa[i];
-                                    obj.__colEOriginalRepClass = aoa[i][4];   // Column E: Original Rep Class
-                                    obj.__colTTransferRepClass = aoa[i][19]; // Column T: Transfer Rep Class
-                                    obj.__colUWhyTransfer = aoa[i][20];      // Column U: Why the transfer
+                                    obj.__colEOriginalRepClass = aoa[i][repClassIndexes.originalIdx];   // Header match or Column E fallback
+                                    obj.__colTTransferRepClass = aoa[i][repClassIndexes.transferIdx]; // Header match or Column T fallback
+                                    obj.__colUWhyTransfer = aoa[i][repClassIndexes.whyIdx];      // Header match or Column U fallback
+                                    obj.__repClassIndexDebug = repClassIndexes;
+                                    // Repair Class Compliance no longer uses transfer values from master_workFLOW.xlsx.
+                                    // The VRO Export row only supplies Order (Column H) and Original REPCLASS/Type (Column E).
+                                    // Transfer REPCLASS and WHY TRANSFER are loaded separately from AI Ref.xlsx.
+                                    obj.__orderFromColumnH = normalizeOrderKey(aoa[i][7]);
+                                    obj.__indexedOriginalRepClass = aoa[i][4];
                                     headers.forEach((h, j) => {
                                         const key = h ? String(h).trim() : '';
                                         if (key) { obj[key] = aoa[i][j]; if (aoa[i][j] !== '') hasData = true; }
@@ -1123,6 +1240,7 @@
                     }
                 });
 
+                await loadAiRefFromFirebase();
                 processExcelData(vroRaw, roDetailRaw, resourceRawAOA, oosRawAOA, usefulRawAOA, dodRawAOA);
                 initFirebaseSync();
                 try {
@@ -1535,6 +1653,232 @@
         }
 
 
+
+        function normalizeHeaderKey(value) {
+            return String(value || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+        }
+
+        function findHeaderIndexByCandidates(headers, candidates) {
+            const normalized = (headers || []).map(h => normalizeHeaderKey(h));
+            const targets = (candidates || []).map(c => normalizeHeaderKey(c));
+            for (let target of targets) {
+                const idx = normalized.findIndex(h => h === target);
+                if (idx >= 0) return idx;
+            }
+            for (let target of targets) {
+                if (!target) continue;
+                const idx = normalized.findIndex(h => h && (h.includes(target) || target.includes(h)));
+                if (idx >= 0) return idx;
+            }
+            return -1;
+        }
+
+        function detectRepClassColumnIndexes(headers) {
+            const originalIdx = findHeaderIndexByCandidates(headers, [
+                'Original REPCLASS', 'Original Rep Class', 'Original Repair Class', 'Original RepairClass',
+                'Current REPCLASS', 'Current Rep Class', 'Current Repair Class', 'Repair Class', 'REPCLASS', 'Type'
+            ]);
+            const transferIdx = findHeaderIndexByCandidates(headers, [
+                'Transfer REPCLASS', 'Transfer Rep Class', 'Transfer Repair Class', 'AI Transfer REPCLASS',
+                'AI Transfer Rep Class', 'AI Transfer Repair Class', 'Recommended REPCLASS', 'Recommended Repair Class'
+            ]);
+            const whyIdx = findHeaderIndexByCandidates(headers, [
+                'Why the transfer', 'Why Transfer', 'Why the Transfer', 'Transfer Reason', 'AI Reason',
+                'Reason', 'Why'
+            ]);
+            return {
+                originalIdx: originalIdx >= 0 ? originalIdx : 4,   // Default Column E
+                transferIdx: transferIdx >= 0 ? transferIdx : 19, // Default Column T
+                whyIdx: whyIdx >= 0 ? whyIdx : 20                // Default Column U
+            };
+        }
+
+        function getRawCell(rowValues, idx) {
+            if (!rowValues || !Array.isArray(rowValues) || idx < 0) return '';
+            const value = rowValues[idx];
+            return value === undefined || value === null ? '' : String(value).trim();
+        }
+
+        function normalizeOrderKey(value) {
+            return String(value || '').trim().toUpperCase();
+        }
+
+        function getOrderKeyVariants(value) {
+            const base = normalizeOrderKey(value);
+            if (!base) return [];
+            const variants = new Set([base]);
+            const compact = base.replace(/\s+/g, '');
+            variants.add(compact);
+
+            const match = compact.match(/^(\d+)-0*(\d+)$/);
+            if (match) {
+                const prefix = match[1];
+                const suffixRaw = match[2];
+                variants.add(prefix + '-' + suffixRaw);
+                variants.add(prefix + '-' + suffixRaw.padStart(7, '0'));
+                variants.add(prefix + '-' + suffixRaw.padStart(6, '0'));
+            }
+
+            return Array.from(variants).filter(Boolean);
+        }
+
+        function storeRepairClassTransferRecord(record) {
+            if (!record || !record.order) return;
+            getOrderKeyVariants(record.order).forEach(key => {
+                const existing = repairClassTransferByOrder[key];
+                if (!existing || record.hasTransfer || !existing.hasTransfer) {
+                    repairClassTransferByOrder[key] = record;
+                }
+            });
+        }
+
+        function addRepairClassTransferIndex(headers, rowValues) {
+            if (!rowValues || !Array.isArray(rowValues)) return null;
+
+            // VRO Export fixed mapping supplied by operations:
+            // Column H = Order / VRO, Column E = TYPE / Original REPCLASS,
+            // Column T = TRANSFER REPCLASS, Column U = WHY TRANSFER.
+            const orderIdx = findHeaderIndexByCandidates(headers || [], ['Order', 'AFS RO #', 'RO Number', 'RONum', 'VRO']);
+            const repClassIndexes = detectRepClassColumnIndexes(headers || []);
+
+            const order = normalizeOrderKey(getRawCell(rowValues, orderIdx >= 0 ? orderIdx : 7));
+            if (!order) return null;
+
+            const originalExact = getRawCell(rowValues, 4);
+            const transferExact = getRawCell(rowValues, 19);
+            const whyExact = getRawCell(rowValues, 20);
+
+            const originalRepClass = originalExact || getRawCell(rowValues, repClassIndexes.originalIdx);
+            const transferRepClass = transferExact || getRawCell(rowValues, repClassIndexes.transferIdx);
+            const transferReason = whyExact || getRawCell(rowValues, repClassIndexes.whyIdx);
+
+            const record = {
+                order,
+                originalRepClass,
+                transferRepClass,
+                transferReason,
+                hasTransfer: !!(normalizeRepClassValue(originalRepClass) && normalizeRepClassValue(transferRepClass) && normalizeRepClassValue(originalRepClass) !== normalizeRepClassValue(transferRepClass))
+            };
+
+            storeRepairClassTransferRecord(record);
+            return record;
+        }
+
+        function getRepairClassTransferRecordByOrder(order) {
+            if (!order || !repairClassTransferByOrder) return null;
+            const variants = getOrderKeyVariants(order);
+            for (let key of variants) {
+                if (repairClassTransferByOrder[key]) return repairClassTransferByOrder[key];
+            }
+            return null;
+        }
+
+        function getRepairClassDataForRo(roOrOrder) {
+            const ro = typeof roOrOrder === 'object' ? roOrOrder : null;
+            const order = typeof roOrOrder === 'string'
+                ? roOrOrder
+                : (ro && (ro.roNum || ro.repairClassOrderKey || ro.order || ro.Order || ro.__orderFromColumnH) ? (ro.roNum || ro.repairClassOrderKey || ro.order || ro.Order || ro.__orderFromColumnH) : '');
+            const rec = getRepairClassTransferRecordByOrder(order);
+
+            // Prefer the VRO Export values already attached to the RO object, then fall back to the global map.
+            // This prevents false OK / 0 of 0 when the map lookup misses because of order formatting.
+            const original = (ro && ro.originalRepClass) || (rec && rec.originalRepClass) || '';
+            const transfer = (rec && rec.transferRepClass) || (ro && ro.transferRepClass) || '';
+            const reason = (rec && rec.transferReason) || (ro && ro.transferReason) || '';
+
+            const computedHasTransfer = !!(normalizeRepClassValue(original) && normalizeRepClassValue(transfer) && normalizeRepClassValue(original) !== normalizeRepClassValue(transfer));
+            // Do not let an earlier false RO flag override the VRO Export transfer map.
+            // If Column E/Type and Column T/TRANSFER REPCLASS differ, this must be a review item.
+            const hasTransfer = computedHasTransfer || !!(ro && ro.repClassReviewRequired);
+            return { originalRepClass: original, transferRepClass: transfer, transferReason: reason, hasTransfer };
+        }
+
+        function buildVroOriginalRepClassMap(vroRows) {
+            const originalByOrder = {};
+            (vroRows || []).forEach(row => {
+                if (!row) return;
+                let order = normalizeOrderKey((row.__orderFromColumnH || row.Order || row.order || row['AFS RO #'] || row['RO Number'] || row.RONUM || ''));
+                if (!order && row.__rowValues) order = normalizeOrderKey(getRawCell(row.__rowValues, 7)); // Column H / Order
+                if (!order) return;
+
+                const original = String((row.__indexedOriginalRepClass || row.__colEOriginalRepClass || row.Type || row.TYPE || (row.__rowValues ? getRawCell(row.__rowValues, 4) : '') || '')).trim(); // Column E / Type
+                getOrderKeyVariants(order).forEach(key => {
+                    originalByOrder[key] = original;
+                });
+            });
+            return originalByOrder;
+        }
+
+        function rebuildRepairClassTransferIndexFromAiRef(vroRows) {
+            repairClassTransferByOrder = {};
+            const originalByOrder = buildVroOriginalRepClassMap(vroRows);
+
+            if (!latestAiRefAOA || !latestAiRefAOA.length) {
+                console.warn('AI Ref.xlsx is not loaded. Repair Class Compliance will have no transfer recommendations.');
+                return;
+            }
+
+            let headerIdx = -1;
+            for (let i = 0; i < Math.min(25, latestAiRefAOA.length); i++) {
+                const rowStr = (latestAiRefAOA[i] || []).join('').toLowerCase().replace(/[^a-z0-9]/g, '');
+                if (rowStr.includes('afsro') && rowStr.includes('transferrepclass')) {
+                    headerIdx = i;
+                    break;
+                }
+            }
+            if (headerIdx === -1) headerIdx = 0;
+
+            const headers = latestAiRefAOA[headerIdx] || [];
+            const orderIdx = findHeaderIndexByCandidates(headers, ['AFS RO #', 'AFS RO', 'Order', 'RO Number', 'VRO']);
+            const transferIdx = findHeaderIndexByCandidates(headers, ['Transfer REPCLASS', 'Transfer Rep Class', 'Transfer Repair Class']);
+            const whyIdx = findHeaderIndexByCandidates(headers, ['Why Transfer / Why No Transfer', 'Why Transfer', 'Why No Transfer', 'Transfer Reason', 'AI Reason']);
+            const spendTransferIdx = findHeaderIndexByCandidates(headers, ['Spend Transfer', 'Transfer Spend']);
+            const aiOriginalIdx = findHeaderIndexByCandidates(headers, ['Original REPCLASS', 'Original Rep Class', 'Original Repair Class']);
+
+            let loaded = 0;
+            let reviewCount = 0;
+
+            for (let i = headerIdx + 1; i < latestAiRefAOA.length; i++) {
+                const rowValues = latestAiRefAOA[i];
+                if (!rowValues || !Array.isArray(rowValues)) continue;
+
+                const order = normalizeOrderKey(getRawCell(rowValues, orderIdx >= 0 ? orderIdx : 0)); // AI Ref Column A / AFS RO #
+                if (!order) continue;
+
+                let originalRepClass = '';
+                const variants = getOrderKeyVariants(order);
+                for (let key of variants) {
+                    if (originalByOrder[key] !== undefined && String(originalByOrder[key] || '').trim() !== '') {
+                        originalRepClass = originalByOrder[key];
+                        break;
+                    }
+                }
+                if (!originalRepClass && aiOriginalIdx >= 0) {
+                    originalRepClass = getRawCell(rowValues, aiOriginalIdx);
+                }
+
+                const transferRepClass = getRawCell(rowValues, transferIdx >= 0 ? transferIdx : 7); // AI Ref Column H
+                const transferReason = getRawCell(rowValues, whyIdx >= 0 ? whyIdx : 8); // AI Ref Column I
+                const spendTransfer = spendTransferIdx >= 0 ? getRawCell(rowValues, spendTransferIdx) : '';
+
+                const record = {
+                    order,
+                    originalRepClass,
+                    transferRepClass,
+                    transferReason,
+                    spendTransfer,
+                    source: 'AI_REF',
+                    hasTransfer: !!(normalizeRepClassValue(originalRepClass) && normalizeRepClassValue(transferRepClass) && normalizeRepClassValue(originalRepClass) !== normalizeRepClassValue(transferRepClass))
+                };
+
+                storeRepairClassTransferRecord(record);
+                loaded++;
+                if (record.hasTransfer) reviewCount++;
+            }
+
+            console.log('workFLOW+ AI Ref transfer map loaded:', loaded, 'AI Ref records;', reviewCount, 'transfer differences matched/evaluated.');
+        }
+
         function normalizeRepClassValue(value) {
             return String(value || '').trim().toUpperCase().replace(/\s+/g, ' ');
         }
@@ -1557,23 +1901,31 @@
         }
 
         function getOriginalRepClassFromVroRow(row) {
-            return getExactColValue(row, '__colEOriginalRepClass', 4) || getCol(row, ['Original REPCLASS', 'Original Rep Class', 'Original Repair Class', 'Current REPCLASS', 'Current Rep Class', 'Repair Class', 'REPCLASS']);
+            return getExactColValue(row, '__colEOriginalRepClass', 4) || getCol(row, [
+                'Original REPCLASS', 'Original Rep Class', 'Original Repair Class', 'Original RepairClass',
+                'Current REPCLASS', 'Current Rep Class', 'Current Repair Class', 'Current RepairClass',
+                'Repair Class', 'REPCLASS'
+            ]);
         }
 
         function getTransferRepClassFromVroRow(row) {
-            return getExactColValue(row, '__colTTransferRepClass', 19) || getCol(row, ['Transfer REPCLASS', 'Transfer Rep Class', 'AI Transfer REPCLASS', 'AI Transfer Rep Class', 'Transfer Repair Class']);
+            return getExactColValue(row, '__colTTransferRepClass', 19) || getCol(row, [
+                'Transfer REPCLASS', 'Transfer Rep Class', 'Transfer Repair Class', 'Transfer RepairClass',
+                'AI Transfer REPCLASS', 'AI Transfer Rep Class', 'AI Transfer Repair Class',
+                'Recommended REPCLASS', 'Recommended Rep Class', 'Recommended Repair Class'
+            ]);
         }
 
         function getTransferReasonFromVroRow(row) {
-            return getExactColValue(row, '__colUWhyTransfer', 20) || getCol(row, ['Why the transfer', 'Why Transfer', 'AI Reason', 'Transfer Reason', 'Why']);
+            return getExactColValue(row, '__colUWhyTransfer', 20) || getCol(row, [
+                'Why the transfer', 'Why Transfer', 'Why the Transfer', 'AI Reason', 'Transfer Reason',
+                'Reason For Transfer', 'Transfer Why', 'Why'
+            ]);
         }
 
         function hasRepairClassTransfer(ro) {
             if (!ro) return false;
-            const original = normalizeRepClassValue(ro.originalRepClass);
-            const transfer = normalizeRepClassValue(ro.transferRepClass);
-            if (!original || !transfer) return false;
-            return original !== transfer;
+            return getRepairClassDataForRo(ro).hasTransfer;
         }
 
         function getRepairClassReviewRecord(safeRo) {
@@ -1588,7 +1940,8 @@
             const decision = String(rec.decision || '').toUpperCase();
             if (decision === 'DECLINED') return true;
             if (decision === 'ACCEPTED') {
-                return normalizeRepClassValue(ro.originalRepClass) === normalizeRepClassValue(ro.transferRepClass);
+                const rc = getRepairClassDataForRo(ro);
+                return normalizeRepClassValue(rc.originalRepClass) === normalizeRepClassValue(rc.transferRepClass);
             }
             return false;
         }
@@ -1617,7 +1970,7 @@
         function generateRepairClassComplianceHtml(dataSet, compact = false) {
             const c = calculateRepairClassCompliance(dataSet);
             return `
-                <div class="workflow-compliance-card ${c.colorClass}${compact ? ' compact' : ''}" title="Repair class review is based on VRO Export Original REPCLASS, Transfer REPCLASS, and Why the Transfer. No AI logic is run in this HTML.">
+                <div class="workflow-compliance-card ${c.colorClass}${compact ? ' compact' : ''}" title="Repair class review is based on VRO Export Order/Type matched to AI Ref.xlsx Transfer REPCLASS and Why Transfer / Why No Transfer. No AI logic is run in this HTML.">
                     <div class="workflow-compliance-header">
                         <div>
                             <div class="workflow-compliance-label">Daily Repair Class Compliance</div>
@@ -1637,15 +1990,16 @@
         }
 
         function getRepairClassCellHtml(ro) {
-            const original = ro && ro.originalRepClass ? ro.originalRepClass : 'Not Available';
-            if (!ro || !hasRepairClassTransfer(ro)) {
+            const rc = getRepairClassDataForRo(ro);
+            const original = rc.originalRepClass || (ro && ro.originalRepClass) || 'Not Available';
+            if (!ro || !rc.hasTransfer) {
                 return `<div class="repair-class-cell"><div class="repair-class-name">${escapeHtml(original)}</div><span class="repair-class-pill clean">OK</span></div>`;
             }
             const safeRo = safeFirebaseKey(ro.roNum);
-            const reason = ro.transferReason || 'No transfer reason provided.';
+            const reason = rc.transferReason || 'No transfer reason provided.';
             const cleared = isRepairClassReviewCleared(ro);
             const reviewTitle = escapeHtml(reason).replace(/"/g, '&quot;');
-            const transfer = escapeHtml(ro.transferRepClass || 'Review');
+            const transfer = escapeHtml(rc.transferRepClass || 'Review');
             const btn = cleared
                 ? `<span class="badge repair-class-toggle status-dispatched">OK</span>`
                 : `<button class="repair-class-toggle status-pending" data-repclass-ro="${safeRo}" onclick="openRepairClassReviewModal('${safeRo}')">PENDING</button>`;
@@ -1678,9 +2032,10 @@
             setText('repclass-modal-unit', ro.unitNo);
             setText('repclass-modal-owner', `${ro.owner || ''}${ro.sourceQueue ? ' • ' + ro.sourceQueue : ''}`);
             setText('repclass-modal-status', ro.status);
-            setText('repclass-modal-current', ro.originalRepClass || 'Not Available');
-            setText('repclass-modal-transfer', ro.transferRepClass || 'Not Available');
-            setText('repclass-modal-reason', ro.transferReason || 'No transfer reason provided.');
+            const rc = getRepairClassDataForRo(ro);
+            setText('repclass-modal-current', rc.originalRepClass || 'Not Available');
+            setText('repclass-modal-transfer', rc.transferRepClass || 'Not Available');
+            setText('repclass-modal-reason', rc.transferReason || 'No transfer reason provided.');
 
             const memoBox = document.getElementById('repclass-review-memo');
             if (memoBox) memoBox.value = '';
@@ -1717,6 +2072,7 @@
                 return;
             }
 
+            const rcSubmit = getRepairClassDataForRo(ro);
             const payload = {
                 decision: decision,
                 memo: memo,
@@ -1725,9 +2081,9 @@
                 owner: ro.owner || '',
                 sourceQueue: ro.sourceQueue || '',
                 status: ro.status || '',
-                originalRepClass: ro.originalRepClass || '',
-                transferRepClass: ro.transferRepClass || '',
-                whyTransfer: ro.transferReason || '',
+                originalRepClass: rcSubmit.originalRepClass || '',
+                transferRepClass: rcSubmit.transferRepClass || '',
+                whyTransfer: rcSubmit.transferReason || '',
                 timestamp: new Date().toISOString()
             };
 
@@ -1894,6 +2250,8 @@
         let masterUnits = {}; 
         let ownerNameToTeam = {};
         let globalBranchToTeam = {};
+        let repairClassTransferByOrder = {};
+        let latestAiRefAOA = [];
         
         let summaryTree = {};
         let summaryUsefulTree = {};
@@ -4617,8 +4975,14 @@
             let allCustSet = new Set();
             let openROsInUnits = new Map(); 
 
+            rebuildRepairClassTransferIndexFromAiRef(vroRaw);
+            try {
+                const transferCount = Object.values(repairClassTransferByOrder || {}).filter(r => r && r.hasTransfer).length;
+                console.log('workFLOW+ AI Ref repair class transfer map loaded:', transferCount, 'transfer differences');
+            } catch(e) {}
+
             processedData = vroRaw.map(row => {
-                let roNum = getCol(row, ['Order', 'RO Number', 'RONum', 'AFS RO #']).toUpperCase().trim();
+                let roNum = normalizeOrderKey(row.__orderFromColumnH || (row.__rowValues ? getRawCell(row.__rowValues, 7) : '') || getCol(row, ['Order', 'RO Number', 'RONum', 'AFS RO #']));
                 if (!roNum) return null;
                 
                 let unit = getCol(row, ['Unit No', 'UNITNUMBER', 'Vehicle']).toUpperCase().trim();
@@ -4632,9 +4996,13 @@
                 let openedRaw = getCol(row, ['Opened', 'ROOpenedDate']);
                 let dueRaw = getCol(row, ['Unit Due Date', 'Estimate Due Date', 'Due Date', 'L']);
                 let compRaw = getCol(row, ['Completed Date', 'Completed', 'P']);
-                let originalRepClass = getOriginalRepClassFromVroRow(row);
-                let transferRepClass = getTransferRepClassFromVroRow(row);
-                let transferReason = getTransferReasonFromVroRow(row);
+                const repClassTransferRecord = getRepairClassTransferRecordByOrder(roNum);
+                // Original REPCLASS comes from VRO Export Column E / Type.
+                // Transfer REPCLASS and WHY TRANSFER come only from AI Ref.xlsx matched by Order / AFS RO #.
+                let originalRepClass = String(row.__indexedOriginalRepClass || row.__colEOriginalRepClass || (row.__rowValues ? getRawCell(row.__rowValues, 4) : '') || getOriginalRepClassFromVroRow(row) || '').trim();
+                let transferRepClass = String((repClassTransferRecord && repClassTransferRecord.transferRepClass) || '').trim();
+                let transferReason = String((repClassTransferRecord && repClassTransferRecord.transferReason) || '').trim();
+                let repClassReviewRequired = !!(normalizeRepClassValue(originalRepClass) && normalizeRepClassValue(transferRepClass) && normalizeRepClassValue(originalRepClass) !== normalizeRepClassValue(transferRepClass));
                 
                 let isOpen = !excludedStatuses.includes(statusStr);
 
@@ -4746,9 +5114,11 @@
                     isDedicatedShopWorkOrder: isDedicatedShopWorkOrder,
                     dedicatedShopOwners: Array.from(dedicatedShopOwners),
                     financialShop: finShop,
+                    repairClassOrderKey: roNum,
                     originalRepClass: originalRepClass,
                     transferRepClass: transferRepClass,
                     transferReason: transferReason,
+                    repClassReviewRequired: repClassReviewRequired,
                     isNonOscQueueWork: isNonOscQueueWork,
                     nonOscLocation: nonOscLocation
                 };
@@ -4769,6 +5139,22 @@
 
                 return roObj;
             }).filter(ro => ro !== null);
+
+            // Final repair-class transfer overlay from VRO Export.
+            // This prevents false OK / 0-of-0 results when the RO was created before the transfer map was complete
+            // or when the RO object's initial repClassReviewRequired flag was false.
+            processedData.forEach(ro => {
+                if (!ro || !ro.roNum || String(ro.roNum).startsWith('NO RO') || String(ro.roNum).startsWith('SEE_OTHER:')) return;
+                const rcOverlay = getRepairClassTransferRecordByOrder(ro.roNum);
+                if (!rcOverlay) return;
+                ro.originalRepClass = ro.originalRepClass || rcOverlay.originalRepClass || '';
+                ro.transferRepClass = rcOverlay.transferRepClass || '';
+                ro.transferReason = rcOverlay.transferReason || '';
+                ro.repClassReviewRequired = !!(normalizeRepClassValue(ro.originalRepClass) && normalizeRepClassValue(ro.transferRepClass) && normalizeRepClassValue(ro.originalRepClass) !== normalizeRepClassValue(ro.transferRepClass));
+                if (ro.isOpen && ro.repClassReviewRequired && ro.isNonOscQueueWork && ro.nonOscLocation) {
+                    activeNonOsc.add(ro.nonOscLocation);
+                }
+            });
 
             let unitRoGroups = {};
             processedData.forEach(ro => {
