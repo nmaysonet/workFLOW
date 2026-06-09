@@ -6,7 +6,6 @@
     <title>workFLOW + | Workflow Management</title>
     <link href="https://fonts.googleapis.com/css2?family=Raleway:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
@@ -193,7 +192,6 @@
         .highlight-box .title { font-size: 12px; font-weight: 800; color: #555; text-transform: uppercase; margin-bottom: 5px; text-align: left; }
         .highlight-box .num { font-size: 26px; font-weight: 800; color: var(--gold); line-height: 1; text-align: right; }
         .highlight-box.urgent-box .num { color: var(--urgent-red); }
-        .chart-box { width: 50px; height: 50px; flex-shrink: 0; position: relative; display: flex; align-items: center; justify-content: center; margin: auto 5px; }
         .kpi-stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; border-top: 1px solid #eee; padding-top: 15px; width: 100%;}
         .stat-box { background: #f9f9f9; padding: 10px 5px; border-radius: 4px; text-align: center; }
         .stat-box .title { font-size: 10px; color: #666; text-transform: uppercase; font-weight: 700; margin-bottom: 5px; }
@@ -2237,7 +2235,6 @@
         let currentCustomerFilter = 'ALL';
         let currentOwnerView = '';
         let currentParentView = '';
-        let globalChartInstances = {}; 
         let searchTimeout = null;
 
         let pmOwners = [];
@@ -4995,7 +4992,6 @@
                 let vmrs = getCol(row, ['Task', 'DESCRIP', 'VMRS Description']);
                 let openedRaw = getCol(row, ['Opened', 'ROOpenedDate']);
                 let dueRaw = getCol(row, ['Unit Due Date', 'Estimate Due Date', 'Due Date', 'L']);
-                let compRaw = getCol(row, ['Completed Date', 'Completed', 'P']);
                 const repClassTransferRecord = getRepairClassTransferRecordByOrder(roNum);
                 // Original REPCLASS comes from VRO Export Column E / Type.
                 // Transfer REPCLASS and WHY TRANSFER come only from AI Ref.xlsx matched by Order / AFS RO #.
@@ -5086,16 +5082,6 @@
                     else ecdState = 'green';
                 }
 
-                let isCompletedKPI = false; let isOnTimeKPI = false; let isLateKPI = false;
-                if (!isOpen && compRaw !== '') {
-                    isCompletedKPI = true; let cDate = parseDateSafe(compRaw);
-                    if (cDate) {
-                        if (ecdDate && cDate <= ecdDate) isOnTimeKPI = true;
-                        else if (ecdDate) isLateKPI = true;
-                        else isOnTimeKPI = true;
-                    } else isCompletedKPI = false;
-                }
-                
                 let roObj = {
                     roNum, customer: mUnit.branch, custKey, drillTopLevel, 
                     owner: Array.from(drilldownOwners).join(', '), 
@@ -5103,7 +5089,7 @@
                     drilldownOwners: Array.from(drilldownOwners),
                     tileOwners: Array.from(drilldownOwners), 
                     unitNo: unit, unitType: mUnit.type, status: statusStr, vmrs, 
-                    isOOS: mUnit.isOOS, isOpen, isCompletedKPI, isOnTimeKPI, isLateKPI, 
+                    isOOS: mUnit.isOOS, isOpen, 
                     subregion: mUnit.subregion, branch: mUnit.branch, 
                     ecdState, ecdFormatted, ecdMs, openedFormatted, 
                     usefulPct: pcts.TOTAL, usefulPctObj: pcts, region: mUnit.region,
@@ -5231,9 +5217,6 @@
                         vmrs: '',
                         isOOS: mUnit.isOOS, 
                         isOpen: true,
-                        isCompletedKPI: false,
-                        isOnTimeKPI: false,
-                        isLateKPI: false,
                         subregion: mUnit.subregion,
                         branch: mUnit.branch,
                         ecdState: 'missing',
@@ -5732,41 +5715,12 @@
 
         function generateTileHTML(name, dataSet, chartId = null, isPM = false) {
             
-            let globalTotal = getSpendGovernorAuthorizedTotal();
-            let lockActive = isSpendGovernorLocked();
-            
             let filteredOpen = getTileOpenRoPopulation(dataSet, isPM);
-            
-            let completedOrders = dataSet.filter(ro => ro.isCompletedKPI);
-            let compCount = completedOrders.length;
-            let onTimeCount = completedOrders.filter(ro => ro.isOnTimeKPI).length;
-            let lateCount = completedOrders.filter(ro => ro.isLateKPI).length;
-            let compPct = compCount > 0 ? Math.round((onTimeCount / compCount) * 100) : 0;
-            let latePct = compCount > 0 ? Math.round((lateCount / compCount) * 100) : 0;
+            let oosCount = filteredOpen.filter(ro => ro.isOOS).length;
+            let priorityCount = filteredOpen.filter(ro => isPriority(ro)).length;
 
-            let chartHTML = '';
-            if (chartId) {
-                chartHTML = `<div class="chart-box"><canvas id="${chartId}" data-comp="${compPct}" data-late="${latePct}"></canvas></div>`;
-            }
-
-            let oosAndPriorityHtml = '';
-            if (!isPM) {
-                let oosCount = filteredOpen.filter(ro => ro.isOOS).length;
-                let priorityCount = filteredOpen.filter(ro => isPriority(ro)).length;
-                oosAndPriorityHtml = `
-                    <div class="highlight-box oos-box">
-                        <div class="title">OOS ROs</div>
-                        <div class="num">${oosCount}</div>
-                    </div>
-                    <div class="highlight-box urgent-box">
-                        <div class="title">Priority ROs</div>
-                        <div class="num">${priorityCount}</div>
-                    </div>
-                `;
-            }
-
-            let workflowComplianceHtml = chartId ? '' : generateWorkflowComplianceHtml(filteredOpen);
-            let repairClassComplianceHtml = chartId ? '' : generateRepairClassComplianceHtml(filteredOpen);
+            let workflowComplianceHtml = generateWorkflowComplianceHtml(filteredOpen);
+            let repairClassComplianceHtml = generateRepairClassComplianceHtml(filteredOpen);
 
             let innerHtml = `
                 <div class="kpi-name">${name}</div>
@@ -5775,60 +5729,19 @@
                         <div class="title">Open ROs</div>
                         <div class="num">${filteredOpen.length}</div>
                     </div>
-                    ${oosAndPriorityHtml}
-                    ${chartHTML}
-                </div>
-                <div class="kpi-stats-grid">
-                    <div class="stat-box">
-                        <div class="title">Completed</div>
-                        <div class="num">${compCount}</div>
+                    <div class="highlight-box oos-box">
+                        <div class="title">OOS ROs</div>
+                        <div class="num">${oosCount}</div>
                     </div>
-                    <div class="stat-box">
-                        <div class="title">On-Time</div>
-                        <div class="num">${onTimeCount}</div>
-                    </div>
-                    <div class="stat-box">
-                        <div class="title">% Compliance</div>
-                        <div class="num good">${compPct}%</div>
-                    </div>
-                    <div class="stat-box">
-                        <div class="title">% Late</div>
-                        <div class="num urgent">${latePct}%</div>
+                    <div class="highlight-box urgent-box">
+                        <div class="title">Priority ROs</div>
+                        <div class="num">${priorityCount}</div>
                     </div>
                 </div>
                 ${workflowComplianceHtml}
                 ${repairClassComplianceHtml}
             `;
             return innerHtml;
-        }
-
-        Chart.register({
-            id: 'centerText',
-            beforeDraw: function(chart) {
-                if (chart.config.options.elements.center) {
-                    var ctx = chart.ctx; var centerConfig = chart.config.options.elements.center;
-                    var txt = centerConfig.text;
-                    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-                    var centerX = ((chart.chartArea.left + chart.chartArea.right) / 2);
-                    var centerY = ((chart.chartArea.top + chart.chartArea.bottom) / 2);
-                    ctx.font = "bold 16px Raleway"; ctx.fillStyle = centerConfig.color || '#333';
-                    ctx.fillText(txt, centerX, centerY);
-                }
-            }
-        });
-
-        function initChart(chartId) {
-            const canvas = document.getElementById(chartId); if(!canvas) return;
-            const comp = parseInt(canvas.getAttribute('data-comp')) || 0;
-            const late = parseInt(canvas.getAttribute('data-late')) || 0;
-            let chartData = [comp, late]; let bgColors = ['#5cb85c', '#d9534f'];
-            if (comp === 0 && late === 0) { chartData = [1]; bgColors = ['#e0e0e0']; }
-            if(globalChartInstances[chartId]) globalChartInstances[chartId].destroy();
-            globalChartInstances[chartId] = new Chart(canvas.getContext('2d'), {
-                type: 'doughnut',
-                data: { labels: ['On-Time', 'Late'], datasets: [{ data: chartData, backgroundColor: bgColors, borderWidth: 0 }] },
-                options: { maintainAspectRatio: false, cutout: '70%', plugins: { legend: { display: false } }, elements: { center: { text: comp + '%' } } }
-            });
         }
 
         function renderHomeDashboard() {
@@ -5857,7 +5770,6 @@
             ersTile.onclick = () => loadPersonDrilldown('ALL_ERS', 'home-view');
             container.appendChild(ersTile);
 
-            initChart('chart-pm'); initChart('chart-vended'); initChart('chart-ers');
         }
 
         function renderKPITiles(ownersList, containerId, parentViewId) {
