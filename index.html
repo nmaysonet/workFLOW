@@ -113,7 +113,6 @@
         body.colorblind-mode .workflow-compliance-card.compliance-red .workflow-compliance-rating { background: #D55E00; color: #111; }
 
 
-
         .spend-log-sort-btn { background: transparent; border: none; color: inherit; font: inherit; font-size: inherit; font-weight: 800; text-transform: uppercase; cursor: pointer; padding: 0; display: inline-flex; align-items: center; gap: 4px; }
         .spend-log-sort-btn:hover { color: var(--gold-hover); }
         .spend-log-sort-indicator { font-size: 10px; opacity: 0.75; }
@@ -331,15 +330,24 @@
         .grouped-ro-item { margin-bottom: 8px; }
         .grouped-ro-item:last-child { margin-bottom: 0; }
 
-        /* Performance/stability: do not move cards/buttons on hover. Moving transforms caused tile jitter on dense queue pages. */
-        .kpi-tile, .home-master-tile, .highlight-box, .stat-box, .workflow-compliance-mini, .status-toggle, .note-btn, .repair-class-toggle { will-change: auto !important; }
-        .kpi-tile:hover, .home-master-tile:hover, .highlight-box:hover, .stat-box:hover, .workflow-compliance-mini:hover, .status-toggle:hover, .note-btn:hover, .repair-class-toggle:hover { transform: none !important; }
-    
-
-        /* PERFORMANCE HOTFIX: remove hover movement/animations from queue tiles to stop visual shaking. */
-        .kpi-tile, .home-master-tile, .billing-kpi.clickable, .highlight-box.clickable, .stat-box.clickable, .workflow-compliance-mini.clickable,
-        .status-toggle, .note-btn, .repair-class-toggle { transition: none !important; }
-        .kpi-tile:hover, .home-master-tile:hover, .billing-kpi.clickable:hover, .highlight-box.clickable:hover, .stat-box.clickable:hover,
+        /* Stable hover behavior: cards lift forward; small controls do not move/jitter. */
+        .kpi-tile, .home-master-tile {
+            position: relative;
+            will-change: transform;
+            transition: transform 0.18s ease, box-shadow 0.18s ease, border-top-color 0.18s ease !important;
+        }
+        .kpi-tile:hover, .home-master-tile:hover {
+            transform: translate3d(0,-4px,0) scale(1.006) !important;
+            box-shadow: 0 12px 20px rgba(0,0,0,0.12);
+            border-top-color: #000000 !important;
+            z-index: 5;
+        }
+        .billing-kpi.clickable, .highlight-box.clickable, .stat-box.clickable, .workflow-compliance-mini.clickable,
+        .status-toggle, .note-btn, .repair-class-toggle {
+            will-change: auto !important;
+            transition: box-shadow 0.15s ease, border-color 0.15s ease, background-color 0.15s ease !important;
+        }
+        .billing-kpi.clickable:hover, .highlight-box.clickable:hover, .stat-box.clickable:hover,
         .workflow-compliance-mini.clickable:hover, .status-toggle:hover, .note-btn:hover, .repair-class-toggle:hover {
             transform: none !important;
         }
@@ -910,78 +918,6 @@
             return currentRepairClassSourceVersion || refreshRepairClassSourceVersion();
         }
 
-        async function fetchWorkbookBuffer() {
-            const workbookPath = 'master_workFLOW.xlsx';
-            const configuredBucket = firebase.app && firebase.app().options ? firebase.app().options.storageBucket : '';
-            const bucketCandidates = Array.from(new Set([
-                configuredBucket,
-                'workflow-dashboard-e6134.firebasestorage.app',
-                'workflow-dashboard-e6134.appspot.com'
-            ].filter(Boolean)));
-
-            async function fetchAndValidateWorkbook(downloadUrl) {
-                const controller = new AbortController();
-                const timeout = setTimeout(() => controller.abort(), 30000);
-
-                try {
-                    const url = downloadUrl + (downloadUrl.includes('?') ? '&' : '?') + `_=${Date.now()}`;
-                    const response = await fetch(url, {
-                        cache: 'no-store',
-                        signal: controller.signal
-                    });
-
-                    if (!response.ok) {
-                        throw new Error(`HTTP ${response.status}`);
-                    }
-
-                    const data = await response.arrayBuffer();
-
-                    if (!data || data.byteLength < 4) {
-                        throw new Error('Empty or invalid file response.');
-                    }
-
-                    const sig = new Uint8Array(data.slice(0, 2));
-                    const isZip = sig[0] === 0x50 && sig[1] === 0x4B;
-
-                    if (!isZip) {
-                        throw new Error('Response is not a valid XLSX file.');
-                    }
-
-                    return data;
-                } catch (err) {
-                    if (err.name === 'AbortError') {
-                        throw new Error('Firebase Storage request timed out');
-                    }
-                    throw err;
-                } finally {
-                    clearTimeout(timeout);
-                }
-            }
-
-            let lastError = null;
-
-            for (let attempt = 1; attempt <= 2; attempt++) {
-                for (let bucket of bucketCandidates) {
-                    try {
-                        const storageRef = bucket === configuredBucket
-                            ? firebase.storage().ref().child(workbookPath)
-                            : firebase.storage().refFromURL(`gs://${bucket}/${workbookPath}`);
-
-                        const downloadUrl = await storageRef.getDownloadURL();
-                        return await fetchAndValidateWorkbook(downloadUrl);
-                    } catch (err) {
-                        lastError = err;
-                        console.warn(`Workbook fetch attempt ${attempt} failed for bucket ${bucket}:`, err);
-                    }
-                }
-
-                await new Promise(resolve => setTimeout(resolve, 750));
-            }
-
-            console.error('Workbook fetch failed:', lastError);
-            throw new Error(`Firebase Storage fetch failed: ${lastError ? lastError.message : 'Unknown error'}`);
-        }
-
 
         async function fetchWorkbookBufferFromStorage(workbookPath, options = {}) {
             const configuredBucket = firebase.app && firebase.app().options ? firebase.app().options.storageBucket : '';
@@ -1086,6 +1022,83 @@
             return XLSX.utils.sheet_to_json(workbook.Sheets[targetSheet], { header: 1, defval: '' }) || [];
         }
 
+        function parseWorkbookSheets(workbook) {
+            const parsed = {
+                vroRaw: [],
+                roDetailRaw: [],
+                resourceRawAOA: [],
+                oosRawAOA: [],
+                usefulRawAOA: [],
+                dodRawAOA: []
+            };
+            repairClassTransferByOrder = {};
+
+            if (!workbook || !workbook.SheetNames) return parsed;
+
+            workbook.SheetNames.forEach(sheetName => {
+                try {
+                    const aoa = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], { header: 1, defval: '' });
+                    if (!aoa || aoa.length === 0) return;
+
+                    const sheetNameLower = String(sheetName || '').toLowerCase();
+
+                    if (sheetNameLower.includes('dod') || sheetNameLower.includes('day over day')) {
+                        parsed.dodRawAOA = aoa;
+                    } else if (sheetNameLower.includes('useful')) {
+                        parsed.usefulRawAOA = aoa;
+                    } else if (sheetNameLower.includes('resource') || sheetNameLower.includes('team')) {
+                        parsed.resourceRawAOA = aoa;
+                    } else if (sheetNameLower.includes('oos garda') || sheetNameLower.includes('national')) {
+                        parsed.oosRawAOA = aoa;
+                    } else if (sheetNameLower.includes('vro export')) {
+                        let headerIdx = -1;
+                        for (let i = 0; i < Math.min(20, aoa.length); i++) {
+                            const rowStr = aoa[i].join('').toLowerCase().replace(/[^a-z0-9]/g, '');
+                            const looksLikeVroHeader = (rowStr.includes('ronumber') || rowStr.includes('order') || rowStr.includes('afsro')) && (rowStr.includes('status') || rowStr.includes('unit'));
+                            if (looksLikeVroHeader) { headerIdx = i; break; }
+                        }
+                        if (headerIdx === -1) {
+                            for (let i = 0; i < Math.min(20, aoa.length); i++) {
+                                const rowStr = aoa[i].join('').toLowerCase().replace(/[^a-z0-9]/g, '');
+                                if (rowStr.includes('ronumber') || rowStr.includes('order') || rowStr.includes('customer')) { headerIdx = i; break; }
+                            }
+                        }
+                        if (headerIdx !== -1) {
+                            const headers = aoa[headerIdx];
+                            const repClassIndexes = detectRepClassColumnIndexes(headers);
+                            for (let i = headerIdx + 1; i < aoa.length; i++) {
+                                if (!aoa[i] || !Array.isArray(aoa[i])) continue;
+                                const obj = {};
+                                let hasData = false;
+                                obj.__rowValues = aoa[i];
+                                obj.__colEOriginalRepClass = aoa[i][repClassIndexes.originalIdx];
+                                obj.__colTTransferRepClass = aoa[i][repClassIndexes.transferIdx];
+                                obj.__colUWhyTransfer = aoa[i][repClassIndexes.whyIdx];
+                                obj.__repClassIndexDebug = repClassIndexes;
+                                obj.__orderFromColumnH = normalizeOrderKey(aoa[i][7]);
+                                obj.__indexedOriginalRepClass = aoa[i][4];
+                                headers.forEach((h, j) => {
+                                    const key = h ? String(h).trim() : '';
+                                    if (key) {
+                                        obj[key] = aoa[i][j];
+                                        if (aoa[i][j] !== '') hasData = true;
+                                    }
+                                });
+                                if (hasData) parsed.vroRaw.push(obj);
+                            }
+                        }
+                    } else if (sheetNameLower.includes('ro detail') || sheetNameLower.includes('rodetail')) {
+                        parsed.roDetailRaw = aoa;
+                    }
+                } catch (err) {
+                    console.warn('Skipped sheet due to parsing error:', sheetName, err);
+                }
+            });
+
+            return parsed;
+        }
+
+
         async function fetchData() {
             const statusEl = document.getElementById('upload-status');
             const uploadBox = document.getElementById('upload-box');
@@ -1100,7 +1113,7 @@
             statusEl.style.color = '#888';
 
             try {
-                const data = await fetchWorkbookBuffer();
+                const data = await fetchWorkbookBufferFromStorage('master_workFLOW.xlsx');
                 currentMasterWorkbookHash = hashArrayBufferForVersion(data);
                 refreshRepairClassSourceVersion();
 
@@ -1108,75 +1121,13 @@
 
                 const workbook = XLSX.read(data, { type: 'array' });
                 
-                let vroRaw = [];
-                repairClassTransferByOrder = {};
-                let roDetailRaw = [];
-                let resourceRawAOA = [];
-                let oosRawAOA = [];
-                let usefulRawAOA = [];
-                let dodRawAOA = [];
-
-                workbook.SheetNames.forEach(sheetName => {
-                    try {
-                        const aoa = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], { header: 1, defval: '' });
-                        if (!aoa || aoa.length === 0) return;
-
-                        const sheetNameLower = sheetName.toLowerCase();
-
-                        if (sheetNameLower.includes('dod') || sheetNameLower.includes('day over day')) {
-                            dodRawAOA = aoa;
-                        } else if (sheetNameLower.includes('useful')) {
-                            usefulRawAOA = aoa;
-                        } else if (sheetNameLower.includes('resource') || sheetNameLower.includes('team')) {
-                            resourceRawAOA = aoa;
-                        } else if (sheetNameLower.includes('oos garda') || sheetNameLower.includes('national')) {
-                            oosRawAOA = aoa;
-                        } else if (sheetNameLower.includes('vro export')) {
-                            let headerIdx = -1;
-                            for (let i = 0; i < Math.min(20, aoa.length); i++) {
-                                const rowStr = aoa[i].join('').toLowerCase().replace(/[^a-z0-9]/g, '');
-                                const looksLikeVroHeader = (rowStr.includes('ronumber') || rowStr.includes('order') || rowStr.includes('afsro')) && (rowStr.includes('status') || rowStr.includes('unit'));
-                                if (looksLikeVroHeader) { headerIdx = i; break; }
-                            }
-                            if (headerIdx === -1) {
-                                for (let i = 0; i < Math.min(20, aoa.length); i++) {
-                                    const rowStr = aoa[i].join('').toLowerCase().replace(/[^a-z0-9]/g, '');
-                                    if (rowStr.includes('ronumber') || rowStr.includes('order') || rowStr.includes('customer')) { headerIdx = i; break; }
-                                }
-                            }
-                            if (headerIdx !== -1) {
-                                const headers = aoa[headerIdx];
-                                const repClassIndexes = detectRepClassColumnIndexes(headers);
-                                for (let i = headerIdx + 1; i < aoa.length; i++) {
-                                    if (!aoa[i] || !Array.isArray(aoa[i])) continue;
-                                    const obj = {}; let hasData = false;
-                                    // Preserve the raw VRO Export row so repair-class compliance can read
-                                    // the exact Excel columns even when header text changes or there are blank headers.
-                                    obj.__rowValues = aoa[i];
-                                    obj.__colEOriginalRepClass = aoa[i][repClassIndexes.originalIdx];   // Header match or Column E fallback
-                                    obj.__colTTransferRepClass = aoa[i][repClassIndexes.transferIdx]; // Header match or Column T fallback
-                                    obj.__colUWhyTransfer = aoa[i][repClassIndexes.whyIdx];      // Header match or Column U fallback
-                                    obj.__repClassIndexDebug = repClassIndexes;
-                                    // Repair Class Compliance no longer uses transfer values from master_workFLOW.xlsx.
-                                    // The VRO Export row only supplies Order (Column H) and Original REPCLASS/Type (Column E).
-                                    // Transfer REPCLASS and WHY TRANSFER are loaded separately from AI Ref.xlsx.
-                                    obj.__orderFromColumnH = normalizeOrderKey(aoa[i][7]);
-                                    obj.__indexedOriginalRepClass = aoa[i][4];
-                                    headers.forEach((h, j) => {
-                                        const key = h ? String(h).trim() : '';
-                                        if (key) { obj[key] = aoa[i][j]; if (aoa[i][j] !== '') hasData = true; }
-                                    });
-                                    if (hasData) vroRaw.push(obj);
-                                }
-                            }
-                        } else if (sheetNameLower.includes('ro detail') || sheetNameLower.includes('rodetail')) {
-                            // Extract full array to safely index RO Detail regardless of headers
-                            roDetailRaw = aoa;
-                        }
-                    } catch (err) {
-                        console.warn('Skipped sheet due to parsing error:', sheetName, err);
-                    }
-                });
+                const parsedWorkbook = parseWorkbookSheets(workbook);
+                const vroRaw = parsedWorkbook.vroRaw;
+                const roDetailRaw = parsedWorkbook.roDetailRaw;
+                const resourceRawAOA = parsedWorkbook.resourceRawAOA;
+                const oosRawAOA = parsedWorkbook.oosRawAOA;
+                const usefulRawAOA = parsedWorkbook.usefulRawAOA;
+                const dodRawAOA = parsedWorkbook.dodRawAOA;
 
                 if (!usefulRawAOA.length && !resourceRawAOA.length && !oosRawAOA.length && !vroRaw.length) {
                     throw new Error(
@@ -1221,74 +1172,13 @@
                 refreshRepairClassSourceVersion();
                 const workbook = XLSX.read(data, { type: 'array' });
 
-                let vroRaw = [];
-                repairClassTransferByOrder = {};
-                let roDetailRaw = [];
-                let resourceRawAOA = [];
-                let oosRawAOA = [];
-                let usefulRawAOA = [];
-                let dodRawAOA = [];
-
-                workbook.SheetNames.forEach(sheetName => {
-                    try {
-                        const aoa = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], { header: 1, defval: '' });
-                        if (!aoa || aoa.length === 0) return;
-
-                        const sheetNameLower = sheetName.toLowerCase();
-
-                        if (sheetNameLower.includes('dod') || sheetNameLower.includes('day over day')) {
-                            dodRawAOA = aoa;
-                        } else if (sheetNameLower.includes('useful')) {
-                            usefulRawAOA = aoa;
-                        } else if (sheetNameLower.includes('resource') || sheetNameLower.includes('team')) {
-                            resourceRawAOA = aoa;
-                        } else if (sheetNameLower.includes('oos garda') || sheetNameLower.includes('national')) {
-                            oosRawAOA = aoa;
-                        } else if (sheetNameLower.includes('vro export')) {
-                            let headerIdx = -1;
-                            for (let i = 0; i < Math.min(20, aoa.length); i++) {
-                                const rowStr = aoa[i].join('').toLowerCase().replace(/[^a-z0-9]/g, '');
-                                const looksLikeVroHeader = (rowStr.includes('ronumber') || rowStr.includes('order') || rowStr.includes('afsro')) && (rowStr.includes('status') || rowStr.includes('unit'));
-                                if (looksLikeVroHeader) { headerIdx = i; break; }
-                            }
-                            if (headerIdx === -1) {
-                                for (let i = 0; i < Math.min(20, aoa.length); i++) {
-                                    const rowStr = aoa[i].join('').toLowerCase().replace(/[^a-z0-9]/g, '');
-                                    if (rowStr.includes('ronumber') || rowStr.includes('order') || rowStr.includes('customer')) { headerIdx = i; break; }
-                                }
-                            }
-                            if (headerIdx !== -1) {
-                                const headers = aoa[headerIdx];
-                                const repClassIndexes = detectRepClassColumnIndexes(headers);
-                                for (let i = headerIdx + 1; i < aoa.length; i++) {
-                                    if (!aoa[i] || !Array.isArray(aoa[i])) continue;
-                                    const obj = {}; let hasData = false;
-                                    // Preserve the raw VRO Export row so repair-class compliance can read
-                                    // the exact Excel columns even when header text changes or there are blank headers.
-                                    obj.__rowValues = aoa[i];
-                                    obj.__colEOriginalRepClass = aoa[i][repClassIndexes.originalIdx];   // Header match or Column E fallback
-                                    obj.__colTTransferRepClass = aoa[i][repClassIndexes.transferIdx]; // Header match or Column T fallback
-                                    obj.__colUWhyTransfer = aoa[i][repClassIndexes.whyIdx];      // Header match or Column U fallback
-                                    obj.__repClassIndexDebug = repClassIndexes;
-                                    // Repair Class Compliance no longer uses transfer values from master_workFLOW.xlsx.
-                                    // The VRO Export row only supplies Order (Column H) and Original REPCLASS/Type (Column E).
-                                    // Transfer REPCLASS and WHY TRANSFER are loaded separately from AI Ref.xlsx.
-                                    obj.__orderFromColumnH = normalizeOrderKey(aoa[i][7]);
-                                    obj.__indexedOriginalRepClass = aoa[i][4];
-                                    headers.forEach((h, j) => {
-                                        const key = h ? String(h).trim() : '';
-                                        if (key) { obj[key] = aoa[i][j]; if (aoa[i][j] !== '') hasData = true; }
-                                    });
-                                    if (hasData) vroRaw.push(obj);
-                                }
-                            }
-                        } else if (sheetNameLower.includes('ro detail') || sheetNameLower.includes('rodetail')) {
-                            roDetailRaw = aoa;
-                        }
-                    } catch (err) {
-                        console.warn('Skipped sheet due to parsing error:', sheetName, err);
-                    }
-                });
+                const parsedWorkbook = parseWorkbookSheets(workbook);
+                const vroRaw = parsedWorkbook.vroRaw;
+                const roDetailRaw = parsedWorkbook.roDetailRaw;
+                const resourceRawAOA = parsedWorkbook.resourceRawAOA;
+                const oosRawAOA = parsedWorkbook.oosRawAOA;
+                const usefulRawAOA = parsedWorkbook.usefulRawAOA;
+                const dodRawAOA = parsedWorkbook.dodRawAOA;
 
                 await loadAiRefFromFirebase();
                 processExcelData(vroRaw, roDetailRaw, resourceRawAOA, oosRawAOA, usefulRawAOA, dodRawAOA);
@@ -1339,72 +1229,11 @@
             globalManualGovernorLockState = JSON.parse(localStorage.getItem('manual_governor_lock') || '{}');
         } catch(e) {}
 
-        function initFirebaseSync() {
-            try {
-                if (typeof firebase !== 'undefined') {
-                    db = firebase.database();
-
-                    db.ref('roChecks').on('value', (snapshot) => {
-                        globalRoCheckState = snapshot.val() || {};
-                        try { localStorage.setItem('workflow_checks', JSON.stringify(globalRoCheckState)); } catch(e) {}
-                        updateAllStatusBadges();
-                    });
-
-                    db.ref('roNotes').on('value', (snapshot) => {
-                        globalRoNotesState = snapshot.val() || {};
-                        try { localStorage.setItem('workflow_notes', JSON.stringify(globalRoNotesState)); } catch(e) {}
-                        updateAllNoteButtons();
-                    });
-
-                    db.ref('workflowActivity').on('value', (snapshot) => {
-                        globalWorkflowActivityState = snapshot.val() || {};
-                        // skip localStorage persistence for workflowActivity; can be large and freeze the page
-                        updateAllNoteButtons();
-                        if (processedData && processedData.length > 0) {
-                            scheduleActiveViewRefresh(350);
-                        }
-                    });
-
-
-                    db.ref('repClassReviewStatus').on('value', (snapshot) => {
-                        globalRepairClassReviewState = snapshot.val() || {};
-                        // skip synchronous localStorage persistence for repClassReviewStatus; Firebase is source of truth
-                        updateAllRepairClassBadges();
-                        if (processedData && processedData.length > 0) {
-                            scheduleRepairClassAccountabilityAudit(900);
-                            scheduleActiveViewRefresh(350);
-                        }
-                    });
-
-                    db.ref('spendGovernor/manualLock').on('value', (snapshot) => {
-                        globalManualGovernorLockState = snapshot.val() || {};
-                        try { localStorage.setItem('manual_governor_lock', JSON.stringify(globalManualGovernorLockState)); } catch(e) {}
-                        checkAndAutoResetManualGovernorLock();
-                        if (processedData && processedData.length > 0) {
-                            scheduleActiveViewRefresh(350);
-                        }
-                    });
-
-                    db.ref('spendGovernor/unlimitedSpendMode').on('value', (snapshot) => {
-                        globalUnlimitedSpendState = snapshot.val() || {};
-                        try { localStorage.setItem('unlimited_spend_mode', JSON.stringify(globalUnlimitedSpendState)); } catch(e) {}
-                        checkAndAutoResetUnlimitedSpendMode();
-                        if (processedData && processedData.length > 0) {
-                            scheduleActiveViewRefresh(350);
-                        }
-                    });
-
-                    if (!window.__manualGovernorResetTimer) {
-                        window.__manualGovernorResetTimer = setInterval(() => {
-                            checkAndAutoResetManualGovernorLock();
-                            checkAndAutoResetUnlimitedSpendMode();
-                        }, 60000);
-                    }
-                }
-            } catch (error) {
-                console.warn("Firebase Init blocked.", error);
-            }
-        }
+        // Final implementations are assigned by the no-realtime mode below.
+        // Keep lightweight stubs so function references stay safe during script initialization.
+        let initFirebaseSync = function() {};
+        let scheduleActiveViewRefresh = function() {};
+        let logWorkflowActivity = function() { return Promise.resolve(); };
 
         function escapeHtml(value) {
             return String(value === undefined || value === null ? '' : value)
@@ -1552,66 +1381,6 @@
             container.innerHTML = html;
         }
 
-        function logWorkflowActivity(safeRo, actionType, noteText = '', meta = {}) {
-            const now = new Date();
-            const nowIso = now.toISOString();
-            const dateKey = getLocalDateKey(now);
-            const roContext = getRoContextBySafeRo(safeRo);
-            const assignedOwner = meta.assignedOwner || (roContext && roContext.kpiOwners && roContext.kpiOwners.length ? roContext.kpiOwners[0] : '') || '';
-            const roNumber = meta.roNumber || (roContext ? roContext.roNum : safeRo);
-            const entry = {
-                timestamp: nowIso,
-                dateKey: dateKey,
-                actionType: actionType,
-                noteText: String(noteText || '').trim(),
-                roNumber: roNumber || '',
-                unitNo: meta.unitNo || (roContext ? roContext.unitNo : '') || '',
-                branch: meta.branch || (roContext ? roContext.branch : '') || '',
-                assignedOwner: assignedOwner,
-                source: meta.source || 'workflow-ui'
-            };
-
-            if (db) {
-                const entryRef = db.ref(`workflowActivity/${safeRo}/activityLog/${dateKey}`).push();
-                const updates = {};
-                updates[`workflowActivity/${safeRo}/activityLog/${dateKey}/${entryRef.key}`] = entry;
-                updates[`workflowActivity/${safeRo}/lastTouchedAt`] = nowIso;
-                updates[`workflowActivity/${safeRo}/lastTouchedDate`] = dateKey;
-                updates[`workflowActivity/${safeRo}/lastTouchedByOwner`] = assignedOwner;
-                updates[`workflowActivity/${safeRo}/lastActionType`] = actionType;
-                updates[`workflowActivity/${safeRo}/roNumber`] = roNumber || '';
-                updates[`workflowActivity/${safeRo}/unitNo`] = entry.unitNo || '';
-                updates[`workflowActivity/${safeRo}/branch`] = entry.branch || '';
-                if (actionType === 'NOTE_ADDED' && isMeaningfulNote(noteText)) {
-                    updates[`workflowActivity/${safeRo}/hasMeaningfulNote`] = true;
-                    updates[`workflowActivity/${safeRo}/lastNoteAt`] = nowIso;
-                    updates[`workflowActivity/${safeRo}/lastNoteDate`] = dateKey;
-                    updates[`workflowActivity/${safeRo}/latestNote`] = String(noteText || '').trim();
-                }
-                return db.ref().update(updates);
-            }
-
-            if (!globalWorkflowActivityState[safeRo]) globalWorkflowActivityState[safeRo] = { activityLog: {} };
-            if (!globalWorkflowActivityState[safeRo].activityLog) globalWorkflowActivityState[safeRo].activityLog = {};
-            if (!globalWorkflowActivityState[safeRo].activityLog[dateKey]) globalWorkflowActivityState[safeRo].activityLog[dateKey] = {};
-            const localKey = 'local_' + now.getTime();
-            globalWorkflowActivityState[safeRo].activityLog[dateKey][localKey] = entry;
-            globalWorkflowActivityState[safeRo].lastTouchedAt = nowIso;
-            globalWorkflowActivityState[safeRo].lastTouchedDate = dateKey;
-            globalWorkflowActivityState[safeRo].lastTouchedByOwner = assignedOwner;
-            globalWorkflowActivityState[safeRo].lastActionType = actionType;
-            if (actionType === 'NOTE_ADDED' && isMeaningfulNote(noteText)) {
-                globalWorkflowActivityState[safeRo].hasMeaningfulNote = true;
-                globalWorkflowActivityState[safeRo].lastNoteAt = nowIso;
-                globalWorkflowActivityState[safeRo].lastNoteDate = dateKey;
-                globalWorkflowActivityState[safeRo].latestNote = String(noteText || '').trim();
-            }
-            // skip localStorage persistence for workflowActivity; can be large and freeze the page
-            updateAllNoteButtons();
-            refreshActiveViewPreservingDrilldown();
-            return Promise.resolve();
-        }
-
         function isRealOpenRoForDailyCompliance(ro) {
             if (!ro || !ro.isOpen || !ro.roNum) return false;
             const rn = String(ro.roNum || '');
@@ -1709,7 +1478,6 @@
                     ${lockNote}
                 </div>`;
         }
-
 
 
         function normalizeHeaderKey(value) {
@@ -2892,19 +2660,9 @@
             return !!info.active;
         }
 
-        function toggleUnlimitedSpendMode() {
-            const currentlyActive = isUnlimitedSpendModeActive();
-            const entered = window.prompt(`Enter password to ${currentlyActive ? 'turn OFF' : 'turn ON'} unlimited spend mode for this week:`);
-            if (entered === null) return;
-            let expectedPassword = '';
-            try { expectedPassword = atob(MANUAL_GOVERNOR_PASSWORD_B64); } catch(e) { expectedPassword = ''; }
-            if (entered !== expectedPassword) {
-                alert('Incorrect password. Unlimited spend mode was not changed.');
-                return;
-            }
 
+        function buildGovernorTogglePayload(nextEnabled) {
             const nowIso = new Date().toISOString();
-            const nextEnabled = !currentlyActive;
             const payload = {
                 enabled: nextEnabled,
                 lastChangedAt: nowIso,
@@ -2921,15 +2679,68 @@
                 payload.disabledBy = 'Manual Toggle';
             }
 
+            return payload;
+        }
+
+        function verifyGovernorPassword(promptText, errorText) {
+            const entered = window.prompt(promptText);
+            if (entered === null) return false;
+            let expectedPassword = '';
+            try { expectedPassword = atob(MANUAL_GOVERNOR_PASSWORD_B64); } catch(e) { expectedPassword = ''; }
+            if (entered !== expectedPassword) {
+                alert(errorText);
+                return false;
+            }
+            return true;
+        }
+
+        function commitGovernorToggle(firebasePath, stateGetter, stateSetter, localStorageKey, payload, failureLabel) {
             if (db) {
-                db.ref('spendGovernor/unlimitedSpendMode').update(payload)
+                db.ref(firebasePath).update(payload)
                     .then(() => refreshActiveViewPreservingDrilldown())
-                    .catch(err => alert('Unlimited spend mode update failed: ' + err.message));
+                    .catch(err => alert(failureLabel + ' update failed: ' + err.message));
             } else {
-                globalUnlimitedSpendState = Object.assign({}, globalUnlimitedSpendState || {}, payload);
-                try { localStorage.setItem('unlimited_spend_mode', JSON.stringify(globalUnlimitedSpendState)); } catch(e) {}
+                const nextState = Object.assign({}, stateGetter() || {}, payload);
+                stateSetter(nextState);
+                try { localStorage.setItem(localStorageKey, JSON.stringify(nextState)); } catch(e) {}
                 refreshActiveViewPreservingDrilldown();
             }
+        }
+
+        function toggleUnlimitedSpendMode() {
+            const currentlyActive = isUnlimitedSpendModeActive();
+            if (!verifyGovernorPassword(
+                `Enter password to ${currentlyActive ? 'turn OFF' : 'turn ON'} unlimited spend mode for this week:`,
+                'Incorrect password. Unlimited spend mode was not changed.'
+            )) return;
+
+            const payload = buildGovernorTogglePayload(!currentlyActive);
+            commitGovernorToggle(
+                'spendGovernor/unlimitedSpendMode',
+                () => globalUnlimitedSpendState,
+                value => { globalUnlimitedSpendState = value; },
+                'unlimited_spend_mode',
+                payload,
+                'Unlimited spend mode'
+            );
+        }
+
+        function toggleManualGovernorLock() {
+            const currentlyActive = isManualGovernorLockActive();
+            if (!verifyGovernorPassword(
+                `Enter password to ${currentlyActive ? 'turn OFF' : 'turn ON'} the manual governor lock:`,
+                'Incorrect password. Manual governor lock was not changed.'
+            )) return;
+
+            const payload = buildGovernorTogglePayload(!currentlyActive);
+            commitGovernorToggle(
+                'spendGovernor/manualLock',
+                () => globalManualGovernorLockState,
+                value => { globalManualGovernorLockState = value; },
+                'manual_governor_lock',
+                payload,
+                'Manual governor lock'
+            );
         }
 
         function getSpendGovernorLockReason() {
@@ -2942,46 +2753,6 @@
             return getSpendGovernorLockReason() === 'MANUAL_LOCK'
                 ? '🔒 MANUAL GOVERNOR LOCK ACTIVE - PRE-WIP WORK IS LOCKED'
                 : '🔒 WEEKLY CAP MET - PRE-WIP WORK IS LOCKED';
-        }
-
-        function toggleManualGovernorLock() {
-            const currentlyActive = isManualGovernorLockActive();
-            const entered = window.prompt(`Enter password to ${currentlyActive ? 'turn OFF' : 'turn ON'} the manual governor lock:`);
-            if (entered === null) return;
-            let expectedPassword = '';
-            try { expectedPassword = atob(MANUAL_GOVERNOR_PASSWORD_B64); } catch(e) { expectedPassword = ''; }
-            if (entered !== expectedPassword) {
-                alert('Incorrect password. Manual governor lock was not changed.');
-                return;
-            }
-
-            const nowIso = new Date().toISOString();
-            const nextEnabled = !currentlyActive;
-            const payload = {
-                enabled: nextEnabled,
-                lastChangedAt: nowIso,
-                lastChangedBy: 'Manual Toggle'
-            };
-
-            if (nextEnabled) {
-                payload.setAt = nowIso;
-                payload.setBy = 'Manual Toggle';
-                payload.expiresAt = getManualGovernorLockExpiryIso(new Date());
-                payload.resetReason = '';
-            } else {
-                payload.disabledAt = nowIso;
-                payload.disabledBy = 'Manual Toggle';
-            }
-
-            if (db) {
-                db.ref('spendGovernor/manualLock').update(payload)
-                    .then(() => refreshActiveViewPreservingDrilldown())
-                    .catch(err => alert('Manual governor lock update failed: ' + err.message));
-            } else {
-                globalManualGovernorLockState = Object.assign({}, globalManualGovernorLockState || {}, payload);
-                try { localStorage.setItem('manual_governor_lock', JSON.stringify(globalManualGovernorLockState)); } catch(e) {}
-                refreshActiveViewPreservingDrilldown();
-            }
         }
 
         function safeFirebaseKey(value) {
@@ -4927,11 +4698,6 @@
                 return;
             }
             triggerViewUpdate();
-        }
-
-        function scheduleActiveViewRefresh(delayMs = 250) {
-            clearTimeout(activeViewRefreshTimer);
-            activeViewRefreshTimer = setTimeout(refreshActiveViewWithoutDrilldownCollapse, delayMs);
         }
 
         function scheduleRepairClassAccountabilityAudit(delayMs = 900) {
@@ -6949,94 +6715,8 @@
            PERFORMANCE HOTFIX - nonblocking Firebase sync + repair-class audit
            ============================================================ */
         (function workflowPerformanceHotfix(){
-            let firebaseInitialSyncComplete = false;
-            let firebaseSyncInitializedOnce = false;
-            let firebaseReadyTimer = null;
             let auditChunkTimer = null;
 
-            function activeViewIdSafe() {
-                try { return getActiveViewId ? getActiveViewId() : ''; } catch(e) { return ''; }
-            }
-
-            // Replace Firebase sync with a version that does not force full page rebuilds during initial snapshots.
-            initFirebaseSync = function() {
-                try {
-                    if (firebaseSyncInitializedOnce || typeof firebase === 'undefined') return;
-                    firebaseSyncInitializedOnce = true;
-                    db = firebase.database();
-                    firebaseInitialSyncComplete = false;
-                    clearTimeout(firebaseReadyTimer);
-                    firebaseReadyTimer = setTimeout(() => {
-                        firebaseInitialSyncComplete = true;
-                        if (processedData && processedData.length > 0) scheduleRepairClassAccountabilityAudit(9000);
-                    }, 3500);
-
-                    db.ref('roChecks').on('value', (snapshot) => {
-                        globalRoCheckState = snapshot.val() || {};
-                        try { localStorage.setItem('workflow_checks', JSON.stringify(globalRoCheckState)); } catch(e) {}
-                        updateAllStatusBadges();
-                    });
-
-                    db.ref('roNotes').on('value', (snapshot) => {
-                        globalRoNotesState = snapshot.val() || {};
-                        try { localStorage.setItem('workflow_notes', JSON.stringify(globalRoNotesState)); } catch(e) {}
-                        updateAllNoteButtons();
-                    });
-
-                    db.ref('workflowActivity').on('value', (snapshot) => {
-                        globalWorkflowActivityState = snapshot.val() || {};
-                        updateAllNoteButtons();
-                        if (firebaseInitialSyncComplete && processedData && processedData.length > 0 && activeViewIdSafe() !== 'person-view') {
-                            scheduleActiveViewRefresh(900);
-                        }
-                    });
-
-                    db.ref('repClassReviewStatus').on('value', (snapshot) => {
-                        globalRepairClassReviewState = snapshot.val() || {};
-                        updateAllRepairClassBadges();
-                        if (firebaseInitialSyncComplete && processedData && processedData.length > 0) {
-                            scheduleRepairClassAccountabilityAudit(10000);
-                            if (activeViewIdSafe() !== 'person-view') scheduleActiveViewRefresh(900);
-                        }
-                    });
-
-                    db.ref('spendGovernor/manualLock').on('value', (snapshot) => {
-                        globalManualGovernorLockState = snapshot.val() || {};
-                        try { localStorage.setItem('manual_governor_lock', JSON.stringify(globalManualGovernorLockState)); } catch(e) {}
-                        checkAndAutoResetManualGovernorLock();
-                        if (firebaseInitialSyncComplete && processedData && processedData.length > 0 && activeViewIdSafe() !== 'person-view') scheduleActiveViewRefresh(900);
-                    });
-
-                    db.ref('spendGovernor/unlimitedSpendMode').on('value', (snapshot) => {
-                        globalUnlimitedSpendState = snapshot.val() || {};
-                        try { localStorage.setItem('unlimited_spend_mode', JSON.stringify(globalUnlimitedSpendState)); } catch(e) {}
-                        checkAndAutoResetUnlimitedSpendMode();
-                        if (firebaseInitialSyncComplete && processedData && processedData.length > 0 && activeViewIdSafe() !== 'person-view') scheduleActiveViewRefresh(900);
-                    });
-
-                    if (!window.__manualGovernorResetTimer) {
-                        window.__manualGovernorResetTimer = setInterval(() => {
-                            checkAndAutoResetManualGovernorLock();
-                            checkAndAutoResetUnlimitedSpendMode();
-                        }, 60000);
-                    }
-                } catch (error) {
-                    console.warn('Firebase Init blocked.', error);
-                }
-            };
-
-            // Keep drilldowns stable: Firebase updates only update visible badges/buttons while inside a drilldown.
-            scheduleActiveViewRefresh = function(delayMs = 500) {
-                clearTimeout(activeViewRefreshTimer);
-                activeViewRefreshTimer = setTimeout(() => {
-                    if (activeViewIdSafe() === 'person-view') {
-                        updateAllNoteButtons();
-                        updateAllRepairClassBadges();
-                        return;
-                    }
-                    triggerViewUpdate();
-                }, Math.max(delayMs, 500));
-            };
 
             // Nonblocking audit: process in small chunks and write only records that actually changed.
             auditRepairClassReviewAccountability = function() {
@@ -7221,7 +6901,6 @@
                 return;
             };
 
-            const originalLogWorkflowActivityNoRealtime = logWorkflowActivity;
             logWorkflowActivity = function(safeRo, actionType, noteText = '', meta = {}) {
                 const now = new Date();
                 const nowIso = now.toISOString();
