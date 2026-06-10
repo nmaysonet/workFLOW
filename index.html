@@ -174,15 +174,15 @@
         .filter-btn.active:hover { background-color: var(--gold-hover); }
 
         .kpi-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 20px; padding-top: 10px;}
-        .kpi-tile { background: #fff; padding: 25px 20px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); cursor: pointer; border-top: 4px solid var(--gold) !important; transition: transform 0.18s ease, box-shadow 0.18s ease, border-top-color 0.18s ease; display: flex; flex-direction: column; position: relative; backface-visibility: hidden; transform: translateZ(0); will-change: transform; }
-        .kpi-tile:hover { transform: translate3d(0,-4px,0) scale(1.006); box-shadow: 0 12px 20px rgba(0,0,0,0.12); border-top-color: #000000 !important; z-index: 5; }
+        .kpi-tile { background: #fff; padding: 25px 20px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); cursor: pointer; border-top: 4px solid var(--gold) !important; transition: transform 0.16s ease, box-shadow 0.16s ease, border-top-color 0.16s ease; display: flex; flex-direction: column; position: relative; backface-visibility: hidden; transform: translateY(0); }
+        .kpi-tile:hover { transform: translateY(-6px); box-shadow: 0 14px 24px rgba(0,0,0,0.14); border-top-color: #000000 !important; z-index: 20; }
         .kpi-name { font-size: 20px; font-weight: 800; margin-bottom: 15px; color: #333; }
         
         .home-dashboard-header { display: flex; justify-content: space-between; align-items: center; margin-top: 40px; margin-bottom: 10px; padding-bottom: 10px; border-bottom: 2px solid var(--border); flex-wrap: wrap; gap: 15px;}
         .filter-select { padding: 8px 15px; border-radius: 4px; border: 1px solid #ccc; font-weight: 700; font-size: 14px; background: #fff;}
         .home-kpi-container { display: flex; gap: 15px; flex-wrap: nowrap; width: 100%; overflow-x: auto; padding-top: 10px; padding-bottom: 15px; }
-        .home-master-tile { flex: 1; min-width: 360px; padding: 20px; cursor: pointer; border-top: 4px solid var(--gold) !important; box-shadow: 0 1px 3px rgba(0,0,0,0.1); transition: transform 0.18s ease, box-shadow 0.18s ease, border-top-color 0.18s ease; position: relative; backface-visibility: hidden; transform: translateZ(0); will-change: transform; }
-        .home-master-tile:hover { transform: translate3d(0,-4px,0) scale(1.006); box-shadow: 0 12px 20px rgba(0,0,0,0.12); border-top-color: #000000 !important; z-index: 5; }
+        .home-master-tile { flex: 1; min-width: 360px; padding: 20px; cursor: pointer; border-top: 4px solid var(--gold) !important; box-shadow: 0 1px 3px rgba(0,0,0,0.1); transition: transform 0.16s ease, box-shadow 0.16s ease, border-top-color 0.16s ease; position: relative; backface-visibility: hidden; transform: translateY(0); }
+        .home-master-tile:hover { transform: translateY(-6px); box-shadow: 0 14px 24px rgba(0,0,0,0.14); border-top-color: #000000 !important; z-index: 20; }
         .home-master-tile .kpi-name { font-size: 18px; margin-bottom: 15px; }
 
         .kpi-top-metrics { display: flex; gap: 10px; margin-bottom: 15px; align-items: stretch; }
@@ -336,17 +336,16 @@
         .grouped-ro-item { margin-bottom: 8px; }
         .grouped-ro-item:last-child { margin-bottom: 0; }
 
-        /* Stable hover behavior: cards lift forward; small controls do not move/jitter. */
+        /* Stable hover behavior: cards pull forward without scaling, which avoids jitter near tile edges. */
         .kpi-tile, .home-master-tile {
             position: relative;
-            will-change: transform;
-            transition: transform 0.18s ease, box-shadow 0.18s ease, border-top-color 0.18s ease !important;
+            transition: transform 0.16s ease, box-shadow 0.16s ease, border-top-color 0.16s ease !important;
         }
         .kpi-tile:hover, .home-master-tile:hover {
-            transform: translate3d(0,-4px,0) scale(1.006) !important;
-            box-shadow: 0 12px 20px rgba(0,0,0,0.12);
+            transform: translateY(-6px) !important;
+            box-shadow: 0 14px 24px rgba(0,0,0,0.14);
             border-top-color: #000000 !important;
-            z-index: 5;
+            z-index: 20;
         }
         .billing-kpi.clickable, .highlight-box.clickable, .stat-box.clickable, .workflow-compliance-mini.clickable,
         .status-toggle, .note-btn, .repair-class-toggle {
@@ -5982,15 +5981,19 @@
         window.clearDrilldownMetricFilter = clearDrilldownMetricFilter;
 
         window.openTileMetricFromEvent = function(event, metric) {
+            // The document-level capture listener has event.currentTarget === document.
+            // Always anchor to event.target/the clicked square so the parent tile and owner are found.
+            const rawTarget = event && event.target ? event.target : null;
+            const metricEl = rawTarget && rawTarget.closest ? rawTarget.closest('.workflow-compliance-mini.clickable') : null;
+            const tile = metricEl ? metricEl.closest('.kpi-tile, .home-master-tile') : (rawTarget && rawTarget.closest ? rawTarget.closest('.kpi-tile, .home-master-tile') : null);
+            if (!tile) return false;
+
             if (event) {
                 event.preventDefault();
                 event.stopPropagation();
                 if (typeof event.stopImmediatePropagation === 'function') event.stopImmediatePropagation();
             }
-            const sourceEl = event && (event.currentTarget || event.target) ? (event.currentTarget || event.target) : null;
-            const metricEl = sourceEl ? sourceEl.closest('.workflow-compliance-mini.clickable') : null;
-            const tile = sourceEl ? sourceEl.closest('.kpi-tile, .home-master-tile') : null;
-            if (!tile) return false;
+
             const owner = tile.dataset.drilldownOwner || '';
             const parentView = tile.dataset.parentView || 'home-view';
             if (!owner) return false;
