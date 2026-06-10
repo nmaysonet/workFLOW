@@ -7226,10 +7226,11 @@
                     .catch(err => console.warn('Dispatch status update failed:', err));
             };
 
-            window.saveNote = async function() {
+            window.saveNote = function() {
                 if (!currentEditingRo) return;
                 const saveBtn = document.querySelector('#note-modal .btn-save');
-                let noteText = document.getElementById('note-textarea').value.trim();
+                const textarea = document.getElementById('note-textarea');
+                let noteText = textarea ? textarea.value.trim() : '';
                 if (!isMeaningfulNote(noteText)) {
                     alert('Please enter a meaningful update with at least 15 characters.');
                     return;
@@ -7243,32 +7244,37 @@
 
                 const safeRo = currentEditingRo;
                 const roNum = currentEditingRoNum || currentEditingRo;
-                try {
-                    if (saveBtn) { saveBtn.disabled = true; saveBtn.innerText = 'Saving...'; }
 
-                    // Write locally for immediate UI response AND publish to Firebase immediately.
-                    // Firebase remains the source of truth; live listeners update every open browser.
-                    globalRoNotesState = Object.assign({}, globalRoNotesState || {}, { [safeRo]: noteText });
-                    scheduleRealtimeComplianceRefresh('local-note-save');
-
-                    const writes = [];
-                    if (db) writes.push(db.ref('roNotes/' + safeRo).set(noteText));
-                    writes.push(logWorkflowActivity(safeRo, 'NOTE_ADDED', noteText, {
-                        source: 'message-button',
-                        roNumber: roNum
-                    }));
-
-                    await Promise.all(writes);
-
-                    document.getElementById('note-textarea').value = '';
-                    renderNoteActivityLog(safeRo);
-                    closeNoteModal();
-                } catch (err) {
-                    console.warn('Note save failed:', err);
-                    alert('Could not save note to Firebase. Please try again.');
-                } finally {
-                    if (saveBtn) { saveBtn.disabled = false; saveBtn.innerText = 'Save Update'; }
+                // Commit to the in-page state immediately so the user is never stuck waiting on Firebase latency.
+                // The Firebase writes are still fired immediately and live listeners will update other open browsers.
+                if (saveBtn) { saveBtn.disabled = true; saveBtn.innerText = 'Saving...'; }
+                globalRoNotesState = Object.assign({}, globalRoNotesState || {}, { [safeRo]: noteText });
+                if (globalWorkflowActivityState && globalWorkflowActivityState[safeRo]) {
+                    globalWorkflowActivityState[safeRo].hasMeaningfulNote = true;
+                    globalWorkflowActivityState[safeRo].latestNote = noteText;
+                    globalWorkflowActivityState[safeRo].lastNoteAt = new Date().toISOString();
+                    globalWorkflowActivityState[safeRo].lastNoteDate = getTodayKey();
                 }
+                scheduleRealtimeComplianceRefresh('local-note-save');
+                try { updateAllNoteButtons(); } catch(e) {}
+                try { refreshActiveViewPreservingDrilldown(); } catch(e) {}
+                if (textarea) textarea.value = '';
+                closeNoteModal();
+                if (saveBtn) { saveBtn.disabled = false; saveBtn.innerText = 'Save Update'; }
+
+                // Publish to Firebase in the background. Do not await these writes; waiting is what caused
+                // the modal to stay stuck on Saving when Firebase was slow or a write promise stalled.
+                if (db) {
+                    db.ref('roNotes/' + safeRo).set(noteText)
+                        .catch(err => {
+                            console.warn('Firebase roNotes write failed:', err);
+                            alert('Warning: the note updated on this screen, but Firebase did not confirm the save. Please refresh and verify this RO note.');
+                        });
+                }
+                Promise.resolve(logWorkflowActivity(safeRo, 'NOTE_ADDED', noteText, {
+                    source: 'message-button',
+                    roNumber: roNum
+                })).catch(err => console.warn('Firebase workflow activity write failed:', err));
             };
 
             // Prevent any leftover auto-reset interval from running after the initial load.
