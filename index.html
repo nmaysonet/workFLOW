@@ -174,14 +174,14 @@
 
         .kpi-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 20px; padding-top: 10px;}
         .kpi-tile { background: #fff; padding: 25px 20px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); cursor: pointer; border-top: 4px solid var(--gold) !important; transition: transform 0.2s ease, box-shadow 0.2s ease, border-top-color 0.2s ease; display: flex; flex-direction: column; }
-        .kpi-tile:hover { transform: translateY(-5px); box-shadow: 0 12px 20px rgba(0,0,0,0.12); border-top-color: #000000 !important; }
+        .kpi-tile:hover { transform: none; box-shadow: 0 3px 8px rgba(0,0,0,0.10); border-top-color: var(--gold) !important; }
         .kpi-name { font-size: 20px; font-weight: 800; margin-bottom: 15px; color: #333; }
         
         .home-dashboard-header { display: flex; justify-content: space-between; align-items: center; margin-top: 40px; margin-bottom: 10px; padding-bottom: 10px; border-bottom: 2px solid var(--border); flex-wrap: wrap; gap: 15px;}
         .filter-select { padding: 8px 15px; border-radius: 4px; border: 1px solid #ccc; font-weight: 700; font-size: 14px; background: #fff;}
         .home-kpi-container { display: flex; gap: 15px; flex-wrap: nowrap; width: 100%; overflow-x: auto; padding-top: 10px; padding-bottom: 15px; }
         .home-master-tile { flex: 1; min-width: 360px; padding: 20px; cursor: pointer; border-top: 4px solid var(--gold) !important; box-shadow: 0 1px 3px rgba(0,0,0,0.1); transition: transform 0.2s ease, box-shadow 0.2s ease, border-top-color 0.2s ease; }
-        .home-master-tile:hover { transform: translateY(-5px); box-shadow: 0 12px 20px rgba(0,0,0,0.12); border-top-color: #000000 !important; }
+        .home-master-tile:hover { transform: none; box-shadow: 0 3px 8px rgba(0,0,0,0.10); border-top-color: var(--gold) !important; }
         .home-master-tile .kpi-name { font-size: 18px; margin-bottom: 15px; }
 
         .kpi-top-metrics { display: flex; gap: 10px; margin-bottom: 15px; align-items: stretch; }
@@ -235,14 +235,14 @@
         .badge-ecd-missing { background-color: #fff3cd; color: #d9534f; padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: 800; border: 1px solid #d9534f; white-space: nowrap; display: inline-block; }
         
         .status-toggle { cursor: pointer; margin-right: 8px; user-select: none; transition: 0.2s; box-shadow: 0 1px 3px rgba(0,0,0,0.2); display: inline-block; text-align: center; min-width: 85px; font-size: 10px; letter-spacing: 0.5px;}
-        .status-toggle:hover { opacity: 0.8; transform: translateY(-1px); }
+        .status-toggle:hover { opacity: 0.9; transform: none; }
         .status-pending { background-color: var(--urgent-red); color: white; border: 1px solid #c9302c; }
         .status-dispatched { background-color: var(--low-green); color: white; border: 1px solid #4cae4c; }
 
         .note-btn { background: #fff0f0; color: var(--urgent-red); border: 1px solid var(--urgent-red); border-radius: 4px; cursor: pointer; padding: 2px 6px; font-size: 12px; transition: 0.2s; opacity: 1; box-shadow: 0 1px 3px rgba(217,83,79,0.18);}
-        .note-btn:hover { background: #ffe1e1; opacity: 1; transform: translateY(-1px); }
+        .note-btn:hover { background: #ffe1e1; opacity: 1; transform: none; }
         .note-btn.has-note { background: #f0fdf4; color: #15803d; border-color: #22c55e; opacity: 1; box-shadow: 0 1px 3px rgba(34,197,94,0.22); }
-        .note-btn.has-note:hover { background: #dcfce7; }
+        .note-btn.has-note:hover { background: #dcfce7; transform:none; }
 
         .repair-class-cell { display:flex; flex-direction:column; gap:5px; min-width:120px; align-items:flex-start; }
         .repair-class-name { font-size:11px; font-weight:900; color:#334155; line-height:1.2; }
@@ -253,7 +253,7 @@
         .repair-class-toggle.status-pending { background-color:var(--urgent-red); color:white; border:1px solid #c9302c; }
         .repair-class-toggle.status-dispatched, .repair-class-toggle.status-accepted { background-color:var(--low-green); color:white; border:1px solid #4cae4c; cursor:default; }
         .repair-class-toggle.status-declined { background-color:#f97316; color:white; border:1px solid #ea580c; cursor:default; }
-        .repair-class-toggle:hover { opacity:.9; transform:translateY(-1px); }
+        .repair-class-toggle:hover { opacity:.92; transform:none; }
         .repair-class-toggle.status-accepted:hover, .repair-class-toggle.status-declined:hover, .repair-class-toggle.status-dispatched:hover { transform:none; opacity:1; }
 
         .repair-class-review-modal { background:rgba(15,23,42,0.72); }
@@ -330,6 +330,10 @@
         .modal-actions { display: flex; justify-content: flex-end; gap: 10px; }
         .grouped-ro-item { margin-bottom: 8px; }
         .grouped-ro-item:last-child { margin-bottom: 0; }
+
+        /* Performance/stability: do not move cards/buttons on hover. Moving transforms caused tile jitter on dense queue pages. */
+        .kpi-tile, .home-master-tile, .highlight-box, .stat-box, .workflow-compliance-mini, .status-toggle, .note-btn, .repair-class-toggle { will-change: auto !important; }
+        .kpi-tile:hover, .home-master-tile:hover, .highlight-box:hover, .stat-box:hover, .workflow-compliance-mini:hover, .status-toggle:hover, .note-btn:hover, .repair-class-toggle:hover { transform: none !important; }
     </style>
 </head>
 <body>
@@ -1307,6 +1311,8 @@
         let currentAiRefWorkbookHash = '';
         let currentRepairClassSourceVersion = '';
         let repClassAccountabilityAuditInFlight = false;
+        let repClassAccountabilityAuditTimer = null;
+        let activeViewRefreshTimer = null;
         let globalSpendChangeLogRows = [];
         let globalWeeklySpendHistoryRows = [];
         let expandedWeeklySpendWeeks = {};
@@ -1346,7 +1352,7 @@
                         try { localStorage.setItem('workflow_activity', JSON.stringify(globalWorkflowActivityState)); } catch(e) {}
                         updateAllNoteButtons();
                         if (processedData && processedData.length > 0) {
-                            refreshActiveViewPreservingDrilldown();
+                            scheduleActiveViewRefresh(350);
                         }
                     });
 
@@ -1356,8 +1362,8 @@
                         try { localStorage.setItem('repclass_review_status', JSON.stringify(globalRepairClassReviewState)); } catch(e) {}
                         updateAllRepairClassBadges();
                         if (processedData && processedData.length > 0) {
-                            auditRepairClassReviewAccountability();
-                            refreshActiveViewPreservingDrilldown();
+                            scheduleRepairClassAccountabilityAudit(900);
+                            scheduleActiveViewRefresh(350);
                         }
                     });
 
@@ -1366,7 +1372,7 @@
                         try { localStorage.setItem('manual_governor_lock', JSON.stringify(globalManualGovernorLockState)); } catch(e) {}
                         checkAndAutoResetManualGovernorLock();
                         if (processedData && processedData.length > 0) {
-                            refreshActiveViewPreservingDrilldown();
+                            scheduleActiveViewRefresh(350);
                         }
                     });
 
@@ -1375,7 +1381,7 @@
                         try { localStorage.setItem('unlimited_spend_mode', JSON.stringify(globalUnlimitedSpendState)); } catch(e) {}
                         checkAndAutoResetUnlimitedSpendMode();
                         if (processedData && processedData.length > 0) {
-                            refreshActiveViewPreservingDrilldown();
+                            scheduleActiveViewRefresh(350);
                         }
                     });
 
@@ -2492,13 +2498,7 @@
                 updates[`repClassReviewStatus/${safeRo}/events/${eventKey}`] = event;
                 hasUpdates = true;
 
-                logWorkflowActivity(safeRo, 'REPCLASS_ACCOUNTABILITY_FLAG', status.message || status.issueType, {
-                    roNumber: ro.roNum,
-                    unitNo: ro.unitNo || '',
-                    branch: ro.branch || '',
-                    assignedOwner: (ro.kpiOwners && ro.kpiOwners.length ? ro.kpiOwners[0] : '') || '',
-                    source: 'repclass-accountability'
-                });
+                // Logged in Firebase under repClassReviewStatus/{RO}/events. Avoid a second workflowActivity write here because it can trigger repeated view refreshes on large files.
             });
 
             if (hasUpdates && db) {
@@ -4903,39 +4903,71 @@
             navigate(target.viewId, menuElement, true);
         }
 
+
+        function getActiveViewId() {
+            const activeView = document.querySelector('.view-section.active');
+            return activeView ? activeView.id : '';
+        }
+
+        function refreshActiveViewWithoutDrilldownCollapse() {
+            const activeViewId = getActiveViewId();
+            if (activeViewId === 'person-view') {
+                updateAllNoteButtons();
+                updateAllRepairClassBadges();
+                applyDrilldownFilters();
+                return;
+            }
+            triggerViewUpdate();
+        }
+
+        function scheduleActiveViewRefresh(delayMs = 250) {
+            clearTimeout(activeViewRefreshTimer);
+            activeViewRefreshTimer = setTimeout(refreshActiveViewWithoutDrilldownCollapse, delayMs);
+        }
+
+        function scheduleRepairClassAccountabilityAudit(delayMs = 900) {
+            clearTimeout(repClassAccountabilityAuditTimer);
+            repClassAccountabilityAuditTimer = setTimeout(() => {
+                auditRepairClassReviewAccountability();
+            }, delayMs);
+        }
+
+        function getDetailStableSegment(detail) {
+            if (!detail) return '';
+            const summary = detail.querySelector(':scope > summary');
+            let label = summary ? String(summary.innerText || '').replace(/\s+/g, ' ').trim() : '';
+            label = label.replace(/\s*\(\d+\s+ROs?\).*$/i, '').trim();
+            const kind = detail.classList.contains('region-details') ? 'region'
+                : detail.classList.contains('subregion-details') ? 'subregion'
+                : detail.classList.contains('branch-details') ? 'branch'
+                : 'details';
+            const branchName = detail.dataset && detail.dataset.branchName ? String(detail.dataset.branchName || '').trim() : '';
+            return `${kind}:${branchName || label}`;
+        }
+
+        function getDetailStablePath(detail, root) {
+            const parts = [];
+            let current = detail;
+            while (current && current !== root) {
+                if (current.tagName === 'DETAILS') parts.unshift(getDetailStableSegment(current));
+                current = current.parentElement ? current.parentElement.closest('details') : null;
+            }
+            return parts.join(' > ');
+        }
+
         function getOpenDetailPaths(root) {
             if (!root) return [];
-            const getPath = (detail) => {
-                const path = [];
-                let current = detail;
-                while (current && current !== root) {
-                    const parent = current.parentElement;
-                    if (!parent) break;
-                    const siblings = Array.from(parent.children).filter(el => el.tagName === 'DETAILS');
-                    path.unshift(siblings.indexOf(current));
-                    current = parent.closest('details');
-                }
-                return path;
-            };
-
             return Array.from(root.querySelectorAll('details'))
                 .filter(detail => detail.open)
-                .map(getPath)
-                .filter(path => path.every(idx => idx >= 0));
+                .map(detail => getDetailStablePath(detail, root))
+                .filter(Boolean);
         }
 
         function restoreOpenDetailPaths(root, paths) {
             if (!root || !Array.isArray(paths)) return;
-            paths.forEach(path => {
-                let scope = root;
-                let detail = null;
-                for (const idx of path) {
-                    const details = Array.from(scope.children).filter(el => el.tagName === 'DETAILS');
-                    detail = details[idx];
-                    if (!detail) return;
-                    detail.open = true;
-                    scope = detail;
-                }
+            const openKeys = new Set(paths);
+            Array.from(root.querySelectorAll('details')).forEach(detail => {
+                if (openKeys.has(getDetailStablePath(detail, root))) detail.open = true;
             });
         }
 
@@ -4946,13 +4978,20 @@
             const root = isDrilldownView ? document.getElementById('drilldown-body') : null;
             const openPaths = getOpenDetailPaths(root);
             const scrollTop = mainContent ? mainContent.scrollTop : 0;
+            const ownerBefore = currentOwnerView;
+            const parentBefore = currentParentView;
 
-            triggerViewUpdate();
+            if (isDrilldownView && ownerBefore) {
+                loadPersonDrilldown(ownerBefore, parentBefore || lastActiveView || 'home-view');
+            } else {
+                triggerViewUpdate();
+            }
 
             if (isDrilldownView) {
                 requestAnimationFrame(() => {
                     const refreshedRoot = document.getElementById('drilldown-body');
                     restoreOpenDetailPaths(refreshedRoot, openPaths);
+                    applyDrilldownFilters();
                     if (mainContent) mainContent.scrollTop = scrollTop;
                 });
             }
