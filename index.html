@@ -874,6 +874,29 @@
             fetchData();
         }
 
+        function hashArrayBufferForVersion(buffer) {
+            try {
+                const bytes = new Uint8Array(buffer || new ArrayBuffer(0));
+                let h = 2166136261;
+                for (let i = 0; i < bytes.length; i++) {
+                    h ^= bytes[i];
+                    h = Math.imul(h, 16777619);
+                }
+                return ('00000000' + (h >>> 0).toString(16)).slice(-8) + ':' + bytes.length;
+            } catch (err) {
+                return 'hash-error:' + Date.now();
+            }
+        }
+
+        function refreshRepairClassSourceVersion() {
+            currentRepairClassSourceVersion = `${currentMasterWorkbookHash || 'MASTER_UNKNOWN'}|${currentAiRefWorkbookHash || 'AIREF_UNKNOWN'}`;
+            return currentRepairClassSourceVersion;
+        }
+
+        function getCurrentRepairClassSourceVersion() {
+            return currentRepairClassSourceVersion || refreshRepairClassSourceVersion();
+        }
+
         async function fetchWorkbookBuffer() {
             const workbookPath = 'master_workFLOW.xlsx';
             const configuredBucket = firebase.app && firebase.app().options ? firebase.app().options.storageBucket : '';
@@ -1025,7 +1048,13 @@
         async function loadAiRefFromFirebase() {
             latestAiRefAOA = [];
             const aiRefBuffer = await fetchWorkbookBufferFromStorage('AI Ref.xlsx', { optional: true });
-            if (!aiRefBuffer) return [];
+            if (!aiRefBuffer) {
+                currentAiRefWorkbookHash = 'AIREF_MISSING';
+                refreshRepairClassSourceVersion();
+                return [];
+            }
+            currentAiRefWorkbookHash = hashArrayBufferForVersion(aiRefBuffer);
+            refreshRepairClassSourceVersion();
             try {
                 const aiWorkbook = XLSX.read(aiRefBuffer, { type: 'array' });
                 latestAiRefAOA = extractAiRefAOA(aiWorkbook);
@@ -1059,6 +1088,8 @@
 
             try {
                 const data = await fetchWorkbookBuffer();
+                currentMasterWorkbookHash = hashArrayBufferForVersion(data);
+                refreshRepairClassSourceVersion();
 
                 statusEl.innerText = 'File found. Processing data...';
 
@@ -1144,6 +1175,7 @@
                 await loadAiRefFromFirebase();
 
                 processExcelData(vroRaw, roDetailRaw, resourceRawAOA, oosRawAOA, usefulRawAOA, dodRawAOA);
+                auditRepairClassReviewAccountability();
                 initFirebaseSync();
                 try {
                     await syncSpendGovernorWithFirebase();
@@ -1172,6 +1204,8 @@
 
             try {
                 const data = await file.arrayBuffer();
+                currentMasterWorkbookHash = 'manual:' + hashArrayBufferForVersion(data);
+                refreshRepairClassSourceVersion();
                 const workbook = XLSX.read(data, { type: 'array' });
 
                 let vroRaw = [];
@@ -1245,6 +1279,7 @@
 
                 await loadAiRefFromFirebase();
                 processExcelData(vroRaw, roDetailRaw, resourceRawAOA, oosRawAOA, usefulRawAOA, dodRawAOA);
+                auditRepairClassReviewAccountability();
                 initFirebaseSync();
                 try {
                     await syncSpendGovernorWithFirebase();
@@ -1268,6 +1303,10 @@
         let globalWorkflowActivityState = {};
         let globalRepairClassReviewState = {};
         let currentRepairClassReviewSafeRo = null;
+        let currentMasterWorkbookHash = '';
+        let currentAiRefWorkbookHash = '';
+        let currentRepairClassSourceVersion = '';
+        let repClassAccountabilityAuditInFlight = false;
         let globalSpendChangeLogRows = [];
         let globalWeeklySpendHistoryRows = [];
         let expandedWeeklySpendWeeks = {};
@@ -1317,6 +1356,7 @@
                         try { localStorage.setItem('repclass_review_status', JSON.stringify(globalRepairClassReviewState)); } catch(e) {}
                         updateAllRepairClassBadges();
                         if (processedData && processedData.length > 0) {
+                            auditRepairClassReviewAccountability();
                             refreshActiveViewPreservingDrilldown();
                         }
                     });
@@ -1941,15 +1981,127 @@
             return rec && rec.decision ? String(rec.decision || '').toUpperCase().trim() : '';
         }
 
-        function isRepairClassReviewCleared(ro) {
-            if (!ro || !hasRepairClassTransfer(ro)) return true;
-            const decision = getRepairClassReviewDecision(ro);
+        function makeRepairClassSignature(originalRepClass, transferRepClass, transferReason) {
+            return [
+                normalizeRepClassValue(originalRepClass),
+                normalizeRepClassValue(transferRepClass),
+                String(transferReason || '').trim().toUpperCase().replace(/\s+/g, ' ').slice(0, 700)
+            ].join('||');
+        }
 
-            // A coordinator's memo decision is the compliance completion event.
-            // Previously ACCEPTED stayed PENDING until the workbook showed the class changed,
-            // which made the button look like it never registered. Both ACCEPTED and DECLINED
-            // now clear the daily compliance item once the required memo is saved.
-            return decision === 'ACCEPTED' || decision === 'DECLINED';
+        function getRepairClassCurrentSnapshot(ro) {
+            const rc = getRepairClassDataForRo(ro);
+            const originalRepClass = rc.originalRepClass || '';
+            const transferRepClass = rc.transferRepClass || '';
+            const transferReason = rc.transferReason || '';
+            const snapshot = {
+                roNumber: ro && ro.roNum ? ro.roNum : '',
+                originalRepClass,
+                transferRepClass,
+                transferReason,
+                originalNorm: normalizeRepClassValue(originalRepClass),
+                transferNorm: normalizeRepClassValue(transferRepClass),
+                hasTransfer: !!rc.hasTransfer,
+                sourceVersion: getCurrentRepairClassSourceVersion()
+            };
+            snapshot.signature = makeRepairClassSignature(snapshot.originalRepClass, snapshot.transferRepClass, snapshot.transferReason);
+            return snapshot;
+        }
+
+        function getRepairClassReviewAccountabilityStatus(ro) {
+            const snapshot = getRepairClassCurrentSnapshot(ro);
+            const safeRo = ro && ro.roNum ? safeFirebaseKey(ro.roNum) : '';
+            const rec = safeRo ? getRepairClassReviewRecord(safeRo) : null;
+            const decision = rec && rec.decision ? String(rec.decision || '').toUpperCase().trim() : '';
+
+            if (decision !== 'ACCEPTED' && decision !== 'DECLINED') {
+                if (!ro || !snapshot.hasTransfer) {
+                    return { cleared: true, issueType: 'NO_ACTIVE_TRANSFER', snapshot, rec };
+                }
+                return { cleared: false, issueType: 'INITIAL_PENDING', message: 'Repair class transfer requires review.', snapshot, rec };
+            }
+
+            const reviewedOriginalNorm = normalizeRepClassValue(rec.reviewedOriginalRepClass || rec.originalRepClass || '');
+            const reviewedTransferNorm = normalizeRepClassValue(rec.reviewedTransferRepClass || rec.transferRepClass || '');
+            const reviewedSignature = rec.reviewSignature || makeRepairClassSignature(
+                rec.reviewedOriginalRepClass || rec.originalRepClass || '',
+                rec.reviewedTransferRepClass || rec.transferRepClass || '',
+                rec.reviewedWhyTransfer || rec.whyTransfer || ''
+            );
+            const reviewedSourceVersion = rec.reviewSourceVersion || '';
+            const sameSourceVersion = reviewedSourceVersion && snapshot.sourceVersion && reviewedSourceVersion === snapshot.sourceVersion;
+            const sameRecommendationSignature = reviewedSignature && snapshot.signature === reviewedSignature;
+
+            if (decision === 'DECLINED') {
+                // Declined means the coordinator is validating the current/original class.
+                // After that, the issue stays cleared while the VRO remains in either the declined original class
+                // or the recommended class. If it moves to a third class, it becomes a new accountability review.
+                const allowedClassNorms = new Set();
+                if (reviewedOriginalNorm) allowedClassNorms.add(reviewedOriginalNorm);
+                if (reviewedTransferNorm) allowedClassNorms.add(reviewedTransferNorm);
+                if (snapshot.transferNorm) allowedClassNorms.add(snapshot.transferNorm);
+
+                if (!snapshot.originalNorm || allowedClassNorms.has(snapshot.originalNorm)) {
+                    return { cleared: true, issueType: 'DECLINE_STILL_VALID', snapshot, rec };
+                }
+
+                return {
+                    cleared: false,
+                    issueType: 'DECLINED_CHANGED_TO_UNAPPROVED_CLASS',
+                    message: `Prior DECLINED reasoning allowed ${rec.reviewedOriginalRepClass || rec.originalRepClass || 'N/A'} or ${rec.reviewedTransferRepClass || rec.transferRepClass || 'N/A'}, but the latest workbook now shows ${snapshot.originalRepClass || 'N/A'}. Review is required again.`,
+                    snapshot,
+                    rec,
+                    auditKey: `DECLINED_CHANGED_TO_UNAPPROVED_CLASS|${snapshot.originalNorm}|${snapshot.transferNorm}|${snapshot.sourceVersion || ''}`
+                };
+            }
+
+            if (decision === 'ACCEPTED') {
+                // Same exact source snapshot = clear immediately after the memo is submitted.
+                if (sameSourceVersion && sameRecommendationSignature) {
+                    return { cleared: true, issueType: 'ACCEPTED_AWAITING_NEXT_REFRESH', snapshot, rec };
+                }
+
+                // Once the workbook updates, ACCEPTED means the VRO should move to the reviewed transfer class.
+                // If the current class equals the reviewed transfer class and no new mismatch exists, keep it cleared.
+                if (reviewedTransferNorm && snapshot.originalNorm === reviewedTransferNorm) {
+                    if (!snapshot.hasTransfer || !snapshot.transferNorm || snapshot.transferNorm === snapshot.originalNorm || snapshot.transferNorm === reviewedTransferNorm) {
+                        return { cleared: true, issueType: 'ACCEPTED_CONFIRMED_CHANGED', snapshot, rec };
+                    }
+                    return {
+                        cleared: false,
+                        issueType: 'ACCEPTED_NEW_RECOMMENDATION_MISMATCH',
+                        message: `Prior ACCEPTED reasoning was completed at ${rec.reviewedTransferRepClass || rec.transferRepClass || 'N/A'}, but the latest AI recommendation now points to ${snapshot.transferRepClass || 'N/A'}. Review is required again.`,
+                        snapshot,
+                        rec,
+                        auditKey: `ACCEPTED_NEW_RECOMMENDATION_MISMATCH|${snapshot.signature}|${snapshot.sourceVersion || ''}`
+                    };
+                }
+
+                // If there is no active transfer anymore, do not hold compliance open. The observation log still records the changed state.
+                if (!snapshot.hasTransfer) {
+                    return { cleared: true, issueType: 'ACCEPTED_NO_ACTIVE_TRANSFER', snapshot, rec };
+                }
+
+                const issueType = sameRecommendationSignature ? 'ACCEPTED_NOT_CHANGED_AFTER_REFRESH' : 'ACCEPTED_CHANGED_OR_RECOMMENDED_AGAIN';
+                const message = issueType === 'ACCEPTED_NOT_CHANGED_AFTER_REFRESH'
+                    ? `Prior ACCEPTED reasoning expected REPCLASS to change to ${rec.reviewedTransferRepClass || rec.transferRepClass || 'N/A'}, but the latest workbook still shows ${snapshot.originalRepClass || 'N/A'}.`
+                    : `Prior ACCEPTED reasoning no longer matches the latest repair-class state. Reviewed ${rec.reviewedOriginalRepClass || rec.originalRepClass || 'N/A'} → ${rec.reviewedTransferRepClass || rec.transferRepClass || 'N/A'}; latest is ${snapshot.originalRepClass || 'N/A'} → ${snapshot.transferRepClass || 'N/A'}.`;
+                return {
+                    cleared: false,
+                    issueType,
+                    message,
+                    snapshot,
+                    rec,
+                    auditKey: `${issueType}|${snapshot.signature}|${snapshot.sourceVersion || ''}`
+                };
+            }
+
+            if (!ro || !snapshot.hasTransfer) return { cleared: true, issueType: 'NO_ACTIVE_TRANSFER', snapshot, rec };
+            return { cleared: false, issueType: 'INITIAL_PENDING', message: 'Repair class transfer requires review.', snapshot, rec };
+        }
+
+        function isRepairClassReviewCleared(ro) {
+            return !!getRepairClassReviewAccountabilityStatus(ro).cleared;
         }
 
         function isRealRepairClassReviewRo(ro) {
@@ -2013,8 +2165,10 @@
             }
             const safeRo = safeFirebaseKey(ro.roNum);
             const reason = rc.transferReason || 'No transfer reason provided.';
-            const cleared = isRepairClassReviewCleared(ro);
-            const reviewTitle = escapeHtml(reason).replace(/"/g, '&quot;');
+            const accountability = getRepairClassReviewAccountabilityStatus(ro);
+            const cleared = !!accountability.cleared;
+            const titleText = accountability.message ? `${reason}\n\nAccountability Flag: ${accountability.message}` : reason;
+            const reviewTitle = escapeHtml(titleText).replace(/"/g, '&quot;');
             const transfer = escapeHtml(rc.transferRepClass || 'Review');
             const decision = getRepairClassReviewDecision(safeRo);
             const clearedLabel = decision === 'ACCEPTED' ? '✓ ACCEPTED' : (decision === 'DECLINED' ? 'DECLINED' : 'OK');
@@ -2066,10 +2220,18 @@
 
             const hist = document.getElementById('repclass-modal-history');
             if (hist) {
+                const accountability = getRepairClassReviewAccountabilityStatus(ro);
+                let histHtml = '';
                 if (rec && rec.memo) {
                     const decision = rec.decision || 'Previous Review';
                     const dateText = rec.timestamp ? new Date(rec.timestamp).toLocaleString() : '';
-                    hist.innerHTML = `<strong>Prior ${escapeHtml(decision)} memo${dateText ? ' - ' + escapeHtml(dateText) : ''}:</strong><br>${escapeHtml(rec.memo)}`;
+                    histHtml += `<strong>Prior ${escapeHtml(decision)} memo${dateText ? ' - ' + escapeHtml(dateText) : ''}:</strong><br>${escapeHtml(rec.memo)}`;
+                }
+                if (accountability && accountability.message) {
+                    histHtml += `${histHtml ? '<br><br>' : ''}<strong>Accountability flag:</strong><br>${escapeHtml(accountability.message)}`;
+                }
+                if (histHtml) {
+                    hist.innerHTML = histHtml;
                     hist.style.display = 'block';
                 } else {
                     hist.style.display = 'none';
@@ -2095,6 +2257,22 @@
             }
 
             const rcSubmit = getRepairClassDataForRo(ro);
+            const currentSnapshot = getRepairClassCurrentSnapshot(ro);
+            const priorRecord = getRepairClassReviewRecord(safeRo) || {};
+            const nowIso = new Date().toISOString();
+            const eventKey = nowIso.replace(/[^0-9A-Za-z]/g, '_');
+            const priorEvents = (priorRecord && priorRecord.events && typeof priorRecord.events === 'object') ? priorRecord.events : {};
+            const reviewEvent = {
+                timestamp: nowIso,
+                eventType: 'REVIEW_' + decision,
+                decision: decision,
+                memo: memo,
+                originalRepClass: currentSnapshot.originalRepClass || rcSubmit.originalRepClass || '',
+                transferRepClass: currentSnapshot.transferRepClass || rcSubmit.transferRepClass || '',
+                whyTransfer: currentSnapshot.transferReason || rcSubmit.transferReason || '',
+                sourceVersion: currentSnapshot.sourceVersion || '',
+                signature: currentSnapshot.signature || ''
+            };
             const payload = {
                 decision: decision,
                 memo: memo,
@@ -2106,7 +2284,24 @@
                 originalRepClass: rcSubmit.originalRepClass || '',
                 transferRepClass: rcSubmit.transferRepClass || '',
                 whyTransfer: rcSubmit.transferReason || '',
-                timestamp: new Date().toISOString()
+                reviewedOriginalRepClass: currentSnapshot.originalRepClass || rcSubmit.originalRepClass || '',
+                reviewedTransferRepClass: currentSnapshot.transferRepClass || rcSubmit.transferRepClass || '',
+                reviewedWhyTransfer: currentSnapshot.transferReason || rcSubmit.transferReason || '',
+                reviewSignature: currentSnapshot.signature || '',
+                reviewSourceVersion: currentSnapshot.sourceVersion || '',
+                requiresReReview: false,
+                latestAccountabilityIssue: '',
+                latestAccountabilityAuditKey: '',
+                timestamp: nowIso,
+                lastValidationAt: nowIso,
+                lastObservedAt: nowIso,
+                lastObservedOriginalRepClass: currentSnapshot.originalRepClass || '',
+                lastObservedTransferRepClass: currentSnapshot.transferRepClass || '',
+                lastObservedWhyTransfer: currentSnapshot.transferReason || '',
+                lastObservedSignature: currentSnapshot.signature || '',
+                lastObservedSourceVersion: currentSnapshot.sourceVersion || '',
+                lastObservedAuditKey: `OBSERVED|${currentSnapshot.signature || ''}|${currentSnapshot.sourceVersion || ''}`,
+                events: Object.assign({}, priorEvents, { [eventKey]: reviewEvent })
             };
 
             const closeModal = () => {
@@ -2133,6 +2328,184 @@
             } else {
                 logWorkflowActivity(safeRo, 'REPCLASS_REVIEW_' + decision, memo, payload);
                 closeModal();
+            }
+        }
+
+        function auditRepairClassReviewAccountability() {
+            if (repClassAccountabilityAuditInFlight || !processedData || !processedData.length) return;
+            const updates = {};
+            let hasUpdates = false;
+            const nowIso = new Date().toISOString();
+            const auditedThisPass = new Set();
+
+            function buildObservationEvent(ro, status, rec, eventType, message) {
+                const snapshot = (status && status.snapshot) ? status.snapshot : getRepairClassCurrentSnapshot(ro);
+                return {
+                    timestamp: nowIso,
+                    eventType: eventType || 'REPCLASS_STATE_OBSERVED',
+                    auditKey: `OBSERVED|${snapshot.signature || ''}|${snapshot.sourceVersion || ''}`,
+                    message: message || '',
+                    decision: rec && rec.decision ? rec.decision : '',
+                    reviewedOriginalRepClass: rec ? (rec.reviewedOriginalRepClass || rec.originalRepClass || '') : '',
+                    reviewedTransferRepClass: rec ? (rec.reviewedTransferRepClass || rec.transferRepClass || '') : '',
+                    currentOriginalRepClass: snapshot.originalRepClass || '',
+                    currentTransferRepClass: snapshot.transferRepClass || '',
+                    currentWhyTransfer: snapshot.transferReason || '',
+                    sourceVersion: snapshot.sourceVersion || '',
+                    signature: snapshot.signature || ''
+                };
+            }
+
+            (processedData || []).forEach(ro => {
+                if (!ro || !ro.roNum) return;
+                const safeRo = safeFirebaseKey(ro.roNum);
+                if (auditedThisPass.has(safeRo)) return;
+
+                const rec = getRepairClassReviewRecord(safeRo) || null;
+                const hasTransfer = hasRepairClassTransfer(ro);
+                if (!hasTransfer && !rec) return;
+
+                const status = getRepairClassReviewAccountabilityStatus(ro);
+                const snapshot = (status && status.snapshot) ? status.snapshot : getRepairClassCurrentSnapshot(ro);
+                const observationKey = `OBSERVED|${snapshot.signature || ''}|${snapshot.sourceVersion || ''}`;
+                const needsObservationLog = !!(rec && observationKey && rec.lastObservedAuditKey !== observationKey);
+                const priorEvents = (rec && rec.events && typeof rec.events === 'object') ? rec.events : {};
+
+                auditedThisPass.add(safeRo);
+
+                if (status && status.cleared) {
+                    if (rec && (needsObservationLog || rec.requiresReReview || rec.latestAccountabilityIssue || rec.latestAccountabilityAuditKey)) {
+                        const eventKey = nowIso.replace(/[^0-9A-Za-z]/g, '_') + '_' + safeRo + '_CLEAR';
+                        const event = buildObservationEvent(ro, status, rec, rec.requiresReReview ? 'REPCLASS_REVIEW_CLEARED_BY_LATEST_STATE' : 'REPCLASS_STATE_OBSERVED', status.issueType || 'Review remains cleared.');
+                        const mergedEvents = Object.assign({}, priorEvents, needsObservationLog || rec.requiresReReview ? { [eventKey]: event } : {});
+                        const localRec = Object.assign({}, rec, {
+                            requiresReReview: false,
+                            latestAccountabilityIssue: '',
+                            latestAccountabilityAuditKey: '',
+                            lastValidationAt: nowIso,
+                            lastObservedAt: nowIso,
+                            lastObservedOriginalRepClass: snapshot.originalRepClass || '',
+                            lastObservedTransferRepClass: snapshot.transferRepClass || '',
+                            lastObservedWhyTransfer: snapshot.transferReason || '',
+                            lastObservedSignature: snapshot.signature || '',
+                            lastObservedSourceVersion: snapshot.sourceVersion || '',
+                            lastObservedAuditKey: observationKey,
+                            events: mergedEvents
+                        });
+                        globalRepairClassReviewState = Object.assign({}, globalRepairClassReviewState || {}, { [safeRo]: localRec });
+                        try { localStorage.setItem('repclass_review_status', JSON.stringify(globalRepairClassReviewState)); } catch(e) {}
+
+                        updates[`repClassReviewStatus/${safeRo}/requiresReReview`] = false;
+                        updates[`repClassReviewStatus/${safeRo}/latestAccountabilityIssue`] = '';
+                        updates[`repClassReviewStatus/${safeRo}/latestAccountabilityAuditKey`] = '';
+                        updates[`repClassReviewStatus/${safeRo}/lastValidationAt`] = nowIso;
+                        updates[`repClassReviewStatus/${safeRo}/lastObservedAt`] = nowIso;
+                        updates[`repClassReviewStatus/${safeRo}/lastObservedOriginalRepClass`] = snapshot.originalRepClass || '';
+                        updates[`repClassReviewStatus/${safeRo}/lastObservedTransferRepClass`] = snapshot.transferRepClass || '';
+                        updates[`repClassReviewStatus/${safeRo}/lastObservedWhyTransfer`] = snapshot.transferReason || '';
+                        updates[`repClassReviewStatus/${safeRo}/lastObservedSignature`] = snapshot.signature || '';
+                        updates[`repClassReviewStatus/${safeRo}/lastObservedSourceVersion`] = snapshot.sourceVersion || '';
+                        updates[`repClassReviewStatus/${safeRo}/lastObservedAuditKey`] = observationKey;
+                        if (needsObservationLog || rec.requiresReReview) updates[`repClassReviewStatus/${safeRo}/events/${eventKey}`] = event;
+                        hasUpdates = true;
+                    }
+                    return;
+                }
+
+                if (!status || !status.auditKey) {
+                    if (rec && needsObservationLog) {
+                        const eventKey = nowIso.replace(/[^0-9A-Za-z]/g, '_') + '_' + safeRo + '_OBS';
+                        const event = buildObservationEvent(ro, status, rec, 'REPCLASS_STATE_OBSERVED', 'Repair-class state changed and was logged.');
+                        const localRec = Object.assign({}, rec, {
+                            lastValidationAt: nowIso,
+                            lastObservedAt: nowIso,
+                            lastObservedOriginalRepClass: snapshot.originalRepClass || '',
+                            lastObservedTransferRepClass: snapshot.transferRepClass || '',
+                            lastObservedWhyTransfer: snapshot.transferReason || '',
+                            lastObservedSignature: snapshot.signature || '',
+                            lastObservedSourceVersion: snapshot.sourceVersion || '',
+                            lastObservedAuditKey: observationKey,
+                            events: Object.assign({}, priorEvents, { [eventKey]: event })
+                        });
+                        globalRepairClassReviewState = Object.assign({}, globalRepairClassReviewState || {}, { [safeRo]: localRec });
+                        try { localStorage.setItem('repclass_review_status', JSON.stringify(globalRepairClassReviewState)); } catch(e) {}
+                        updates[`repClassReviewStatus/${safeRo}/lastValidationAt`] = nowIso;
+                        updates[`repClassReviewStatus/${safeRo}/lastObservedAt`] = nowIso;
+                        updates[`repClassReviewStatus/${safeRo}/lastObservedOriginalRepClass`] = snapshot.originalRepClass || '';
+                        updates[`repClassReviewStatus/${safeRo}/lastObservedTransferRepClass`] = snapshot.transferRepClass || '';
+                        updates[`repClassReviewStatus/${safeRo}/lastObservedWhyTransfer`] = snapshot.transferReason || '';
+                        updates[`repClassReviewStatus/${safeRo}/lastObservedSignature`] = snapshot.signature || '';
+                        updates[`repClassReviewStatus/${safeRo}/lastObservedSourceVersion`] = snapshot.sourceVersion || '';
+                        updates[`repClassReviewStatus/${safeRo}/lastObservedAuditKey`] = observationKey;
+                        updates[`repClassReviewStatus/${safeRo}/events/${eventKey}`] = event;
+                        hasUpdates = true;
+                    }
+                    return;
+                }
+
+                if (rec && rec.latestAccountabilityAuditKey === status.auditKey && !needsObservationLog) return;
+
+                const eventKey = nowIso.replace(/[^0-9A-Za-z]/g, '_') + '_' + safeRo + '_FLAG';
+                const event = {
+                    timestamp: nowIso,
+                    eventType: status.issueType,
+                    auditKey: status.auditKey,
+                    message: status.message || '',
+                    decision: rec && rec.decision ? rec.decision : '',
+                    reviewedOriginalRepClass: rec ? (rec.reviewedOriginalRepClass || rec.originalRepClass || '') : '',
+                    reviewedTransferRepClass: rec ? (rec.reviewedTransferRepClass || rec.transferRepClass || '') : '',
+                    currentOriginalRepClass: snapshot.originalRepClass || '',
+                    currentTransferRepClass: snapshot.transferRepClass || '',
+                    currentWhyTransfer: snapshot.transferReason || '',
+                    sourceVersion: snapshot.sourceVersion || '',
+                    signature: snapshot.signature || ''
+                };
+
+                const localRec = Object.assign({}, rec || {}, {
+                    requiresReReview: true,
+                    latestAccountabilityIssue: status.message || status.issueType,
+                    latestAccountabilityAuditKey: status.auditKey,
+                    lastValidationAt: nowIso,
+                    lastObservedAt: nowIso,
+                    lastObservedOriginalRepClass: snapshot.originalRepClass || '',
+                    lastObservedTransferRepClass: snapshot.transferRepClass || '',
+                    lastObservedWhyTransfer: snapshot.transferReason || '',
+                    lastObservedSignature: snapshot.signature || '',
+                    lastObservedSourceVersion: snapshot.sourceVersion || '',
+                    lastObservedAuditKey: observationKey,
+                    events: Object.assign({}, priorEvents, { [eventKey]: event })
+                });
+                globalRepairClassReviewState = Object.assign({}, globalRepairClassReviewState || {}, { [safeRo]: localRec });
+                try { localStorage.setItem('repclass_review_status', JSON.stringify(globalRepairClassReviewState)); } catch(e) {}
+
+                updates[`repClassReviewStatus/${safeRo}/requiresReReview`] = true;
+                updates[`repClassReviewStatus/${safeRo}/latestAccountabilityIssue`] = status.message || status.issueType;
+                updates[`repClassReviewStatus/${safeRo}/latestAccountabilityAuditKey`] = status.auditKey;
+                updates[`repClassReviewStatus/${safeRo}/lastValidationAt`] = nowIso;
+                updates[`repClassReviewStatus/${safeRo}/lastObservedAt`] = nowIso;
+                updates[`repClassReviewStatus/${safeRo}/lastObservedOriginalRepClass`] = snapshot.originalRepClass || '';
+                updates[`repClassReviewStatus/${safeRo}/lastObservedTransferRepClass`] = snapshot.transferRepClass || '';
+                updates[`repClassReviewStatus/${safeRo}/lastObservedWhyTransfer`] = snapshot.transferReason || '';
+                updates[`repClassReviewStatus/${safeRo}/lastObservedSignature`] = snapshot.signature || '';
+                updates[`repClassReviewStatus/${safeRo}/lastObservedSourceVersion`] = snapshot.sourceVersion || '';
+                updates[`repClassReviewStatus/${safeRo}/lastObservedAuditKey`] = observationKey;
+                updates[`repClassReviewStatus/${safeRo}/events/${eventKey}`] = event;
+                hasUpdates = true;
+
+                logWorkflowActivity(safeRo, 'REPCLASS_ACCOUNTABILITY_FLAG', status.message || status.issueType, {
+                    roNumber: ro.roNum,
+                    unitNo: ro.unitNo || '',
+                    branch: ro.branch || '',
+                    assignedOwner: (ro.kpiOwners && ro.kpiOwners.length ? ro.kpiOwners[0] : '') || '',
+                    source: 'repclass-accountability'
+                });
+            });
+
+            if (hasUpdates && db) {
+                repClassAccountabilityAuditInFlight = true;
+                db.ref().update(updates)
+                    .catch(err => console.warn('Repair class accountability audit write failed:', err))
+                    .finally(() => { repClassAccountabilityAuditInFlight = false; });
             }
         }
 
