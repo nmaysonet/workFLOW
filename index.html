@@ -334,7 +334,16 @@
         /* Performance/stability: do not move cards/buttons on hover. Moving transforms caused tile jitter on dense queue pages. */
         .kpi-tile, .home-master-tile, .highlight-box, .stat-box, .workflow-compliance-mini, .status-toggle, .note-btn, .repair-class-toggle { will-change: auto !important; }
         .kpi-tile:hover, .home-master-tile:hover, .highlight-box:hover, .stat-box:hover, .workflow-compliance-mini:hover, .status-toggle:hover, .note-btn:hover, .repair-class-toggle:hover { transform: none !important; }
-    </style>
+    
+
+        /* PERFORMANCE HOTFIX: remove hover movement/animations from queue tiles to stop visual shaking. */
+        .kpi-tile, .home-master-tile, .billing-kpi.clickable, .highlight-box.clickable, .stat-box.clickable, .workflow-compliance-mini.clickable,
+        .status-toggle, .note-btn, .repair-class-toggle { transition: none !important; }
+        .kpi-tile:hover, .home-master-tile:hover, .billing-kpi.clickable:hover, .highlight-box.clickable:hover, .stat-box.clickable:hover,
+        .workflow-compliance-mini.clickable:hover, .status-toggle:hover, .note-btn:hover, .repair-class-toggle:hover {
+            transform: none !important;
+        }
+</style>
 </head>
 <body>
 
@@ -1179,7 +1188,7 @@
                 await loadAiRefFromFirebase();
 
                 processExcelData(vroRaw, roDetailRaw, resourceRawAOA, oosRawAOA, usefulRawAOA, dodRawAOA);
-                auditRepairClassReviewAccountability();
+                scheduleRepairClassAccountabilityAudit(12000);
                 initFirebaseSync();
                 try {
                     await syncSpendGovernorWithFirebase();
@@ -1283,7 +1292,7 @@
 
                 await loadAiRefFromFirebase();
                 processExcelData(vroRaw, roDetailRaw, resourceRawAOA, oosRawAOA, usefulRawAOA, dodRawAOA);
-                auditRepairClassReviewAccountability();
+                scheduleRepairClassAccountabilityAudit(12000);
                 initFirebaseSync();
                 try {
                     await syncSpendGovernorWithFirebase();
@@ -1349,7 +1358,7 @@
 
                     db.ref('workflowActivity').on('value', (snapshot) => {
                         globalWorkflowActivityState = snapshot.val() || {};
-                        try { localStorage.setItem('workflow_activity', JSON.stringify(globalWorkflowActivityState)); } catch(e) {}
+                        // skip localStorage persistence for workflowActivity; can be large and freeze the page
                         updateAllNoteButtons();
                         if (processedData && processedData.length > 0) {
                             scheduleActiveViewRefresh(350);
@@ -1359,7 +1368,7 @@
 
                     db.ref('repClassReviewStatus').on('value', (snapshot) => {
                         globalRepairClassReviewState = snapshot.val() || {};
-                        try { localStorage.setItem('repclass_review_status', JSON.stringify(globalRepairClassReviewState)); } catch(e) {}
+                        // skip synchronous localStorage persistence for repClassReviewStatus; Firebase is source of truth
                         updateAllRepairClassBadges();
                         if (processedData && processedData.length > 0) {
                             scheduleRepairClassAccountabilityAudit(900);
@@ -1597,7 +1606,7 @@
                 globalWorkflowActivityState[safeRo].lastNoteDate = dateKey;
                 globalWorkflowActivityState[safeRo].latestNote = String(noteText || '').trim();
             }
-            try { localStorage.setItem('workflow_activity', JSON.stringify(globalWorkflowActivityState)); } catch(e) {}
+            // skip localStorage persistence for workflowActivity; can be large and freeze the page
             updateAllNoteButtons();
             refreshActiveViewPreservingDrilldown();
             return Promise.resolve();
@@ -2321,7 +2330,7 @@
             // Update local state immediately so the modal close/refresh does not redraw the row as PENDING
             // while Firebase is still acknowledging the write.
             globalRepairClassReviewState = Object.assign({}, globalRepairClassReviewState || {}, { [safeRo]: payload });
-            try { localStorage.setItem('repclass_review_status', JSON.stringify(globalRepairClassReviewState)); } catch(e) {}
+            // skip synchronous localStorage persistence for repClassReviewStatus; Firebase is source of truth
 
             if (db) {
                 db.ref('repClassReviewStatus/' + safeRo).set(payload)
@@ -2399,7 +2408,7 @@
                             events: mergedEvents
                         });
                         globalRepairClassReviewState = Object.assign({}, globalRepairClassReviewState || {}, { [safeRo]: localRec });
-                        try { localStorage.setItem('repclass_review_status', JSON.stringify(globalRepairClassReviewState)); } catch(e) {}
+                        // skip synchronous localStorage persistence for repClassReviewStatus; Firebase is source of truth
 
                         updates[`repClassReviewStatus/${safeRo}/requiresReReview`] = false;
                         updates[`repClassReviewStatus/${safeRo}/latestAccountabilityIssue`] = '';
@@ -2434,7 +2443,7 @@
                             events: Object.assign({}, priorEvents, { [eventKey]: event })
                         });
                         globalRepairClassReviewState = Object.assign({}, globalRepairClassReviewState || {}, { [safeRo]: localRec });
-                        try { localStorage.setItem('repclass_review_status', JSON.stringify(globalRepairClassReviewState)); } catch(e) {}
+                        // skip synchronous localStorage persistence for repClassReviewStatus; Firebase is source of truth
                         updates[`repClassReviewStatus/${safeRo}/lastValidationAt`] = nowIso;
                         updates[`repClassReviewStatus/${safeRo}/lastObservedAt`] = nowIso;
                         updates[`repClassReviewStatus/${safeRo}/lastObservedOriginalRepClass`] = snapshot.originalRepClass || '';
@@ -2482,7 +2491,7 @@
                     events: Object.assign({}, priorEvents, { [eventKey]: event })
                 });
                 globalRepairClassReviewState = Object.assign({}, globalRepairClassReviewState || {}, { [safeRo]: localRec });
-                try { localStorage.setItem('repclass_review_status', JSON.stringify(globalRepairClassReviewState)); } catch(e) {}
+                // skip synchronous localStorage persistence for repClassReviewStatus; Firebase is source of truth
 
                 updates[`repClassReviewStatus/${safeRo}/requiresReReview`] = true;
                 updates[`repClassReviewStatus/${safeRo}/latestAccountabilityIssue`] = status.message || status.issueType;
@@ -6934,6 +6943,215 @@
                 renderAmeritOos();
             }
         }
-    </script>
+    
+
+        /* ============================================================
+           PERFORMANCE HOTFIX - nonblocking Firebase sync + repair-class audit
+           ============================================================ */
+        (function workflowPerformanceHotfix(){
+            let firebaseInitialSyncComplete = false;
+            let firebaseSyncInitializedOnce = false;
+            let firebaseReadyTimer = null;
+            let auditChunkTimer = null;
+
+            function activeViewIdSafe() {
+                try { return getActiveViewId ? getActiveViewId() : ''; } catch(e) { return ''; }
+            }
+
+            // Replace Firebase sync with a version that does not force full page rebuilds during initial snapshots.
+            initFirebaseSync = function() {
+                try {
+                    if (firebaseSyncInitializedOnce || typeof firebase === 'undefined') return;
+                    firebaseSyncInitializedOnce = true;
+                    db = firebase.database();
+                    firebaseInitialSyncComplete = false;
+                    clearTimeout(firebaseReadyTimer);
+                    firebaseReadyTimer = setTimeout(() => {
+                        firebaseInitialSyncComplete = true;
+                        if (processedData && processedData.length > 0) scheduleRepairClassAccountabilityAudit(9000);
+                    }, 3500);
+
+                    db.ref('roChecks').on('value', (snapshot) => {
+                        globalRoCheckState = snapshot.val() || {};
+                        try { localStorage.setItem('workflow_checks', JSON.stringify(globalRoCheckState)); } catch(e) {}
+                        updateAllStatusBadges();
+                    });
+
+                    db.ref('roNotes').on('value', (snapshot) => {
+                        globalRoNotesState = snapshot.val() || {};
+                        try { localStorage.setItem('workflow_notes', JSON.stringify(globalRoNotesState)); } catch(e) {}
+                        updateAllNoteButtons();
+                    });
+
+                    db.ref('workflowActivity').on('value', (snapshot) => {
+                        globalWorkflowActivityState = snapshot.val() || {};
+                        updateAllNoteButtons();
+                        if (firebaseInitialSyncComplete && processedData && processedData.length > 0 && activeViewIdSafe() !== 'person-view') {
+                            scheduleActiveViewRefresh(900);
+                        }
+                    });
+
+                    db.ref('repClassReviewStatus').on('value', (snapshot) => {
+                        globalRepairClassReviewState = snapshot.val() || {};
+                        updateAllRepairClassBadges();
+                        if (firebaseInitialSyncComplete && processedData && processedData.length > 0) {
+                            scheduleRepairClassAccountabilityAudit(10000);
+                            if (activeViewIdSafe() !== 'person-view') scheduleActiveViewRefresh(900);
+                        }
+                    });
+
+                    db.ref('spendGovernor/manualLock').on('value', (snapshot) => {
+                        globalManualGovernorLockState = snapshot.val() || {};
+                        try { localStorage.setItem('manual_governor_lock', JSON.stringify(globalManualGovernorLockState)); } catch(e) {}
+                        checkAndAutoResetManualGovernorLock();
+                        if (firebaseInitialSyncComplete && processedData && processedData.length > 0 && activeViewIdSafe() !== 'person-view') scheduleActiveViewRefresh(900);
+                    });
+
+                    db.ref('spendGovernor/unlimitedSpendMode').on('value', (snapshot) => {
+                        globalUnlimitedSpendState = snapshot.val() || {};
+                        try { localStorage.setItem('unlimited_spend_mode', JSON.stringify(globalUnlimitedSpendState)); } catch(e) {}
+                        checkAndAutoResetUnlimitedSpendMode();
+                        if (firebaseInitialSyncComplete && processedData && processedData.length > 0 && activeViewIdSafe() !== 'person-view') scheduleActiveViewRefresh(900);
+                    });
+
+                    if (!window.__manualGovernorResetTimer) {
+                        window.__manualGovernorResetTimer = setInterval(() => {
+                            checkAndAutoResetManualGovernorLock();
+                            checkAndAutoResetUnlimitedSpendMode();
+                        }, 60000);
+                    }
+                } catch (error) {
+                    console.warn('Firebase Init blocked.', error);
+                }
+            };
+
+            // Keep drilldowns stable: Firebase updates only update visible badges/buttons while inside a drilldown.
+            scheduleActiveViewRefresh = function(delayMs = 500) {
+                clearTimeout(activeViewRefreshTimer);
+                activeViewRefreshTimer = setTimeout(() => {
+                    if (activeViewIdSafe() === 'person-view') {
+                        updateAllNoteButtons();
+                        updateAllRepairClassBadges();
+                        return;
+                    }
+                    triggerViewUpdate();
+                }, Math.max(delayMs, 500));
+            };
+
+            // Nonblocking audit: process in small chunks and write only records that actually changed.
+            auditRepairClassReviewAccountability = function() {
+                if (repClassAccountabilityAuditInFlight || !processedData || !processedData.length) return;
+                clearTimeout(auditChunkTimer);
+                repClassAccountabilityAuditInFlight = true;
+
+                const seen = new Set();
+                const rows = [];
+                for (const ro of (processedData || [])) {
+                    if (!ro || !ro.roNum) continue;
+                    const safeRo = safeFirebaseKey(ro.roNum);
+                    if (!safeRo || seen.has(safeRo)) continue;
+                    seen.add(safeRo);
+                    const rec = getRepairClassReviewRecord(safeRo);
+                    const needsReviewData = !!rec || hasRepairClassTransfer(ro);
+                    if (needsReviewData) rows.push(ro);
+                }
+
+                const nowIsoBase = new Date().toISOString();
+                let index = 0;
+                let updates = {};
+                let hasUpdates = false;
+
+                function makeEventKey(safeRo, suffix) {
+                    return (new Date().toISOString().replace(/[^0-9A-Za-z]/g, '_') + '_' + safeRo + '_' + suffix);
+                }
+
+                function addObservationUpdate(safeRo, rec, snapshot, eventType, message, status) {
+                    const observationKey = `OBSERVED|${snapshot.signature || ''}|${snapshot.sourceVersion || ''}`;
+                    updates[`repClassReviewStatus/${safeRo}/lastValidationAt`] = nowIsoBase;
+                    updates[`repClassReviewStatus/${safeRo}/lastObservedAt`] = nowIsoBase;
+                    updates[`repClassReviewStatus/${safeRo}/lastObservedOriginalRepClass`] = snapshot.originalRepClass || '';
+                    updates[`repClassReviewStatus/${safeRo}/lastObservedTransferRepClass`] = snapshot.transferRepClass || '';
+                    updates[`repClassReviewStatus/${safeRo}/lastObservedWhyTransfer`] = snapshot.transferReason || '';
+                    updates[`repClassReviewStatus/${safeRo}/lastObservedSignature`] = snapshot.signature || '';
+                    updates[`repClassReviewStatus/${safeRo}/lastObservedSourceVersion`] = snapshot.sourceVersion || '';
+                    updates[`repClassReviewStatus/${safeRo}/lastObservedAuditKey`] = observationKey;
+                    const eventKey = makeEventKey(safeRo, eventType || 'OBS');
+                    updates[`repClassReviewStatus/${safeRo}/events/${eventKey}`] = {
+                        timestamp: nowIsoBase,
+                        eventType: eventType || 'REPCLASS_STATE_OBSERVED',
+                        auditKey: status && status.auditKey ? status.auditKey : observationKey,
+                        message: message || '',
+                        decision: rec && rec.decision ? rec.decision : '',
+                        reviewedOriginalRepClass: rec ? (rec.reviewedOriginalRepClass || rec.originalRepClass || '') : '',
+                        reviewedTransferRepClass: rec ? (rec.reviewedTransferRepClass || rec.transferRepClass || '') : '',
+                        currentOriginalRepClass: snapshot.originalRepClass || '',
+                        currentTransferRepClass: snapshot.transferRepClass || '',
+                        currentWhyTransfer: snapshot.transferReason || '',
+                        sourceVersion: snapshot.sourceVersion || '',
+                        signature: snapshot.signature || ''
+                    };
+                    hasUpdates = true;
+                }
+
+                function processChunk() {
+                    const start = Date.now();
+                    while (index < rows.length && Date.now() - start < 14) {
+                        const ro = rows[index++];
+                        const safeRo = safeFirebaseKey(ro.roNum);
+                        const rec = getRepairClassReviewRecord(safeRo);
+                        if (!rec && !hasRepairClassTransfer(ro)) continue;
+
+                        const status = getRepairClassReviewAccountabilityStatus(ro);
+                        const snapshot = status && status.snapshot ? status.snapshot : getRepairClassCurrentSnapshot(ro);
+                        const observationKey = `OBSERVED|${snapshot.signature || ''}|${snapshot.sourceVersion || ''}`;
+                        const needsObservationLog = !!(rec && observationKey && rec.lastObservedAuditKey !== observationKey);
+
+                        if (status && status.cleared) {
+                            if (rec && (rec.requiresReReview || rec.latestAccountabilityIssue || rec.latestAccountabilityAuditKey || needsObservationLog)) {
+                                updates[`repClassReviewStatus/${safeRo}/requiresReReview`] = false;
+                                updates[`repClassReviewStatus/${safeRo}/latestAccountabilityIssue`] = '';
+                                updates[`repClassReviewStatus/${safeRo}/latestAccountabilityAuditKey`] = '';
+                                addObservationUpdate(safeRo, rec, snapshot, rec.requiresReReview ? 'REPCLASS_REVIEW_CLEARED_BY_LATEST_STATE' : 'REPCLASS_STATE_OBSERVED', status.issueType || 'Review remains cleared.', status);
+                            }
+                            continue;
+                        }
+
+                        if (rec && status && status.auditKey && (rec.latestAccountabilityAuditKey !== status.auditKey || needsObservationLog)) {
+                            updates[`repClassReviewStatus/${safeRo}/requiresReReview`] = true;
+                            updates[`repClassReviewStatus/${safeRo}/latestAccountabilityIssue`] = status.message || status.issueType || 'Repair-class review required again.';
+                            updates[`repClassReviewStatus/${safeRo}/latestAccountabilityAuditKey`] = status.auditKey;
+                            addObservationUpdate(safeRo, rec, snapshot, status.issueType || 'REPCLASS_REVIEW_REOPENED', status.message || 'Repair-class review required again.', status);
+                            continue;
+                        }
+
+                        if (rec && needsObservationLog) {
+                            addObservationUpdate(safeRo, rec, snapshot, 'REPCLASS_STATE_OBSERVED', 'Repair-class state changed and was logged.', status);
+                        }
+                    }
+
+                    if (index < rows.length) {
+                        auditChunkTimer = setTimeout(processChunk, 35);
+                    } else {
+                        const finish = () => { repClassAccountabilityAuditInFlight = false; updateAllRepairClassBadges(); };
+                        if (hasUpdates && db) {
+                            db.ref().update(updates).catch(err => console.warn('Repair class audit write failed:', err)).finally(finish);
+                        } else {
+                            finish();
+                        }
+                    }
+                }
+
+                auditChunkTimer = setTimeout(processChunk, 120);
+            };
+
+            scheduleRepairClassAccountabilityAudit = function(delayMs = 9000) {
+                clearTimeout(repClassAccountabilityAuditTimer);
+                repClassAccountabilityAuditTimer = setTimeout(() => {
+                    if (!processedData || !processedData.length) return;
+                    auditRepairClassReviewAccountability();
+                }, Math.max(delayMs, 3000));
+            };
+        })();
+</script>
 </body>
 </html>
