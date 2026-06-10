@@ -1,4 +1,6 @@
 <!DOCTYPE html>
+<!-- Stability checked build: no realtime Firebase listeners, note save and repclass review save audited. -->
+
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -1474,10 +1476,10 @@
                         </div>
                     </div>
                     <div class="workflow-compliance-grid">
-                        <div class="workflow-compliance-mini clickable" title="Show ROs not touched today" onclick="openTileMetricFromEvent(event, 'workflow-stale')"><div class="mini-title">Touched</div><div class="mini-num">${c.touched}/${c.total}</div></div>
-                        <div class="workflow-compliance-mini clickable" title="Show ROs missing a meaningful note" onclick="openTileMetricFromEvent(event, 'workflow-missing-notes')"><div class="mini-title">Notes</div><div class="mini-num">${c.notes}/${c.total}</div></div>
-                        <div class="workflow-compliance-mini clickable" title="Show ROs not marked dispatched" onclick="openTileMetricFromEvent(event, 'workflow-pending-dispatch')"><div class="mini-title">Dispatch</div><div class="mini-num">${c.dispatched}/${c.dispatchTotal}</div></div>
-                        <div class="workflow-compliance-mini clickable" title="Show stale / not touched ROs" onclick="openTileMetricFromEvent(event, 'workflow-stale')"><div class="mini-title">Stale</div><div class="mini-num">${c.stale}</div></div>
+                        <div class="workflow-compliance-mini clickable" data-metric="workflow-stale" title="Show ROs not touched today" onclick="openTileMetricFromEvent(event, 'workflow-stale')"><div class="mini-title">Touched</div><div class="mini-num">${c.touched}/${c.total}</div></div>
+                        <div class="workflow-compliance-mini clickable" data-metric="workflow-missing-notes" title="Show ROs missing a meaningful note" onclick="openTileMetricFromEvent(event, 'workflow-missing-notes')"><div class="mini-title">Notes</div><div class="mini-num">${c.notes}/${c.total}</div></div>
+                        <div class="workflow-compliance-mini clickable" data-metric="workflow-pending-dispatch" title="Show ROs not marked dispatched" onclick="openTileMetricFromEvent(event, 'workflow-pending-dispatch')"><div class="mini-title">Dispatch</div><div class="mini-num">${c.dispatched}/${c.dispatchTotal}</div></div>
+                        <div class="workflow-compliance-mini clickable" data-metric="workflow-stale" title="Show stale / not touched ROs" onclick="openTileMetricFromEvent(event, 'workflow-stale')"><div class="mini-title">Stale</div><div class="mini-num">${c.stale}</div></div>
                     </div>
                     ${lockNote}
                 </div>`;
@@ -1936,10 +1938,10 @@
                         </div>
                     </div>
                     <div class="workflow-compliance-grid">
-                        <div class="workflow-compliance-mini clickable" title="Show pending repair-class reviews" onclick="openTileMetricFromEvent(event, 'repclass-pending')"><div class="mini-title">RO Review</div><div class="mini-num">${c.reviewed}/${c.total}</div></div>
-                        <div class="workflow-compliance-mini clickable" title="Show pending repair-class reviews" onclick="openTileMetricFromEvent(event, 'repclass-pending')"><div class="mini-title">Touched</div><div class="mini-num">${c.reviewed}/${c.total}</div></div>
-                        <div class="workflow-compliance-mini clickable" title="Show repair-class reviews still needed" onclick="openTileMetricFromEvent(event, 'repclass-pending')"><div class="mini-title">Review Needed</div><div class="mini-num">${c.reviewNeeded}</div></div>
-                        <div class="workflow-compliance-mini clickable" title="Show accepted / corrected repair-class reviews" onclick="openTileMetricFromEvent(event, 'repclass-accepted')"><div class="mini-title">Corrected</div><div class="mini-num">${c.accepted}</div></div>
+                        <div class="workflow-compliance-mini clickable" data-metric="repclass-pending" title="Show pending repair-class reviews" onclick="openTileMetricFromEvent(event, 'repclass-pending')"><div class="mini-title">RO Review</div><div class="mini-num">${c.reviewed}/${c.total}</div></div>
+                        <div class="workflow-compliance-mini clickable" data-metric="repclass-pending" title="Show pending repair-class reviews" onclick="openTileMetricFromEvent(event, 'repclass-pending')"><div class="mini-title">Touched</div><div class="mini-num">${c.reviewed}/${c.total}</div></div>
+                        <div class="workflow-compliance-mini clickable" data-metric="repclass-pending" title="Show repair-class reviews still needed" onclick="openTileMetricFromEvent(event, 'repclass-pending')"><div class="mini-title">Review Needed</div><div class="mini-num">${c.reviewNeeded}</div></div>
+                        <div class="workflow-compliance-mini clickable" data-metric="repclass-accepted" title="Show accepted / corrected repair-class reviews" onclick="openTileMetricFromEvent(event, 'repclass-accepted')"><div class="mini-title">Corrected</div><div class="mini-num">${c.accepted}</div></div>
                     </div>
                 </div>`;
         }
@@ -5983,15 +5985,29 @@
             if (event) {
                 event.preventDefault();
                 event.stopPropagation();
+                if (typeof event.stopImmediatePropagation === 'function') event.stopImmediatePropagation();
             }
-            const tile = event && event.currentTarget ? event.currentTarget.closest('.kpi-tile, .home-master-tile') : null;
-            if (!tile) return;
+            const sourceEl = event && (event.currentTarget || event.target) ? (event.currentTarget || event.target) : null;
+            const metricEl = sourceEl ? sourceEl.closest('.workflow-compliance-mini.clickable') : null;
+            const tile = sourceEl ? sourceEl.closest('.kpi-tile, .home-master-tile') : null;
+            if (!tile) return false;
             const owner = tile.dataset.drilldownOwner || '';
             const parentView = tile.dataset.parentView || 'home-view';
-            if (!owner) return;
-            currentDrilldownMetricFilter = metric || '';
+            if (!owner) return false;
+            currentDrilldownMetricFilter = metric || (metricEl ? metricEl.dataset.metric : '') || '';
             loadPersonDrilldown(owner, parentView);
+            return false;
         };
+
+        // Capture click events on metric squares before the parent tile click can fire.
+        // This prevents a square click from opening the unfiltered tile drilldown first.
+        document.addEventListener('click', function(e) {
+            const metricEl = e.target && e.target.closest ? e.target.closest('.workflow-compliance-mini.clickable') : null;
+            if (!metricEl) return;
+            const tile = metricEl.closest('.kpi-tile, .home-master-tile');
+            if (!tile) return;
+            window.openTileMetricFromEvent(e, metricEl.dataset.metric || '');
+        }, true);
 
         function generateTileHTML(name, dataSet, chartId = null, isPM = false) {
             
@@ -6418,7 +6434,7 @@
                                 let lockTooltipHtml = isPreWipLocked ? getLockTooltipHtml() : '';
                                 let roHtml = `<div style="display:flex; align-items:center; gap: 4px; flex-wrap: wrap;">${statusToggleHtml} ${roLinkDisplayHtml} ${noteBtnHtml} ${sourcePillHtml} ${lockTooltipHtml}</div>`;
 
-                                tableHTML += `<tr class="ro-row${isPreWipLocked ? ' locked-prewip-row' : ''}${isRepClassOnlyClosed ? ' repclass-only-row' : ''}" data-oos="${u.isOOS}" data-priority="${isPri}" data-repclass-only="${isRepClassOnlyClosed}" data-touched-today="${!!metricMeta.touchedToday}" data-has-note="${!!metricMeta.hasMeaningfulNote}" data-dispatched="${!!metricMeta.dispatched}" data-repclass-pending="${!!metricMeta.repclassPending}" data-repclass-accepted="${!!metricMeta.repclassAccepted}" data-repclass-cleared="${!!metricMeta.repclassCleared}" title="${isPreWipLocked ? PRE_WIP_LOCK_MESSAGE : (isRepClassOnlyClosed ? 'Completed/finalized RO included for Repair Class review only.' : '')}">`;
+                                tableHTML += `<tr class="ro-row${isPreWipLocked ? ' locked-prewip-row' : ''}${isRepClassOnlyClosed ? ' repclass-only-row' : ''}" data-safe-ro="${safeRo}" data-ro-number="${roNum}" data-oos="${u.isOOS}" data-priority="${isPri}" data-repclass-only="${isRepClassOnlyClosed}" data-touched-today="${!!metricMeta.touchedToday}" data-has-note="${!!metricMeta.hasMeaningfulNote}" data-dispatched="${!!metricMeta.dispatched}" data-repclass-pending="${!!metricMeta.repclassPending}" data-repclass-accepted="${!!metricMeta.repclassAccepted}" data-repclass-cleared="${!!metricMeta.repclassCleared}" title="${isPreWipLocked ? PRE_WIP_LOCK_MESSAGE : (isRepClassOnlyClosed ? 'Completed/finalized RO included for Repair Class review only.' : '')}">`;
                                 tableHTML += `<td style="vertical-align:top; padding-top:15px; border-bottom: ${localIdx === rowCount - 1 ? '1px solid var(--border)' : '1px dashed #eee'};">${roHtml}</td>`;
                                 
                                 let safeUnitType = u.unitType || 'UNKNOWN';
@@ -6534,6 +6550,20 @@
                 const visibleRows = Array.from(reg.querySelectorAll('.ro-row')).filter(r => r.style.display !== 'none');
                 reg.style.display = visibleRows.length === 0 ? 'none' : '';
             });
+
+            // When the user clicks a compliance square, open the path to the missing items
+            // so they land directly on the rows that require action instead of a collapsed tree.
+            if (currentDrilldownMetricFilter) {
+                Array.from(container.querySelectorAll('.ro-row')).forEach(row => {
+                    if (row.style.display !== 'none') {
+                        let node = row.parentElement;
+                        while (node && node !== container) {
+                            if (node.tagName && node.tagName.toLowerCase() === 'details') node.open = true;
+                            node = node.parentElement;
+                        }
+                    }
+                });
+            }
         }
 
         function loadPersonDrilldown(owner, parentViewId) {
@@ -6928,15 +6958,21 @@
         })();
 
         /* ============================================================
-           NO REAL-TIME PULL MODE
+           FIREBASE DATABASE LIVE COMPLIANCE MODE
            ------------------------------------------------------------
-           The dashboard is upload/refresh driven. After the page loads
-           the workbook + Firebase state once, it must not subscribe to
-           Firebase or rebuild itself from background snapshots.
+           Firebase Storage workbooks stay refresh-driven only.
+           The live Firebase Database nodes below are mandatory because
+           daily notes, dispatch progress, and repair-class review progress
+           must be visible to leaders and survive browser refreshes.
            ============================================================ */
-        (function workflowNoRealtimePullMode(){
-            window.__workflowNoRealtimeMode = true;
-            window.__firebaseRealtimeDisabled = true;
+        (function workflowFirebaseLiveComplianceMode(){
+            window.__workflowNoRealtimeMode = false;
+            window.__firebaseStorageRefreshOnly = true;
+            window.__firebaseDatabaseRealtimeMode = true;
+
+            let realtimeUiRefreshTimer = null;
+            let firebaseLiveListenersAttached = false;
+            const liveRefs = [];
 
             async function readFirebaseValue(path) {
                 if (!db) return null;
@@ -6944,55 +6980,113 @@
                     const snap = await db.ref(path).once('value');
                     return snap.val() || {};
                 } catch (err) {
-                    console.warn('One-time Firebase read failed for ' + path, err);
+                    console.warn('Firebase read failed for ' + path, err);
                     return {};
                 }
             }
 
+            function attachLiveNode(path, applyValue) {
+                if (!db) return;
+                const ref = db.ref(path);
+                liveRefs.push(ref);
+                ref.on('value', snap => {
+                    try {
+                        applyValue(snap.val() || {});
+                        scheduleRealtimeComplianceRefresh(path);
+                    } catch (err) {
+                        console.warn('Live Firebase apply failed for ' + path, err);
+                    }
+                }, err => console.warn('Live Firebase listener failed for ' + path, err));
+            }
+
+            function scheduleRealtimeComplianceRefresh(reason) {
+                clearTimeout(realtimeUiRefreshTimer);
+                realtimeUiRefreshTimer = setTimeout(() => refreshComplianceUiFromLiveFirebase(reason), 180);
+            }
+
+            function updateExistingDrilldownRowMetricData() {
+                const body = document.getElementById('drilldown-body');
+                if (!body) return;
+                body.querySelectorAll('.ro-row[data-safe-ro]').forEach(row => {
+                    const safeRo = row.dataset.safeRo || '';
+                    const ro = getRoContextBySafeRo(safeRo);
+                    const meta = ro ? buildRowMetricMeta(ro, ro.roNum) : {
+                        touchedToday: roTouchedToday(safeRo),
+                        hasMeaningfulNote: roHasMeaningfulNote(safeRo),
+                        dispatched: !!globalRoCheckState[safeRo],
+                        repclassPending: false,
+                        repclassAccepted: false,
+                        repclassCleared: false
+                    };
+                    row.dataset.touchedToday = String(!!meta.touchedToday);
+                    row.dataset.hasNote = String(!!meta.hasMeaningfulNote);
+                    row.dataset.dispatched = String(!!meta.dispatched);
+                    row.dataset.repclassPending = String(!!meta.repclassPending);
+                    row.dataset.repclassAccepted = String(!!meta.repclassAccepted);
+                    row.dataset.repclassCleared = String(!!meta.repclassCleared);
+                });
+            }
+
+            function refreshComplianceUiFromLiveFirebase(reason) {
+                updateAllStatusBadges();
+                updateAllNoteButtons();
+                updateAllRepairClassBadges();
+
+                const activeView = document.querySelector('.view-section.active');
+                const activeId = activeView ? activeView.id : '';
+
+                // Live Firebase updates must not reload Storage workbooks and must not collapse drilldowns.
+                if (activeId === 'person-view') {
+                    updateExistingDrilldownRowMetricData();
+                    renderNoteActivityLog(currentEditingRo || '');
+                    applyDrilldownFilters();
+                    return;
+                }
+
+                if (activeId === 'home-view') renderHomeDashboard();
+                else if (activeId === 'pm-view') renderKPITiles(pmOwners, 'pm-kpi-container', 'pm-view');
+                else if (activeId === 'vended-view') renderKPITiles(vendedOwners, 'vended-kpi-container', 'vended-view');
+                else if (activeId === 'ers-view') renderKPITiles(ersOwners, 'ers-kpi-container', 'ers-view');
+                else if (activeId === 'nonosc-view') renderNonOscTiles();
+                else if (activeId === 'summary-view') { renderSummary(); renderAmeritOos(); }
+            }
+
             initFirebaseSync = function() {
                 try {
-                    if (window.__firebaseInitialReadComplete || typeof firebase === 'undefined') return;
-                    window.__firebaseInitialReadComplete = true;
+                    if (window.__firebaseLiveComplianceInitialized || typeof firebase === 'undefined') return;
+                    window.__firebaseLiveComplianceInitialized = true;
                     db = firebase.database();
 
+                    // These lightweight operational nodes are live. They are the source of truth for
+                    // daily notes compliance, dispatch progress, and repair-class review progress.
+                    attachLiveNode('roChecks', value => { globalRoCheckState = value || {}; });
+                    attachLiveNode('roNotes', value => { globalRoNotesState = value || {}; });
+                    attachLiveNode('workflowActivity', value => { globalWorkflowActivityState = value || {}; });
+                    attachLiveNode('repClassReviewStatus', value => { globalRepairClassReviewState = value || {}; });
+
+                    // Governor config is still loaded once. Storage workbook refresh remains manual/page-refresh driven.
                     Promise.all([
-                        readFirebaseValue('roChecks'),
-                        readFirebaseValue('roNotes'),
-                        readFirebaseValue('workflowActivity'),
-                        readFirebaseValue('repClassReviewStatus'),
                         readFirebaseValue('spendGovernor/manualLock'),
                         readFirebaseValue('spendGovernor/unlimitedSpendMode')
-                    ]).then(([checks, notes, activity, repclass, manualLock, unlimitedMode]) => {
-                        globalRoCheckState = checks || {};
-                        globalRoNotesState = notes || {};
-                        globalWorkflowActivityState = activity || {};
-                        globalRepairClassReviewState = repclass || {};
+                    ]).then(([manualLock, unlimitedMode]) => {
                         globalManualGovernorLockState = manualLock || {};
                         globalUnlimitedSpendState = unlimitedMode || {};
-
-                        try { localStorage.setItem('workflow_checks', JSON.stringify(globalRoCheckState)); } catch(e) {}
-                        try { localStorage.setItem('workflow_notes', JSON.stringify(globalRoNotesState)); } catch(e) {}
                         try { localStorage.setItem('manual_governor_lock', JSON.stringify(globalManualGovernorLockState)); } catch(e) {}
                         try { localStorage.setItem('unlimited_spend_mode', JSON.stringify(globalUnlimitedSpendState)); } catch(e) {}
-
-                        updateAllStatusBadges();
-                        updateAllNoteButtons();
-                        updateAllRepairClassBadges();
-
-                        // One observed-state accountability pass per manual page refresh only.
-                        // This writes lifecycle/audit evidence if workbook data changed, but it does not subscribe.
-                        if (processedData && processedData.length > 0) {
-                            setTimeout(() => scheduleRepairClassAccountabilityAudit(6000), 1000);
-                        }
                     });
+
+                    // One observed-state accountability pass per manual page refresh only.
+                    // This uses the workbook/AI Ref snapshot loaded at page refresh; it does not pull Storage again.
+                    if (processedData && processedData.length > 0) {
+                        setTimeout(() => scheduleRepairClassAccountabilityAudit(6000), 1000);
+                    }
                 } catch (error) {
-                    console.warn('One-time Firebase initialization failed.', error);
+                    console.warn('Firebase live compliance initialization failed.', error);
                 }
             };
 
             scheduleActiveViewRefresh = function() {
-                // No background-driven refreshes. User actions call refreshActiveViewPreservingDrilldown directly.
-                return;
+                scheduleRealtimeComplianceRefresh('scheduled-local-state-refresh');
             };
 
             logWorkflowActivity = function(safeRo, actionType, noteText = '', meta = {}) {
@@ -7033,7 +7127,7 @@
                     globalWorkflowActivityState[safeRo].latestNote = String(noteText || '').trim();
                 }
 
-                updateAllNoteButtons();
+                scheduleRealtimeComplianceRefresh('local-activity-write');
 
                 if (!db) return Promise.resolve();
 
@@ -7053,8 +7147,7 @@
                     updates[`workflowActivity/${safeRo}/lastNoteDate`] = dateKey;
                     updates[`workflowActivity/${safeRo}/latestNote`] = String(noteText || '').trim();
                 }
-                db.ref().update(updates).catch(err => console.warn('Background workflow activity write failed:', err));
-                return Promise.resolve();
+                return db.ref().update(updates).catch(err => console.warn('Firebase workflow activity write failed:', err));
             };
 
             toggleRoCheck = function(ro, isChecked) {
@@ -7066,9 +7159,7 @@
                 }
                 const actionText = isChecked ? 'Marked dispatched.' : 'Moved back to pending.';
                 globalRoCheckState = Object.assign({}, globalRoCheckState || {}, { [safeRo]: isChecked });
-                try { localStorage.setItem('workflow_checks', JSON.stringify(globalRoCheckState)); } catch(e) {}
-                updateAllStatusBadges();
-                refreshActiveViewPreservingDrilldown();
+                scheduleRealtimeComplianceRefresh('local-dispatch-toggle');
 
                 const writePromise = db ? db.ref('roChecks/' + safeRo).set(isChecked) : Promise.resolve();
                 writePromise
@@ -7099,29 +7190,26 @@
                 try {
                     if (saveBtn) { saveBtn.disabled = true; saveBtn.innerText = 'Saving...'; }
 
-                    // Optimistic local save: the UI clears immediately and does not wait on Firebase/network.
+                    // Write locally for immediate UI response AND publish to Firebase immediately.
+                    // Firebase remains the source of truth; live listeners update every open browser.
                     globalRoNotesState = Object.assign({}, globalRoNotesState || {}, { [safeRo]: noteText });
-                    try { localStorage.setItem('workflow_notes', JSON.stringify(globalRoNotesState)); } catch(e) {}
+                    scheduleRealtimeComplianceRefresh('local-note-save');
 
-                    // Log locally first so compliance buttons and note history update immediately.
-                    await logWorkflowActivity(safeRo, 'NOTE_ADDED', noteText, {
+                    const writes = [];
+                    if (db) writes.push(db.ref('roNotes/' + safeRo).set(noteText));
+                    writes.push(logWorkflowActivity(safeRo, 'NOTE_ADDED', noteText, {
                         source: 'message-button',
                         roNumber: roNum
-                    });
+                    }));
+
+                    await Promise.all(writes);
 
                     document.getElementById('note-textarea').value = '';
                     renderNoteActivityLog(safeRo);
-                    updateAllNoteButtons();
-                    refreshActiveViewPreservingDrilldown();
                     closeNoteModal();
-
-                    // Persist roNotes in the background. logWorkflowActivity already writes its activity node.
-                    if (db) {
-                        db.ref('roNotes/' + safeRo).set(noteText).catch(err => console.warn('Background note write failed:', err));
-                    }
                 } catch (err) {
                     console.warn('Note save failed:', err);
-                    alert('Could not save note. Please try again.');
+                    alert('Could not save note to Firebase. Please try again.');
                 } finally {
                     if (saveBtn) { saveBtn.disabled = false; saveBtn.innerText = 'Save Update'; }
                 }
@@ -7133,6 +7221,7 @@
                 window.__manualGovernorResetTimer = null;
             }
         })();
+
 
 </script>
 </body>
