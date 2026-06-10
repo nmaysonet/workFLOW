@@ -7030,6 +7030,52 @@
                 });
             }
 
+            // Queue/home tiles were visually "ticking" because live Firebase compliance updates
+            // were rebuilding the whole tile grid while the mouse was still hovering a card.
+            // Track tile hover state and defer full card-grid rebuilds until the user leaves the tile.
+            window.__workflowTileHovering = false;
+            window.__workflowQueuedTileRefreshReason = '';
+            window.__workflowQueuedTileRefreshTimer = null;
+
+            function isWorkflowTileElement(el) {
+                return !!(el && el.closest && el.closest('.kpi-tile, .home-master-tile'));
+            }
+
+            function isWorkflowTileHoverLocked() {
+                return !!window.__workflowTileHovering;
+            }
+
+            function queueTileRefreshAfterHover(reason) {
+                window.__workflowQueuedTileRefreshReason = reason || 'live-firebase-update';
+                clearTimeout(window.__workflowQueuedTileRefreshTimer);
+                window.__workflowQueuedTileRefreshTimer = setTimeout(() => {
+                    if (!isWorkflowTileHoverLocked() && window.__workflowQueuedTileRefreshReason) {
+                        const queuedReason = window.__workflowQueuedTileRefreshReason;
+                        window.__workflowQueuedTileRefreshReason = '';
+                        refreshComplianceUiFromLiveFirebase(queuedReason + ':after-hover');
+                    }
+                }, 350);
+            }
+
+            document.addEventListener('pointerover', function(e) {
+                if (isWorkflowTileElement(e.target)) {
+                    window.__workflowTileHovering = true;
+                }
+            }, true);
+
+            document.addEventListener('pointerout', function(e) {
+                const fromTile = e.target && e.target.closest ? e.target.closest('.kpi-tile, .home-master-tile') : null;
+                if (!fromTile) return;
+                const toTile = e.relatedTarget && e.relatedTarget.closest ? e.relatedTarget.closest('.kpi-tile, .home-master-tile') : null;
+                if (toTile === fromTile) return;
+                window.__workflowTileHovering = false;
+                if (window.__workflowQueuedTileRefreshReason) queueTileRefreshAfterHover(window.__workflowQueuedTileRefreshReason);
+            }, true);
+
+            function activeViewIsTileGrid(activeId) {
+                return ['home-view', 'pm-view', 'vended-view', 'ers-view', 'nonosc-view'].includes(activeId || '');
+            }
+
             function refreshComplianceUiFromLiveFirebase(reason) {
                 updateAllStatusBadges();
                 updateAllNoteButtons();
@@ -7043,6 +7089,13 @@
                     updateExistingDrilldownRowMetricData();
                     renderNoteActivityLog(currentEditingRo || '');
                     applyDrilldownFilters();
+                    return;
+                }
+
+                // Do not rebuild the entire tile grid while the cursor is sitting on a tile.
+                // Replacing the hovered DOM node makes the browser fire hover off/on, which looks like a tick.
+                if (activeViewIsTileGrid(activeId) && isWorkflowTileHoverLocked()) {
+                    queueTileRefreshAfterHover(reason || 'live-firebase-update');
                     return;
                 }
 
