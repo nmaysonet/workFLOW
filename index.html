@@ -7152,6 +7152,203 @@
                 }, Math.max(delayMs, 3000));
             };
         })();
+
+        /* ============================================================
+           NO REAL-TIME PULL MODE
+           ------------------------------------------------------------
+           The dashboard is upload/refresh driven. After the page loads
+           the workbook + Firebase state once, it must not subscribe to
+           Firebase or rebuild itself from background snapshots.
+           ============================================================ */
+        (function workflowNoRealtimePullMode(){
+            window.__workflowNoRealtimeMode = true;
+            window.__firebaseRealtimeDisabled = true;
+
+            async function readFirebaseValue(path) {
+                if (!db) return null;
+                try {
+                    const snap = await db.ref(path).once('value');
+                    return snap.val() || {};
+                } catch (err) {
+                    console.warn('One-time Firebase read failed for ' + path, err);
+                    return {};
+                }
+            }
+
+            initFirebaseSync = function() {
+                try {
+                    if (window.__firebaseInitialReadComplete || typeof firebase === 'undefined') return;
+                    window.__firebaseInitialReadComplete = true;
+                    db = firebase.database();
+
+                    Promise.all([
+                        readFirebaseValue('roChecks'),
+                        readFirebaseValue('roNotes'),
+                        readFirebaseValue('workflowActivity'),
+                        readFirebaseValue('repClassReviewStatus'),
+                        readFirebaseValue('spendGovernor/manualLock'),
+                        readFirebaseValue('spendGovernor/unlimitedSpendMode')
+                    ]).then(([checks, notes, activity, repclass, manualLock, unlimitedMode]) => {
+                        globalRoCheckState = checks || {};
+                        globalRoNotesState = notes || {};
+                        globalWorkflowActivityState = activity || {};
+                        globalRepairClassReviewState = repclass || {};
+                        globalManualGovernorLockState = manualLock || {};
+                        globalUnlimitedSpendState = unlimitedMode || {};
+
+                        try { localStorage.setItem('workflow_checks', JSON.stringify(globalRoCheckState)); } catch(e) {}
+                        try { localStorage.setItem('workflow_notes', JSON.stringify(globalRoNotesState)); } catch(e) {}
+                        try { localStorage.setItem('manual_governor_lock', JSON.stringify(globalManualGovernorLockState)); } catch(e) {}
+                        try { localStorage.setItem('unlimited_spend_mode', JSON.stringify(globalUnlimitedSpendState)); } catch(e) {}
+
+                        updateAllStatusBadges();
+                        updateAllNoteButtons();
+                        updateAllRepairClassBadges();
+
+                        // One observed-state accountability pass per manual page refresh only.
+                        // This writes lifecycle/audit evidence if workbook data changed, but it does not subscribe.
+                        if (processedData && processedData.length > 0) {
+                            setTimeout(() => scheduleRepairClassAccountabilityAudit(6000), 1000);
+                        }
+                    });
+                } catch (error) {
+                    console.warn('One-time Firebase initialization failed.', error);
+                }
+            };
+
+            scheduleActiveViewRefresh = function() {
+                // No background-driven refreshes. User actions call refreshActiveViewPreservingDrilldown directly.
+                return;
+            };
+
+            const originalLogWorkflowActivityNoRealtime = logWorkflowActivity;
+            logWorkflowActivity = function(safeRo, actionType, noteText = '', meta = {}) {
+                const now = new Date();
+                const nowIso = now.toISOString();
+                const dateKey = getLocalDateKey(now);
+                const roContext = getRoContextBySafeRo(safeRo);
+                const assignedOwner = meta.assignedOwner || (roContext && roContext.kpiOwners && roContext.kpiOwners.length ? roContext.kpiOwners[0] : '') || '';
+                const roNumber = meta.roNumber || (roContext ? roContext.roNum : safeRo);
+                const entry = {
+                    timestamp: nowIso,
+                    dateKey: dateKey,
+                    actionType: actionType,
+                    noteText: String(noteText || '').trim(),
+                    roNumber: roNumber || '',
+                    unitNo: meta.unitNo || (roContext ? roContext.unitNo : '') || '',
+                    branch: meta.branch || (roContext ? roContext.branch : '') || '',
+                    assignedOwner: assignedOwner,
+                    source: meta.source || 'workflow-ui'
+                };
+
+                if (!globalWorkflowActivityState[safeRo]) globalWorkflowActivityState[safeRo] = { activityLog: {} };
+                if (!globalWorkflowActivityState[safeRo].activityLog) globalWorkflowActivityState[safeRo].activityLog = {};
+                if (!globalWorkflowActivityState[safeRo].activityLog[dateKey]) globalWorkflowActivityState[safeRo].activityLog[dateKey] = {};
+                const localKey = 'local_' + now.getTime() + '_' + Math.random().toString(36).slice(2, 7);
+                globalWorkflowActivityState[safeRo].activityLog[dateKey][localKey] = entry;
+                globalWorkflowActivityState[safeRo].lastTouchedAt = nowIso;
+                globalWorkflowActivityState[safeRo].lastTouchedDate = dateKey;
+                globalWorkflowActivityState[safeRo].lastTouchedByOwner = assignedOwner;
+                globalWorkflowActivityState[safeRo].lastActionType = actionType;
+                globalWorkflowActivityState[safeRo].roNumber = roNumber || '';
+                globalWorkflowActivityState[safeRo].unitNo = entry.unitNo || '';
+                globalWorkflowActivityState[safeRo].branch = entry.branch || '';
+                if (actionType === 'NOTE_ADDED' && isMeaningfulNote(noteText)) {
+                    globalWorkflowActivityState[safeRo].hasMeaningfulNote = true;
+                    globalWorkflowActivityState[safeRo].lastNoteAt = nowIso;
+                    globalWorkflowActivityState[safeRo].lastNoteDate = dateKey;
+                    globalWorkflowActivityState[safeRo].latestNote = String(noteText || '').trim();
+                }
+
+                updateAllNoteButtons();
+
+                if (!db) return Promise.resolve();
+
+                const entryRef = db.ref(`workflowActivity/${safeRo}/activityLog/${dateKey}`).push();
+                const updates = {};
+                updates[`workflowActivity/${safeRo}/activityLog/${dateKey}/${entryRef.key}`] = entry;
+                updates[`workflowActivity/${safeRo}/lastTouchedAt`] = nowIso;
+                updates[`workflowActivity/${safeRo}/lastTouchedDate`] = dateKey;
+                updates[`workflowActivity/${safeRo}/lastTouchedByOwner`] = assignedOwner;
+                updates[`workflowActivity/${safeRo}/lastActionType`] = actionType;
+                updates[`workflowActivity/${safeRo}/roNumber`] = roNumber || '';
+                updates[`workflowActivity/${safeRo}/unitNo`] = entry.unitNo || '';
+                updates[`workflowActivity/${safeRo}/branch`] = entry.branch || '';
+                if (actionType === 'NOTE_ADDED' && isMeaningfulNote(noteText)) {
+                    updates[`workflowActivity/${safeRo}/hasMeaningfulNote`] = true;
+                    updates[`workflowActivity/${safeRo}/lastNoteAt`] = nowIso;
+                    updates[`workflowActivity/${safeRo}/lastNoteDate`] = dateKey;
+                    updates[`workflowActivity/${safeRo}/latestNote`] = String(noteText || '').trim();
+                }
+                return db.ref().update(updates);
+            };
+
+            toggleRoCheck = function(ro, isChecked) {
+                let safeRo = safeFirebaseKey(ro);
+                const roContext = getRoContextBySafeRo(safeRo);
+                if (roContext && shouldLockPreWipRow(roContext.status)) {
+                    alert(PRE_WIP_LOCK_MESSAGE);
+                    return;
+                }
+                const actionText = isChecked ? 'Marked dispatched.' : 'Moved back to pending.';
+                globalRoCheckState = Object.assign({}, globalRoCheckState || {}, { [safeRo]: isChecked });
+                try { localStorage.setItem('workflow_checks', JSON.stringify(globalRoCheckState)); } catch(e) {}
+                updateAllStatusBadges();
+                refreshActiveViewPreservingDrilldown();
+
+                const writePromise = db ? db.ref('roChecks/' + safeRo).set(isChecked) : Promise.resolve();
+                writePromise
+                    .then(() => logWorkflowActivity(safeRo, isChecked ? 'DISPATCH_MARKED' : 'DISPATCH_REOPENED', actionText, {
+                        source: 'dispatch-toggle',
+                        roNumber: roContext ? roContext.roNum : ro
+                    }))
+                    .catch(err => console.warn('Dispatch status update failed:', err));
+            };
+
+            window.saveNote = async function() {
+                if (!currentEditingRo) return;
+                let noteText = document.getElementById('note-textarea').value.trim();
+                if (!isMeaningfulNote(noteText)) {
+                    alert('Please enter a meaningful update with at least 15 characters.');
+                    return;
+                }
+
+                const latestNote = getLatestMeaningfulNote(currentEditingRo).trim();
+                if (latestNote && latestNote.toLowerCase() === noteText.toLowerCase()) {
+                    alert('This update is the same as the latest saved note. Add a new meaningful update if something changed.');
+                    return;
+                }
+
+                const safeRo = currentEditingRo;
+                const roNum = currentEditingRoNum || currentEditingRo;
+                try {
+                    globalRoNotesState = Object.assign({}, globalRoNotesState || {}, { [safeRo]: noteText });
+                    try { localStorage.setItem('workflow_notes', JSON.stringify(globalRoNotesState)); } catch(e) {}
+                    updateAllNoteButtons();
+
+                    if (db) await db.ref('roNotes/' + safeRo).set(noteText);
+                    await logWorkflowActivity(safeRo, 'NOTE_ADDED', noteText, {
+                        source: 'message-button',
+                        roNumber: roNum
+                    });
+
+                    document.getElementById('note-textarea').value = '';
+                    renderNoteActivityLog(safeRo);
+                    refreshActiveViewPreservingDrilldown();
+                    closeNoteModal();
+                } catch (err) {
+                    console.warn('Note save failed:', err);
+                    alert('Could not save note. Please try again.');
+                }
+            };
+
+            // Prevent any leftover auto-reset interval from running after the initial load.
+            if (window.__manualGovernorResetTimer) {
+                clearInterval(window.__manualGovernorResetTimer);
+                window.__manualGovernorResetTimer = null;
+            }
+        })();
+
 </script>
 </body>
 </html>
