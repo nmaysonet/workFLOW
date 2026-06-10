@@ -2043,11 +2043,14 @@
                 return;
             }
 
+            const buttons = document.querySelectorAll('#repair-class-review-modal .btn-accept-reasoning, #repair-class-review-modal .btn-decline-reasoning');
+            buttons.forEach(btn => { btn.disabled = true; btn.dataset.originalText = btn.dataset.originalText || btn.innerText; btn.innerText = 'SAVING...'; });
+
             const rcSubmit = getRepairClassDataForRo(ro);
             const currentSnapshot = getRepairClassCurrentSnapshot(ro);
             const priorRecord = getRepairClassReviewRecord(safeRo) || {};
             const nowIso = new Date().toISOString();
-            const eventKey = nowIso.replace(/[^0-9A-Za-z]/g, '_');
+            const eventKey = nowIso.replace(/[^0-9A-Za-z]/g, '_') + '_' + Math.random().toString(36).slice(2, 7);
             const priorEvents = (priorRecord && priorRecord.events && typeof priorRecord.events === 'object') ? priorRecord.events : {};
             const reviewEvent = {
                 timestamp: nowIso,
@@ -2087,34 +2090,47 @@
                 lastObservedWhyTransfer: currentSnapshot.transferReason || '',
                 lastObservedSignature: currentSnapshot.signature || '',
                 lastObservedSourceVersion: currentSnapshot.sourceVersion || '',
-                lastObservedAuditKey: `OBSERVED|${currentSnapshot.signature || ''}|${currentSnapshot.sourceVersion || ''}`,
-                events: Object.assign({}, priorEvents, { [eventKey]: reviewEvent })
+                lastObservedAuditKey: `OBSERVED|${currentSnapshot.signature || ''}|${currentSnapshot.sourceVersion || ''}`
             };
 
             const closeModal = () => {
                 const modal = document.getElementById('repair-class-review-modal');
                 if (modal) modal.style.display = 'none';
+                if (memoEl) memoEl.value = '';
                 currentRepairClassReviewSafeRo = null;
+                buttons.forEach(btn => { btn.disabled = false; if (btn.dataset.originalText) btn.innerText = btn.dataset.originalText; });
                 updateAllRepairClassBadges();
                 refreshActiveViewPreservingDrilldown();
             };
 
-            // Update local state immediately so the modal close/refresh does not redraw the row as PENDING
-            // while Firebase is still acknowledging the write.
-            globalRepairClassReviewState = Object.assign({}, globalRepairClassReviewState || {}, { [safeRo]: payload });
-            // skip synchronous localStorage persistence for repClassReviewStatus; Firebase is source of truth
+            // Optimistic local save: clear the compliance item immediately, just like VRO notes.
+            // Firebase is still the source of truth, but the UI no longer waits on network acknowledgement.
+            const localRecord = Object.assign({}, priorRecord, payload, {
+                events: Object.assign({}, priorEvents, { [eventKey]: reviewEvent })
+            });
+            globalRepairClassReviewState = Object.assign({}, globalRepairClassReviewState || {}, { [safeRo]: localRecord });
+
+            // Update activity locally/background before closing so the memo appears in the audit trail.
+            try {
+                logWorkflowActivity(safeRo, 'REPCLASS_REVIEW_' + decision, memo, Object.assign({}, payload, {
+                    source: 'repair-class-review-modal',
+                    roNumber: ro.roNum
+                }));
+            } catch (activityErr) {
+                console.warn('Local repair-class activity log failed:', activityErr);
+            }
+
+            closeModal();
 
             if (db) {
-                db.ref('repClassReviewStatus/' + safeRo).set(payload)
-                    .then(() => logWorkflowActivity(safeRo, 'REPCLASS_REVIEW_' + decision, memo, payload))
-                    .then(closeModal)
-                    .catch(errObj => {
-                        console.warn('Repair class review save failed:', errObj);
-                        alert('Could not save repair class review. Please try again.');
-                    });
-            } else {
-                logWorkflowActivity(safeRo, 'REPCLASS_REVIEW_' + decision, memo, payload);
-                closeModal();
+                const updates = {};
+                Object.keys(payload).forEach(key => {
+                    updates[`repClassReviewStatus/${safeRo}/${key}`] = payload[key];
+                });
+                updates[`repClassReviewStatus/${safeRo}/events/${eventKey}`] = reviewEvent;
+                db.ref().update(updates).catch(errObj => {
+                    console.warn('Background repair class review save failed:', errObj);
+                });
             }
         }
 
