@@ -1,6 +1,4 @@
 <!DOCTYPE html>
-<!-- Stability checked build: no realtime Firebase listeners, note save and repclass review save audited. -->
-
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -115,6 +113,7 @@
         body.colorblind-mode .workflow-compliance-card.compliance-red .workflow-compliance-rating { background: #D55E00; color: #111; }
 
 
+
         .spend-log-sort-btn { background: transparent; border: none; color: inherit; font: inherit; font-size: inherit; font-weight: 800; text-transform: uppercase; cursor: pointer; padding: 0; display: inline-flex; align-items: center; gap: 4px; }
         .spend-log-sort-btn:hover { color: var(--gold-hover); }
         .spend-log-sort-indicator { font-size: 10px; opacity: 0.75; }
@@ -174,15 +173,15 @@
         .filter-btn.active:hover { background-color: var(--gold-hover); }
 
         .kpi-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 20px; padding-top: 10px;}
-        .kpi-tile { background: #fff; padding: 25px 20px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); cursor: pointer; border-top: 4px solid var(--gold) !important; transition: transform 0.16s ease, box-shadow 0.16s ease, border-top-color 0.16s ease; display: flex; flex-direction: column; position: relative; backface-visibility: hidden; transform: translateY(0); }
-        .kpi-tile:hover { transform: translateY(-6px); box-shadow: 0 14px 24px rgba(0,0,0,0.14); border-top-color: #000000 !important; z-index: 20; }
+        .kpi-tile { background: #fff; padding: 25px 20px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); cursor: pointer; border-top: 4px solid var(--gold) !important; transition: transform 0.2s ease, box-shadow 0.2s ease, border-top-color 0.2s ease; display: flex; flex-direction: column; }
+        .kpi-tile:hover { transform: translateY(-5px); box-shadow: 0 12px 20px rgba(0,0,0,0.12); border-top-color: #000000 !important; }
         .kpi-name { font-size: 20px; font-weight: 800; margin-bottom: 15px; color: #333; }
         
         .home-dashboard-header { display: flex; justify-content: space-between; align-items: center; margin-top: 40px; margin-bottom: 10px; padding-bottom: 10px; border-bottom: 2px solid var(--border); flex-wrap: wrap; gap: 15px;}
         .filter-select { padding: 8px 15px; border-radius: 4px; border: 1px solid #ccc; font-weight: 700; font-size: 14px; background: #fff;}
         .home-kpi-container { display: flex; gap: 15px; flex-wrap: nowrap; width: 100%; overflow-x: auto; padding-top: 10px; padding-bottom: 15px; }
-        .home-master-tile { flex: 1; min-width: 360px; padding: 20px; cursor: pointer; border-top: 4px solid var(--gold) !important; box-shadow: 0 1px 3px rgba(0,0,0,0.1); transition: transform 0.16s ease, box-shadow 0.16s ease, border-top-color 0.16s ease; position: relative; backface-visibility: hidden; transform: translateY(0); }
-        .home-master-tile:hover { transform: translateY(-6px); box-shadow: 0 14px 24px rgba(0,0,0,0.14); border-top-color: #000000 !important; z-index: 20; }
+        .home-master-tile { flex: 1; min-width: 360px; padding: 20px; cursor: pointer; border-top: 4px solid var(--gold) !important; box-shadow: 0 1px 3px rgba(0,0,0,0.1); transition: transform 0.2s ease, box-shadow 0.2s ease, border-top-color 0.2s ease; }
+        .home-master-tile:hover { transform: translateY(-5px); box-shadow: 0 12px 20px rgba(0,0,0,0.12); border-top-color: #000000 !important; }
         .home-master-tile .kpi-name { font-size: 18px; margin-bottom: 15px; }
 
         .kpi-top-metrics { display: flex; gap: 10px; margin-bottom: 15px; align-items: stretch; }
@@ -236,26 +235,24 @@
         .badge-ecd-missing { background-color: #fff3cd; color: #d9534f; padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: 800; border: 1px solid #d9534f; white-space: nowrap; display: inline-block; }
         
         .status-toggle { cursor: pointer; margin-right: 8px; user-select: none; transition: 0.2s; box-shadow: 0 1px 3px rgba(0,0,0,0.2); display: inline-block; text-align: center; min-width: 85px; font-size: 10px; letter-spacing: 0.5px;}
-        .status-toggle:hover { opacity: 0.9; transform: none; }
+        .status-toggle:hover { opacity: 0.8; transform: translateY(-1px); }
         .status-pending { background-color: var(--urgent-red); color: white; border: 1px solid #c9302c; }
         .status-dispatched { background-color: var(--low-green); color: white; border: 1px solid #4cae4c; }
 
         .note-btn { background: #fff0f0; color: var(--urgent-red); border: 1px solid var(--urgent-red); border-radius: 4px; cursor: pointer; padding: 2px 6px; font-size: 12px; transition: 0.2s; opacity: 1; box-shadow: 0 1px 3px rgba(217,83,79,0.18);}
-        .note-btn:hover { background: #ffe1e1; opacity: 1; transform: none; }
+        .note-btn:hover { background: #ffe1e1; opacity: 1; transform: translateY(-1px); }
         .note-btn.has-note { background: #f0fdf4; color: #15803d; border-color: #22c55e; opacity: 1; box-shadow: 0 1px 3px rgba(34,197,94,0.22); }
-        .note-btn.has-note:hover { background: #dcfce7; transform:none; }
+        .note-btn.has-note:hover { background: #dcfce7; }
 
         .repair-class-cell { display:flex; flex-direction:column; gap:5px; min-width:120px; align-items:flex-start; }
         .repair-class-name { font-size:11px; font-weight:900; color:#334155; line-height:1.2; }
         .repair-class-pill { display:inline-block; width:max-content; max-width:100%; padding:3px 7px; border-radius:999px; font-size:9px; font-weight:900; letter-spacing:0.3px; text-transform:uppercase; white-space:normal; line-height:1.15; cursor:help; }
         .repair-class-pill.clean { color:#166534; background:#dcfce7; border:1px solid #86efac; }
         .repair-class-pill.review { color:#581c87; background:#f3e8ff; border:1px solid #c084fc; }
-        .repair-class-toggle { min-width:86px; min-height:23px; margin-right:0; padding:4px 8px; border-radius:12px; font-size:10px; font-weight:900; text-transform:uppercase; cursor:pointer; border:none; box-shadow:0 1px 3px rgba(0,0,0,0.2); display:inline-flex; align-items:center; justify-content:center; text-align:center; line-height:1.1; vertical-align:middle; }
+        .repair-class-toggle { min-width:86px; margin-right:0; padding:4px 7px; border-radius:12px; font-size:10px; font-weight:900; text-transform:uppercase; cursor:pointer; border:none; box-shadow:0 1px 3px rgba(0,0,0,0.2); }
         .repair-class-toggle.status-pending { background-color:var(--urgent-red); color:white; border:1px solid #c9302c; }
-        .repair-class-toggle.status-dispatched, .repair-class-toggle.status-accepted { background-color:var(--low-green); color:white; border:1px solid #4cae4c; cursor:default; }
-        .repair-class-toggle.status-declined { background-color:#f97316; color:white; border:1px solid #ea580c; cursor:default; }
-        .repair-class-toggle:hover { opacity:.92; transform:none; }
-        .repair-class-toggle.status-accepted:hover, .repair-class-toggle.status-declined:hover, .repair-class-toggle.status-dispatched:hover { transform:none; opacity:1; }
+        .repair-class-toggle.status-dispatched { background-color:var(--low-green); color:white; border:1px solid #4cae4c; cursor:default; }
+        .repair-class-toggle:hover { opacity:.9; transform:translateY(-1px); }
 
         .repair-class-review-modal { background:rgba(15,23,42,0.72); }
         .repair-class-review-box { width:680px; max-width:94%; border-top:5px solid var(--gold); }
@@ -278,9 +275,6 @@
 
 
         .locked-prewip-row td { background: #f1f5f9 !important; color: #64748b !important; }
-
-        .repclass-only-row td { background: #f8fbff !important; }
-        .repclass-only-row:hover td { background: #eef6ff !important; }
         .locked-prewip-row:hover td { background: #e2e8f0 !important; }
         .ro-link-locked { color: #64748b !important; font-weight: 800; cursor: not-allowed; text-decoration: none !important; opacity: 0.85; }
         .locked-status-toggle { background: #cbd5e1 !important; color: #475569 !important; border: 1px solid #94a3b8 !important; cursor: not-allowed !important; box-shadow: none !important; opacity: 1 !important; min-width: 85px; text-align: center; display: inline-block; }
@@ -308,10 +302,6 @@
         .workflow-compliance-card.compliance-red .workflow-compliance-rating { background: #dc2626; }
         .workflow-compliance-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
         .workflow-compliance-mini { background: rgba(255,255,255,0.7); border: 1px solid rgba(148,163,184,0.35); border-radius: 4px; padding: 5px 3px; text-align: center; }
-        .workflow-compliance-mini.clickable { cursor: pointer; }
-        .workflow-compliance-mini.clickable:hover { border-color: var(--gold); box-shadow: 0 2px 7px rgba(15,23,42,0.12); background:#fff; }
-        .drilldown-active-filter-pill { display:inline-flex; align-items:center; gap:8px; margin-bottom:10px; padding:7px 10px; border-radius:999px; border:1px solid #cbd5e1; background:#f8fafc; color:#334155; font-size:12px; font-weight:900; }
-        .drilldown-active-filter-pill button { border:none; background:#334155; color:#fff; border-radius:999px; padding:3px 8px; font-size:10px; font-weight:900; cursor:pointer; }
         .workflow-compliance-mini .mini-title { font-size: 9px; font-weight: 800; color: #64748b; text-transform: uppercase; }
         .workflow-compliance-mini .mini-num { font-size: 12px; font-weight: 900; color: #334155; margin-top: 2px; }
         .workflow-compliance-card.compact { margin-top: 8px; padding: 8px; }
@@ -335,28 +325,7 @@
         .modal-actions { display: flex; justify-content: flex-end; gap: 10px; }
         .grouped-ro-item { margin-bottom: 8px; }
         .grouped-ro-item:last-child { margin-bottom: 0; }
-
-        /* Stable hover behavior: cards pull forward without scaling, which avoids jitter near tile edges. */
-        .kpi-tile, .home-master-tile {
-            position: relative;
-            transition: transform 0.16s ease, box-shadow 0.16s ease, border-top-color 0.16s ease !important;
-        }
-        .kpi-tile:hover, .home-master-tile:hover {
-            transform: translateY(-6px) !important;
-            box-shadow: 0 14px 24px rgba(0,0,0,0.14);
-            border-top-color: #000000 !important;
-            z-index: 20;
-        }
-        .billing-kpi.clickable, .highlight-box.clickable, .stat-box.clickable, .workflow-compliance-mini.clickable,
-        .status-toggle, .note-btn, .repair-class-toggle {
-            will-change: auto !important;
-            transition: box-shadow 0.15s ease, border-color 0.15s ease, background-color 0.15s ease !important;
-        }
-        .billing-kpi.clickable:hover, .highlight-box.clickable:hover, .stat-box.clickable:hover,
-        .workflow-compliance-mini.clickable:hover, .status-toggle:hover, .note-btn:hover, .repair-class-toggle:hover {
-            transform: none !important;
-        }
-</style>
+    </style>
 </head>
 <body>
 
@@ -711,7 +680,7 @@
                     </colgroup>
                     <thead>
                         <tr>
-                            <th>AFS RO # / Action</th><th>Unit No</th><th>Priority Status</th>
+                            <th>AFS RO # & Dispatch</th><th>Unit No</th><th>Priority Status</th>
                             <th>OOS Status</th><th>Opened Date</th><th>Owner</th>
                             <th>Status & ECD</th>
                         </tr>
@@ -900,27 +869,76 @@
             fetchData();
         }
 
-        function hashArrayBufferForVersion(buffer) {
-            try {
-                const bytes = new Uint8Array(buffer || new ArrayBuffer(0));
-                let h = 2166136261;
-                for (let i = 0; i < bytes.length; i++) {
-                    h ^= bytes[i];
-                    h = Math.imul(h, 16777619);
+        async function fetchWorkbookBuffer() {
+            const workbookPath = 'master_workFLOW.xlsx';
+            const configuredBucket = firebase.app && firebase.app().options ? firebase.app().options.storageBucket : '';
+            const bucketCandidates = Array.from(new Set([
+                configuredBucket,
+                'workflow-dashboard-e6134.firebasestorage.app',
+                'workflow-dashboard-e6134.appspot.com'
+            ].filter(Boolean)));
+
+            async function fetchAndValidateWorkbook(downloadUrl) {
+                const controller = new AbortController();
+                const timeout = setTimeout(() => controller.abort(), 30000);
+
+                try {
+                    const url = downloadUrl + (downloadUrl.includes('?') ? '&' : '?') + `_=${Date.now()}`;
+                    const response = await fetch(url, {
+                        cache: 'no-store',
+                        signal: controller.signal
+                    });
+
+                    if (!response.ok) {
+                        throw new Error(`HTTP ${response.status}`);
+                    }
+
+                    const data = await response.arrayBuffer();
+
+                    if (!data || data.byteLength < 4) {
+                        throw new Error('Empty or invalid file response.');
+                    }
+
+                    const sig = new Uint8Array(data.slice(0, 2));
+                    const isZip = sig[0] === 0x50 && sig[1] === 0x4B;
+
+                    if (!isZip) {
+                        throw new Error('Response is not a valid XLSX file.');
+                    }
+
+                    return data;
+                } catch (err) {
+                    if (err.name === 'AbortError') {
+                        throw new Error('Firebase Storage request timed out');
+                    }
+                    throw err;
+                } finally {
+                    clearTimeout(timeout);
                 }
-                return ('00000000' + (h >>> 0).toString(16)).slice(-8) + ':' + bytes.length;
-            } catch (err) {
-                return 'hash-error:' + Date.now();
             }
-        }
 
-        function refreshRepairClassSourceVersion() {
-            currentRepairClassSourceVersion = `${currentMasterWorkbookHash || 'MASTER_UNKNOWN'}|${currentAiRefWorkbookHash || 'AIREF_UNKNOWN'}`;
-            return currentRepairClassSourceVersion;
-        }
+            let lastError = null;
 
-        function getCurrentRepairClassSourceVersion() {
-            return currentRepairClassSourceVersion || refreshRepairClassSourceVersion();
+            for (let attempt = 1; attempt <= 2; attempt++) {
+                for (let bucket of bucketCandidates) {
+                    try {
+                        const storageRef = bucket === configuredBucket
+                            ? firebase.storage().ref().child(workbookPath)
+                            : firebase.storage().refFromURL(`gs://${bucket}/${workbookPath}`);
+
+                        const downloadUrl = await storageRef.getDownloadURL();
+                        return await fetchAndValidateWorkbook(downloadUrl);
+                    } catch (err) {
+                        lastError = err;
+                        console.warn(`Workbook fetch attempt ${attempt} failed for bucket ${bucket}:`, err);
+                    }
+                }
+
+                await new Promise(resolve => setTimeout(resolve, 750));
+            }
+
+            console.error('Workbook fetch failed:', lastError);
+            throw new Error(`Firebase Storage fetch failed: ${lastError ? lastError.message : 'Unknown error'}`);
         }
 
 
@@ -1002,13 +1020,7 @@
         async function loadAiRefFromFirebase() {
             latestAiRefAOA = [];
             const aiRefBuffer = await fetchWorkbookBufferFromStorage('AI Ref.xlsx', { optional: true });
-            if (!aiRefBuffer) {
-                currentAiRefWorkbookHash = 'AIREF_MISSING';
-                refreshRepairClassSourceVersion();
-                return [];
-            }
-            currentAiRefWorkbookHash = hashArrayBufferForVersion(aiRefBuffer);
-            refreshRepairClassSourceVersion();
+            if (!aiRefBuffer) return [];
             try {
                 const aiWorkbook = XLSX.read(aiRefBuffer, { type: 'array' });
                 latestAiRefAOA = extractAiRefAOA(aiWorkbook);
@@ -1027,83 +1039,6 @@
             return XLSX.utils.sheet_to_json(workbook.Sheets[targetSheet], { header: 1, defval: '' }) || [];
         }
 
-        function parseWorkbookSheets(workbook) {
-            const parsed = {
-                vroRaw: [],
-                roDetailRaw: [],
-                resourceRawAOA: [],
-                oosRawAOA: [],
-                usefulRawAOA: [],
-                dodRawAOA: []
-            };
-            repairClassTransferByOrder = {};
-
-            if (!workbook || !workbook.SheetNames) return parsed;
-
-            workbook.SheetNames.forEach(sheetName => {
-                try {
-                    const aoa = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], { header: 1, defval: '' });
-                    if (!aoa || aoa.length === 0) return;
-
-                    const sheetNameLower = String(sheetName || '').toLowerCase();
-
-                    if (sheetNameLower.includes('dod') || sheetNameLower.includes('day over day')) {
-                        parsed.dodRawAOA = aoa;
-                    } else if (sheetNameLower.includes('useful')) {
-                        parsed.usefulRawAOA = aoa;
-                    } else if (sheetNameLower.includes('resource') || sheetNameLower.includes('team')) {
-                        parsed.resourceRawAOA = aoa;
-                    } else if (sheetNameLower.includes('oos garda') || sheetNameLower.includes('national')) {
-                        parsed.oosRawAOA = aoa;
-                    } else if (sheetNameLower.includes('vro export')) {
-                        let headerIdx = -1;
-                        for (let i = 0; i < Math.min(20, aoa.length); i++) {
-                            const rowStr = aoa[i].join('').toLowerCase().replace(/[^a-z0-9]/g, '');
-                            const looksLikeVroHeader = (rowStr.includes('ronumber') || rowStr.includes('order') || rowStr.includes('afsro')) && (rowStr.includes('status') || rowStr.includes('unit'));
-                            if (looksLikeVroHeader) { headerIdx = i; break; }
-                        }
-                        if (headerIdx === -1) {
-                            for (let i = 0; i < Math.min(20, aoa.length); i++) {
-                                const rowStr = aoa[i].join('').toLowerCase().replace(/[^a-z0-9]/g, '');
-                                if (rowStr.includes('ronumber') || rowStr.includes('order') || rowStr.includes('customer')) { headerIdx = i; break; }
-                            }
-                        }
-                        if (headerIdx !== -1) {
-                            const headers = aoa[headerIdx];
-                            const repClassIndexes = detectRepClassColumnIndexes(headers);
-                            for (let i = headerIdx + 1; i < aoa.length; i++) {
-                                if (!aoa[i] || !Array.isArray(aoa[i])) continue;
-                                const obj = {};
-                                let hasData = false;
-                                obj.__rowValues = aoa[i];
-                                obj.__colEOriginalRepClass = aoa[i][repClassIndexes.originalIdx];
-                                obj.__colTTransferRepClass = aoa[i][repClassIndexes.transferIdx];
-                                obj.__colUWhyTransfer = aoa[i][repClassIndexes.whyIdx];
-                                obj.__repClassIndexDebug = repClassIndexes;
-                                obj.__orderFromColumnH = normalizeOrderKey(aoa[i][7]);
-                                obj.__indexedOriginalRepClass = aoa[i][4];
-                                headers.forEach((h, j) => {
-                                    const key = h ? String(h).trim() : '';
-                                    if (key) {
-                                        obj[key] = aoa[i][j];
-                                        if (aoa[i][j] !== '') hasData = true;
-                                    }
-                                });
-                                if (hasData) parsed.vroRaw.push(obj);
-                            }
-                        }
-                    } else if (sheetNameLower.includes('ro detail') || sheetNameLower.includes('rodetail')) {
-                        parsed.roDetailRaw = aoa;
-                    }
-                } catch (err) {
-                    console.warn('Skipped sheet due to parsing error:', sheetName, err);
-                }
-            });
-
-            return parsed;
-        }
-
-
         async function fetchData() {
             const statusEl = document.getElementById('upload-status');
             const uploadBox = document.getElementById('upload-box');
@@ -1118,21 +1053,81 @@
             statusEl.style.color = '#888';
 
             try {
-                const data = await fetchWorkbookBufferFromStorage('master_workFLOW.xlsx');
-                currentMasterWorkbookHash = hashArrayBufferForVersion(data);
-                refreshRepairClassSourceVersion();
+                const data = await fetchWorkbookBuffer();
 
                 statusEl.innerText = 'File found. Processing data...';
 
                 const workbook = XLSX.read(data, { type: 'array' });
                 
-                const parsedWorkbook = parseWorkbookSheets(workbook);
-                const vroRaw = parsedWorkbook.vroRaw;
-                const roDetailRaw = parsedWorkbook.roDetailRaw;
-                const resourceRawAOA = parsedWorkbook.resourceRawAOA;
-                const oosRawAOA = parsedWorkbook.oosRawAOA;
-                const usefulRawAOA = parsedWorkbook.usefulRawAOA;
-                const dodRawAOA = parsedWorkbook.dodRawAOA;
+                let vroRaw = [];
+                repairClassTransferByOrder = {};
+                let roDetailRaw = [];
+                let resourceRawAOA = [];
+                let oosRawAOA = [];
+                let usefulRawAOA = [];
+                let dodRawAOA = [];
+
+                workbook.SheetNames.forEach(sheetName => {
+                    try {
+                        const aoa = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], { header: 1, defval: '' });
+                        if (!aoa || aoa.length === 0) return;
+
+                        const sheetNameLower = sheetName.toLowerCase();
+
+                        if (sheetNameLower.includes('dod') || sheetNameLower.includes('day over day')) {
+                            dodRawAOA = aoa;
+                        } else if (sheetNameLower.includes('useful')) {
+                            usefulRawAOA = aoa;
+                        } else if (sheetNameLower.includes('resource') || sheetNameLower.includes('team')) {
+                            resourceRawAOA = aoa;
+                        } else if (sheetNameLower.includes('oos garda') || sheetNameLower.includes('national')) {
+                            oosRawAOA = aoa;
+                        } else if (sheetNameLower.includes('vro export')) {
+                            let headerIdx = -1;
+                            for (let i = 0; i < Math.min(20, aoa.length); i++) {
+                                const rowStr = aoa[i].join('').toLowerCase().replace(/[^a-z0-9]/g, '');
+                                const looksLikeVroHeader = (rowStr.includes('ronumber') || rowStr.includes('order') || rowStr.includes('afsro')) && (rowStr.includes('status') || rowStr.includes('unit'));
+                                if (looksLikeVroHeader) { headerIdx = i; break; }
+                            }
+                            if (headerIdx === -1) {
+                                for (let i = 0; i < Math.min(20, aoa.length); i++) {
+                                    const rowStr = aoa[i].join('').toLowerCase().replace(/[^a-z0-9]/g, '');
+                                    if (rowStr.includes('ronumber') || rowStr.includes('order') || rowStr.includes('customer')) { headerIdx = i; break; }
+                                }
+                            }
+                            if (headerIdx !== -1) {
+                                const headers = aoa[headerIdx];
+                                const repClassIndexes = detectRepClassColumnIndexes(headers);
+                                for (let i = headerIdx + 1; i < aoa.length; i++) {
+                                    if (!aoa[i] || !Array.isArray(aoa[i])) continue;
+                                    const obj = {}; let hasData = false;
+                                    // Preserve the raw VRO Export row so repair-class compliance can read
+                                    // the exact Excel columns even when header text changes or there are blank headers.
+                                    obj.__rowValues = aoa[i];
+                                    obj.__colEOriginalRepClass = aoa[i][repClassIndexes.originalIdx];   // Header match or Column E fallback
+                                    obj.__colTTransferRepClass = aoa[i][repClassIndexes.transferIdx]; // Header match or Column T fallback
+                                    obj.__colUWhyTransfer = aoa[i][repClassIndexes.whyIdx];      // Header match or Column U fallback
+                                    obj.__repClassIndexDebug = repClassIndexes;
+                                    // Repair Class Compliance no longer uses transfer values from master_workFLOW.xlsx.
+                                    // The VRO Export row only supplies Order (Column H) and Original REPCLASS/Type (Column E).
+                                    // Transfer REPCLASS and WHY TRANSFER are loaded separately from AI Ref.xlsx.
+                                    obj.__orderFromColumnH = normalizeOrderKey(aoa[i][7]);
+                                    obj.__indexedOriginalRepClass = aoa[i][4];
+                                    headers.forEach((h, j) => {
+                                        const key = h ? String(h).trim() : '';
+                                        if (key) { obj[key] = aoa[i][j]; if (aoa[i][j] !== '') hasData = true; }
+                                    });
+                                    if (hasData) vroRaw.push(obj);
+                                }
+                            }
+                        } else if (sheetNameLower.includes('ro detail') || sheetNameLower.includes('rodetail')) {
+                            // Extract full array to safely index RO Detail regardless of headers
+                            roDetailRaw = aoa;
+                        }
+                    } catch (err) {
+                        console.warn('Skipped sheet due to parsing error:', sheetName, err);
+                    }
+                });
 
                 if (!usefulRawAOA.length && !resourceRawAOA.length && !oosRawAOA.length && !vroRaw.length) {
                     throw new Error(
@@ -1144,7 +1139,6 @@
                 await loadAiRefFromFirebase();
 
                 processExcelData(vroRaw, roDetailRaw, resourceRawAOA, oosRawAOA, usefulRawAOA, dodRawAOA);
-                scheduleRepairClassAccountabilityAudit(12000);
                 initFirebaseSync();
                 try {
                     await syncSpendGovernorWithFirebase();
@@ -1173,21 +1167,79 @@
 
             try {
                 const data = await file.arrayBuffer();
-                currentMasterWorkbookHash = 'manual:' + hashArrayBufferForVersion(data);
-                refreshRepairClassSourceVersion();
                 const workbook = XLSX.read(data, { type: 'array' });
 
-                const parsedWorkbook = parseWorkbookSheets(workbook);
-                const vroRaw = parsedWorkbook.vroRaw;
-                const roDetailRaw = parsedWorkbook.roDetailRaw;
-                const resourceRawAOA = parsedWorkbook.resourceRawAOA;
-                const oosRawAOA = parsedWorkbook.oosRawAOA;
-                const usefulRawAOA = parsedWorkbook.usefulRawAOA;
-                const dodRawAOA = parsedWorkbook.dodRawAOA;
+                let vroRaw = [];
+                repairClassTransferByOrder = {};
+                let roDetailRaw = [];
+                let resourceRawAOA = [];
+                let oosRawAOA = [];
+                let usefulRawAOA = [];
+                let dodRawAOA = [];
+
+                workbook.SheetNames.forEach(sheetName => {
+                    try {
+                        const aoa = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], { header: 1, defval: '' });
+                        if (!aoa || aoa.length === 0) return;
+
+                        const sheetNameLower = sheetName.toLowerCase();
+
+                        if (sheetNameLower.includes('dod') || sheetNameLower.includes('day over day')) {
+                            dodRawAOA = aoa;
+                        } else if (sheetNameLower.includes('useful')) {
+                            usefulRawAOA = aoa;
+                        } else if (sheetNameLower.includes('resource') || sheetNameLower.includes('team')) {
+                            resourceRawAOA = aoa;
+                        } else if (sheetNameLower.includes('oos garda') || sheetNameLower.includes('national')) {
+                            oosRawAOA = aoa;
+                        } else if (sheetNameLower.includes('vro export')) {
+                            let headerIdx = -1;
+                            for (let i = 0; i < Math.min(20, aoa.length); i++) {
+                                const rowStr = aoa[i].join('').toLowerCase().replace(/[^a-z0-9]/g, '');
+                                const looksLikeVroHeader = (rowStr.includes('ronumber') || rowStr.includes('order') || rowStr.includes('afsro')) && (rowStr.includes('status') || rowStr.includes('unit'));
+                                if (looksLikeVroHeader) { headerIdx = i; break; }
+                            }
+                            if (headerIdx === -1) {
+                                for (let i = 0; i < Math.min(20, aoa.length); i++) {
+                                    const rowStr = aoa[i].join('').toLowerCase().replace(/[^a-z0-9]/g, '');
+                                    if (rowStr.includes('ronumber') || rowStr.includes('order') || rowStr.includes('customer')) { headerIdx = i; break; }
+                                }
+                            }
+                            if (headerIdx !== -1) {
+                                const headers = aoa[headerIdx];
+                                const repClassIndexes = detectRepClassColumnIndexes(headers);
+                                for (let i = headerIdx + 1; i < aoa.length; i++) {
+                                    if (!aoa[i] || !Array.isArray(aoa[i])) continue;
+                                    const obj = {}; let hasData = false;
+                                    // Preserve the raw VRO Export row so repair-class compliance can read
+                                    // the exact Excel columns even when header text changes or there are blank headers.
+                                    obj.__rowValues = aoa[i];
+                                    obj.__colEOriginalRepClass = aoa[i][repClassIndexes.originalIdx];   // Header match or Column E fallback
+                                    obj.__colTTransferRepClass = aoa[i][repClassIndexes.transferIdx]; // Header match or Column T fallback
+                                    obj.__colUWhyTransfer = aoa[i][repClassIndexes.whyIdx];      // Header match or Column U fallback
+                                    obj.__repClassIndexDebug = repClassIndexes;
+                                    // Repair Class Compliance no longer uses transfer values from master_workFLOW.xlsx.
+                                    // The VRO Export row only supplies Order (Column H) and Original REPCLASS/Type (Column E).
+                                    // Transfer REPCLASS and WHY TRANSFER are loaded separately from AI Ref.xlsx.
+                                    obj.__orderFromColumnH = normalizeOrderKey(aoa[i][7]);
+                                    obj.__indexedOriginalRepClass = aoa[i][4];
+                                    headers.forEach((h, j) => {
+                                        const key = h ? String(h).trim() : '';
+                                        if (key) { obj[key] = aoa[i][j]; if (aoa[i][j] !== '') hasData = true; }
+                                    });
+                                    if (hasData) vroRaw.push(obj);
+                                }
+                            }
+                        } else if (sheetNameLower.includes('ro detail') || sheetNameLower.includes('rodetail')) {
+                            roDetailRaw = aoa;
+                        }
+                    } catch (err) {
+                        console.warn('Skipped sheet due to parsing error:', sheetName, err);
+                    }
+                });
 
                 await loadAiRefFromFirebase();
                 processExcelData(vroRaw, roDetailRaw, resourceRawAOA, oosRawAOA, usefulRawAOA, dodRawAOA);
-                scheduleRepairClassAccountabilityAudit(12000);
                 initFirebaseSync();
                 try {
                     await syncSpendGovernorWithFirebase();
@@ -1211,12 +1263,6 @@
         let globalWorkflowActivityState = {};
         let globalRepairClassReviewState = {};
         let currentRepairClassReviewSafeRo = null;
-        let currentMasterWorkbookHash = '';
-        let currentAiRefWorkbookHash = '';
-        let currentRepairClassSourceVersion = '';
-        let repClassAccountabilityAuditInFlight = false;
-        let repClassAccountabilityAuditTimer = null;
-        let activeViewRefreshTimer = null;
         let globalSpendChangeLogRows = [];
         let globalWeeklySpendHistoryRows = [];
         let expandedWeeklySpendWeeks = {};
@@ -1234,11 +1280,71 @@
             globalManualGovernorLockState = JSON.parse(localStorage.getItem('manual_governor_lock') || '{}');
         } catch(e) {}
 
-        // Final implementations are assigned by the no-realtime mode below.
-        // Keep lightweight stubs so function references stay safe during script initialization.
-        let initFirebaseSync = function() {};
-        let scheduleActiveViewRefresh = function() {};
-        let logWorkflowActivity = function() { return Promise.resolve(); };
+        function initFirebaseSync() {
+            try {
+                if (typeof firebase !== 'undefined') {
+                    db = firebase.database();
+
+                    db.ref('roChecks').on('value', (snapshot) => {
+                        globalRoCheckState = snapshot.val() || {};
+                        try { localStorage.setItem('workflow_checks', JSON.stringify(globalRoCheckState)); } catch(e) {}
+                        updateAllStatusBadges();
+                    });
+
+                    db.ref('roNotes').on('value', (snapshot) => {
+                        globalRoNotesState = snapshot.val() || {};
+                        try { localStorage.setItem('workflow_notes', JSON.stringify(globalRoNotesState)); } catch(e) {}
+                        updateAllNoteButtons();
+                    });
+
+                    db.ref('workflowActivity').on('value', (snapshot) => {
+                        globalWorkflowActivityState = snapshot.val() || {};
+                        try { localStorage.setItem('workflow_activity', JSON.stringify(globalWorkflowActivityState)); } catch(e) {}
+                        updateAllNoteButtons();
+                        if (processedData && processedData.length > 0) {
+                            refreshActiveViewPreservingDrilldown();
+                        }
+                    });
+
+
+                    db.ref('repClassReviewStatus').on('value', (snapshot) => {
+                        globalRepairClassReviewState = snapshot.val() || {};
+                        try { localStorage.setItem('repclass_review_status', JSON.stringify(globalRepairClassReviewState)); } catch(e) {}
+                        updateAllRepairClassBadges();
+                        if (processedData && processedData.length > 0) {
+                            refreshActiveViewPreservingDrilldown();
+                        }
+                    });
+
+                    db.ref('spendGovernor/manualLock').on('value', (snapshot) => {
+                        globalManualGovernorLockState = snapshot.val() || {};
+                        try { localStorage.setItem('manual_governor_lock', JSON.stringify(globalManualGovernorLockState)); } catch(e) {}
+                        checkAndAutoResetManualGovernorLock();
+                        if (processedData && processedData.length > 0) {
+                            refreshActiveViewPreservingDrilldown();
+                        }
+                    });
+
+                    db.ref('spendGovernor/unlimitedSpendMode').on('value', (snapshot) => {
+                        globalUnlimitedSpendState = snapshot.val() || {};
+                        try { localStorage.setItem('unlimited_spend_mode', JSON.stringify(globalUnlimitedSpendState)); } catch(e) {}
+                        checkAndAutoResetUnlimitedSpendMode();
+                        if (processedData && processedData.length > 0) {
+                            refreshActiveViewPreservingDrilldown();
+                        }
+                    });
+
+                    if (!window.__manualGovernorResetTimer) {
+                        window.__manualGovernorResetTimer = setInterval(() => {
+                            checkAndAutoResetManualGovernorLock();
+                            checkAndAutoResetUnlimitedSpendMode();
+                        }, 60000);
+                    }
+                }
+            } catch (error) {
+                console.warn("Firebase Init blocked.", error);
+            }
+        }
 
         function escapeHtml(value) {
             return String(value === undefined || value === null ? '' : value)
@@ -1386,6 +1492,66 @@
             container.innerHTML = html;
         }
 
+        function logWorkflowActivity(safeRo, actionType, noteText = '', meta = {}) {
+            const now = new Date();
+            const nowIso = now.toISOString();
+            const dateKey = getLocalDateKey(now);
+            const roContext = getRoContextBySafeRo(safeRo);
+            const assignedOwner = meta.assignedOwner || (roContext && roContext.kpiOwners && roContext.kpiOwners.length ? roContext.kpiOwners[0] : '') || '';
+            const roNumber = meta.roNumber || (roContext ? roContext.roNum : safeRo);
+            const entry = {
+                timestamp: nowIso,
+                dateKey: dateKey,
+                actionType: actionType,
+                noteText: String(noteText || '').trim(),
+                roNumber: roNumber || '',
+                unitNo: meta.unitNo || (roContext ? roContext.unitNo : '') || '',
+                branch: meta.branch || (roContext ? roContext.branch : '') || '',
+                assignedOwner: assignedOwner,
+                source: meta.source || 'workflow-ui'
+            };
+
+            if (db) {
+                const entryRef = db.ref(`workflowActivity/${safeRo}/activityLog/${dateKey}`).push();
+                const updates = {};
+                updates[`workflowActivity/${safeRo}/activityLog/${dateKey}/${entryRef.key}`] = entry;
+                updates[`workflowActivity/${safeRo}/lastTouchedAt`] = nowIso;
+                updates[`workflowActivity/${safeRo}/lastTouchedDate`] = dateKey;
+                updates[`workflowActivity/${safeRo}/lastTouchedByOwner`] = assignedOwner;
+                updates[`workflowActivity/${safeRo}/lastActionType`] = actionType;
+                updates[`workflowActivity/${safeRo}/roNumber`] = roNumber || '';
+                updates[`workflowActivity/${safeRo}/unitNo`] = entry.unitNo || '';
+                updates[`workflowActivity/${safeRo}/branch`] = entry.branch || '';
+                if (actionType === 'NOTE_ADDED' && isMeaningfulNote(noteText)) {
+                    updates[`workflowActivity/${safeRo}/hasMeaningfulNote`] = true;
+                    updates[`workflowActivity/${safeRo}/lastNoteAt`] = nowIso;
+                    updates[`workflowActivity/${safeRo}/lastNoteDate`] = dateKey;
+                    updates[`workflowActivity/${safeRo}/latestNote`] = String(noteText || '').trim();
+                }
+                return db.ref().update(updates);
+            }
+
+            if (!globalWorkflowActivityState[safeRo]) globalWorkflowActivityState[safeRo] = { activityLog: {} };
+            if (!globalWorkflowActivityState[safeRo].activityLog) globalWorkflowActivityState[safeRo].activityLog = {};
+            if (!globalWorkflowActivityState[safeRo].activityLog[dateKey]) globalWorkflowActivityState[safeRo].activityLog[dateKey] = {};
+            const localKey = 'local_' + now.getTime();
+            globalWorkflowActivityState[safeRo].activityLog[dateKey][localKey] = entry;
+            globalWorkflowActivityState[safeRo].lastTouchedAt = nowIso;
+            globalWorkflowActivityState[safeRo].lastTouchedDate = dateKey;
+            globalWorkflowActivityState[safeRo].lastTouchedByOwner = assignedOwner;
+            globalWorkflowActivityState[safeRo].lastActionType = actionType;
+            if (actionType === 'NOTE_ADDED' && isMeaningfulNote(noteText)) {
+                globalWorkflowActivityState[safeRo].hasMeaningfulNote = true;
+                globalWorkflowActivityState[safeRo].lastNoteAt = nowIso;
+                globalWorkflowActivityState[safeRo].lastNoteDate = dateKey;
+                globalWorkflowActivityState[safeRo].latestNote = String(noteText || '').trim();
+            }
+            try { localStorage.setItem('workflow_activity', JSON.stringify(globalWorkflowActivityState)); } catch(e) {}
+            updateAllNoteButtons();
+            refreshActiveViewPreservingDrilldown();
+            return Promise.resolve();
+        }
+
         function isRealOpenRoForDailyCompliance(ro) {
             if (!ro || !ro.isOpen || !ro.roNum) return false;
             const rn = String(ro.roNum || '');
@@ -1475,14 +1641,15 @@
                         </div>
                     </div>
                     <div class="workflow-compliance-grid">
-                        <div class="workflow-compliance-mini clickable" data-metric="workflow-stale" title="Show ROs not touched today" onclick="openTileMetricFromEvent(event, 'workflow-stale')"><div class="mini-title">Touched</div><div class="mini-num">${c.touched}/${c.total}</div></div>
-                        <div class="workflow-compliance-mini clickable" data-metric="workflow-missing-notes" title="Show ROs missing a meaningful note" onclick="openTileMetricFromEvent(event, 'workflow-missing-notes')"><div class="mini-title">Notes</div><div class="mini-num">${c.notes}/${c.total}</div></div>
-                        <div class="workflow-compliance-mini clickable" data-metric="workflow-pending-dispatch" title="Show ROs not marked dispatched" onclick="openTileMetricFromEvent(event, 'workflow-pending-dispatch')"><div class="mini-title">Dispatch</div><div class="mini-num">${c.dispatched}/${c.dispatchTotal}</div></div>
-                        <div class="workflow-compliance-mini clickable" data-metric="workflow-stale" title="Show stale / not touched ROs" onclick="openTileMetricFromEvent(event, 'workflow-stale')"><div class="mini-title">Stale</div><div class="mini-num">${c.stale}</div></div>
+                        <div class="workflow-compliance-mini"><div class="mini-title">Touched</div><div class="mini-num">${c.touched}/${c.total}</div></div>
+                        <div class="workflow-compliance-mini"><div class="mini-title">Notes</div><div class="mini-num">${c.notes}/${c.total}</div></div>
+                        <div class="workflow-compliance-mini"><div class="mini-title">Dispatch</div><div class="mini-num">${c.dispatched}/${c.dispatchTotal}</div></div>
+                        <div class="workflow-compliance-mini"><div class="mini-title">Stale</div><div class="mini-num">${c.stale}</div></div>
                     </div>
                     ${lockNote}
                 </div>`;
         }
+
 
 
         function normalizeHeaderKey(value) {
@@ -1763,147 +1930,22 @@
             return (globalRepairClassReviewState && globalRepairClassReviewState[safeRo]) ? globalRepairClassReviewState[safeRo] : null;
         }
 
-        function getRepairClassReviewDecision(roOrSafeRo) {
-            const safeRo = typeof roOrSafeRo === 'string' ? roOrSafeRo : (roOrSafeRo && roOrSafeRo.roNum ? safeFirebaseKey(roOrSafeRo.roNum) : '');
-            const rec = getRepairClassReviewRecord(safeRo);
-            return rec && rec.decision ? String(rec.decision || '').toUpperCase().trim() : '';
-        }
-
-        function makeRepairClassSignature(originalRepClass, transferRepClass, transferReason) {
-            return [
-                normalizeRepClassValue(originalRepClass),
-                normalizeRepClassValue(transferRepClass),
-                String(transferReason || '').trim().toUpperCase().replace(/\s+/g, ' ').slice(0, 700)
-            ].join('||');
-        }
-
-        function getRepairClassCurrentSnapshot(ro) {
-            const rc = getRepairClassDataForRo(ro);
-            const originalRepClass = rc.originalRepClass || '';
-            const transferRepClass = rc.transferRepClass || '';
-            const transferReason = rc.transferReason || '';
-            const snapshot = {
-                roNumber: ro && ro.roNum ? ro.roNum : '',
-                originalRepClass,
-                transferRepClass,
-                transferReason,
-                originalNorm: normalizeRepClassValue(originalRepClass),
-                transferNorm: normalizeRepClassValue(transferRepClass),
-                hasTransfer: !!rc.hasTransfer,
-                sourceVersion: getCurrentRepairClassSourceVersion()
-            };
-            snapshot.signature = makeRepairClassSignature(snapshot.originalRepClass, snapshot.transferRepClass, snapshot.transferReason);
-            return snapshot;
-        }
-
-        function getRepairClassReviewAccountabilityStatus(ro) {
-            const snapshot = getRepairClassCurrentSnapshot(ro);
-            const safeRo = ro && ro.roNum ? safeFirebaseKey(ro.roNum) : '';
-            const rec = safeRo ? getRepairClassReviewRecord(safeRo) : null;
-            const decision = rec && rec.decision ? String(rec.decision || '').toUpperCase().trim() : '';
-
-            if (decision !== 'ACCEPTED' && decision !== 'DECLINED') {
-                if (!ro || !snapshot.hasTransfer) {
-                    return { cleared: true, issueType: 'NO_ACTIVE_TRANSFER', snapshot, rec };
-                }
-                return { cleared: false, issueType: 'INITIAL_PENDING', message: 'Repair class transfer requires review.', snapshot, rec };
-            }
-
-            const reviewedOriginalNorm = normalizeRepClassValue(rec.reviewedOriginalRepClass || rec.originalRepClass || '');
-            const reviewedTransferNorm = normalizeRepClassValue(rec.reviewedTransferRepClass || rec.transferRepClass || '');
-            const reviewedSignature = rec.reviewSignature || makeRepairClassSignature(
-                rec.reviewedOriginalRepClass || rec.originalRepClass || '',
-                rec.reviewedTransferRepClass || rec.transferRepClass || '',
-                rec.reviewedWhyTransfer || rec.whyTransfer || ''
-            );
-            const reviewedSourceVersion = rec.reviewSourceVersion || '';
-            const sameSourceVersion = reviewedSourceVersion && snapshot.sourceVersion && reviewedSourceVersion === snapshot.sourceVersion;
-            const sameRecommendationSignature = reviewedSignature && snapshot.signature === reviewedSignature;
-
-            if (decision === 'DECLINED') {
-                // Declined means the coordinator is validating the current/original class.
-                // After that, the issue stays cleared while the VRO remains in either the declined original class
-                // or the recommended class. If it moves to a third class, it becomes a new accountability review.
-                const allowedClassNorms = new Set();
-                if (reviewedOriginalNorm) allowedClassNorms.add(reviewedOriginalNorm);
-                if (reviewedTransferNorm) allowedClassNorms.add(reviewedTransferNorm);
-                if (snapshot.transferNorm) allowedClassNorms.add(snapshot.transferNorm);
-
-                if (!snapshot.originalNorm || allowedClassNorms.has(snapshot.originalNorm)) {
-                    return { cleared: true, issueType: 'DECLINE_STILL_VALID', snapshot, rec };
-                }
-
-                return {
-                    cleared: false,
-                    issueType: 'DECLINED_CHANGED_TO_UNAPPROVED_CLASS',
-                    message: `Prior DECLINED reasoning allowed ${rec.reviewedOriginalRepClass || rec.originalRepClass || 'N/A'} or ${rec.reviewedTransferRepClass || rec.transferRepClass || 'N/A'}, but the latest workbook now shows ${snapshot.originalRepClass || 'N/A'}. Review is required again.`,
-                    snapshot,
-                    rec,
-                    auditKey: `DECLINED_CHANGED_TO_UNAPPROVED_CLASS|${snapshot.originalNorm}|${snapshot.transferNorm}|${snapshot.sourceVersion || ''}`
-                };
-            }
-
-            if (decision === 'ACCEPTED') {
-                // Same exact source snapshot = clear immediately after the memo is submitted.
-                if (sameSourceVersion && sameRecommendationSignature) {
-                    return { cleared: true, issueType: 'ACCEPTED_AWAITING_NEXT_REFRESH', snapshot, rec };
-                }
-
-                // Once the workbook updates, ACCEPTED means the VRO should move to the reviewed transfer class.
-                // If the current class equals the reviewed transfer class and no new mismatch exists, keep it cleared.
-                if (reviewedTransferNorm && snapshot.originalNorm === reviewedTransferNorm) {
-                    if (!snapshot.hasTransfer || !snapshot.transferNorm || snapshot.transferNorm === snapshot.originalNorm || snapshot.transferNorm === reviewedTransferNorm) {
-                        return { cleared: true, issueType: 'ACCEPTED_CONFIRMED_CHANGED', snapshot, rec };
-                    }
-                    return {
-                        cleared: false,
-                        issueType: 'ACCEPTED_NEW_RECOMMENDATION_MISMATCH',
-                        message: `Prior ACCEPTED reasoning was completed at ${rec.reviewedTransferRepClass || rec.transferRepClass || 'N/A'}, but the latest AI recommendation now points to ${snapshot.transferRepClass || 'N/A'}. Review is required again.`,
-                        snapshot,
-                        rec,
-                        auditKey: `ACCEPTED_NEW_RECOMMENDATION_MISMATCH|${snapshot.signature}|${snapshot.sourceVersion || ''}`
-                    };
-                }
-
-                // If there is no active transfer anymore, do not hold compliance open. The observation log still records the changed state.
-                if (!snapshot.hasTransfer) {
-                    return { cleared: true, issueType: 'ACCEPTED_NO_ACTIVE_TRANSFER', snapshot, rec };
-                }
-
-                const issueType = sameRecommendationSignature ? 'ACCEPTED_NOT_CHANGED_AFTER_REFRESH' : 'ACCEPTED_CHANGED_OR_RECOMMENDED_AGAIN';
-                const message = issueType === 'ACCEPTED_NOT_CHANGED_AFTER_REFRESH'
-                    ? `Prior ACCEPTED reasoning expected REPCLASS to change to ${rec.reviewedTransferRepClass || rec.transferRepClass || 'N/A'}, but the latest workbook still shows ${snapshot.originalRepClass || 'N/A'}.`
-                    : `Prior ACCEPTED reasoning no longer matches the latest repair-class state. Reviewed ${rec.reviewedOriginalRepClass || rec.originalRepClass || 'N/A'} → ${rec.reviewedTransferRepClass || rec.transferRepClass || 'N/A'}; latest is ${snapshot.originalRepClass || 'N/A'} → ${snapshot.transferRepClass || 'N/A'}.`;
-                return {
-                    cleared: false,
-                    issueType,
-                    message,
-                    snapshot,
-                    rec,
-                    auditKey: `${issueType}|${snapshot.signature}|${snapshot.sourceVersion || ''}`
-                };
-            }
-
-            if (!ro || !snapshot.hasTransfer) return { cleared: true, issueType: 'NO_ACTIVE_TRANSFER', snapshot, rec };
-            return { cleared: false, issueType: 'INITIAL_PENDING', message: 'Repair class transfer requires review.', snapshot, rec };
-        }
-
         function isRepairClassReviewCleared(ro) {
-            return !!getRepairClassReviewAccountabilityStatus(ro).cleared;
-        }
-
-        function isRealRepairClassReviewRo(ro) {
-            if (!ro || !ro.roNum) return false;
-            const rn = String(ro.roNum || '').trim();
-            if (!rn || rn.startsWith('NO RO') || rn.startsWith('SEE_OTHER:')) return false;
-            return hasRepairClassTransfer(ro);
+            if (!ro || !hasRepairClassTransfer(ro)) return true;
+            const safeRo = safeFirebaseKey(ro.roNum);
+            const rec = getRepairClassReviewRecord(safeRo);
+            if (!rec || !rec.decision) return false;
+            const decision = String(rec.decision || '').toUpperCase();
+            if (decision === 'DECLINED') return true;
+            if (decision === 'ACCEPTED') {
+                const rc = getRepairClassDataForRo(ro);
+                return normalizeRepClassValue(rc.originalRepClass) === normalizeRepClassValue(rc.transferRepClass);
+            }
+            return false;
         }
 
         function getRepairClassReviewPopulation(dataSet) {
-            // Repair Class Compliance is not an open-dispatch workflow metric.
-            // Completed / Final Charges rows must still count when AI Ref recommends a transfer,
-            // so this intentionally does NOT filter on ro.isOpen.
-            return (dataSet || []).filter(ro => isRealRepairClassReviewRo(ro));
+            return (dataSet || []).filter(ro => ro && ro.isOpen && hasRepairClassTransfer(ro));
         }
 
         function calculateRepairClassCompliance(dataSet) {
@@ -1937,10 +1979,10 @@
                         </div>
                     </div>
                     <div class="workflow-compliance-grid">
-                        <div class="workflow-compliance-mini clickable" data-metric="repclass-pending" title="Show pending repair-class reviews" onclick="openTileMetricFromEvent(event, 'repclass-pending')"><div class="mini-title">RO Review</div><div class="mini-num">${c.reviewed}/${c.total}</div></div>
-                        <div class="workflow-compliance-mini clickable" data-metric="repclass-pending" title="Show pending repair-class reviews" onclick="openTileMetricFromEvent(event, 'repclass-pending')"><div class="mini-title">Touched</div><div class="mini-num">${c.reviewed}/${c.total}</div></div>
-                        <div class="workflow-compliance-mini clickable" data-metric="repclass-pending" title="Show repair-class reviews still needed" onclick="openTileMetricFromEvent(event, 'repclass-pending')"><div class="mini-title">Review Needed</div><div class="mini-num">${c.reviewNeeded}</div></div>
-                        <div class="workflow-compliance-mini clickable" data-metric="repclass-accepted" title="Show accepted / corrected repair-class reviews" onclick="openTileMetricFromEvent(event, 'repclass-accepted')"><div class="mini-title">Corrected</div><div class="mini-num">${c.accepted}</div></div>
+                        <div class="workflow-compliance-mini"><div class="mini-title">RO Review</div><div class="mini-num">${c.reviewed}/${c.total}</div></div>
+                        <div class="workflow-compliance-mini"><div class="mini-title">Touched</div><div class="mini-num">${c.reviewed}/${c.total}</div></div>
+                        <div class="workflow-compliance-mini"><div class="mini-title">Review Needed</div><div class="mini-num">${c.reviewNeeded}</div></div>
+                        <div class="workflow-compliance-mini"><div class="mini-title">Corrected</div><div class="mini-num">${c.accepted}</div></div>
                     </div>
                 </div>`;
         }
@@ -1953,16 +1995,11 @@
             }
             const safeRo = safeFirebaseKey(ro.roNum);
             const reason = rc.transferReason || 'No transfer reason provided.';
-            const accountability = getRepairClassReviewAccountabilityStatus(ro);
-            const cleared = !!accountability.cleared;
-            const titleText = accountability.message ? `${reason}\n\nAccountability Flag: ${accountability.message}` : reason;
-            const reviewTitle = escapeHtml(titleText).replace(/"/g, '&quot;');
+            const cleared = isRepairClassReviewCleared(ro);
+            const reviewTitle = escapeHtml(reason).replace(/"/g, '&quot;');
             const transfer = escapeHtml(rc.transferRepClass || 'Review');
-            const decision = getRepairClassReviewDecision(safeRo);
-            const clearedLabel = decision === 'ACCEPTED' ? '✓ ACCEPTED' : (decision === 'DECLINED' ? 'DECLINED' : 'OK');
-            const clearedClass = decision === 'DECLINED' ? 'status-declined' : 'status-accepted';
             const btn = cleared
-                ? `<span class="badge repair-class-toggle ${clearedClass}">${clearedLabel}</span>`
+                ? `<span class="badge repair-class-toggle status-dispatched">OK</span>`
                 : `<button class="repair-class-toggle status-pending" data-repclass-ro="${safeRo}" onclick="openRepairClassReviewModal('${safeRo}')">PENDING</button>`;
             return `<div class="repair-class-cell">
                 <div class="repair-class-name">${escapeHtml(original)}</div>
@@ -1976,10 +2013,7 @@
                 const safeRo = btn.getAttribute('data-repclass-ro');
                 const ro = getRoContextBySafeRo(safeRo);
                 if (ro && isRepairClassReviewCleared(ro)) {
-                    const decision = getRepairClassReviewDecision(safeRo);
-                    const clearedLabel = decision === 'ACCEPTED' ? '✓ ACCEPTED' : (decision === 'DECLINED' ? 'DECLINED' : 'OK');
-                    const clearedClass = decision === 'DECLINED' ? 'status-declined' : 'status-accepted';
-                    btn.outerHTML = `<span class="badge repair-class-toggle ${clearedClass}">${clearedLabel}</span>`;
+                    btn.outerHTML = `<span class="badge repair-class-toggle status-dispatched">OK</span>`;
                 }
             });
         }
@@ -2008,18 +2042,10 @@
 
             const hist = document.getElementById('repclass-modal-history');
             if (hist) {
-                const accountability = getRepairClassReviewAccountabilityStatus(ro);
-                let histHtml = '';
                 if (rec && rec.memo) {
                     const decision = rec.decision || 'Previous Review';
                     const dateText = rec.timestamp ? new Date(rec.timestamp).toLocaleString() : '';
-                    histHtml += `<strong>Prior ${escapeHtml(decision)} memo${dateText ? ' - ' + escapeHtml(dateText) : ''}:</strong><br>${escapeHtml(rec.memo)}`;
-                }
-                if (accountability && accountability.message) {
-                    histHtml += `${histHtml ? '<br><br>' : ''}<strong>Accountability flag:</strong><br>${escapeHtml(accountability.message)}`;
-                }
-                if (histHtml) {
-                    hist.innerHTML = histHtml;
+                    hist.innerHTML = `<strong>Prior ${escapeHtml(decision)} memo${dateText ? ' - ' + escapeHtml(dateText) : ''}:</strong><br>${escapeHtml(rec.memo)}`;
                     hist.style.display = 'block';
                 } else {
                     hist.style.display = 'none';
@@ -2044,26 +2070,7 @@
                 return;
             }
 
-            const buttons = document.querySelectorAll('#repair-class-review-modal .btn-accept-reasoning, #repair-class-review-modal .btn-decline-reasoning');
-            buttons.forEach(btn => { btn.disabled = true; btn.dataset.originalText = btn.dataset.originalText || btn.innerText; btn.innerText = 'SAVING...'; });
-
             const rcSubmit = getRepairClassDataForRo(ro);
-            const currentSnapshot = getRepairClassCurrentSnapshot(ro);
-            const priorRecord = getRepairClassReviewRecord(safeRo) || {};
-            const nowIso = new Date().toISOString();
-            const eventKey = nowIso.replace(/[^0-9A-Za-z]/g, '_') + '_' + Math.random().toString(36).slice(2, 7);
-            const priorEvents = (priorRecord && priorRecord.events && typeof priorRecord.events === 'object') ? priorRecord.events : {};
-            const reviewEvent = {
-                timestamp: nowIso,
-                eventType: 'REVIEW_' + decision,
-                decision: decision,
-                memo: memo,
-                originalRepClass: currentSnapshot.originalRepClass || rcSubmit.originalRepClass || '',
-                transferRepClass: currentSnapshot.transferRepClass || rcSubmit.transferRepClass || '',
-                whyTransfer: currentSnapshot.transferReason || rcSubmit.transferReason || '',
-                sourceVersion: currentSnapshot.sourceVersion || '',
-                signature: currentSnapshot.signature || ''
-            };
             const payload = {
                 decision: decision,
                 memo: memo,
@@ -2075,235 +2082,30 @@
                 originalRepClass: rcSubmit.originalRepClass || '',
                 transferRepClass: rcSubmit.transferRepClass || '',
                 whyTransfer: rcSubmit.transferReason || '',
-                reviewedOriginalRepClass: currentSnapshot.originalRepClass || rcSubmit.originalRepClass || '',
-                reviewedTransferRepClass: currentSnapshot.transferRepClass || rcSubmit.transferRepClass || '',
-                reviewedWhyTransfer: currentSnapshot.transferReason || rcSubmit.transferReason || '',
-                reviewSignature: currentSnapshot.signature || '',
-                reviewSourceVersion: currentSnapshot.sourceVersion || '',
-                requiresReReview: false,
-                latestAccountabilityIssue: '',
-                latestAccountabilityAuditKey: '',
-                timestamp: nowIso,
-                lastValidationAt: nowIso,
-                lastObservedAt: nowIso,
-                lastObservedOriginalRepClass: currentSnapshot.originalRepClass || '',
-                lastObservedTransferRepClass: currentSnapshot.transferRepClass || '',
-                lastObservedWhyTransfer: currentSnapshot.transferReason || '',
-                lastObservedSignature: currentSnapshot.signature || '',
-                lastObservedSourceVersion: currentSnapshot.sourceVersion || '',
-                lastObservedAuditKey: `OBSERVED|${currentSnapshot.signature || ''}|${currentSnapshot.sourceVersion || ''}`
+                timestamp: new Date().toISOString()
             };
 
             const closeModal = () => {
                 const modal = document.getElementById('repair-class-review-modal');
                 if (modal) modal.style.display = 'none';
-                if (memoEl) memoEl.value = '';
                 currentRepairClassReviewSafeRo = null;
-                buttons.forEach(btn => { btn.disabled = false; if (btn.dataset.originalText) btn.innerText = btn.dataset.originalText; });
                 updateAllRepairClassBadges();
                 refreshActiveViewPreservingDrilldown();
             };
 
-            // Optimistic local save: clear the compliance item immediately, just like VRO notes.
-            // Firebase is still the source of truth, but the UI no longer waits on network acknowledgement.
-            const localRecord = Object.assign({}, priorRecord, payload, {
-                events: Object.assign({}, priorEvents, { [eventKey]: reviewEvent })
-            });
-            globalRepairClassReviewState = Object.assign({}, globalRepairClassReviewState || {}, { [safeRo]: localRecord });
-
-            // Update activity locally/background before closing so the memo appears in the audit trail.
-            try {
-                logWorkflowActivity(safeRo, 'REPCLASS_REVIEW_' + decision, memo, Object.assign({}, payload, {
-                    source: 'repair-class-review-modal',
-                    roNumber: ro.roNum
-                }));
-            } catch (activityErr) {
-                console.warn('Local repair-class activity log failed:', activityErr);
-            }
-
-            closeModal();
-
             if (db) {
-                const updates = {};
-                Object.keys(payload).forEach(key => {
-                    updates[`repClassReviewStatus/${safeRo}/${key}`] = payload[key];
-                });
-                updates[`repClassReviewStatus/${safeRo}/events/${eventKey}`] = reviewEvent;
-                db.ref().update(updates).catch(errObj => {
-                    console.warn('Background repair class review save failed:', errObj);
-                });
-            }
-        }
-
-        function auditRepairClassReviewAccountability() {
-            if (repClassAccountabilityAuditInFlight || !processedData || !processedData.length) return;
-            const updates = {};
-            let hasUpdates = false;
-            const nowIso = new Date().toISOString();
-            const auditedThisPass = new Set();
-
-            function buildObservationEvent(ro, status, rec, eventType, message) {
-                const snapshot = (status && status.snapshot) ? status.snapshot : getRepairClassCurrentSnapshot(ro);
-                return {
-                    timestamp: nowIso,
-                    eventType: eventType || 'REPCLASS_STATE_OBSERVED',
-                    auditKey: `OBSERVED|${snapshot.signature || ''}|${snapshot.sourceVersion || ''}`,
-                    message: message || '',
-                    decision: rec && rec.decision ? rec.decision : '',
-                    reviewedOriginalRepClass: rec ? (rec.reviewedOriginalRepClass || rec.originalRepClass || '') : '',
-                    reviewedTransferRepClass: rec ? (rec.reviewedTransferRepClass || rec.transferRepClass || '') : '',
-                    currentOriginalRepClass: snapshot.originalRepClass || '',
-                    currentTransferRepClass: snapshot.transferRepClass || '',
-                    currentWhyTransfer: snapshot.transferReason || '',
-                    sourceVersion: snapshot.sourceVersion || '',
-                    signature: snapshot.signature || ''
-                };
-            }
-
-            (processedData || []).forEach(ro => {
-                if (!ro || !ro.roNum) return;
-                const safeRo = safeFirebaseKey(ro.roNum);
-                if (auditedThisPass.has(safeRo)) return;
-
-                const rec = getRepairClassReviewRecord(safeRo) || null;
-                const hasTransfer = hasRepairClassTransfer(ro);
-                if (!hasTransfer && !rec) return;
-
-                const status = getRepairClassReviewAccountabilityStatus(ro);
-                const snapshot = (status && status.snapshot) ? status.snapshot : getRepairClassCurrentSnapshot(ro);
-                const observationKey = `OBSERVED|${snapshot.signature || ''}|${snapshot.sourceVersion || ''}`;
-                const needsObservationLog = !!(rec && observationKey && rec.lastObservedAuditKey !== observationKey);
-                const priorEvents = (rec && rec.events && typeof rec.events === 'object') ? rec.events : {};
-
-                auditedThisPass.add(safeRo);
-
-                if (status && status.cleared) {
-                    if (rec && (needsObservationLog || rec.requiresReReview || rec.latestAccountabilityIssue || rec.latestAccountabilityAuditKey)) {
-                        const eventKey = nowIso.replace(/[^0-9A-Za-z]/g, '_') + '_' + safeRo + '_CLEAR';
-                        const event = buildObservationEvent(ro, status, rec, rec.requiresReReview ? 'REPCLASS_REVIEW_CLEARED_BY_LATEST_STATE' : 'REPCLASS_STATE_OBSERVED', status.issueType || 'Review remains cleared.');
-                        const mergedEvents = Object.assign({}, priorEvents, needsObservationLog || rec.requiresReReview ? { [eventKey]: event } : {});
-                        const localRec = Object.assign({}, rec, {
-                            requiresReReview: false,
-                            latestAccountabilityIssue: '',
-                            latestAccountabilityAuditKey: '',
-                            lastValidationAt: nowIso,
-                            lastObservedAt: nowIso,
-                            lastObservedOriginalRepClass: snapshot.originalRepClass || '',
-                            lastObservedTransferRepClass: snapshot.transferRepClass || '',
-                            lastObservedWhyTransfer: snapshot.transferReason || '',
-                            lastObservedSignature: snapshot.signature || '',
-                            lastObservedSourceVersion: snapshot.sourceVersion || '',
-                            lastObservedAuditKey: observationKey,
-                            events: mergedEvents
-                        });
-                        globalRepairClassReviewState = Object.assign({}, globalRepairClassReviewState || {}, { [safeRo]: localRec });
-                        // skip synchronous localStorage persistence for repClassReviewStatus; Firebase is source of truth
-
-                        updates[`repClassReviewStatus/${safeRo}/requiresReReview`] = false;
-                        updates[`repClassReviewStatus/${safeRo}/latestAccountabilityIssue`] = '';
-                        updates[`repClassReviewStatus/${safeRo}/latestAccountabilityAuditKey`] = '';
-                        updates[`repClassReviewStatus/${safeRo}/lastValidationAt`] = nowIso;
-                        updates[`repClassReviewStatus/${safeRo}/lastObservedAt`] = nowIso;
-                        updates[`repClassReviewStatus/${safeRo}/lastObservedOriginalRepClass`] = snapshot.originalRepClass || '';
-                        updates[`repClassReviewStatus/${safeRo}/lastObservedTransferRepClass`] = snapshot.transferRepClass || '';
-                        updates[`repClassReviewStatus/${safeRo}/lastObservedWhyTransfer`] = snapshot.transferReason || '';
-                        updates[`repClassReviewStatus/${safeRo}/lastObservedSignature`] = snapshot.signature || '';
-                        updates[`repClassReviewStatus/${safeRo}/lastObservedSourceVersion`] = snapshot.sourceVersion || '';
-                        updates[`repClassReviewStatus/${safeRo}/lastObservedAuditKey`] = observationKey;
-                        if (needsObservationLog || rec.requiresReReview) updates[`repClassReviewStatus/${safeRo}/events/${eventKey}`] = event;
-                        hasUpdates = true;
-                    }
-                    return;
-                }
-
-                if (!status || !status.auditKey) {
-                    if (rec && needsObservationLog) {
-                        const eventKey = nowIso.replace(/[^0-9A-Za-z]/g, '_') + '_' + safeRo + '_OBS';
-                        const event = buildObservationEvent(ro, status, rec, 'REPCLASS_STATE_OBSERVED', 'Repair-class state changed and was logged.');
-                        const localRec = Object.assign({}, rec, {
-                            lastValidationAt: nowIso,
-                            lastObservedAt: nowIso,
-                            lastObservedOriginalRepClass: snapshot.originalRepClass || '',
-                            lastObservedTransferRepClass: snapshot.transferRepClass || '',
-                            lastObservedWhyTransfer: snapshot.transferReason || '',
-                            lastObservedSignature: snapshot.signature || '',
-                            lastObservedSourceVersion: snapshot.sourceVersion || '',
-                            lastObservedAuditKey: observationKey,
-                            events: Object.assign({}, priorEvents, { [eventKey]: event })
-                        });
-                        globalRepairClassReviewState = Object.assign({}, globalRepairClassReviewState || {}, { [safeRo]: localRec });
-                        // skip synchronous localStorage persistence for repClassReviewStatus; Firebase is source of truth
-                        updates[`repClassReviewStatus/${safeRo}/lastValidationAt`] = nowIso;
-                        updates[`repClassReviewStatus/${safeRo}/lastObservedAt`] = nowIso;
-                        updates[`repClassReviewStatus/${safeRo}/lastObservedOriginalRepClass`] = snapshot.originalRepClass || '';
-                        updates[`repClassReviewStatus/${safeRo}/lastObservedTransferRepClass`] = snapshot.transferRepClass || '';
-                        updates[`repClassReviewStatus/${safeRo}/lastObservedWhyTransfer`] = snapshot.transferReason || '';
-                        updates[`repClassReviewStatus/${safeRo}/lastObservedSignature`] = snapshot.signature || '';
-                        updates[`repClassReviewStatus/${safeRo}/lastObservedSourceVersion`] = snapshot.sourceVersion || '';
-                        updates[`repClassReviewStatus/${safeRo}/lastObservedAuditKey`] = observationKey;
-                        updates[`repClassReviewStatus/${safeRo}/events/${eventKey}`] = event;
-                        hasUpdates = true;
-                    }
-                    return;
-                }
-
-                if (rec && rec.latestAccountabilityAuditKey === status.auditKey && !needsObservationLog) return;
-
-                const eventKey = nowIso.replace(/[^0-9A-Za-z]/g, '_') + '_' + safeRo + '_FLAG';
-                const event = {
-                    timestamp: nowIso,
-                    eventType: status.issueType,
-                    auditKey: status.auditKey,
-                    message: status.message || '',
-                    decision: rec && rec.decision ? rec.decision : '',
-                    reviewedOriginalRepClass: rec ? (rec.reviewedOriginalRepClass || rec.originalRepClass || '') : '',
-                    reviewedTransferRepClass: rec ? (rec.reviewedTransferRepClass || rec.transferRepClass || '') : '',
-                    currentOriginalRepClass: snapshot.originalRepClass || '',
-                    currentTransferRepClass: snapshot.transferRepClass || '',
-                    currentWhyTransfer: snapshot.transferReason || '',
-                    sourceVersion: snapshot.sourceVersion || '',
-                    signature: snapshot.signature || ''
-                };
-
-                const localRec = Object.assign({}, rec || {}, {
-                    requiresReReview: true,
-                    latestAccountabilityIssue: status.message || status.issueType,
-                    latestAccountabilityAuditKey: status.auditKey,
-                    lastValidationAt: nowIso,
-                    lastObservedAt: nowIso,
-                    lastObservedOriginalRepClass: snapshot.originalRepClass || '',
-                    lastObservedTransferRepClass: snapshot.transferRepClass || '',
-                    lastObservedWhyTransfer: snapshot.transferReason || '',
-                    lastObservedSignature: snapshot.signature || '',
-                    lastObservedSourceVersion: snapshot.sourceVersion || '',
-                    lastObservedAuditKey: observationKey,
-                    events: Object.assign({}, priorEvents, { [eventKey]: event })
-                });
-                globalRepairClassReviewState = Object.assign({}, globalRepairClassReviewState || {}, { [safeRo]: localRec });
-                // skip synchronous localStorage persistence for repClassReviewStatus; Firebase is source of truth
-
-                updates[`repClassReviewStatus/${safeRo}/requiresReReview`] = true;
-                updates[`repClassReviewStatus/${safeRo}/latestAccountabilityIssue`] = status.message || status.issueType;
-                updates[`repClassReviewStatus/${safeRo}/latestAccountabilityAuditKey`] = status.auditKey;
-                updates[`repClassReviewStatus/${safeRo}/lastValidationAt`] = nowIso;
-                updates[`repClassReviewStatus/${safeRo}/lastObservedAt`] = nowIso;
-                updates[`repClassReviewStatus/${safeRo}/lastObservedOriginalRepClass`] = snapshot.originalRepClass || '';
-                updates[`repClassReviewStatus/${safeRo}/lastObservedTransferRepClass`] = snapshot.transferRepClass || '';
-                updates[`repClassReviewStatus/${safeRo}/lastObservedWhyTransfer`] = snapshot.transferReason || '';
-                updates[`repClassReviewStatus/${safeRo}/lastObservedSignature`] = snapshot.signature || '';
-                updates[`repClassReviewStatus/${safeRo}/lastObservedSourceVersion`] = snapshot.sourceVersion || '';
-                updates[`repClassReviewStatus/${safeRo}/lastObservedAuditKey`] = observationKey;
-                updates[`repClassReviewStatus/${safeRo}/events/${eventKey}`] = event;
-                hasUpdates = true;
-
-                // Logged in Firebase under repClassReviewStatus/{RO}/events. Avoid a second workflowActivity write here because it can trigger repeated view refreshes on large files.
-            });
-
-            if (hasUpdates && db) {
-                repClassAccountabilityAuditInFlight = true;
-                db.ref().update(updates)
-                    .catch(err => console.warn('Repair class accountability audit write failed:', err))
-                    .finally(() => { repClassAccountabilityAuditInFlight = false; });
+                db.ref('repClassReviewStatus/' + safeRo).set(payload)
+                    .then(() => logWorkflowActivity(safeRo, 'REPCLASS_REVIEW_' + decision, memo, payload))
+                    .then(closeModal)
+                    .catch(errObj => {
+                        console.warn('Repair class review save failed:', errObj);
+                        alert('Could not save repair class review. Please try again.');
+                    });
+            } else {
+                globalRepairClassReviewState[safeRo] = payload;
+                try { localStorage.setItem('repclass_review_status', JSON.stringify(globalRepairClassReviewState)); } catch(e) {}
+                logWorkflowActivity(safeRo, 'REPCLASS_REVIEW_' + decision, memo, payload);
+                closeModal();
             }
         }
 
@@ -2433,7 +2235,6 @@
         let currentCustomerFilter = 'ALL';
         let currentOwnerView = '';
         let currentParentView = '';
-        let currentDrilldownMetricFilter = '';
         let searchTimeout = null;
 
         let pmOwners = [];
@@ -2682,9 +2483,19 @@
             return !!info.active;
         }
 
+        function toggleUnlimitedSpendMode() {
+            const currentlyActive = isUnlimitedSpendModeActive();
+            const entered = window.prompt(`Enter password to ${currentlyActive ? 'turn OFF' : 'turn ON'} unlimited spend mode for this week:`);
+            if (entered === null) return;
+            let expectedPassword = '';
+            try { expectedPassword = atob(MANUAL_GOVERNOR_PASSWORD_B64); } catch(e) { expectedPassword = ''; }
+            if (entered !== expectedPassword) {
+                alert('Incorrect password. Unlimited spend mode was not changed.');
+                return;
+            }
 
-        function buildGovernorTogglePayload(nextEnabled) {
             const nowIso = new Date().toISOString();
+            const nextEnabled = !currentlyActive;
             const payload = {
                 enabled: nextEnabled,
                 lastChangedAt: nowIso,
@@ -2701,68 +2512,15 @@
                 payload.disabledBy = 'Manual Toggle';
             }
 
-            return payload;
-        }
-
-        function verifyGovernorPassword(promptText, errorText) {
-            const entered = window.prompt(promptText);
-            if (entered === null) return false;
-            let expectedPassword = '';
-            try { expectedPassword = atob(MANUAL_GOVERNOR_PASSWORD_B64); } catch(e) { expectedPassword = ''; }
-            if (entered !== expectedPassword) {
-                alert(errorText);
-                return false;
-            }
-            return true;
-        }
-
-        function commitGovernorToggle(firebasePath, stateGetter, stateSetter, localStorageKey, payload, failureLabel) {
             if (db) {
-                db.ref(firebasePath).update(payload)
+                db.ref('spendGovernor/unlimitedSpendMode').update(payload)
                     .then(() => refreshActiveViewPreservingDrilldown())
-                    .catch(err => alert(failureLabel + ' update failed: ' + err.message));
+                    .catch(err => alert('Unlimited spend mode update failed: ' + err.message));
             } else {
-                const nextState = Object.assign({}, stateGetter() || {}, payload);
-                stateSetter(nextState);
-                try { localStorage.setItem(localStorageKey, JSON.stringify(nextState)); } catch(e) {}
+                globalUnlimitedSpendState = Object.assign({}, globalUnlimitedSpendState || {}, payload);
+                try { localStorage.setItem('unlimited_spend_mode', JSON.stringify(globalUnlimitedSpendState)); } catch(e) {}
                 refreshActiveViewPreservingDrilldown();
             }
-        }
-
-        function toggleUnlimitedSpendMode() {
-            const currentlyActive = isUnlimitedSpendModeActive();
-            if (!verifyGovernorPassword(
-                `Enter password to ${currentlyActive ? 'turn OFF' : 'turn ON'} unlimited spend mode for this week:`,
-                'Incorrect password. Unlimited spend mode was not changed.'
-            )) return;
-
-            const payload = buildGovernorTogglePayload(!currentlyActive);
-            commitGovernorToggle(
-                'spendGovernor/unlimitedSpendMode',
-                () => globalUnlimitedSpendState,
-                value => { globalUnlimitedSpendState = value; },
-                'unlimited_spend_mode',
-                payload,
-                'Unlimited spend mode'
-            );
-        }
-
-        function toggleManualGovernorLock() {
-            const currentlyActive = isManualGovernorLockActive();
-            if (!verifyGovernorPassword(
-                `Enter password to ${currentlyActive ? 'turn OFF' : 'turn ON'} the manual governor lock:`,
-                'Incorrect password. Manual governor lock was not changed.'
-            )) return;
-
-            const payload = buildGovernorTogglePayload(!currentlyActive);
-            commitGovernorToggle(
-                'spendGovernor/manualLock',
-                () => globalManualGovernorLockState,
-                value => { globalManualGovernorLockState = value; },
-                'manual_governor_lock',
-                payload,
-                'Manual governor lock'
-            );
         }
 
         function getSpendGovernorLockReason() {
@@ -2775,6 +2533,46 @@
             return getSpendGovernorLockReason() === 'MANUAL_LOCK'
                 ? '🔒 MANUAL GOVERNOR LOCK ACTIVE - PRE-WIP WORK IS LOCKED'
                 : '🔒 WEEKLY CAP MET - PRE-WIP WORK IS LOCKED';
+        }
+
+        function toggleManualGovernorLock() {
+            const currentlyActive = isManualGovernorLockActive();
+            const entered = window.prompt(`Enter password to ${currentlyActive ? 'turn OFF' : 'turn ON'} the manual governor lock:`);
+            if (entered === null) return;
+            let expectedPassword = '';
+            try { expectedPassword = atob(MANUAL_GOVERNOR_PASSWORD_B64); } catch(e) { expectedPassword = ''; }
+            if (entered !== expectedPassword) {
+                alert('Incorrect password. Manual governor lock was not changed.');
+                return;
+            }
+
+            const nowIso = new Date().toISOString();
+            const nextEnabled = !currentlyActive;
+            const payload = {
+                enabled: nextEnabled,
+                lastChangedAt: nowIso,
+                lastChangedBy: 'Manual Toggle'
+            };
+
+            if (nextEnabled) {
+                payload.setAt = nowIso;
+                payload.setBy = 'Manual Toggle';
+                payload.expiresAt = getManualGovernorLockExpiryIso(new Date());
+                payload.resetReason = '';
+            } else {
+                payload.disabledAt = nowIso;
+                payload.disabledBy = 'Manual Toggle';
+            }
+
+            if (db) {
+                db.ref('spendGovernor/manualLock').update(payload)
+                    .then(() => refreshActiveViewPreservingDrilldown())
+                    .catch(err => alert('Manual governor lock update failed: ' + err.message));
+            } else {
+                globalManualGovernorLockState = Object.assign({}, globalManualGovernorLockState || {}, payload);
+                try { localStorage.setItem('manual_governor_lock', JSON.stringify(globalManualGovernorLockState)); } catch(e) {}
+                refreshActiveViewPreservingDrilldown();
+            }
         }
 
         function safeFirebaseKey(value) {
@@ -4705,66 +4503,39 @@
             navigate(target.viewId, menuElement, true);
         }
 
-
-        function getActiveViewId() {
-            const activeView = document.querySelector('.view-section.active');
-            return activeView ? activeView.id : '';
-        }
-
-        function refreshActiveViewWithoutDrilldownCollapse() {
-            const activeViewId = getActiveViewId();
-            if (activeViewId === 'person-view') {
-                updateAllNoteButtons();
-                updateAllRepairClassBadges();
-                applyDrilldownFilters();
-                return;
-            }
-            triggerViewUpdate();
-        }
-
-        function scheduleRepairClassAccountabilityAudit(delayMs = 900) {
-            clearTimeout(repClassAccountabilityAuditTimer);
-            repClassAccountabilityAuditTimer = setTimeout(() => {
-                auditRepairClassReviewAccountability();
-            }, delayMs);
-        }
-
-        function getDetailStableSegment(detail) {
-            if (!detail) return '';
-            const summary = detail.querySelector(':scope > summary');
-            let label = summary ? String(summary.innerText || '').replace(/\s+/g, ' ').trim() : '';
-            label = label.replace(/\s*\(\d+\s+ROs?\).*$/i, '').trim();
-            const kind = detail.classList.contains('region-details') ? 'region'
-                : detail.classList.contains('subregion-details') ? 'subregion'
-                : detail.classList.contains('branch-details') ? 'branch'
-                : 'details';
-            const branchName = detail.dataset && detail.dataset.branchName ? String(detail.dataset.branchName || '').trim() : '';
-            return `${kind}:${branchName || label}`;
-        }
-
-        function getDetailStablePath(detail, root) {
-            const parts = [];
-            let current = detail;
-            while (current && current !== root) {
-                if (current.tagName === 'DETAILS') parts.unshift(getDetailStableSegment(current));
-                current = current.parentElement ? current.parentElement.closest('details') : null;
-            }
-            return parts.join(' > ');
-        }
-
         function getOpenDetailPaths(root) {
             if (!root) return [];
+            const getPath = (detail) => {
+                const path = [];
+                let current = detail;
+                while (current && current !== root) {
+                    const parent = current.parentElement;
+                    if (!parent) break;
+                    const siblings = Array.from(parent.children).filter(el => el.tagName === 'DETAILS');
+                    path.unshift(siblings.indexOf(current));
+                    current = parent.closest('details');
+                }
+                return path;
+            };
+
             return Array.from(root.querySelectorAll('details'))
                 .filter(detail => detail.open)
-                .map(detail => getDetailStablePath(detail, root))
-                .filter(Boolean);
+                .map(getPath)
+                .filter(path => path.every(idx => idx >= 0));
         }
 
         function restoreOpenDetailPaths(root, paths) {
             if (!root || !Array.isArray(paths)) return;
-            const openKeys = new Set(paths);
-            Array.from(root.querySelectorAll('details')).forEach(detail => {
-                if (openKeys.has(getDetailStablePath(detail, root))) detail.open = true;
+            paths.forEach(path => {
+                let scope = root;
+                let detail = null;
+                for (const idx of path) {
+                    const details = Array.from(scope.children).filter(el => el.tagName === 'DETAILS');
+                    detail = details[idx];
+                    if (!detail) return;
+                    detail.open = true;
+                    scope = detail;
+                }
             });
         }
 
@@ -4775,20 +4546,13 @@
             const root = isDrilldownView ? document.getElementById('drilldown-body') : null;
             const openPaths = getOpenDetailPaths(root);
             const scrollTop = mainContent ? mainContent.scrollTop : 0;
-            const ownerBefore = currentOwnerView;
-            const parentBefore = currentParentView;
 
-            if (isDrilldownView && ownerBefore) {
-                loadPersonDrilldown(ownerBefore, parentBefore || lastActiveView || 'home-view');
-            } else {
-                triggerViewUpdate();
-            }
+            triggerViewUpdate();
 
             if (isDrilldownView) {
                 requestAnimationFrame(() => {
                     const refreshedRoot = document.getElementById('drilldown-body');
                     restoreOpenDetailPaths(refreshedRoot, openPaths);
-                    applyDrilldownFilters();
                     if (mainContent) mainContent.scrollTop = scrollTop;
                 });
             }
@@ -5373,21 +5137,8 @@
                 ro.transferRepClass = rcOverlay.transferRepClass || '';
                 ro.transferReason = rcOverlay.transferReason || '';
                 ro.repClassReviewRequired = !!(normalizeRepClassValue(ro.originalRepClass) && normalizeRepClassValue(ro.transferRepClass) && normalizeRepClassValue(ro.originalRepClass) !== normalizeRepClassValue(ro.transferRepClass));
-                if (ro.repClassReviewRequired) {
-                    // Repair Class review is its own compliance workflow. Completed/finalized rows
-                    // still need to surface on the owner/location tile for Rep Class review,
-                    // but they do not count as open dispatch work.
-                    if (ro.isNonOscQueueWork && ro.nonOscLocation) {
-                        activeNonOsc.add(ro.nonOscLocation);
-                    }
-                    (ro.kpiOwners || []).forEach(o => {
-                        let t = ownerNameToTeam[o] || 'VENDED REPAIR';
-                        if (o === 'Kevin Anguzza') t = 'PM';
-                        if (t === 'PM') activePM.add(o);
-                        else if (t === 'ERS') activeERS.add(o);
-                        else activeVended.add(o);
-                    });
-                    (ro.dedicatedShopOwners || []).forEach(o => activeVended.add(o));
+                if (ro.isOpen && ro.repClassReviewRequired && ro.isNonOscQueueWork && ro.nonOscLocation) {
+                    activeNonOsc.add(ro.nonOscLocation);
                 }
             });
 
@@ -5962,56 +5713,6 @@
             document.getElementById('summary-table-body').innerHTML = html || '<tr><td colspan="7" style="text-align:center; padding: 20px;">No data available</td></tr>';
         }
 
-
-        function getDrilldownMetricLabel(metric) {
-            const labels = {
-                'workflow-stale': 'Workflow: stale / not touched today',
-                'workflow-missing-notes': 'Workflow: missing meaningful notes',
-                'workflow-pending-dispatch': 'Workflow: not marked dispatched',
-                'repclass-pending': 'Repair Class: review needed',
-                'repclass-accepted': 'Repair Class: accepted / corrected'
-            };
-            return labels[metric] || '';
-        }
-
-        function clearDrilldownMetricFilter() {
-            currentDrilldownMetricFilter = '';
-            applyDrilldownFilters();
-        }
-        window.clearDrilldownMetricFilter = clearDrilldownMetricFilter;
-
-        window.openTileMetricFromEvent = function(event, metric) {
-            // The document-level capture listener has event.currentTarget === document.
-            // Always anchor to event.target/the clicked square so the parent tile and owner are found.
-            const rawTarget = event && event.target ? event.target : null;
-            const metricEl = rawTarget && rawTarget.closest ? rawTarget.closest('.workflow-compliance-mini.clickable') : null;
-            const tile = metricEl ? metricEl.closest('.kpi-tile, .home-master-tile') : (rawTarget && rawTarget.closest ? rawTarget.closest('.kpi-tile, .home-master-tile') : null);
-            if (!tile) return false;
-
-            if (event) {
-                event.preventDefault();
-                event.stopPropagation();
-                if (typeof event.stopImmediatePropagation === 'function') event.stopImmediatePropagation();
-            }
-
-            const owner = tile.dataset.drilldownOwner || '';
-            const parentView = tile.dataset.parentView || 'home-view';
-            if (!owner) return false;
-            currentDrilldownMetricFilter = metric || (metricEl ? metricEl.dataset.metric : '') || '';
-            loadPersonDrilldown(owner, parentView);
-            return false;
-        };
-
-        // Capture click events on metric squares before the parent tile click can fire.
-        // This prevents a square click from opening the unfiltered tile drilldown first.
-        document.addEventListener('click', function(e) {
-            const metricEl = e.target && e.target.closest ? e.target.closest('.workflow-compliance-mini.clickable') : null;
-            if (!metricEl) return;
-            const tile = metricEl.closest('.kpi-tile, .home-master-tile');
-            if (!tile) return;
-            window.openTileMetricFromEvent(e, metricEl.dataset.metric || '');
-        }, true);
-
         function generateTileHTML(name, dataSet, chartId = null, isPM = false) {
             
             let filteredOpen = getTileOpenRoPopulation(dataSet, isPM);
@@ -6019,7 +5720,7 @@
             let priorityCount = filteredOpen.filter(ro => isPriority(ro)).length;
 
             let workflowComplianceHtml = generateWorkflowComplianceHtml(filteredOpen);
-            let repairClassComplianceHtml = generateRepairClassComplianceHtml(dataSet);
+            let repairClassComplianceHtml = generateRepairClassComplianceHtml(filteredOpen);
 
             let innerHtml = `
                 <div class="kpi-name">${name}</div>
@@ -6056,17 +5757,17 @@
             let vendedData = aggData.filter(ro => ro.kpiOwners.some(o => vendedOwners.includes(o)));
             let ersRoData = aggData.filter(ro => ro.kpiOwners.some(o => ersOwners.includes(o)));
 
-            const pmTile = document.createElement('div'); pmTile.className = 'kpi-tile home-master-tile'; pmTile.dataset.drilldownOwner = 'ALL_PM'; pmTile.dataset.parentView = 'home-view'; pmTile.innerHTML = generateTileHTML('PM Dashboard', pmData, 'chart-pm', true);
-            pmTile.onclick = () => { currentDrilldownMetricFilter = ''; loadPersonDrilldown('ALL_PM', 'home-view'); } ;
+            const pmTile = document.createElement('div'); pmTile.className = 'kpi-tile home-master-tile'; pmTile.innerHTML = generateTileHTML('PM Dashboard', pmData, 'chart-pm', true);
+            pmTile.onclick = () => loadPersonDrilldown('ALL_PM', 'home-view');
             container.appendChild(pmTile);
             
-            const vendedTile = document.createElement('div'); vendedTile.className = 'kpi-tile home-master-tile'; vendedTile.dataset.drilldownOwner = 'ALL_VENDED'; vendedTile.dataset.parentView = 'home-view'; vendedTile.innerHTML = generateTileHTML('Vended Repair Dashboard', vendedData, 'chart-vended');
-            vendedTile.onclick = () => { currentDrilldownMetricFilter = ''; loadPersonDrilldown('ALL_VENDED', 'home-view'); } ;
+            const vendedTile = document.createElement('div'); vendedTile.className = 'kpi-tile home-master-tile'; vendedTile.innerHTML = generateTileHTML('Vended Repair Dashboard', vendedData, 'chart-vended');
+            vendedTile.onclick = () => loadPersonDrilldown('ALL_VENDED', 'home-view');
             container.appendChild(vendedTile);
             
-            const ersTile = document.createElement('div'); ersTile.className = 'kpi-tile home-master-tile'; ersTile.dataset.drilldownOwner = 'ALL_ERS'; ersTile.dataset.parentView = 'home-view'; 
+            const ersTile = document.createElement('div'); ersTile.className = 'kpi-tile home-master-tile'; 
             ersTile.innerHTML = generateTileHTML('ERS Dashboard', ersRoData, 'chart-ers');
-            ersTile.onclick = () => { currentDrilldownMetricFilter = ''; loadPersonDrilldown('ALL_ERS', 'home-view'); } ;
+            ersTile.onclick = () => loadPersonDrilldown('ALL_ERS', 'home-view');
             container.appendChild(ersTile);
 
         }
@@ -6098,19 +5799,16 @@
 
                 // During lockout, pre-WIP work stays visible but progression actions are locked.
 
-                const repClassReviewData = getRepairClassReviewPopulation(ownerDataAll);
-                if (targetData.length === 0 && !(currentFilter === 'ALL' && repClassReviewData.length > 0)) return; 
+                if (targetData.length === 0) return; 
 
                 const tile = document.createElement('div'); tile.className = 'kpi-tile';
-                tile.dataset.drilldownOwner = owner;
-                tile.dataset.parentView = parentViewId;
                 
                 if (owner.toUpperCase() === 'UNASSIGNED') {
                     tile.style.borderTopColor = 'var(--urgent-red)';
                     tile.style.backgroundColor = '#fef2f2';
                 }
 
-                tile.onclick = () => { currentDrilldownMetricFilter = ''; loadPersonDrilldown(owner, parentViewId); };
+                tile.onclick = () => loadPersonDrilldown(owner, parentViewId);
                 tile.innerHTML = generateTileHTML(owner, ownerDataAll, null, isPM);
                 container.appendChild(tile);
             });
@@ -6135,42 +5833,20 @@
                     targetData = targetData.filter(ro => isPriority(ro));
                 }
 
-                const repClassReviewData = getRepairClassReviewPopulation(locationDataAll);
-                if (targetData.length === 0 && !(currentFilter === 'ALL' && repClassReviewData.length > 0)) return;
+                if (targetData.length === 0) return;
 
                 const tile = document.createElement('div');
                 tile.className = 'kpi-tile';
-                tile.dataset.drilldownOwner = 'NONOSC::' + location;
-                tile.dataset.parentView = 'nonosc-view';
-                tile.onclick = () => { currentDrilldownMetricFilter = ''; loadPersonDrilldown('NONOSC::' + location, 'nonosc-view'); };
+                tile.onclick = () => loadPersonDrilldown('NONOSC::' + location, 'nonosc-view');
                 tile.innerHTML = generateTileHTML(location, locationDataAll, null, false);
                 container.appendChild(tile);
             });
         }
 
-
-        function buildRowMetricMeta(ro, roNumOverride) {
-            const roNum = roNumOverride || (ro && ro.roNum) || '';
-            const safeRo = safeFirebaseKey(roNum);
-            const repStatus = getRepairClassReviewAccountabilityStatus(ro || { roNum: roNum });
-            return {
-                safeRo,
-                touchedToday: roTouchedToday(safeRo),
-                hasMeaningfulNote: roHasMeaningfulNote(safeRo),
-                dispatched: !!globalRoCheckState[safeRo],
-                repclassPending: !!(ro && isRealRepairClassReviewRo(ro)) && !repStatus.cleared,
-                repclassCleared: !!(ro && isRealRepairClassReviewRo(ro)) && !!repStatus.cleared,
-                repclassAccepted: String(getRepairClassReviewDecision(safeRo) || '').toUpperCase() === 'ACCEPTED'
-            };
-        }
-
         function generateRoDrilldownHtml(ownerDataAll, isPM) {
             let isVendedQueue = currentOwnerView === 'ALL_VENDED' || vendedOwners.includes(currentOwnerView);
             let isNonOscQueueView = String(currentOwnerView || '').startsWith('NONOSC::');
-            let baseOpenData = ownerDataAll
-                .filter(ro => ro && (ro.isOpen || hasRepairClassTransfer(ro)))
-                .map(ro => {
-                ro = (!ro.isOpen && hasRepairClassTransfer(ro)) ? Object.assign({}, ro, { isRepClassOnlyClosed: true }) : ro;
+            let baseOpenData = ownerDataAll.filter(ro => ro.isOpen).map(ro => {
                 if (isNonOscQueueView && ro.isNonOscQueueWork) {
                     return Object.assign({}, ro, {
                         drillTopLevel: 'Dedicated / Non-OSC Work Orders',
@@ -6225,7 +5901,7 @@
 
             // During lockout, pre-WIP work stays visible but is action-locked.
 
-            if(targetData.length === 0) return `<p style="margin-top:15px; color:#666;">No Repair Orders or Repair Class review items to display under the current filters.</p>`;
+            if(targetData.length === 0) return `<p style="margin-top:15px; color:#666;">No active Repair Orders to display under the current filters.</p>`;
             
             let hierarchy = {};
             targetData.forEach(ro => {
@@ -6315,8 +5991,6 @@
                                     queueSources: [],
                                     otherQueueOrders: [],
                                     repairClassCells: [],
-                                    repClassOnlyClosedFlags: [],
-                                    rowMetricMeta: [],
                                     isOOS: ro.isOOS,
                                     usefulPct: ro.usefulPct,
                                     usefulPctObj: ro.usefulPctObj,
@@ -6346,8 +6020,6 @@
                                     unitsMap[ro.unitNo].otherQueueOrders.push([]);
                                     unitsMap[ro.unitNo].roLinks.push(actualRoLinkHtml);
                                     unitsMap[ro.unitNo].repairClassCells.push(getRepairClassCellHtml(ro));
-                                    unitsMap[ro.unitNo].repClassOnlyClosedFlags.push(!!ro.isRepClassOnlyClosed);
-                                    unitsMap[ro.unitNo].rowMetricMeta.push(buildRowMetricMeta(ro, actualRoNum));
                                     unitsMap[ro.unitNo].openedDates.push(ro.openedFormatted);
                                     unitsMap[ro.unitNo].statuses.push(ro.status);
                                     unitsMap[ro.unitNo].ecdCells.push(ecdCell);
@@ -6377,8 +6049,6 @@
                             unitsMap[ro.unitNo].otherQueueOrders.push(ro.otherQueueOrders || []);
                             unitsMap[ro.unitNo].roLinks.push(roLinkHtml);
                             unitsMap[ro.unitNo].repairClassCells.push(getRepairClassCellHtml(ro));
-                            unitsMap[ro.unitNo].repClassOnlyClosedFlags.push(!!ro.isRepClassOnlyClosed);
-                            unitsMap[ro.unitNo].rowMetricMeta.push(buildRowMetricMeta(ro, ro.roNum));
                             
                             unitsMap[ro.unitNo].openedDates.push(ro.openedFormatted);
                             unitsMap[ro.unitNo].statuses.push(ro.status);
@@ -6415,29 +6085,22 @@
                             visibleIdxs.forEach((idx, localIdx) => {
                                 let roNum = u.roNums[idx];
                                 let safeRo = roNum.replace(/[.#$\[\]]/g, '_');
-                                let isRepClassOnlyClosed = !!(u.repClassOnlyClosedFlags && u.repClassOnlyClosedFlags[idx]);
-                                let metricMeta = (u.rowMetricMeta && u.rowMetricMeta[idx]) ? u.rowMetricMeta[idx] : { touchedToday: roTouchedToday(safeRo), hasMeaningfulNote: roHasMeaningfulNote(safeRo), dispatched: !!globalRoCheckState[safeRo], repclassPending: false, repclassAccepted: false, repclassCleared: false };
-                                let isPreWipLocked = !isRepClassOnlyClosed && shouldLockPreWipRow(u.statuses[idx]);
+                                let isPreWipLocked = shouldLockPreWipRow(u.statuses[idx]);
                                 let isDispatched = !!globalRoCheckState[safeRo];
-                                let statusToggleHtml = isRepClassOnlyClosed
-                                    ? `<span class="badge" style="background:#e0f2fe; color:#075985; border:1px solid #7dd3fc; font-size:10px; font-weight:900;" title="Completed/finalized RO included for Repair Class review only. Dispatch compliance is not scored for this row.">REPCLASS REVIEW</span>`
-                                    : getDispatchToggleHtml(safeRo, isDispatched, isPreWipLocked);
+                                let statusToggleHtml = getDispatchToggleHtml(safeRo, isDispatched, isPreWipLocked);
 
-                                let noteBtnHtml = '';
-                                if (!isRepClassOnlyClosed) {
-                                    let latestNote = getLatestMeaningfulNote(safeRo);
-                                    let hasNote = isMeaningfulNote(latestNote);
-                                    let noteClass = hasNote ? 'note-btn has-note' : 'note-btn';
-                                    let noteTitle = hasNote ? escapeHtml(latestNote).replace(/"/g, '&quot;') : 'Needs Update';
-                                    noteBtnHtml = `<button class="${noteClass}" data-ro="${safeRo}" title="${noteTitle}" onclick="openNoteModal('${safeRo}', '${roNum}')">📝</button>`;
-                                }
+                                let latestNote = getLatestMeaningfulNote(safeRo);
+                                let hasNote = isMeaningfulNote(latestNote);
+                                let noteClass = hasNote ? 'note-btn has-note' : 'note-btn';
+                                let noteTitle = hasNote ? escapeHtml(latestNote).replace(/"/g, '&quot;') : 'Needs Update';
+                                let noteBtnHtml = `<button class="${noteClass}" data-ro="${safeRo}" title="${noteTitle}" onclick="openNoteModal('${safeRo}', '${roNum}')">📝</button>`;
 
                                 let sourcePillHtml = getQueueSourcePillHtml(u.queueSources[idx], isVendedQueue);
                                 let roLinkDisplayHtml = isPreWipLocked ? getLockedRoDisplayFromHtml(u.roLinks[idx], roNum) : u.roLinks[idx];
                                 let lockTooltipHtml = isPreWipLocked ? getLockTooltipHtml() : '';
                                 let roHtml = `<div style="display:flex; align-items:center; gap: 4px; flex-wrap: wrap;">${statusToggleHtml} ${roLinkDisplayHtml} ${noteBtnHtml} ${sourcePillHtml} ${lockTooltipHtml}</div>`;
 
-                                tableHTML += `<tr class="ro-row${isPreWipLocked ? ' locked-prewip-row' : ''}${isRepClassOnlyClosed ? ' repclass-only-row' : ''}" data-safe-ro="${safeRo}" data-ro-number="${roNum}" data-oos="${u.isOOS}" data-priority="${isPri}" data-repclass-only="${isRepClassOnlyClosed}" data-touched-today="${!!metricMeta.touchedToday}" data-has-note="${!!metricMeta.hasMeaningfulNote}" data-dispatched="${!!metricMeta.dispatched}" data-repclass-pending="${!!metricMeta.repclassPending}" data-repclass-accepted="${!!metricMeta.repclassAccepted}" data-repclass-cleared="${!!metricMeta.repclassCleared}" title="${isPreWipLocked ? PRE_WIP_LOCK_MESSAGE : (isRepClassOnlyClosed ? 'Completed/finalized RO included for Repair Class review only.' : '')}">`;
+                                tableHTML += `<tr class="ro-row${isPreWipLocked ? ' locked-prewip-row' : ''}" data-oos="${u.isOOS}" data-priority="${isPri}" title="${isPreWipLocked ? PRE_WIP_LOCK_MESSAGE : ''}">`;
                                 tableHTML += `<td style="vertical-align:top; padding-top:15px; border-bottom: ${localIdx === rowCount - 1 ? '1px solid var(--border)' : '1px dashed #eee'};">${roHtml}</td>`;
                                 
                                 let safeUnitType = u.unitType || 'UNKNOWN';
@@ -6474,7 +6137,7 @@
                         let hiddenMsg = lockedCount > 0 ? `<span style="color:var(--urgent-red); font-size:11px; font-weight:bold; margin-left: 10px;">(${lockedCount} PRE-WIP ROs Locked)</span>` : '';
 
                         if (visibleRowsCount > 0) {
-                            branchHtml += `<details class="ro-detail-node branch-details" data-branch-name="${branch}"><summary><div style="flex-grow:1; display:flex; align-items:center;"><span class="branch-title-text">${branch} (${visibleRowsCount} ROs)</span>${hiddenMsg}</div><div>${badgesHtml}</div></summary>`;
+                            branchHtml += `<details class="ro-detail-node branch-details" data-branch-name="${branch}"><summary><div style="flex-grow:1; display:flex; align-items:center;"><span class="branch-title-text">${branch} (${visibleRowsCount} WIP)</span>${hiddenMsg}</div><div>${badgesHtml}</div></summary>`;
                             branchHtml += tableHTML + `</details>`;
                         }
                     }
@@ -6507,25 +6170,8 @@
                     if (currentFilter === 'OOS' && row.dataset.oos !== 'true') show = false;
                     if (currentFilter === 'PRIORITY' && row.dataset.priority !== 'true') show = false;
                 }
-                if (show && currentDrilldownMetricFilter) {
-                    if (currentDrilldownMetricFilter === 'workflow-stale' && row.dataset.touchedToday === 'true') show = false;
-                    if (currentDrilldownMetricFilter === 'workflow-missing-notes' && row.dataset.hasNote === 'true') show = false;
-                    if (currentDrilldownMetricFilter === 'workflow-pending-dispatch' && row.dataset.dispatched === 'true') show = false;
-                    if (currentDrilldownMetricFilter === 'repclass-pending' && row.dataset.repclassPending !== 'true') show = false;
-                    if (currentDrilldownMetricFilter === 'repclass-accepted' && row.dataset.repclassAccepted !== 'true') show = false;
-                }
                 row.style.display = show ? '' : 'none';
             });
-
-            const existingPill = container.querySelector('.drilldown-active-filter-pill');
-            if (existingPill) existingPill.remove();
-            const metricLabel = getDrilldownMetricLabel(currentDrilldownMetricFilter);
-            if (metricLabel) {
-                const pill = document.createElement('div');
-                pill.className = 'drilldown-active-filter-pill';
-                pill.innerHTML = `${escapeHtml(metricLabel)} <button type="button" onclick="clearDrilldownMetricFilter()">Clear</button>`;
-                container.insertBefore(pill, container.firstChild);
-            }
 
             // Re-calculate Branch Headers and hide empty ones
             const branchNodes = container.querySelectorAll('.branch-details');
@@ -6553,20 +6199,6 @@
                 const visibleRows = Array.from(reg.querySelectorAll('.ro-row')).filter(r => r.style.display !== 'none');
                 reg.style.display = visibleRows.length === 0 ? 'none' : '';
             });
-
-            // When the user clicks a compliance square, open the path to the missing items
-            // so they land directly on the rows that require action instead of a collapsed tree.
-            if (currentDrilldownMetricFilter) {
-                Array.from(container.querySelectorAll('.ro-row')).forEach(row => {
-                    if (row.style.display !== 'none') {
-                        let node = row.parentElement;
-                        while (node && node !== container) {
-                            if (node.tagName && node.tagName.toLowerCase() === 'details') node.open = true;
-                            node = node.parentElement;
-                        }
-                    }
-                });
-            }
         }
 
         function loadPersonDrilldown(owner, parentViewId) {
@@ -6836,595 +6468,6 @@
                 renderAmeritOos();
             }
         }
-    
-
-        /* ============================================================
-           PERFORMANCE HOTFIX - nonblocking Firebase sync + repair-class audit
-           ============================================================ */
-        (function workflowPerformanceHotfix(){
-            let auditChunkTimer = null;
-
-
-            // Nonblocking audit: process in small chunks and write only records that actually changed.
-            auditRepairClassReviewAccountability = function() {
-                if (repClassAccountabilityAuditInFlight || !processedData || !processedData.length) return;
-                clearTimeout(auditChunkTimer);
-                repClassAccountabilityAuditInFlight = true;
-
-                const seen = new Set();
-                const rows = [];
-                for (const ro of (processedData || [])) {
-                    if (!ro || !ro.roNum) continue;
-                    const safeRo = safeFirebaseKey(ro.roNum);
-                    if (!safeRo || seen.has(safeRo)) continue;
-                    seen.add(safeRo);
-                    const rec = getRepairClassReviewRecord(safeRo);
-                    const needsReviewData = !!rec || hasRepairClassTransfer(ro);
-                    if (needsReviewData) rows.push(ro);
-                }
-
-                const nowIsoBase = new Date().toISOString();
-                let index = 0;
-                let updates = {};
-                let hasUpdates = false;
-
-                function makeEventKey(safeRo, suffix) {
-                    return (new Date().toISOString().replace(/[^0-9A-Za-z]/g, '_') + '_' + safeRo + '_' + suffix);
-                }
-
-                function addObservationUpdate(safeRo, rec, snapshot, eventType, message, status) {
-                    const observationKey = `OBSERVED|${snapshot.signature || ''}|${snapshot.sourceVersion || ''}`;
-                    updates[`repClassReviewStatus/${safeRo}/lastValidationAt`] = nowIsoBase;
-                    updates[`repClassReviewStatus/${safeRo}/lastObservedAt`] = nowIsoBase;
-                    updates[`repClassReviewStatus/${safeRo}/lastObservedOriginalRepClass`] = snapshot.originalRepClass || '';
-                    updates[`repClassReviewStatus/${safeRo}/lastObservedTransferRepClass`] = snapshot.transferRepClass || '';
-                    updates[`repClassReviewStatus/${safeRo}/lastObservedWhyTransfer`] = snapshot.transferReason || '';
-                    updates[`repClassReviewStatus/${safeRo}/lastObservedSignature`] = snapshot.signature || '';
-                    updates[`repClassReviewStatus/${safeRo}/lastObservedSourceVersion`] = snapshot.sourceVersion || '';
-                    updates[`repClassReviewStatus/${safeRo}/lastObservedAuditKey`] = observationKey;
-                    const eventKey = makeEventKey(safeRo, eventType || 'OBS');
-                    updates[`repClassReviewStatus/${safeRo}/events/${eventKey}`] = {
-                        timestamp: nowIsoBase,
-                        eventType: eventType || 'REPCLASS_STATE_OBSERVED',
-                        auditKey: status && status.auditKey ? status.auditKey : observationKey,
-                        message: message || '',
-                        decision: rec && rec.decision ? rec.decision : '',
-                        reviewedOriginalRepClass: rec ? (rec.reviewedOriginalRepClass || rec.originalRepClass || '') : '',
-                        reviewedTransferRepClass: rec ? (rec.reviewedTransferRepClass || rec.transferRepClass || '') : '',
-                        currentOriginalRepClass: snapshot.originalRepClass || '',
-                        currentTransferRepClass: snapshot.transferRepClass || '',
-                        currentWhyTransfer: snapshot.transferReason || '',
-                        sourceVersion: snapshot.sourceVersion || '',
-                        signature: snapshot.signature || ''
-                    };
-                    hasUpdates = true;
-                }
-
-                function processChunk() {
-                    const start = Date.now();
-                    while (index < rows.length && Date.now() - start < 14) {
-                        const ro = rows[index++];
-                        const safeRo = safeFirebaseKey(ro.roNum);
-                        const rec = getRepairClassReviewRecord(safeRo);
-                        if (!rec && !hasRepairClassTransfer(ro)) continue;
-
-                        const status = getRepairClassReviewAccountabilityStatus(ro);
-                        const snapshot = status && status.snapshot ? status.snapshot : getRepairClassCurrentSnapshot(ro);
-                        const observationKey = `OBSERVED|${snapshot.signature || ''}|${snapshot.sourceVersion || ''}`;
-                        const needsObservationLog = !!(rec && observationKey && rec.lastObservedAuditKey !== observationKey);
-
-                        if (status && status.cleared) {
-                            if (rec && (rec.requiresReReview || rec.latestAccountabilityIssue || rec.latestAccountabilityAuditKey || needsObservationLog)) {
-                                updates[`repClassReviewStatus/${safeRo}/requiresReReview`] = false;
-                                updates[`repClassReviewStatus/${safeRo}/latestAccountabilityIssue`] = '';
-                                updates[`repClassReviewStatus/${safeRo}/latestAccountabilityAuditKey`] = '';
-                                addObservationUpdate(safeRo, rec, snapshot, rec.requiresReReview ? 'REPCLASS_REVIEW_CLEARED_BY_LATEST_STATE' : 'REPCLASS_STATE_OBSERVED', status.issueType || 'Review remains cleared.', status);
-                            }
-                            continue;
-                        }
-
-                        if (rec && status && status.auditKey && (rec.latestAccountabilityAuditKey !== status.auditKey || needsObservationLog)) {
-                            updates[`repClassReviewStatus/${safeRo}/requiresReReview`] = true;
-                            updates[`repClassReviewStatus/${safeRo}/latestAccountabilityIssue`] = status.message || status.issueType || 'Repair-class review required again.';
-                            updates[`repClassReviewStatus/${safeRo}/latestAccountabilityAuditKey`] = status.auditKey;
-                            addObservationUpdate(safeRo, rec, snapshot, status.issueType || 'REPCLASS_REVIEW_REOPENED', status.message || 'Repair-class review required again.', status);
-                            continue;
-                        }
-
-                        if (rec && needsObservationLog) {
-                            addObservationUpdate(safeRo, rec, snapshot, 'REPCLASS_STATE_OBSERVED', 'Repair-class state changed and was logged.', status);
-                        }
-                    }
-
-                    if (index < rows.length) {
-                        auditChunkTimer = setTimeout(processChunk, 35);
-                    } else {
-                        const finish = () => { repClassAccountabilityAuditInFlight = false; updateAllRepairClassBadges(); };
-                        if (hasUpdates && db) {
-                            db.ref().update(updates).catch(err => console.warn('Repair class audit write failed:', err)).finally(finish);
-                        } else {
-                            finish();
-                        }
-                    }
-                }
-
-                auditChunkTimer = setTimeout(processChunk, 120);
-            };
-
-            scheduleRepairClassAccountabilityAudit = function(delayMs = 9000) {
-                clearTimeout(repClassAccountabilityAuditTimer);
-                repClassAccountabilityAuditTimer = setTimeout(() => {
-                    if (!processedData || !processedData.length) return;
-                    auditRepairClassReviewAccountability();
-                }, Math.max(delayMs, 3000));
-            };
-        })();
-
-        /* ============================================================
-           FIREBASE DATABASE LIVE COMPLIANCE MODE
-           ------------------------------------------------------------
-           Firebase Storage workbooks stay refresh-driven only.
-           The live Firebase Database nodes below are mandatory because
-           daily notes, dispatch progress, and repair-class review progress
-           must be visible to leaders and survive browser refreshes.
-           ============================================================ */
-        (function workflowFirebaseLiveComplianceMode(){
-            window.__workflowNoRealtimeMode = false;
-            window.__firebaseStorageRefreshOnly = true;
-            window.__firebaseDatabaseRealtimeMode = true;
-
-            let realtimeUiRefreshTimer = null;
-            let firebaseLiveListenersAttached = false;
-            const liveRefs = [];
-
-            async function readFirebaseValue(path) {
-                if (!db) return null;
-                try {
-                    const snap = await db.ref(path).once('value');
-                    return snap.val() || {};
-                } catch (err) {
-                    console.warn('Firebase read failed for ' + path, err);
-                    return {};
-                }
-            }
-
-            function attachLiveNode(path, applyValue) {
-                if (!db) return;
-                const ref = db.ref(path);
-                liveRefs.push(ref);
-                ref.on('value', snap => {
-                    try {
-                        applyValue(snap.val() || {});
-                        scheduleRealtimeComplianceRefresh(path);
-                    } catch (err) {
-                        console.warn('Live Firebase apply failed for ' + path, err);
-                    }
-                }, err => console.warn('Live Firebase listener failed for ' + path, err));
-            }
-
-            function scheduleRealtimeComplianceRefresh(reason) {
-                clearTimeout(realtimeUiRefreshTimer);
-                realtimeUiRefreshTimer = setTimeout(() => refreshComplianceUiFromLiveFirebase(reason), 180);
-            }
-
-            function updateExistingDrilldownRowMetricData() {
-                const body = document.getElementById('drilldown-body');
-                if (!body) return;
-                body.querySelectorAll('.ro-row[data-safe-ro]').forEach(row => {
-                    const safeRo = row.dataset.safeRo || '';
-                    const ro = getRoContextBySafeRo(safeRo);
-                    const meta = ro ? buildRowMetricMeta(ro, ro.roNum) : {
-                        touchedToday: roTouchedToday(safeRo),
-                        hasMeaningfulNote: roHasMeaningfulNote(safeRo),
-                        dispatched: !!globalRoCheckState[safeRo],
-                        repclassPending: false,
-                        repclassAccepted: false,
-                        repclassCleared: false
-                    };
-                    row.dataset.touchedToday = String(!!meta.touchedToday);
-                    row.dataset.hasNote = String(!!meta.hasMeaningfulNote);
-                    row.dataset.dispatched = String(!!meta.dispatched);
-                    row.dataset.repclassPending = String(!!meta.repclassPending);
-                    row.dataset.repclassAccepted = String(!!meta.repclassAccepted);
-                    row.dataset.repclassCleared = String(!!meta.repclassCleared);
-                });
-            }
-
-            // Queue/home tiles were visually "ticking" because live Firebase compliance updates
-            // were rebuilding the whole tile grid while the mouse was still hovering a card.
-            // Track tile hover state and defer full card-grid rebuilds until the user leaves the tile.
-            window.__workflowTileHovering = false;
-            window.__workflowQueuedTileRefreshReason = '';
-            window.__workflowQueuedTileRefreshTimer = null;
-
-            function isWorkflowTileElement(el) {
-                return !!(el && el.closest && el.closest('.kpi-tile, .home-master-tile'));
-            }
-
-            function isWorkflowTileHoverLocked() {
-                return !!window.__workflowTileHovering;
-            }
-
-            function queueTileRefreshAfterHover(reason) {
-                window.__workflowQueuedTileRefreshReason = reason || 'live-firebase-update';
-                clearTimeout(window.__workflowQueuedTileRefreshTimer);
-                window.__workflowQueuedTileRefreshTimer = setTimeout(() => {
-                    if (!isWorkflowTileHoverLocked() && window.__workflowQueuedTileRefreshReason) {
-                        const queuedReason = window.__workflowQueuedTileRefreshReason;
-                        window.__workflowQueuedTileRefreshReason = '';
-                        refreshComplianceUiFromLiveFirebase(queuedReason + ':after-hover');
-                    }
-                }, 350);
-            }
-
-            document.addEventListener('pointerover', function(e) {
-                if (isWorkflowTileElement(e.target)) {
-                    window.__workflowTileHovering = true;
-                }
-            }, true);
-
-            document.addEventListener('pointerout', function(e) {
-                const fromTile = e.target && e.target.closest ? e.target.closest('.kpi-tile, .home-master-tile') : null;
-                if (!fromTile) return;
-                const toTile = e.relatedTarget && e.relatedTarget.closest ? e.relatedTarget.closest('.kpi-tile, .home-master-tile') : null;
-                if (toTile === fromTile) return;
-                window.__workflowTileHovering = false;
-                if (window.__workflowQueuedTileRefreshReason) queueTileRefreshAfterHover(window.__workflowQueuedTileRefreshReason);
-            }, true);
-
-            function activeViewIsTileGrid(activeId) {
-                return ['home-view', 'pm-view', 'vended-view', 'ers-view', 'nonosc-view'].includes(activeId || '');
-            }
-
-            function refreshComplianceUiFromLiveFirebase(reason) {
-                updateAllStatusBadges();
-                updateAllNoteButtons();
-                updateAllRepairClassBadges();
-
-                const activeView = document.querySelector('.view-section.active');
-                const activeId = activeView ? activeView.id : '';
-
-                // Live Firebase updates must not reload Storage workbooks and must not collapse drilldowns.
-                if (activeId === 'person-view') {
-                    updateExistingDrilldownRowMetricData();
-                    renderNoteActivityLog(currentEditingRo || '');
-                    applyDrilldownFilters();
-                    return;
-                }
-
-                // Do not rebuild the entire tile grid while the cursor is sitting on a tile.
-                // Replacing the hovered DOM node makes the browser fire hover off/on, which looks like a tick.
-                if (activeViewIsTileGrid(activeId) && isWorkflowTileHoverLocked()) {
-                    queueTileRefreshAfterHover(reason || 'live-firebase-update');
-                    return;
-                }
-
-                if (activeId === 'home-view') renderHomeDashboard();
-                else if (activeId === 'pm-view') renderKPITiles(pmOwners, 'pm-kpi-container', 'pm-view');
-                else if (activeId === 'vended-view') renderKPITiles(vendedOwners, 'vended-kpi-container', 'vended-view');
-                else if (activeId === 'ers-view') renderKPITiles(ersOwners, 'ers-kpi-container', 'ers-view');
-                else if (activeId === 'nonosc-view') renderNonOscTiles();
-                else if (activeId === 'summary-view') { renderSummary(); renderAmeritOos(); }
-            }
-
-            initFirebaseSync = function() {
-                try {
-                    if (window.__firebaseLiveComplianceInitialized || typeof firebase === 'undefined') return;
-                    window.__firebaseLiveComplianceInitialized = true;
-                    db = firebase.database();
-
-                    // These lightweight operational nodes are live. They are the source of truth for
-                    // daily notes compliance, dispatch progress, and repair-class review progress.
-                    attachLiveNode('roChecks', value => { globalRoCheckState = value || {}; });
-                    attachLiveNode('roNotes', value => { globalRoNotesState = value || {}; });
-                    attachLiveNode('workflowActivity', value => { globalWorkflowActivityState = value || {}; });
-                    attachLiveNode('repClassReviewStatus', value => { globalRepairClassReviewState = value || {}; });
-
-                    // Governor config is still loaded once. Storage workbook refresh remains manual/page-refresh driven.
-                    Promise.all([
-                        readFirebaseValue('spendGovernor/manualLock'),
-                        readFirebaseValue('spendGovernor/unlimitedSpendMode')
-                    ]).then(([manualLock, unlimitedMode]) => {
-                        globalManualGovernorLockState = manualLock || {};
-                        globalUnlimitedSpendState = unlimitedMode || {};
-                        try { localStorage.setItem('manual_governor_lock', JSON.stringify(globalManualGovernorLockState)); } catch(e) {}
-                        try { localStorage.setItem('unlimited_spend_mode', JSON.stringify(globalUnlimitedSpendState)); } catch(e) {}
-                    });
-
-                    // One observed-state accountability pass per manual page refresh only.
-                    // This uses the workbook/AI Ref snapshot loaded at page refresh; it does not pull Storage again.
-                    if (processedData && processedData.length > 0) {
-                        setTimeout(() => scheduleRepairClassAccountabilityAudit(6000), 1000);
-                    }
-                } catch (error) {
-                    console.warn('Firebase live compliance initialization failed.', error);
-                }
-            };
-
-            scheduleActiveViewRefresh = function() {
-                scheduleRealtimeComplianceRefresh('scheduled-local-state-refresh');
-            };
-
-            logWorkflowActivity = function(safeRo, actionType, noteText = '', meta = {}) {
-                const now = new Date();
-                const nowIso = now.toISOString();
-                const dateKey = getLocalDateKey(now);
-                const roContext = getRoContextBySafeRo(safeRo);
-                const assignedOwner = meta.assignedOwner || (roContext && roContext.kpiOwners && roContext.kpiOwners.length ? roContext.kpiOwners[0] : '') || '';
-                const roNumber = meta.roNumber || (roContext ? roContext.roNum : safeRo);
-                const entry = {
-                    timestamp: nowIso,
-                    dateKey: dateKey,
-                    actionType: actionType,
-                    noteText: String(noteText || '').trim(),
-                    roNumber: roNumber || '',
-                    unitNo: meta.unitNo || (roContext ? roContext.unitNo : '') || '',
-                    branch: meta.branch || (roContext ? roContext.branch : '') || '',
-                    assignedOwner: assignedOwner,
-                    source: meta.source || 'workflow-ui'
-                };
-
-                if (!globalWorkflowActivityState[safeRo]) globalWorkflowActivityState[safeRo] = { activityLog: {} };
-                if (!globalWorkflowActivityState[safeRo].activityLog) globalWorkflowActivityState[safeRo].activityLog = {};
-                if (!globalWorkflowActivityState[safeRo].activityLog[dateKey]) globalWorkflowActivityState[safeRo].activityLog[dateKey] = {};
-                const localKey = 'local_' + now.getTime() + '_' + Math.random().toString(36).slice(2, 7);
-                globalWorkflowActivityState[safeRo].activityLog[dateKey][localKey] = entry;
-                globalWorkflowActivityState[safeRo].lastTouchedAt = nowIso;
-                globalWorkflowActivityState[safeRo].lastTouchedDate = dateKey;
-                globalWorkflowActivityState[safeRo].lastTouchedByOwner = assignedOwner;
-                globalWorkflowActivityState[safeRo].lastActionType = actionType;
-                globalWorkflowActivityState[safeRo].roNumber = roNumber || '';
-                globalWorkflowActivityState[safeRo].unitNo = entry.unitNo || '';
-                globalWorkflowActivityState[safeRo].branch = entry.branch || '';
-                if (actionType === 'NOTE_ADDED' && isMeaningfulNote(noteText)) {
-                    globalWorkflowActivityState[safeRo].hasMeaningfulNote = true;
-                    globalWorkflowActivityState[safeRo].lastNoteAt = nowIso;
-                    globalWorkflowActivityState[safeRo].lastNoteDate = dateKey;
-                    globalWorkflowActivityState[safeRo].latestNote = String(noteText || '').trim();
-                }
-
-                scheduleRealtimeComplianceRefresh('local-activity-write');
-
-                if (!db) return Promise.resolve();
-
-                const entryRef = db.ref(`workflowActivity/${safeRo}/activityLog/${dateKey}`).push();
-                const updates = {};
-                updates[`workflowActivity/${safeRo}/activityLog/${dateKey}/${entryRef.key}`] = entry;
-                updates[`workflowActivity/${safeRo}/lastTouchedAt`] = nowIso;
-                updates[`workflowActivity/${safeRo}/lastTouchedDate`] = dateKey;
-                updates[`workflowActivity/${safeRo}/lastTouchedByOwner`] = assignedOwner;
-                updates[`workflowActivity/${safeRo}/lastActionType`] = actionType;
-                updates[`workflowActivity/${safeRo}/roNumber`] = roNumber || '';
-                updates[`workflowActivity/${safeRo}/unitNo`] = entry.unitNo || '';
-                updates[`workflowActivity/${safeRo}/branch`] = entry.branch || '';
-                if (actionType === 'NOTE_ADDED' && isMeaningfulNote(noteText)) {
-                    updates[`workflowActivity/${safeRo}/hasMeaningfulNote`] = true;
-                    updates[`workflowActivity/${safeRo}/lastNoteAt`] = nowIso;
-                    updates[`workflowActivity/${safeRo}/lastNoteDate`] = dateKey;
-                    updates[`workflowActivity/${safeRo}/latestNote`] = String(noteText || '').trim();
-                }
-                return db.ref().update(updates).catch(err => console.warn('Firebase workflow activity write failed:', err));
-            };
-
-            toggleRoCheck = function(ro, isChecked) {
-                let safeRo = safeFirebaseKey(ro);
-                const roContext = getRoContextBySafeRo(safeRo);
-                if (roContext && shouldLockPreWipRow(roContext.status)) {
-                    alert(PRE_WIP_LOCK_MESSAGE);
-                    return;
-                }
-                const actionText = isChecked ? 'Marked dispatched.' : 'Moved back to pending.';
-                globalRoCheckState = Object.assign({}, globalRoCheckState || {}, { [safeRo]: isChecked });
-                scheduleRealtimeComplianceRefresh('local-dispatch-toggle');
-
-                const writePromise = db ? db.ref('roChecks/' + safeRo).set(isChecked) : Promise.resolve();
-                writePromise
-                    .then(() => logWorkflowActivity(safeRo, isChecked ? 'DISPATCH_MARKED' : 'DISPATCH_REOPENED', actionText, {
-                        source: 'dispatch-toggle',
-                        roNumber: roContext ? roContext.roNum : ro
-                    }))
-                    .catch(err => console.warn('Dispatch status update failed:', err));
-            };
-
-            window.saveNote = function() {
-                if (!currentEditingRo) return;
-                const saveBtn = document.querySelector('#note-modal .btn-save');
-                const textarea = document.getElementById('note-textarea');
-                let noteText = textarea ? textarea.value.trim() : '';
-                if (!isMeaningfulNote(noteText)) {
-                    alert('Please enter a meaningful update with at least 15 characters.');
-                    return;
-                }
-
-                const latestNote = getLatestMeaningfulNote(currentEditingRo).trim();
-                if (latestNote && latestNote.toLowerCase() === noteText.toLowerCase()) {
-                    alert('This update is the same as the latest saved note. Add a new meaningful update if something changed.');
-                    return;
-                }
-
-                const safeRo = currentEditingRo;
-                const roNum = currentEditingRoNum || currentEditingRo;
-
-                // Commit to the in-page state immediately so the user is never stuck waiting on Firebase latency.
-                // The Firebase writes are still fired immediately and live listeners will update other open browsers.
-                if (saveBtn) { saveBtn.disabled = true; saveBtn.innerText = 'Saving...'; }
-                globalRoNotesState = Object.assign({}, globalRoNotesState || {}, { [safeRo]: noteText });
-                if (globalWorkflowActivityState && globalWorkflowActivityState[safeRo]) {
-                    globalWorkflowActivityState[safeRo].hasMeaningfulNote = true;
-                    globalWorkflowActivityState[safeRo].latestNote = noteText;
-                    globalWorkflowActivityState[safeRo].lastNoteAt = new Date().toISOString();
-                    globalWorkflowActivityState[safeRo].lastNoteDate = getTodayKey();
-                }
-                scheduleRealtimeComplianceRefresh('local-note-save');
-                try { updateAllNoteButtons(); } catch(e) {}
-                try { refreshActiveViewPreservingDrilldown(); } catch(e) {}
-                if (textarea) textarea.value = '';
-                closeNoteModal();
-                if (saveBtn) { saveBtn.disabled = false; saveBtn.innerText = 'Save Update'; }
-
-                // Publish to Firebase in the background. Do not await these writes; waiting is what caused
-                // the modal to stay stuck on Saving when Firebase was slow or a write promise stalled.
-                if (db) {
-                    db.ref('roNotes/' + safeRo).set(noteText)
-                        .catch(err => {
-                            console.warn('Firebase roNotes write failed:', err);
-                            alert('Warning: the note updated on this screen, but Firebase did not confirm the save. Please refresh and verify this RO note.');
-                        });
-                }
-                Promise.resolve(logWorkflowActivity(safeRo, 'NOTE_ADDED', noteText, {
-                    source: 'message-button',
-                    roNumber: roNum
-                })).catch(err => console.warn('Firebase workflow activity write failed:', err));
-            };
-
-            // Prevent any leftover auto-reset interval from running after the initial load.
-            if (window.__manualGovernorResetTimer) {
-                clearInterval(window.__manualGovernorResetTimer);
-                window.__manualGovernorResetTimer = null;
-            }
-        })();
-
-
-</script>
+    </script>
 </body>
-</html><!-- NOTE SAVE FIREBASE CONFIRMATION HOTFIX -->
-<script>
-(function workflowConfirmedNoteSaveFix(){
-    function noteSaveTimeout(ms) {
-        return new Promise((_, reject) => setTimeout(() => reject(new Error('Firebase save confirmation timed out')), ms));
-    }
-
-    function getDatabaseOrNull() {
-        try {
-            if (typeof db !== 'undefined' && db) return db;
-            if (typeof firebase !== 'undefined' && firebase.apps && firebase.apps.length) {
-                db = firebase.database();
-                return db;
-            }
-        } catch (err) {
-            console.warn('Firebase database is not available for note save:', err);
-        }
-        return null;
-    }
-
-    function mergeLocalNoteState(safeRo, roNumber, noteText, entry, dateKey, actionType) {
-        try {
-            globalRoNotesState = Object.assign({}, globalRoNotesState || {}, { [safeRo]: noteText });
-            const current = Object.assign({}, (globalWorkflowActivityState || {})[safeRo] || {});
-            const activityLog = Object.assign({}, current.activityLog || {});
-            const dayLog = Object.assign({}, activityLog[dateKey] || {});
-            const entryKey = entry && entry.localKey ? entry.localKey : ('local_' + Date.now());
-            dayLog[entryKey] = Object.assign({}, entry || {}, { localKey: undefined });
-            activityLog[dateKey] = dayLog;
-            globalWorkflowActivityState = Object.assign({}, globalWorkflowActivityState || {}, {
-                [safeRo]: Object.assign({}, current, {
-                    activityLog,
-                    hasMeaningfulNote: true,
-                    latestNote: noteText,
-                    lastTouchedAt: entry.timestamp,
-                    lastTouchedDate: dateKey,
-                    lastNoteAt: entry.timestamp,
-                    lastNoteDate: dateKey,
-                    lastActionType: actionType || 'NOTE_ADDED',
-                    roNumber: roNumber || current.roNumber || '',
-                    unitNo: entry.unitNo || current.unitNo || '',
-                    branch: entry.branch || current.branch || '',
-                    lastTouchedByOwner: entry.owner || current.lastTouchedByOwner || ''
-                })
-            });
-        } catch (err) {
-            console.warn('Local note state merge failed:', err);
-        }
-    }
-
-    window.saveNote = async function confirmedFirebaseSaveNote() {
-        if (!currentEditingRo) return;
-
-        const saveBtn = document.querySelector('#note-modal .btn-save');
-        const textarea = document.getElementById('note-textarea');
-        const noteText = textarea ? String(textarea.value || '').trim() : '';
-
-        if (!isMeaningfulNote(noteText)) {
-            alert('Please enter a meaningful update with at least 15 characters.');
-            return;
-        }
-
-        const latestNote = String(getLatestMeaningfulNote(currentEditingRo) || '').trim();
-        if (latestNote && latestNote.toLowerCase() === noteText.toLowerCase()) {
-            alert('This update is the same as the latest saved note. Add a new meaningful update if something changed.');
-            return;
-        }
-
-        const safeRo = currentEditingRo;
-        const roNumber = currentEditingRoNum || currentEditingRo;
-        const database = getDatabaseOrNull();
-        if (!database) {
-            alert('Firebase is not connected. The update was not saved. Refresh the page and try again.');
-            return;
-        }
-
-        const nowIso = new Date().toISOString();
-        const dateKey = (typeof getTodayKey === 'function') ? getTodayKey() : nowIso.slice(0, 10);
-        const roContext = (typeof getRoContextBySafeRo === 'function') ? (getRoContextBySafeRo(safeRo) || {}) : {};
-        const assignedOwner = roContext.owner || roContext.queueName || roContext.queueSource || '';
-        const actionType = 'NOTE_ADDED';
-        const activityRef = database.ref(`workflowActivity/${safeRo}/activityLog/${dateKey}`).push();
-        const activityKey = activityRef.key || ('note_' + Date.now());
-
-        const entry = {
-            timestamp: nowIso,
-            dateKey,
-            actionType,
-            note: noteText,
-            roNumber: roNumber || roContext.roNum || '',
-            unitNo: roContext.unitNo || roContext.unit || '',
-            branch: roContext.branch || roContext.branchName || roContext.site || '',
-            owner: assignedOwner,
-            source: 'message-button'
-        };
-
-        const updates = {};
-        updates[`roNotes/${safeRo}`] = noteText;
-        updates[`workflowActivity/${safeRo}/activityLog/${dateKey}/${activityKey}`] = entry;
-        updates[`workflowActivity/${safeRo}/lastTouchedAt`] = nowIso;
-        updates[`workflowActivity/${safeRo}/lastTouchedDate`] = dateKey;
-        updates[`workflowActivity/${safeRo}/lastTouchedByOwner`] = assignedOwner;
-        updates[`workflowActivity/${safeRo}/lastActionType`] = actionType;
-        updates[`workflowActivity/${safeRo}/roNumber`] = roNumber || roContext.roNum || '';
-        updates[`workflowActivity/${safeRo}/unitNo`] = entry.unitNo || '';
-        updates[`workflowActivity/${safeRo}/branch`] = entry.branch || '';
-        updates[`workflowActivity/${safeRo}/hasMeaningfulNote`] = true;
-        updates[`workflowActivity/${safeRo}/lastNoteAt`] = nowIso;
-        updates[`workflowActivity/${safeRo}/lastNoteDate`] = dateKey;
-        updates[`workflowActivity/${safeRo}/latestNote`] = noteText;
-
-        if (saveBtn) {
-            saveBtn.disabled = true;
-            saveBtn.innerText = 'Saving...';
-        }
-
-        try {
-            await Promise.race([
-                database.ref().update(updates),
-                noteSaveTimeout(12000)
-            ]);
-
-            mergeLocalNoteState(safeRo, roNumber, noteText, Object.assign({ localKey: activityKey }, entry), dateKey, actionType);
-            if (textarea) textarea.value = '';
-            try { renderNoteActivityLog(safeRo); } catch(e) {}
-            try { updateAllNoteButtons(); } catch(e) {}
-            try { scheduleRealtimeComplianceRefresh('note-save-confirmed'); } catch(e) {}
-            try { refreshActiveViewPreservingDrilldown(); } catch(e) {}
-            closeNoteModal();
-        } catch (err) {
-            console.warn('Firebase note save did not complete:', err);
-            alert('The note did not save to Firebase. Please check your connection and try again.');
-        } finally {
-            if (saveBtn) {
-                saveBtn.disabled = false;
-                saveBtn.innerText = 'Save Update';
-            }
-        }
-    };
-})();
-</script>
+</html>
