@@ -49,11 +49,9 @@
         @keyframes spin { 100% { transform: rotate(360deg); } }
         @keyframes bump { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-1.5px); } }
         @keyframes moveRoad { from { stroke-dashoffset: 0; } to { stroke-dashoffset: 15; } }
-        .logo-spin { animation: spin 4s linear infinite; transform-origin: center; display: inline-block; }
+        .logo-spin { animation: none !important; transform-origin: center; display: inline-block; }
         .moving-truck-svg { overflow: visible; }
-        .truck-body { animation: bump 0.4s ease-in-out infinite; }
-        .wheel { animation: spin 0.8s linear infinite; }
-        .road-line { animation: moveRoad 0.4s linear infinite; }
+        .truck-body, .wheel, .road-line { animation: none !important; }
 
         .main-content { flex-grow: 1; display: flex; flex-direction: column; overflow-y: auto; overflow-x: hidden; }
         .top-bar { background: #fff; padding: 12px 30px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 5px rgba(0,0,0,0.05); z-index: 10; flex-shrink: 0; position: relative; min-height: 86px; }
@@ -233,6 +231,15 @@
         .ecd-red { color: #d9534f; font-weight: 800; }
         .ecd-green { color: #5cb85c; font-weight: 800; }
         .badge-ecd-missing { background-color: #fff3cd; color: #d9534f; padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: 800; border: 1px solid #d9534f; white-space: nowrap; display: inline-block; }
+
+        .ecd-review-cell { display:flex; flex-direction:column; align-items:flex-start; gap:5px; }
+        .ecd-review-btn { min-width:78px; padding:4px 8px; border-radius:999px; border:1px solid #c9302c; background:var(--urgent-red); color:#fff; font-size:9px; font-weight:900; text-transform:uppercase; cursor:pointer; line-height:1.1; box-shadow:0 1px 3px rgba(0,0,0,0.18); }
+        .ecd-review-btn:hover { opacity:.9; transform:translateY(-1px); }
+        .ecd-review-btn.updated { background:#16a34a; border-color:#15803d; cursor:default; }
+        .ecd-review-btn.updated:hover { opacity:1; transform:none; }
+        .ecd-review-btn.stale { background:#f97316; border-color:#ea580c; }
+        .ecd-review-hint { font-size:9px; font-weight:800; color:#64748b; line-height:1.15; text-transform:uppercase; }
+        .repclass-only-badge { display:inline-flex; align-items:center; justify-content:center; padding:4px 8px; border-radius:999px; font-size:9px; font-weight:900; text-transform:uppercase; color:#475569; background:#e2e8f0; border:1px solid #cbd5e1; white-space:nowrap; }
         
         .status-toggle { cursor: pointer; margin-right: 8px; user-select: none; transition: 0.2s; box-shadow: 0 1px 3px rgba(0,0,0,0.2); display: inline-block; text-align: center; min-width: 85px; font-size: 10px; letter-spacing: 0.5px;}
         .status-toggle:hover { opacity: 0.8; transform: translateY(-1px); }
@@ -249,10 +256,37 @@
         .repair-class-pill { display:inline-block; width:max-content; max-width:100%; padding:3px 7px; border-radius:999px; font-size:9px; font-weight:900; letter-spacing:0.3px; text-transform:uppercase; white-space:normal; line-height:1.15; cursor:help; }
         .repair-class-pill.clean { color:#166534; background:#dcfce7; border:1px solid #86efac; }
         .repair-class-pill.review { color:#581c87; background:#f3e8ff; border:1px solid #c084fc; }
-        .repair-class-toggle { min-width:86px; margin-right:0; padding:4px 7px; border-radius:12px; font-size:10px; font-weight:900; text-transform:uppercase; cursor:pointer; border:none; box-shadow:0 1px 3px rgba(0,0,0,0.2); }
+        .repair-class-decision-row { display:flex; align-items:center; gap:6px; flex-wrap:wrap; }
+        .repair-class-toggle { min-width:86px; min-height:23px; margin-right:0; padding:4px 8px; border-radius:12px; font-size:10px; font-weight:900; text-transform:uppercase; cursor:pointer; border:none; box-shadow:0 1px 3px rgba(0,0,0,0.2); display:inline-flex; align-items:center; justify-content:center; text-align:center; line-height:1.1; vertical-align:middle; }
         .repair-class-toggle.status-pending { background-color:var(--urgent-red); color:white; border:1px solid #c9302c; }
-        .repair-class-toggle.status-dispatched { background-color:var(--low-green); color:white; border:1px solid #4cae4c; cursor:default; }
+        .repair-class-toggle.status-dispatched, .repair-class-toggle.status-accepted { background-color:var(--low-green); color:white; border:1px solid #4cae4c; }
+        .repair-class-toggle.status-declined { background-color:#f97316; color:white; border:1px solid #ea580c; }
+        .repair-class-toggle.status-accepted, .repair-class-toggle.status-declined, .repair-class-toggle.status-dispatched { cursor:default; pointer-events:none; }
         .repair-class-toggle:hover { opacity:.9; transform:translateY(-1px); }
+        .repair-class-toggle.status-accepted:hover, .repair-class-toggle.status-declined:hover, .repair-class-toggle.status-dispatched:hover { opacity:1; transform:none; }
+        .repair-class-note-btn { min-height:23px; padding:2px 6px; border-radius:4px; font-size:12px; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; line-height:1.1; }
+        .repair-class-note-btn:hover { transform:translateY(-1px); }
+        .kpi-tile-header { display:flex; align-items:flex-start; justify-content:space-between; gap:10px; margin-bottom:12px; }
+        .kpi-tile-header .kpi-name { margin-bottom:0; }
+        .enter-queue-square { min-width:70px; padding:7px 8px; border-radius:6px; border:1px solid var(--gold); background:#fffaf0; color:#333; font-size:10px; font-weight:900; text-transform:uppercase; line-height:1.05; cursor:pointer; box-shadow:0 1px 3px rgba(15,23,42,0.12); }
+        .enter-queue-square:hover { background:var(--gold); transform:translateY(-1px); }
+        .tile-square, .workflow-compliance-mini.clickable { cursor:pointer; transition:box-shadow .15s ease, border-color .15s ease, background-color .15s ease; }
+        .tile-square:hover, .workflow-compliance-mini.clickable:hover { border-color:var(--gold); box-shadow:0 5px 12px rgba(15,23,42,0.16); background:#fff7ed; }
+        .active-square-filter-banner { display:none; align-items:center; justify-content:space-between; gap:10px; margin:0 0 12px 0; padding:9px 12px; border:1px solid var(--gold); border-left:4px solid var(--gold); background:#fffaf0; border-radius:6px; font-size:12px; font-weight:900; color:#334155; }
+        .active-square-filter-banner button { border:none; background:#334155; color:#fff; border-radius:999px; padding:5px 9px; cursor:pointer; font-size:10px; font-weight:900; text-transform:uppercase; }
+        .repclass-memo-view-overlay { display:flex; position:fixed; inset:0; background:rgba(15,23,42,0.72); z-index:1300; align-items:center; justify-content:center; padding:18px; }
+        .repclass-memo-view-box { width:560px; max-width:94vw; background:#fff; border-radius:8px; border-top:5px solid var(--gold); box-shadow:0 16px 34px rgba(0,0,0,0.28); padding:18px; }
+        .repclass-memo-view-header { display:flex; justify-content:space-between; align-items:center; gap:12px; margin-bottom:12px; }
+        .repclass-memo-view-title { font-size:18px; font-weight:900; color:#333; }
+        .repclass-memo-view-close { border:none; background:transparent; font-size:24px; line-height:1; cursor:pointer; color:#64748b; font-weight:900; }
+        .repclass-memo-view-close:hover { color:#111827; }
+        .repclass-memo-view-grid { display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap:8px; margin-bottom:12px; }
+        .repclass-memo-view-field { background:#f8fafc; border:1px solid #e2e8f0; border-radius:6px; padding:8px; }
+        .repclass-memo-view-field .label { font-size:9px; font-weight:900; color:#64748b; text-transform:uppercase; letter-spacing:.4px; margin-bottom:3px; }
+        .repclass-memo-view-field .value { font-size:13px; font-weight:800; color:#334155; line-height:1.25; }
+        .repclass-memo-view-memo { background:#fff7ed; border:1px solid #fdba74; color:#7c2d12; border-radius:6px; padding:10px; font-size:13px; font-weight:750; line-height:1.35; white-space:pre-wrap; }
+        .repclass-only-row td { background:#f1f5f9 !important; }
+        .repclass-only-row:hover td { background:#e2e8f0 !important; }
 
         .repair-class-review-modal { background:rgba(15,23,42,0.72); }
         .repair-class-review-box { width:680px; max-width:94%; border-top:5px solid var(--gold); }
@@ -300,7 +334,7 @@
         .workflow-compliance-card.compliance-red { border-color: #fca5a5; background: #fef2f2; }
         .workflow-compliance-card.compliance-red .workflow-compliance-score { color: #dc2626; }
         .workflow-compliance-card.compliance-red .workflow-compliance-rating { background: #dc2626; }
-        .workflow-compliance-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+        .workflow-compliance-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(58px, 1fr)); gap: 6px; }
         .workflow-compliance-mini { background: rgba(255,255,255,0.7); border: 1px solid rgba(148,163,184,0.35); border-radius: 4px; padding: 5px 3px; text-align: center; }
         .workflow-compliance-mini .mini-title { font-size: 9px; font-weight: 800; color: #64748b; text-transform: uppercase; }
         .workflow-compliance-mini .mini-num { font-size: 12px; font-weight: 900; color: #334155; margin-top: 2px; }
@@ -370,8 +404,11 @@
             <div class="menu-item" id="menu-nonosc" onclick="navigate('nonosc-view', this)">Non-OSC Queue</div>
         </div>
         <div class="menu-item" onclick="window.location.href='vendor.html'">Vendor Search</div>
-        <div class="menu-item" id="menu-spend" onclick="navigate('spend-view', this)">Weekly Spend Matrix</div>
-        <div class="menu-item" id="menu-summary" onclick="navigate('summary-view', this)">Consolidation Summary</div>
+        <div class="menu-item submenu-toggle" id="menu-garda" onclick="toggleGardaMenu()">Garda</div>
+        <div class="submenu" id="garda-submenu">
+            <div class="menu-item" id="menu-spend" onclick="navigate('spend-view', this)">Weekly Spend Matrix</div>
+            <div class="menu-item" id="menu-summary" onclick="navigate('summary-view', this)">Consolidation Summary</div>
+        </div>
         
         <div class="sidebar-truck">
             <svg width="140" height="70" viewBox="0 0 120 60" xmlns="http://www.w3.org/2000/svg" class="moving-truck-svg">
@@ -497,6 +534,7 @@
                 <button class="sub-tab" onclick="switchSpendTab('sub-weekly-history', this)">Weekly History</button>
             </div>
             <div id="sub-weekly-spend" class="sub-section active">
+                <div style="font-size:12px; color:#64748b; font-weight:900; margin-bottom:12px; background:#fff7ed; border:1px solid #f59e0b; border-radius:6px; padding:9px 12px;">Garda-specific reporting only: all spend totals, history, and change logs are filtered to Garda VROs.</div>
                 <div id="spend-dashboard-widget"></div>
             </div>
             <div id="sub-spend-change-log" class="sub-section">
@@ -508,7 +546,7 @@
                         </div>
                     </div>
                     <div style="font-size:12px; color:#64748b; font-weight:700; margin-bottom:12px;">
-                        Tracks each Firebase-detected status or RO Detail spend change for spend-governed VROs through closure.
+                        Tracks each Firebase-detected status or RO Detail spend change for Garda spend-governed VROs through closure.
                     </div>
                     <div class="table-wrapper">
                         <table id="spend-change-log-table">
@@ -554,7 +592,7 @@
                         </div>
                     </div>
                     <div style="font-size:12px; color:#64748b; font-weight:700; margin-bottom:12px;">
-                        Shows weekly captured spend totals from Firebase and lets you expand each week to see the VROs locked into spend for that week.
+                        Shows weekly Garda-only captured spend totals from Firebase and lets you expand each week to see the VROs locked into spend for that week.
                     </div>
                     <div id="weekly-spend-history-body"></div>
                 </div>
@@ -578,6 +616,7 @@
                 <button class="filter-btn" data-filter="OOS" onclick="setFilter('OOS')">Only OOS</button>
                 <button class="filter-btn" data-filter="PRIORITY" onclick="setFilter('PRIORITY')">Priority</button>
             </div>
+            <div id="active-square-filter-banner" class="active-square-filter-banner"></div>
             <div class="drilldown-container" id="drilldown-body"></div>
         </div>
 
@@ -1039,6 +1078,27 @@
             return XLSX.utils.sheet_to_json(workbook.Sheets[targetSheet], { header: 1, defval: '' }) || [];
         }
 
+
+        function getWorkbookFingerprintFromBuffer(buffer) {
+            try {
+                const bytes = new Uint8Array(buffer || new ArrayBuffer(0));
+                let hash = 2166136261;
+                const len = bytes.length || 0;
+                const step = Math.max(1, Math.floor(len / 512));
+                for (let i = 0; i < len; i += step) {
+                    hash ^= bytes[i];
+                    hash = Math.imul(hash, 16777619);
+                }
+                for (let i = Math.max(0, len - 128); i < len; i++) {
+                    hash ^= bytes[i];
+                    hash = Math.imul(hash, 16777619);
+                }
+                return `${len}-${(hash >>> 0).toString(16)}`;
+            } catch (e) {
+                return `unknown-${Date.now()}`;
+            }
+        }
+
         async function fetchData() {
             const statusEl = document.getElementById('upload-status');
             const uploadBox = document.getElementById('upload-box');
@@ -1054,6 +1114,7 @@
 
             try {
                 const data = await fetchWorkbookBuffer();
+                currentWorkbookFingerprint = getWorkbookFingerprintFromBuffer(data);
 
                 statusEl.innerText = 'File found. Processing data...';
 
@@ -1167,6 +1228,7 @@
 
             try {
                 const data = await file.arrayBuffer();
+                currentWorkbookFingerprint = getWorkbookFingerprintFromBuffer(data);
                 const workbook = XLSX.read(data, { type: 'array' });
 
                 let vroRaw = [];
@@ -1262,6 +1324,8 @@
         let globalRoNotesState = {};
         let globalWorkflowActivityState = {};
         let globalRepairClassReviewState = {};
+        let globalEcdReviewState = {};
+        let currentWorkbookFingerprint = 'initial';
         let currentRepairClassReviewSafeRo = null;
         let globalSpendChangeLogRows = [];
         let globalWeeklySpendHistoryRows = [];
@@ -1276,6 +1340,7 @@
             globalRoNotesState = JSON.parse(localStorage.getItem('workflow_notes') || '{}');
             globalWorkflowActivityState = JSON.parse(localStorage.getItem('workflow_activity') || '{}');
             globalRepairClassReviewState = JSON.parse(localStorage.getItem('repclass_review_status') || '{}');
+            globalEcdReviewState = JSON.parse(localStorage.getItem('ecd_review_status') || '{}');
             globalUnlimitedSpendState = JSON.parse(localStorage.getItem('unlimited_spend_mode') || '{}');
             globalManualGovernorLockState = JSON.parse(localStorage.getItem('manual_governor_lock') || '{}');
         } catch(e) {}
@@ -1311,6 +1376,15 @@
                         globalRepairClassReviewState = snapshot.val() || {};
                         try { localStorage.setItem('repclass_review_status', JSON.stringify(globalRepairClassReviewState)); } catch(e) {}
                         updateAllRepairClassBadges();
+                        if (processedData && processedData.length > 0) {
+                            refreshActiveViewPreservingDrilldown();
+                        }
+                    });
+
+                    db.ref('ecdReviewStatus').on('value', (snapshot) => {
+                        globalEcdReviewState = snapshot.val() || {};
+                        try { localStorage.setItem('ecd_review_status', JSON.stringify(globalEcdReviewState)); } catch(e) {}
+                        updateAllEcdReviewButtons();
                         if (processedData && processedData.length > 0) {
                             refreshActiveViewPreservingDrilldown();
                         }
@@ -1594,6 +1668,161 @@
             return true;
         }
 
+
+        function getEcdReviewRecord(safeRo) {
+            return (globalEcdReviewState && globalEcdReviewState[safeRo]) ? globalEcdReviewState[safeRo] : null;
+        }
+
+        function getEcdFingerprint(ro) {
+            if (!ro) return '';
+            return String(ro.ecdFormatted || '') + '|' + String(ro.ecdMs || 0) + '|' + String(ro.ecdState || '');
+        }
+
+        function isEcdReviewRequired(ro) {
+            if (!ro || !isComplianceEligibleRo(ro)) return false;
+            return ro.ecdState === 'red' || ro.ecdState === 'missing';
+        }
+
+        function isEcdMarkedUpdatedForCurrentWorkbook(ro) {
+            if (!isEcdReviewRequired(ro)) return true;
+            const safeRo = safeFirebaseKey(ro.roNum);
+            const rec = getEcdReviewRecord(safeRo);
+            if (!rec || String(rec.status || '').toUpperCase() !== 'UPDATED') return false;
+            const currentEcdKey = getEcdFingerprint(ro);
+            const reviewedEcdKey = String(rec.reviewedEcdKey || '');
+            if (reviewedEcdKey && reviewedEcdKey !== currentEcdKey) return true;
+            if (String(rec.workbookFingerprint || '') === String(currentWorkbookFingerprint || '')) return true;
+            return false;
+        }
+
+        function getEcdReviewButtonHtml(ro) {
+            if (!isEcdReviewRequired(ro)) return '';
+            const safeRo = safeFirebaseKey(ro.roNum);
+            const rec = getEcdReviewRecord(safeRo);
+            const currentEcdKey = getEcdFingerprint(ro);
+            const isUpdated = isEcdMarkedUpdatedForCurrentWorkbook(ro);
+            const sameEcdNewWorkbook = rec && String(rec.status || '').toUpperCase() === 'UPDATED' && String(rec.reviewedEcdKey || '') === currentEcdKey && String(rec.workbookFingerprint || '') !== String(currentWorkbookFingerprint || '');
+            const cls = isUpdated ? 'ecd-review-btn updated' : (sameEcdNewWorkbook ? 'ecd-review-btn stale' : 'ecd-review-btn');
+            const label = isUpdated ? 'UPDATED' : 'PENDING';
+            const title = isUpdated
+                ? 'Marked updated for the current workbook load. On the next workbook refresh, workFLOW+ will verify whether the ECD changed.'
+                : (sameEcdNewWorkbook ? 'ECD was marked updated before, but the latest workbook still shows the same LATE/MISSING ECD. Update required again.' : 'Late/missing ECD needs to be updated. Click after updating the ECD in the VRO/source system.');
+            const disabled = isUpdated ? ' disabled' : '';
+            return `<button type="button" class="${cls}" data-ecd-ro="${escapeHtml(safeRo)}" title="${escapeHtml(title)}" onclick="event.preventDefault(); event.stopPropagation(); markEcdUpdated('${safeRo}')"${disabled}>${label}</button>`;
+        }
+
+        function getEcdCellHtml(ro) {
+            let ecdValue = '';
+            if (ro.ecdState === 'missing') ecdValue = `<span class="badge-ecd-missing">${escapeHtml(ro.ecdFormatted || 'NO ECD, UPDATE')}</span>`;
+            else if (ro.ecdState === 'red') ecdValue = `<span class="ecd-red">${escapeHtml(ro.ecdFormatted || '')}</span>`;
+            else ecdValue = `<span class="ecd-green">${escapeHtml(ro.ecdFormatted || '')}</span>`;
+            const buttonHtml = getEcdReviewButtonHtml(ro);
+            if (!buttonHtml) return ecdValue;
+            const hint = isEcdMarkedUpdatedForCurrentWorkbook(ro)
+                ? '<div class="ecd-review-hint">verify on next workbook refresh</div>'
+                : '<div class="ecd-review-hint">LATE/MISSING ECD</div>';
+            return `<div class="ecd-review-cell">${ecdValue}${buttonHtml}${hint}</div>`;
+        }
+
+        function updateAllEcdReviewButtons() {
+            document.querySelectorAll('[data-ecd-ro]').forEach(btn => {
+                const safeRo = btn.getAttribute('data-ecd-ro');
+                const ro = getRoContextBySafeRo(safeRo);
+                if (!ro) return;
+                const updated = isEcdMarkedUpdatedForCurrentWorkbook(ro);
+                btn.textContent = updated ? 'UPDATED' : 'PENDING';
+                btn.disabled = updated;
+                btn.classList.toggle('updated', updated);
+            });
+        }
+
+        async function markEcdUpdated(safeRo) {
+            rememberWorkflowScrollPosition();
+            const ro = getRoContextBySafeRo(safeRo);
+            if (!ro) return;
+            const now = new Date();
+            const dateKey = getLocalDateKey(now);
+            const currentEcdKey = getEcdFingerprint(ro);
+            const payload = {
+                status: 'UPDATED',
+                roNumber: ro.roNum || safeRo,
+                unitNo: ro.unitNo || '',
+                owner: ro.owner || '',
+                sourceQueue: ro.sourceQueue || '',
+                reviewedEcd: ro.ecdFormatted || '',
+                reviewedEcdState: ro.ecdState || '',
+                reviewedEcdMs: ro.ecdMs || 0,
+                reviewedEcdKey: currentEcdKey,
+                workbookFingerprint: currentWorkbookFingerprint || '',
+                updatedAt: now.toISOString(),
+                updatedDate: dateKey,
+                source: 'workflow-ecd-compliance'
+            };
+            globalEcdReviewState[safeRo] = payload;
+            try { localStorage.setItem('ecd_review_status', JSON.stringify(globalEcdReviewState)); } catch(e) {}
+            updateAllEcdReviewButtons();
+            refreshActiveViewPreservingDrilldown();
+            restoreWorkflowScrollPositionSoon();
+            if (db) {
+                const updates = {};
+                updates[`ecdReviewStatus/${safeRo}`] = payload;
+                updates[`workflowActivity/${safeRo}/lastTouchedAt`] = payload.updatedAt;
+                updates[`workflowActivity/${safeRo}/lastTouchedDate`] = dateKey;
+                updates[`workflowActivity/${safeRo}/lastActionType`] = 'ECD_UPDATED';
+                updates[`workflowActivity/${safeRo}/latestEcdUpdate`] = payload;
+                await db.ref().update(updates).catch(err => {
+                    console.error('Failed to save ECD update status:', err);
+                    alert('ECD update status did not save to Firebase. Please try again.');
+                });
+                logWorkflowActivity(safeRo, 'ECD_UPDATED', `ECD marked updated. Current workbook ECD: ${payload.reviewedEcd}`, payload).catch(err => console.warn('ECD workflow activity log failed:', err));
+            }
+        }
+
+        function escapeJsArg(value) {
+            return String(value == null ? '' : value)
+                .replace(/\\/g, '\\\\')
+                .replace(/'/g, "\\'")
+                .replace(/\r?\n/g, ' ');
+        }
+
+        function getTileSquareLabel(type, fallback) {
+            const labels = {
+                all: 'Entire queue', open: 'Open ROs', oos: 'OOS ROs', priority: 'Priority ROs',
+                touched: 'ROs not touched today', notes: 'ROs missing notes', dispatch: 'ROs not dispatched',
+                ecd: 'Late/missing ECDs pending update', stale: 'Stale ROs',
+                roReview: 'Pending repair-class reviews', reviewNeeded: 'Pending repair-class reviews',
+                repairTouched: 'Repair-class reviews remaining', corrected: 'Accepted repair-class reviews'
+            };
+            return labels[type] || fallback || 'Filtered queue';
+        }
+
+        function openTileSquareDrilldown(evt, owner, parentViewId, filterType, label) {
+            if (evt) {
+                evt.preventDefault();
+                evt.stopPropagation();
+            }
+            currentSquareFilter = filterType && filterType !== 'all'
+                ? { type: filterType, label: getTileSquareLabel(filterType, label) }
+                : null;
+            loadPersonDrilldown(owner, parentViewId);
+        }
+
+        function clearTileSquareFilter() {
+            currentSquareFilter = null;
+            applyDrilldownFilters();
+        }
+
+        function workflowSquare(owner, parentViewId, type, title, value, disabled) {
+            const ownerArg = escapeJsArg(owner);
+            const parentArg = escapeJsArg(parentViewId);
+            const typeArg = escapeJsArg(type);
+            const labelArg = escapeJsArg(title);
+            const classes = `workflow-compliance-mini${disabled ? '' : ' clickable'}`;
+            const click = disabled ? '' : ` onclick="openTileSquareDrilldown(event, '${ownerArg}', '${parentArg}', '${typeArg}', '${labelArg}')"`;
+            const titleAttr = disabled ? '' : ` title="Open only ${escapeHtml(String(title || '').toLowerCase())}"`;
+            return `<div class="${classes}"${click}${titleAttr}><div class="mini-title">${escapeHtml(title)}</div><div class="mini-num">${value}</div></div>`;
+        }
+
         function calculateWorkflowCompliance(dataSet, dateKey = getLocalDateKey(new Date())) {
             const realOpenRos = (dataSet || []).filter(ro => isRealOpenRoForDailyCompliance(ro));
             const activeRos = realOpenRos.filter(ro => isComplianceEligibleRo(ro));
@@ -1604,7 +1833,7 @@
 
             const total = activeRos.length;
             if (total === 0) {
-                return { score: 100, rating: 'ON TRACK', colorClass: 'compliance-green', total: 0, touched: 0, notes: 0, dispatched: 0, dispatchTotal: 0, stale: 0, touchPct: 100, notesPct: 100, dispatchPct: 100, staleCleanPct: 100, dateKey, lockActive, lockedExcluded, realOpenTotal: realOpenRos.length };
+                return { score: 100, rating: 'ON TRACK', colorClass: 'compliance-green', total: 0, touched: 0, notes: 0, dispatched: 0, dispatchTotal: 0, stale: 0, ecdUpdated: 0, ecdTotal: 0, ecdPending: 0, touchPct: 100, notesPct: 100, dispatchPct: 100, staleCleanPct: 100, ecdPct: 100, dateKey, lockActive, lockedExcluded, realOpenTotal: realOpenRos.length };
             }
 
             let touched = 0;
@@ -1612,6 +1841,9 @@
             let stale = 0;
             let dispatched = 0;
             let dispatchTotal = 0;
+            let ecdUpdated = 0;
+            let ecdTotal = 0;
+            let ecdPending = 0;
 
             activeRos.forEach(ro => {
                 const safeRo = safeFirebaseKey(ro.roNum);
@@ -1623,25 +1855,33 @@
 
                 dispatchTotal++;
                 if (isToday ? !!globalRoCheckState[safeRo] : roDispatchedAsOf(safeRo, dateKey)) dispatched++;
+
+                if (isEcdReviewRequired(ro)) {
+                    ecdTotal++;
+                    if (isEcdMarkedUpdatedForCurrentWorkbook(ro)) ecdUpdated++;
+                    else ecdPending++;
+                }
             });
 
             const touchPct = total ? touched / total : 1;
             const notesPct = total ? notes / total : 1;
             const dispatchPct = dispatchTotal ? dispatched / dispatchTotal : 1;
             const staleCleanPct = total ? (total - stale) / total : 1;
-            const score = Math.round((touchPct * 40) + (notesPct * 30) + (dispatchPct * 20) + (staleCleanPct * 10));
+            const ecdPctRaw = ecdTotal ? ecdUpdated / ecdTotal : 1;
+            const score = Math.round((touchPct * 35) + (notesPct * 25) + (dispatchPct * 20) + (staleCleanPct * 10) + (ecdPctRaw * 10));
             const colorClass = score >= 85 ? 'compliance-green' : (score >= 70 ? 'compliance-yellow' : 'compliance-red');
             const rating = score >= 85 ? 'ON TRACK' : (score >= 70 ? 'WATCH' : 'NEEDS ACTION');
 
-            return { score, rating, colorClass, total, touched, notes, dispatched, dispatchTotal, stale, touchPct: Math.round(touchPct * 100), notesPct: Math.round(notesPct * 100), dispatchPct: Math.round(dispatchPct * 100), staleCleanPct: Math.round(staleCleanPct * 100), dateKey, lockActive, lockedExcluded, realOpenTotal: realOpenRos.length };
+            return { score, rating, colorClass, total, touched, notes, dispatched, dispatchTotal, stale, ecdUpdated, ecdTotal, ecdPending, touchPct: Math.round(touchPct * 100), notesPct: Math.round(notesPct * 100), dispatchPct: Math.round(dispatchPct * 100), staleCleanPct: Math.round(staleCleanPct * 100), ecdPct: Math.round(ecdPctRaw * 100), dateKey, lockActive, lockedExcluded, realOpenTotal: realOpenRos.length };
         }
 
-        function generateWorkflowComplianceHtml(dataSet, compact = false) {
+        function generateWorkflowComplianceHtml(dataSet, compact = false, ownerKey = '', parentViewId = '') {
             const c = calculateWorkflowCompliance(dataSet);
-            const prior = calculateWorkflowCompliance(dataSet, getPriorLocalDateKey());
             const lockNote = c.lockActive && c.lockedExcluded > 0
                 ? `<div style="margin-top:6px; font-size:10px; font-weight:800; color:#64748b; text-transform:uppercase; letter-spacing:0.3px;">${c.lockedExcluded} locked pre-WIP RO${c.lockedExcluded === 1 ? '' : 's'} excluded from score</div>`
                 : '';
+            const owner = ownerKey || currentOwnerView || '';
+            const parent = parentViewId || currentParentView || lastActiveView || 'home-view';
             return `
                 <div class="workflow-compliance-card ${c.colorClass}${compact ? ' compact' : ''}" title="Score is based only on ROs coordinators are allowed to work. During spend/manual lockout, locked pre-WIP rows are excluded from compliance scoring.">
                     <div class="workflow-compliance-header">
@@ -1650,18 +1890,15 @@
                             <div class="workflow-compliance-score">${c.score}%</div>
                         </div>
                         <div class="workflow-compliance-actions">
-                            <div class="workflow-compliance-prior" title="Prior day score (${prior.dateKey}) based on the same open RO population and prior-day workflow activity">
-                                <div class="prior-title">Prior Day</div>
-                                <div class="prior-score">${prior.score}%</div>
-                            </div>
                             <div class="workflow-compliance-rating">${c.rating}</div>
                         </div>
                     </div>
                     <div class="workflow-compliance-grid">
-                        <div class="workflow-compliance-mini"><div class="mini-title">Touched</div><div class="mini-num">${c.touched}/${c.total}</div></div>
-                        <div class="workflow-compliance-mini"><div class="mini-title">Notes</div><div class="mini-num">${c.notes}/${c.total}</div></div>
-                        <div class="workflow-compliance-mini"><div class="mini-title">Dispatch</div><div class="mini-num">${c.dispatched}/${c.dispatchTotal}</div></div>
-                        <div class="workflow-compliance-mini"><div class="mini-title">Stale</div><div class="mini-num">${c.stale}</div></div>
+                        ${workflowSquare(owner, parent, 'touched', 'Touched', `${c.touched}/${c.total}`, c.total === 0)}
+                        ${workflowSquare(owner, parent, 'notes', 'Notes', `${c.notes}/${c.total}`, c.total === 0)}
+                        ${workflowSquare(owner, parent, 'dispatch', 'Dispatch', `${c.dispatched}/${c.dispatchTotal}`, c.dispatchTotal === 0)}
+                        ${workflowSquare(owner, parent, 'ecd', 'ECD', `${c.ecdUpdated}/${c.ecdTotal}`, c.ecdTotal === 0)}
+                        ${workflowSquare(owner, parent, 'stale', 'Stale', `${c.stale}`, c.stale === 0)}
                     </div>
                     ${lockNote}
                 </div>`;
@@ -1943,6 +2180,45 @@
             return getRepairClassDataForRo(ro).hasTransfer;
         }
 
+        function isCompletedOrFinalStatus(status) {
+            return normalizeSpendStatus(status) === 'CLOSED';
+        }
+
+        function isCompletedRepClassReviewOnly(ro) {
+            return !!(ro && !ro.isOpen && isCompletedOrFinalStatus(ro.status) && hasRepairClassTransfer(ro));
+        }
+
+        function shouldOpenVroForRepairClassReview(ro) {
+            // A repair-class PENDING click should always open the VRO when an RO number exists.
+            // Earlier logic skipped the VRO for completed review-only rows, which made PENDING
+            // show the memo modal without launching the actual VRO in a new tab.
+            return !!(ro && ro.roNum);
+        }
+
+        function getRepairClassReviewDecision(ro) {
+            if (!ro) return '';
+            const rec = getRepairClassReviewRecord(safeFirebaseKey(ro.roNum));
+            return rec && rec.decision ? String(rec.decision || '').toUpperCase() : '';
+        }
+
+        function getRepairClassActionButtonHtml(ro) {
+            if (!ro) return '';
+            const safeRo = safeFirebaseKey(ro.roNum);
+            const cleared = isRepairClassReviewCleared(ro);
+            const decision = getRepairClassReviewDecision(ro);
+            if (cleared && decision === 'ACCEPTED') {
+                return `<div class="repair-class-decision-row"><span class="repair-class-toggle status-accepted" title="Accepted reasoning saved">ACCEPTED</span><button type="button" class="note-btn has-note repair-class-note-btn" title="View saved accepted memo" onclick="event.stopPropagation(); openRepairClassMemoView('${safeRo}')">📝</button></div>`;
+            }
+            if (cleared && decision === 'DECLINED') {
+                return `<div class="repair-class-decision-row"><span class="repair-class-toggle status-declined" title="Declined reasoning saved">DECLINED</span><button type="button" class="note-btn has-note repair-class-note-btn" title="View saved declined memo" onclick="event.stopPropagation(); openRepairClassMemoView('${safeRo}')">📝</button></div>`;
+            }
+            if (cleared) {
+                return `<span class="badge repair-class-toggle status-dispatched">OK</span>`;
+            }
+            const vroUrl = ro.roNum ? `https://afshub.azurewebsites.net/Vendors/VendedRepairOrder/Estimate/${encodeURIComponent(ro.roNum)}` : '#';
+            return `<a href="${vroUrl}" target="_blank" rel="noopener" role="button" class="repair-class-toggle status-pending" data-repclass-ro="${safeRo}" onclick="event.stopPropagation(); rememberWorkflowScrollPosition(); openRepairClassReviewModal('${safeRo}', false, true)">PENDING</a>`;
+        }
+
         function getRepairClassReviewRecord(safeRo) {
             return (globalRepairClassReviewState && globalRepairClassReviewState[safeRo]) ? globalRepairClassReviewState[safeRo] : null;
         }
@@ -1952,17 +2228,19 @@
             const safeRo = safeFirebaseKey(ro.roNum);
             const rec = getRepairClassReviewRecord(safeRo);
             if (!rec || !rec.decision) return false;
-            const decision = String(rec.decision || '').toUpperCase();
-            if (decision === 'DECLINED') return true;
-            if (decision === 'ACCEPTED') {
-                const rc = getRepairClassDataForRo(ro);
-                return normalizeRepClassValue(rc.originalRepClass) === normalizeRepClassValue(rc.transferRepClass);
-            }
+            const decision = String(rec.decision || '').trim().toUpperCase();
+
+            // Any saved ACCEPTED / DECLINED decision clears the visible Pending state.
+            // The previous logic only cleared ACCEPTED when the workbook already showed
+            // Current REPCLASS = Transfer REPCLASS, which caused the button to snap back
+            // to PENDING immediately after a coordinator accepted the recommendation.
+            if (decision === 'DECLINED' || decision === 'ACCEPTED') return true;
+
             return false;
         }
 
         function getRepairClassReviewPopulation(dataSet) {
-            return (dataSet || []).filter(ro => ro && ro.isOpen && hasRepairClassTransfer(ro));
+            return (dataSet || []).filter(ro => ro && (ro.isOpen || isCompletedRepClassReviewOnly(ro)) && hasRepairClassTransfer(ro));
         }
 
         function calculateRepairClassCompliance(dataSet) {
@@ -1982,8 +2260,10 @@
             return { total, reviewed, reviewNeeded, accepted, score, colorClass, rating };
         }
 
-        function generateRepairClassComplianceHtml(dataSet, compact = false) {
+        function generateRepairClassComplianceHtml(dataSet, compact = false, ownerKey = '', parentViewId = '') {
             const c = calculateRepairClassCompliance(dataSet);
+            const owner = ownerKey || currentOwnerView || '';
+            const parent = parentViewId || currentParentView || lastActiveView || 'home-view';
             return `
                 <div class="workflow-compliance-card ${c.colorClass}${compact ? ' compact' : ''}" title="Repair class review is based on VRO Export Order/Type matched to AI Ref.xlsx Transfer REPCLASS and Why Transfer / Why No Transfer. No AI logic is run in this HTML.">
                     <div class="workflow-compliance-header">
@@ -1996,10 +2276,10 @@
                         </div>
                     </div>
                     <div class="workflow-compliance-grid">
-                        <div class="workflow-compliance-mini"><div class="mini-title">RO Review</div><div class="mini-num">${c.reviewed}/${c.total}</div></div>
-                        <div class="workflow-compliance-mini"><div class="mini-title">Touched</div><div class="mini-num">${c.reviewed}/${c.total}</div></div>
-                        <div class="workflow-compliance-mini"><div class="mini-title">Review Needed</div><div class="mini-num">${c.reviewNeeded}</div></div>
-                        <div class="workflow-compliance-mini"><div class="mini-title">Corrected</div><div class="mini-num">${c.accepted}</div></div>
+                        ${workflowSquare(owner, parent, 'roReview', 'RO Review', `${c.reviewed}/${c.total}`, c.total === 0)}
+                        ${workflowSquare(owner, parent, 'repairTouched', 'Touched', `${c.reviewed}/${c.total}`, c.total === 0)}
+                        ${workflowSquare(owner, parent, 'reviewNeeded', 'Review Needed', `${c.reviewNeeded}`, c.reviewNeeded === 0)}
+                        ${workflowSquare(owner, parent, 'corrected', 'Corrected', `${c.accepted}`, c.accepted === 0)}
                     </div>
                 </div>`;
         }
@@ -2010,14 +2290,10 @@
             if (!ro || !rc.hasTransfer) {
                 return `<div class="repair-class-cell"><div class="repair-class-name">${escapeHtml(original)}</div><span class="repair-class-pill clean">OK</span></div>`;
             }
-            const safeRo = safeFirebaseKey(ro.roNum);
             const reason = rc.transferReason || 'No transfer reason provided.';
-            const cleared = isRepairClassReviewCleared(ro);
             const reviewTitle = escapeHtml(reason).replace(/"/g, '&quot;');
             const transfer = escapeHtml(rc.transferRepClass || 'Review');
-            const btn = cleared
-                ? `<span class="badge repair-class-toggle status-dispatched">OK</span>`
-                : `<button class="repair-class-toggle status-pending" data-repclass-ro="${safeRo}" onclick="openRepairClassReviewModal('${safeRo}')">PENDING</button>`;
+            const btn = getRepairClassActionButtonHtml(ro);
             return `<div class="repair-class-cell">
                 <div class="repair-class-name">${escapeHtml(original)}</div>
                 <span class="repair-class-pill review" title="${reviewTitle}">${transfer} REVIEW</span>
@@ -2029,17 +2305,71 @@
             document.querySelectorAll('[data-repclass-ro]').forEach(btn => {
                 const safeRo = btn.getAttribute('data-repclass-ro');
                 const ro = getRoContextBySafeRo(safeRo);
-                if (ro && isRepairClassReviewCleared(ro)) {
-                    btn.outerHTML = `<span class="badge repair-class-toggle status-dispatched">OK</span>`;
+                const cell = btn.closest('.repair-class-cell');
+                if (ro && cell) {
+                    cell.outerHTML = getRepairClassCellHtml(ro);
                 }
             });
         }
 
-        function openRepairClassReviewModal(safeRo) {
+        function openRepairClassMemoView(safeRo) {
+            const ro = getRoContextBySafeRo(safeRo);
+            const rec = getRepairClassReviewRecord(safeRo);
+            if (!ro || !rec) return;
+            const rc = getRepairClassDataForRo(ro);
+            const decision = String(rec.decision || 'Reviewed').toUpperCase();
+            const memo = rec.memo || 'No memo was saved for this review.';
+            const timestamp = rec.timestamp ? new Date(rec.timestamp).toLocaleString() : '-';
+            const existing = document.getElementById('repclass-memo-view-overlay');
+            if (existing) existing.remove();
+            const overlay = document.createElement('div');
+            overlay.id = 'repclass-memo-view-overlay';
+            overlay.className = 'repclass-memo-view-overlay';
+            overlay.innerHTML = `
+                <div class="repclass-memo-view-box" role="dialog" aria-modal="true" aria-label="Repair class memo">
+                    <div class="repclass-memo-view-header">
+                        <div class="repclass-memo-view-title">Repair Class Memo</div>
+                        <button type="button" class="repclass-memo-view-close" onclick="closeRepairClassMemoView()">&times;</button>
+                    </div>
+                    <div class="repclass-memo-view-grid">
+                        <div class="repclass-memo-view-field"><div class="label">AFS RO #</div><div class="value">${escapeHtml(ro.roNum || '-')}</div></div>
+                        <div class="repclass-memo-view-field"><div class="label">Unit</div><div class="value">${escapeHtml(ro.unitNo || '-')}</div></div>
+                        <div class="repclass-memo-view-field"><div class="label">Decision</div><div class="value">${escapeHtml(decision)}</div></div>
+                        <div class="repclass-memo-view-field"><div class="label">Timestamp</div><div class="value">${escapeHtml(timestamp)}</div></div>
+                        <div class="repclass-memo-view-field"><div class="label">Current REPCLASS</div><div class="value">${escapeHtml(rc.originalRepClass || rec.originalRepClass || '-')}</div></div>
+                        <div class="repclass-memo-view-field"><div class="label">AI Transfer REPCLASS</div><div class="value">${escapeHtml(rc.transferRepClass || rec.transferRepClass || '-')}</div></div>
+                    </div>
+                    <div class="repclass-memo-view-memo"><strong>Saved Memo:</strong><br>${escapeHtml(memo)}</div>
+                </div>`;
+            overlay.addEventListener('click', function(evt) {
+                if (evt.target === overlay) closeRepairClassMemoView();
+            });
+            document.body.appendChild(overlay);
+        }
+
+        function closeRepairClassMemoView() {
+            const overlay = document.getElementById('repclass-memo-view-overlay');
+            if (overlay) overlay.remove();
+        }
+
+        function openRepairClassReviewModal(safeRo, openVro = true, vroAlreadyOpened = false) {
             const ro = getRoContextBySafeRo(safeRo);
             if (!ro) return;
             currentRepairClassReviewSafeRo = safeRo;
-            window.open(`https://afshub.azurewebsites.net/Vendors/VendedRepairOrder/Estimate/${encodeURIComponent(ro.roNum)}`, '_blank');
+            let attemptedVroOpen = false;
+            if (openVro && ro.roNum) {
+                const openedTab = window.open(`https://afshub.azurewebsites.net/Vendors/VendedRepairOrder/Estimate/${encodeURIComponent(ro.roNum)}`, '_blank', 'noopener');
+                attemptedVroOpen = true;
+                try { if (openedTab) openedTab.opener = null; } catch(e) {}
+            }
+
+            const warning = document.querySelector('#repair-class-review-modal .repair-class-review-warning');
+            if (warning) {
+                const vroOpenMessage = 'This review cannot be closed silently. The VRO has been opened in a new tab. Confirm whether you accepted the AI recommendation and changed the repair class, or declined the recommendation and left the current REPCLASS unchanged. A memo is required either way.';
+                warning.innerText = (vroAlreadyOpened || attemptedVroOpen)
+                    ? vroOpenMessage
+                    : 'This repair-class review is for REPCLASS accountability only. No dispatch or VRO progression action is required from this screen. Review the prior notes, then accept or decline the REPCLASS recommendation with a required memo.';
+            }
 
             const rec = getRepairClassReviewRecord(safeRo);
             const setText = (id, value) => { const el = document.getElementById(id); if (el) el.innerText = value || '-'; };
@@ -2103,12 +2433,20 @@
             };
 
             const closeModal = () => {
+                rememberWorkflowScrollPosition();
                 const modal = document.getElementById('repair-class-review-modal');
                 if (modal) modal.style.display = 'none';
                 currentRepairClassReviewSafeRo = null;
                 updateAllRepairClassBadges();
                 refreshActiveViewPreservingDrilldown();
+                restoreWorkflowScrollPositionSoon();
             };
+
+            // Optimistically update local state before the Firebase listener returns so
+            // the button changes to ACCEPTED / DECLINED immediately instead of briefly
+            // re-rendering as PENDING.
+            globalRepairClassReviewState[safeRo] = payload;
+            try { localStorage.setItem('repclass_review_status', JSON.stringify(globalRepairClassReviewState)); } catch(e) {}
 
             if (db) {
                 db.ref('repClassReviewStatus/' + safeRo).set(payload)
@@ -2119,8 +2457,6 @@
                         alert('Could not save repair class review. Please try again.');
                     });
             } else {
-                globalRepairClassReviewState[safeRo] = payload;
-                try { localStorage.setItem('repclass_review_status', JSON.stringify(globalRepairClassReviewState)); } catch(e) {}
                 logWorkflowActivity(safeRo, 'REPCLASS_REVIEW_' + decision, memo, payload);
                 closeModal();
             }
@@ -2145,6 +2481,7 @@
         }
 
         function toggleRoCheck(ro, isChecked) {
+            rememberWorkflowScrollPosition();
             let safeRo = safeFirebaseKey(ro);
             const roContext = getRoContextBySafeRo(safeRo);
             if (roContext && shouldLockPreWipRow(roContext.status)) {
@@ -2238,7 +2575,9 @@
                 document.getElementById('note-textarea').value = '';
                 renderNoteActivityLog(currentEditingRo);
                 updateAllNoteButtons();
+                rememberWorkflowScrollPosition();
                 refreshActiveViewPreservingDrilldown();
+                restoreWorkflowScrollPositionSoon();
                 closeNoteModal();
             } catch (err) {
                 console.warn('Save note failed:', err);
@@ -2252,7 +2591,48 @@
         let currentCustomerFilter = 'ALL';
         let currentOwnerView = '';
         let currentParentView = '';
+        let currentSquareFilter = null;
         let searchTimeout = null;
+
+        // Prevent action buttons inside long drilldowns from snapping the page back to the top.
+        // This protects ECD PENDING/UPDATED, dispatch, note, and repair-class action clicks while
+        // Firebase live updates or local badge refreshes are being applied.
+        let workflowActionScrollTop = null;
+        let workflowActionScrollUntil = 0;
+
+        function getWorkflowMainScroller() {
+            return document.querySelector('.main-content') || document.scrollingElement || document.documentElement;
+        }
+
+        function rememberWorkflowScrollPosition() {
+            const activeView = document.querySelector('.view-section.active');
+            if (!activeView || activeView.id !== 'person-view') return;
+            const scroller = getWorkflowMainScroller();
+            workflowActionScrollTop = scroller ? scroller.scrollTop : null;
+            workflowActionScrollUntil = Date.now() + 2500;
+        }
+
+        function restoreWorkflowScrollPosition(force = false) {
+            if (workflowActionScrollTop === null) return;
+            if (!force && Date.now() > workflowActionScrollUntil) return;
+            const activeView = document.querySelector('.view-section.active');
+            if (!activeView || activeView.id !== 'person-view') return;
+            const scroller = getWorkflowMainScroller();
+            if (!scroller) return;
+            scroller.scrollTop = workflowActionScrollTop;
+        }
+
+        function restoreWorkflowScrollPositionSoon() {
+            requestAnimationFrame(() => restoreWorkflowScrollPosition(true));
+            setTimeout(() => restoreWorkflowScrollPosition(true), 25);
+            setTimeout(() => restoreWorkflowScrollPosition(true), 100);
+            setTimeout(() => restoreWorkflowScrollPosition(true), 250);
+        }
+
+        document.addEventListener('pointerdown', function(e) {
+            const actionTarget = e.target && e.target.closest ? e.target.closest('.ecd-review-btn, .status-toggle, .repair-class-toggle, .note-btn, .repclass-note-btn, .workflow-compliance-mini, .highlight-box.clickable, .stat-box.clickable') : null;
+            if (actionTarget) rememberWorkflowScrollPosition();
+        }, true);
 
         let pmOwners = [];
         let vendedOwners = [];
@@ -2769,9 +3149,80 @@
             return getRoSpendInfo(String(roNum || '').toUpperCase().trim()).amount;
         }
 
+        const SPEND_GOVERNOR_ALLOWED_CUSTOMER = 'GARDA';
+
+        function isGardaSpendCustomerText(value) {
+            const raw = String(value || '').toUpperCase().trim();
+            if (!raw) return false;
+            if (raw.includes('GARDA')) return true;
+            try {
+                if (typeof getCustKey === 'function' && getCustKey(value) === SPEND_GOVERNOR_ALLOWED_CUSTOMER) return true;
+            } catch(e) {}
+            return false;
+        }
+
+        function isExplicitNonGardaSpendText(value) {
+            return /BRINK|LOOMIS|PUROLATOR|FERGUSON|FRONTIER|COLONY|PURPLE|NATIONAL|MERCHANT|META|STANDARD/i.test(String(value || ''));
+        }
+
+        function getProcessedRoForSpend(roNumber) {
+            const ro = String(roNumber || '').toUpperCase().trim();
+            if (!ro || !Array.isArray(processedData)) return null;
+            return processedData.find(item => String(item && item.roNum ? item.roNum : '').toUpperCase().trim() === ro) || null;
+        }
+
+        function isGardaSpendRecord(record) {
+            if (!record) return false;
+            const roNum = String(record.roNumber || record.roNum || record.order || '').toUpperCase().trim();
+            const matchedRo = getProcessedRoForSpend(roNum);
+            const fin = roNum && window.globalOrderFin ? window.globalOrderFin[roNum] : null;
+
+            const explicitCustomerFields = [
+                record.custKey,
+                record.preBillingCustomer,
+                record.customer,
+                record.roDetailCustomer,
+                matchedRo && matchedRo.custKey,
+                matchedRo && matchedRo.preBillingCustomer,
+                fin && fin.customer
+            ].filter(v => v !== undefined && v !== null && String(v).trim() !== '');
+
+            if (explicitCustomerFields.some(isGardaSpendCustomerText)) return true;
+            if (explicitCustomerFields.length && explicitCustomerFields.some(isExplicitNonGardaSpendText)) return false;
+
+            const locationFields = [
+                record.rawCustomerLocation,
+                record.customerLocation,
+                record.branch,
+                record.subregion,
+                record.region,
+                record.financialShop,
+                matchedRo && matchedRo.rawCustomerLocation,
+                matchedRo && matchedRo.customer,
+                matchedRo && matchedRo.branch,
+                matchedRo && matchedRo.subregion,
+                matchedRo && matchedRo.region,
+                fin && fin.customerLocation,
+                fin && fin.shop
+            ].filter(v => v !== undefined && v !== null && String(v).trim() !== '');
+
+            if (locationFields.some(isGardaSpendCustomerText)) return true;
+
+            // Garda locations often carry the 3-2 branch code. Use this only after customer fields
+            // are checked so non-Garda customers with explicit labels cannot enter Garda reporting.
+            if (locationFields.some(v => !!extractGardaCode(v))) return true;
+
+            return false;
+        }
+
+        function filterGardaSpendRows(rows) {
+            return (rows || []).filter(row => isGardaSpendRecord(row));
+        }
+
         function isSpendGovernedRo(ro) {
             if (!ro || !ro.roNum) return false;
             if (String(ro.roNum).startsWith('NO RO') || String(ro.roNum).startsWith('SEE_OTHER:')) return false;
+            if (!isGardaSpendRecord(ro)) return false;
 
             const bCode = extractGardaCode(ro.branch) || normalizeBranchStr(ro.branch);
             if (!bCode) return false;
@@ -2843,8 +3294,9 @@
                     rows.push(Object.assign({ safeRo, eventKey }, e));
                 });
             });
-            rows.sort((a, b) => new Date(b.changedAt || 0) - new Date(a.changedAt || 0));
-            return rows;
+            const gardaRows = filterGardaSpendRows(rows);
+            gardaRows.sort((a, b) => new Date(b.changedAt || 0) - new Date(a.changedAt || 0));
+            return gardaRows;
         }
 
         function makeSpendChangeLogEventKey(prefix, safeRo, timestamp) {
@@ -2860,6 +3312,7 @@
                 Object.keys(weekAuths).forEach(safeRo => {
                     const auth = weekAuths[safeRo] || {};
                     const roNum = auth.roNumber || safeRo;
+                    if (!isGardaSpendRecord(Object.assign({ safeRo: safeRo, roNumber: roNum }, auth))) return;
                     const currentSpend = Number(auth.spend || 0);
 
                     if (auth.authorizedAt) {
@@ -3022,6 +3475,7 @@
                 Object.keys(weekAuths).forEach(safeRo => {
                     const auth = weekAuths[safeRo] || {};
                     const roNumber = auth.roNumber || auth.roNum || safeRo;
+                    if (!isGardaSpendRecord(Object.assign({ safeRo: safeRo, roNumber: roNumber }, auth))) return;
                     rows.push({
                         weekKey: auth.weekKey || weekKey,
                         safeRo: safeRo,
@@ -3539,8 +3993,10 @@
                 });
             }
 
-            function stampSpendAuthorization({ safeRo, roNum, unitNo, branch, subregion, region, owner, previousStatus, previousNormalizedStatus, currentStatus, currentNormalizedStatus, spend, spendStatus, spendSource, roDetailStatus, source, countType, inferredOpenedAt, inferredClosedAt }) {
+            function stampSpendAuthorization({ safeRo, roNum, unitNo, branch, subregion, region, owner, customer, rawCustomerLocation, previousStatus, previousNormalizedStatus, currentStatus, currentNormalizedStatus, spend, spendStatus, spendSource, roDetailStatus, source, countType, inferredOpenedAt, inferredClosedAt }) {
                 if (!safeRo || !roNum) return;
+                if (!isGardaSpendRecord({ roNumber: roNum, branch, subregion, region, customer, rawCustomerLocation })) return;
+                const spendCustomer = customer || SPEND_GOVERNOR_ALLOWED_CUSTOMER;
                 const authUpdatePath = `spendGovernor/authorizations/${weekKey}/${safeRo}`;
                 if (updates[authUpdatePath]) return;
                 // Block true duplicates, but allow a repair if countIndex exists without any saved authorization record.
@@ -3557,6 +4013,8 @@
                     subregion: subregion || '',
                     region: region || '',
                     owner: owner || '',
+                    customer: spendCustomer,
+                    rawCustomerLocation: rawCustomerLocation || '',
                     previousStatus: previousStatus || '',
                     previousNormalizedStatus: previousNormalizedStatus || '',
                     currentStatus: currentStatus || '',
@@ -3577,6 +4035,7 @@
 
                 updates[`spendGovernor/countIndex/${safeRo}`] = {
                     roNumber: roNum,
+                    customer: spendCustomer,
                     firstAuthorizedAt: nowIso,
                     firstAuthorizedWeek: weekKey,
                     spend: numericSpend,
@@ -3594,6 +4053,8 @@
                     subregion: subregion || '',
                     region: region || '',
                     owner: owner || '',
+                    customer: spendCustomer,
+                    rawCustomerLocation: rawCustomerLocation || '',
                     changeType: countType || 'OBSERVED WIP AUTHORIZATION',
                     previousStatus: previousStatus || '',
                     currentStatus: currentStatus || '',
@@ -3652,6 +4113,8 @@
                         subregion: ro.subregion || '',
                         region: ro.region || '',
                         owner: (ro.kpiOwners && ro.kpiOwners.length ? ro.kpiOwners[0] : '') || (ro.drilldownOwners && ro.drilldownOwners.length ? ro.drilldownOwners[0] : '') || '',
+                        customer: ro.preBillingCustomer || ro.custKey || SPEND_GOVERNOR_ALLOWED_CUSTOMER,
+                        rawCustomerLocation: ro.rawCustomerLocation || ro.customer || ro.branch || '',
                         changeType: changeTypes.join(' + ') || 'UPDATE',
                         previousStatus: priorStatus,
                         currentStatus: currentStatus,
@@ -3713,6 +4176,8 @@
                         subregion: ro.subregion || '',
                         region: ro.region || '',
                         owner: (ro.kpiOwners && ro.kpiOwners.length ? ro.kpiOwners[0] : '') || (ro.drilldownOwners && ro.drilldownOwners.length ? ro.drilldownOwners[0] : '') || '',
+                        customer: ro.preBillingCustomer || ro.custKey || SPEND_GOVERNOR_ALLOWED_CUSTOMER,
+                        rawCustomerLocation: ro.rawCustomerLocation || ro.customer || ro.branch || '',
                         previousStatus: prior ? (prior.status || '') : 'NOT SEEN IN FIREBASE',
                         previousNormalizedStatus: prior ? (prior.normalizedStatus || '') : 'UNKNOWN',
                         currentStatus,
@@ -3734,6 +4199,8 @@
                     branch: ro.branch || '',
                     subregion: ro.subregion || '',
                     region: ro.region || '',
+                    customer: ro.preBillingCustomer || ro.custKey || SPEND_GOVERNOR_ALLOWED_CUSTOMER,
+                    rawCustomerLocation: ro.rawCustomerLocation || ro.customer || ro.branch || '',
                     status: currentStatus,
                     normalizedStatus: currentNorm,
                     latestSpend: auditSpend,
@@ -3758,6 +4225,7 @@
                 if (countIndex[safeRo] || existingAuthorizations[safeRo]) return;
 
                 const fin = roDetailFinancials[roNum] || {};
+                if (!isGardaSpendRecord({ roNumber: roNum, customer: fin.customer || '', customerLocation: fin.customerLocation || '', branch: fin.customerLocation || fin.shop || '' })) return;
                 const currentStatus = String(fin.status || '').trim();
                 const currentNorm = normalizeSpendStatus(currentStatus);
                 if (currentNorm !== 'WIP' && currentNorm !== 'CLOSED') return;
@@ -3801,6 +4269,8 @@
                     subregion: '',
                     region: '',
                     owner: ownerLabel,
+                    customer: fin.customer || SPEND_GOVERNOR_ALLOWED_CUSTOMER,
+                    rawCustomerLocation: fin.customerLocation || fin.shop || '',
                     previousStatus: prior ? (prior.status || '') : 'NOT SEEN IN FIREBASE',
                     previousNormalizedStatus: prior ? (prior.normalizedStatus || '') : 'UNKNOWN',
                     currentStatus,
@@ -3821,6 +4291,8 @@
                     branch: branchLabel,
                     subregion: '',
                     region: '',
+                    customer: fin.customer || SPEND_GOVERNOR_ALLOWED_CUSTOMER,
+                    rawCustomerLocation: fin.customerLocation || fin.shop || '',
                     status: currentStatus,
                     normalizedStatus: currentNorm,
                     latestSpend: spend,
@@ -3862,6 +4334,7 @@
                 const countType = currNorm === 'WIP' ? 'OBSERVED WIP AUTHORIZATION' : 'BYPASSED WIP TO CLOSED';
                 const roNum = String(ev.roNumber || '').toUpperCase().trim();
                 if (!roNum) return;
+                if (!isGardaSpendRecord(Object.assign({ safeRo: safeRo, roNumber: roNum }, ev))) return;
 
                 const spendInfo = getRoSpendInfo(roNum);
                 const repairSpend = spendInfo && spendInfo.foundInRoDetail ? Number(spendInfo.amount || 0) : Number(ev.currentSpend || 0);
@@ -3873,6 +4346,8 @@
                     subregion: ev.subregion || '',
                     region: ev.region || '',
                     owner: ev.owner || '',
+                    customer: ev.customer || SPEND_GOVERNOR_ALLOWED_CUSTOMER,
+                    rawCustomerLocation: ev.rawCustomerLocation || ev.branch || '',
                     previousStatus: ev.previousStatus || '',
                     previousNormalizedStatus: ev.previousNormalizedStatus || 'PRE_WIP',
                     currentStatus: ev.currentStatus || '',
@@ -3897,6 +4372,7 @@
                     const auth = weekAuths[safeRo] || {};
                     const roNum = String(auth.roNumber || '').toUpperCase().trim();
                     if (!roNum) return;
+                    if (!isGardaSpendRecord(Object.assign({ safeRo: safeRo, roNumber: roNum }, auth))) return;
 
                     const spendInfo = getRoSpendInfo(roNum);
                     const latestSpend = Number(spendInfo.amount || 0);
@@ -3918,6 +4394,8 @@
                             subregion: auth.subregion || '',
                             region: auth.region || '',
                             owner: auth.owner || '',
+                            customer: auth.customer || SPEND_GOVERNOR_ALLOWED_CUSTOMER,
+                            rawCustomerLocation: auth.rawCustomerLocation || auth.branch || '',
                             changeType: previousSpend > 0 ? 'SPEND UPDATED' : 'SPEND BACKFILLED',
                             previousStatus: auth.currentStatus || '',
                             currentStatus: auth.currentStatus || '',
@@ -3968,7 +4446,7 @@
             let pendingSpendCount = 0;
             let branchAuthorized = {};
 
-            Object.values(weeklyAuthorizations).forEach(auth => {
+            Object.values(weeklyAuthorizations).filter(auth => isGardaSpendRecord(auth)).forEach(auth => {
                 const spend = Number(auth.spend || 0);
                 weeklyAuthorizedTotal += spend;
 
@@ -4474,6 +4952,14 @@
             toggle.classList.toggle('expanded');
         }
 
+        function toggleGardaMenu() {
+            const submenu = document.getElementById('garda-submenu');
+            const toggle = document.getElementById('menu-garda');
+            if (!submenu || !toggle) return;
+            submenu.classList.toggle('open');
+            toggle.classList.toggle('expanded');
+        }
+
 
         function applyExternalNavigationRequest() {
             let target = null;
@@ -4503,6 +4989,7 @@
                 'vended-view': 'menu-vended',
                 'pm-view': 'menu-pm',
                 'ers-view': 'menu-ers',
+                'nonosc-view': 'menu-nonosc',
                 'spend-view': 'menu-spend',
                 'summary-view': 'menu-summary'
             };
@@ -4510,9 +4997,15 @@
             const menuId = target.menuId || viewToMenu[target.viewId] || null;
             const menuElement = menuId ? document.getElementById(menuId) : null;
 
-            if (['vended-view', 'pm-view', 'ers-view'].includes(target.viewId) || target.expandQueues) {
+            if (['vended-view', 'pm-view', 'ers-view', 'nonosc-view'].includes(target.viewId) || target.expandQueues) {
                 const submenu = document.getElementById('queues-submenu');
                 const toggle = document.getElementById('menu-queues');
+                if (submenu) submenu.classList.add('open');
+                if (toggle) toggle.classList.add('expanded');
+            }
+            if (['spend-view', 'summary-view'].includes(target.viewId)) {
+                const submenu = document.getElementById('garda-submenu');
+                const toggle = document.getElementById('menu-garda');
                 if (submenu) submenu.classList.add('open');
                 if (toggle) toggle.classList.add('expanded');
             }
@@ -4557,21 +5050,27 @@
         }
 
         function refreshActiveViewPreservingDrilldown() {
-            const mainContent = document.querySelector('.main-content');
+            const mainContent = getWorkflowMainScroller ? getWorkflowMainScroller() : document.querySelector('.main-content');
             const activeView = document.querySelector('.view-section.active');
             const isDrilldownView = activeView && activeView.id === 'person-view';
             const root = isDrilldownView ? document.getElementById('drilldown-body') : null;
             const openPaths = getOpenDetailPaths(root);
-            const scrollTop = mainContent ? mainContent.scrollTop : 0;
+            const protectedScrollActive = workflowActionScrollTop !== null && Date.now() <= workflowActionScrollUntil;
+            const scrollTop = protectedScrollActive ? workflowActionScrollTop : (mainContent ? mainContent.scrollTop : 0);
 
             triggerViewUpdate();
 
             if (isDrilldownView) {
-                requestAnimationFrame(() => {
+                const restore = () => {
                     const refreshedRoot = document.getElementById('drilldown-body');
                     restoreOpenDetailPaths(refreshedRoot, openPaths);
-                    if (mainContent) mainContent.scrollTop = scrollTop;
-                });
+                    const scroller = getWorkflowMainScroller ? getWorkflowMainScroller() : mainContent;
+                    if (scroller) scroller.scrollTop = scrollTop;
+                };
+                requestAnimationFrame(restore);
+                setTimeout(restore, 25);
+                setTimeout(restore, 100);
+                setTimeout(restore, 250);
             }
         }
 
@@ -4913,6 +5412,7 @@
 
             for (let roNum in orderFin) {
                 let order = orderFin[roNum];
+                if (!isGardaSpendRecord({ roNumber: roNum, customer: order.customer || '', customerLocation: order.customerLocation || '', branch: order.customerLocation || order.shop || '' })) continue;
                 
                 let bCode = normalizeShopIdForSpend(order.shop) || extractGardaCode(order.shop) || normalizeBranchStr(order.shop);
                 if (!bCode) continue;
@@ -5156,6 +5656,17 @@
                 ro.repClassReviewRequired = !!(normalizeRepClassValue(ro.originalRepClass) && normalizeRepClassValue(ro.transferRepClass) && normalizeRepClassValue(ro.originalRepClass) !== normalizeRepClassValue(ro.transferRepClass));
                 if (ro.isOpen && ro.repClassReviewRequired && ro.isNonOscQueueWork && ro.nonOscLocation) {
                     activeNonOsc.add(ro.nonOscLocation);
+                }
+                if (!ro.isOpen && ro.repClassReviewRequired && isCompletedOrFinalStatus(ro.status)) {
+                    if (ro.isNonOscQueueWork && ro.nonOscLocation) activeNonOsc.add(ro.nonOscLocation);
+                    (ro.kpiOwners || []).forEach(o => {
+                        let t = ownerNameToTeam[o] || 'VENDED REPAIR';
+                        if (o === 'Kevin Anguzza') t = 'PM';
+                        if (t === 'PM') activePM.add(o);
+                        else if (t === 'ERS') activeERS.add(o);
+                        else activeVended.add(o);
+                    });
+                    (ro.dedicatedShopOwners || []).forEach(o => activeVended.add(o));
                 }
             });
 
@@ -5448,6 +5959,8 @@
                     for (let bra of Object.keys(summaryTree[reg].subs[sub].branches).sort()) {
                         let bData = summaryTree[reg].subs[sub].branches[bra];
                         let authorized = bData.authorizedRev !== undefined ? bData.authorizedRev : (bData.wipRev || 0);
+                        if (!isGardaSpendRecord({ branch: bra, subregion: sub, region: reg }) && Number(authorized || 0) <= 0) continue;
+                        if (Number(authorized || 0) <= 0) continue;
                         branchFinData.push({
                             name: bra,
                             authorized: authorized || 0,
@@ -5730,27 +6243,33 @@
             document.getElementById('summary-table-body').innerHTML = html || '<tr><td colspan="7" style="text-align:center; padding: 20px;">No data available</td></tr>';
         }
 
-        function generateTileHTML(name, dataSet, chartId = null, isPM = false) {
-            
+        function generateTileHTML(name, dataSet, chartId = null, isPM = false, ownerKey = '', parentViewId = '') {
+            const owner = ownerKey || name;
+            const parent = parentViewId || lastActiveView || 'home-view';
+            const ownerArg = escapeJsArg(owner);
+            const parentArg = escapeJsArg(parent);
             let filteredOpen = getTileOpenRoPopulation(dataSet, isPM);
             let oosCount = filteredOpen.filter(ro => ro.isOOS).length;
             let priorityCount = filteredOpen.filter(ro => isPriority(ro)).length;
 
-            let workflowComplianceHtml = generateWorkflowComplianceHtml(filteredOpen);
-            let repairClassComplianceHtml = generateRepairClassComplianceHtml(filteredOpen);
+            let workflowComplianceHtml = generateWorkflowComplianceHtml(filteredOpen, false, owner, parent);
+            let repairClassComplianceHtml = generateRepairClassComplianceHtml((dataSet || []).filter(ro => ro && (ro.isOpen || isCompletedRepClassReviewOnly(ro))), false, owner, parent);
 
             let innerHtml = `
-                <div class="kpi-name">${name}</div>
+                <div class="kpi-tile-header">
+                    <div class="kpi-name">${escapeHtml(name)}</div>
+                    <button type="button" class="enter-queue-square" onclick="openTileSquareDrilldown(event, '${ownerArg}', '${parentArg}', 'all', 'Entire queue')">Enter<br>Queue</button>
+                </div>
                 <div class="kpi-top-metrics">
-                    <div class="highlight-box">
+                    <div class="highlight-box tile-square" onclick="openTileSquareDrilldown(event, '${ownerArg}', '${parentArg}', 'open', 'Open ROs')">
                         <div class="title">Open ROs</div>
                         <div class="num">${filteredOpen.length}</div>
                     </div>
-                    <div class="highlight-box oos-box">
+                    <div class="highlight-box oos-box tile-square" onclick="openTileSquareDrilldown(event, '${ownerArg}', '${parentArg}', 'oos', 'OOS ROs')">
                         <div class="title">OOS ROs</div>
                         <div class="num">${oosCount}</div>
                     </div>
-                    <div class="highlight-box urgent-box">
+                    <div class="highlight-box urgent-box tile-square" onclick="openTileSquareDrilldown(event, '${ownerArg}', '${parentArg}', 'priority', 'Priority ROs')">
                         <div class="title">Priority ROs</div>
                         <div class="num">${priorityCount}</div>
                     </div>
@@ -5774,17 +6293,14 @@
             let vendedData = aggData.filter(ro => ro.kpiOwners.some(o => vendedOwners.includes(o)));
             let ersRoData = aggData.filter(ro => ro.kpiOwners.some(o => ersOwners.includes(o)));
 
-            const pmTile = document.createElement('div'); pmTile.className = 'kpi-tile home-master-tile'; pmTile.innerHTML = generateTileHTML('PM Dashboard', pmData, 'chart-pm', true);
-            pmTile.onclick = () => loadPersonDrilldown('ALL_PM', 'home-view');
+            const pmTile = document.createElement('div'); pmTile.className = 'kpi-tile home-master-tile'; pmTile.innerHTML = generateTileHTML('PM Dashboard', pmData, 'chart-pm', true, 'ALL_PM', 'home-view');
             container.appendChild(pmTile);
             
-            const vendedTile = document.createElement('div'); vendedTile.className = 'kpi-tile home-master-tile'; vendedTile.innerHTML = generateTileHTML('Vended Repair Dashboard', vendedData, 'chart-vended');
-            vendedTile.onclick = () => loadPersonDrilldown('ALL_VENDED', 'home-view');
+            const vendedTile = document.createElement('div'); vendedTile.className = 'kpi-tile home-master-tile'; vendedTile.innerHTML = generateTileHTML('Vended Repair Dashboard', vendedData, 'chart-vended', false, 'ALL_VENDED', 'home-view');
             container.appendChild(vendedTile);
             
             const ersTile = document.createElement('div'); ersTile.className = 'kpi-tile home-master-tile'; 
-            ersTile.innerHTML = generateTileHTML('ERS Dashboard', ersRoData, 'chart-ers');
-            ersTile.onclick = () => loadPersonDrilldown('ALL_ERS', 'home-view');
+            ersTile.innerHTML = generateTileHTML('ERS Dashboard', ersRoData, 'chart-ers', false, 'ALL_ERS', 'home-view');
             container.appendChild(ersTile);
 
         }
@@ -5803,12 +6319,15 @@
                 }
 
                 let targetData = ownerDataAll.filter(ro => ro.isOpen);
+                if (currentFilter === 'ALL') {
+                    targetData = targetData.concat(ownerDataAll.filter(ro => isCompletedRepClassReviewOnly(ro)));
+                }
                 
                 if (!isPM) {
                     if (currentFilter === 'OOS') {
-                        targetData = targetData.filter(ro => ro.isOOS);
+                        targetData = targetData.filter(ro => ro.isOpen && ro.isOOS);
                     } else if (currentFilter === 'PRIORITY') {
-                        targetData = targetData.filter(ro => isPriority(ro));
+                        targetData = targetData.filter(ro => ro.isOpen && isPriority(ro));
                     }
                 }
                 
@@ -5825,8 +6344,7 @@
                     tile.style.backgroundColor = '#fef2f2';
                 }
 
-                tile.onclick = () => loadPersonDrilldown(owner, parentViewId);
-                tile.innerHTML = generateTileHTML(owner, ownerDataAll, null, isPM);
+                tile.innerHTML = generateTileHTML(owner, ownerDataAll, null, isPM, owner, parentViewId);
                 container.appendChild(tile);
             });
         }
@@ -5854,8 +6372,7 @@
 
                 const tile = document.createElement('div');
                 tile.className = 'kpi-tile';
-                tile.onclick = () => loadPersonDrilldown('NONOSC::' + location, 'nonosc-view');
-                tile.innerHTML = generateTileHTML(location, locationDataAll, null, false);
+                tile.innerHTML = generateTileHTML(location, locationDataAll, null, false, 'NONOSC::' + location, 'nonosc-view');
                 container.appendChild(tile);
             });
         }
@@ -5863,7 +6380,7 @@
         function generateRoDrilldownHtml(ownerDataAll, isPM) {
             let isVendedQueue = currentOwnerView === 'ALL_VENDED' || vendedOwners.includes(currentOwnerView);
             let isNonOscQueueView = String(currentOwnerView || '').startsWith('NONOSC::');
-            let baseOpenData = ownerDataAll.filter(ro => ro.isOpen).map(ro => {
+            let baseOpenData = ownerDataAll.filter(ro => ro.isOpen || isCompletedRepClassReviewOnly(ro)).map(ro => {
                 if (isNonOscQueueView && ro.isNonOscQueueWork) {
                     return Object.assign({}, ro, {
                         drillTopLevel: 'Dedicated / Non-OSC Work Orders',
@@ -5908,9 +6425,9 @@
             
             if (!isPM) {
                 if (currentFilter === 'OOS') {
-                    targetData = targetData.filter(ro => ro.isOOS);
+                    targetData = targetData.filter(ro => ro.isOpen && ro.isOOS);
                 } else if(currentFilter === 'PRIORITY') {
-                    targetData = targetData.filter(ro => isPriority(ro));
+                    targetData = targetData.filter(ro => ro.isOpen && isPriority(ro));
                 }
             }
 
@@ -6008,6 +6525,8 @@
                                     queueSources: [],
                                     otherQueueOrders: [],
                                     repairClassCells: [],
+                                    repclassOnlyFlags: [],
+                                    roObjects: [],
                                     isOOS: ro.isOOS,
                                     usefulPct: ro.usefulPct,
                                     usefulPctObj: ro.usefulPctObj,
@@ -6015,10 +6534,7 @@
                                 };
                             }
                             
-                            let ecdCell = '';
-                            if (ro.ecdState === 'missing') ecdCell = `<span class="badge-ecd-missing">${ro.ecdFormatted}</span>`;
-                            else if (ro.ecdState === 'red') ecdCell = `<span class="ecd-red">${ro.ecdFormatted}</span>`;
-                            else ecdCell = `<span class="ecd-green">${ro.ecdFormatted}</span>`;
+                            let ecdCell = getEcdCellHtml(ro);
 
                             if (String(ro.roNum || '').startsWith('SEE_OTHER:')) {
                                 const actualROs = (ro.otherQueueOrders && ro.otherQueueOrders.length > 0)
@@ -6037,6 +6553,8 @@
                                     unitsMap[ro.unitNo].otherQueueOrders.push([]);
                                     unitsMap[ro.unitNo].roLinks.push(actualRoLinkHtml);
                                     unitsMap[ro.unitNo].repairClassCells.push(getRepairClassCellHtml(ro));
+                                    unitsMap[ro.unitNo].repclassOnlyFlags.push(isCompletedRepClassReviewOnly(ro));
+                                    unitsMap[ro.unitNo].roObjects.push(Object.assign({}, ro, { roNum: actualRoNum, sourceQueue: order.sourceQueue || ro.sourceQueue || 'VENDED REPAIR' }));
                                     unitsMap[ro.unitNo].openedDates.push(ro.openedFormatted);
                                     unitsMap[ro.unitNo].statuses.push(ro.status);
                                     unitsMap[ro.unitNo].ecdCells.push(ecdCell);
@@ -6066,6 +6584,8 @@
                             unitsMap[ro.unitNo].otherQueueOrders.push(ro.otherQueueOrders || []);
                             unitsMap[ro.unitNo].roLinks.push(roLinkHtml);
                             unitsMap[ro.unitNo].repairClassCells.push(getRepairClassCellHtml(ro));
+                            unitsMap[ro.unitNo].repclassOnlyFlags.push(isCompletedRepClassReviewOnly(ro));
+                            unitsMap[ro.unitNo].roObjects.push(ro);
                             
                             unitsMap[ro.unitNo].openedDates.push(ro.openedFormatted);
                             unitsMap[ro.unitNo].statuses.push(ro.status);
@@ -6098,26 +6618,37 @@
 
                             let rowCount = visibleIdxs.length;
                             visibleRowsCount += rowCount;
+                            const forceSingleRows = !!(u.repclassOnlyFlags && u.repclassOnlyFlags.some(Boolean));
 
                             visibleIdxs.forEach((idx, localIdx) => {
                                 let roNum = u.roNums[idx];
                                 let safeRo = roNum.replace(/[.#$\[\]]/g, '_');
+                                let rowRo = (u.roObjects && u.roObjects[idx]) ? u.roObjects[idx] : (getRoContextBySafeRo(safeRo) || {});
                                 let isPreWipLocked = shouldLockPreWipRow(u.statuses[idx]);
+                                let isRepclassOnlyRow = !!(u.repclassOnlyFlags && u.repclassOnlyFlags[idx]);
                                 let isDispatched = !!globalRoCheckState[safeRo];
-                                let statusToggleHtml = getDispatchToggleHtml(safeRo, isDispatched, isPreWipLocked);
+                                let statusToggleHtml = isRepclassOnlyRow ? '<span class="repclass-only-badge">REPCLASS REVIEW ONLY</span>' : getDispatchToggleHtml(safeRo, isDispatched, isPreWipLocked);
 
                                 let latestNote = getLatestMeaningfulNote(safeRo);
                                 let hasNote = isMeaningfulNote(latestNote);
                                 let noteClass = hasNote ? 'note-btn has-note' : 'note-btn';
                                 let noteTitle = hasNote ? escapeHtml(latestNote).replace(/"/g, '&quot;') : 'Needs Update';
-                                let noteBtnHtml = `<button class="${noteClass}" data-ro="${safeRo}" title="${noteTitle}" onclick="openNoteModal('${safeRo}', '${roNum}')">📝</button>`;
+                                let noteBtnHtml = isRepclassOnlyRow ? '' : `<button class="${noteClass}" data-ro="${safeRo}" title="${noteTitle}" onclick="openNoteModal('${safeRo}', '${roNum}')">📝</button>`;
 
                                 let sourcePillHtml = getQueueSourcePillHtml(u.queueSources[idx], isVendedQueue);
-                                let roLinkDisplayHtml = isPreWipLocked ? getLockedRoDisplayFromHtml(u.roLinks[idx], roNum) : u.roLinks[idx];
-                                let lockTooltipHtml = isPreWipLocked ? getLockTooltipHtml() : '';
+                                let roLinkDisplayHtml = isRepclassOnlyRow ? `<span class="ro-link ro-link-locked" title="Completed work: repclass review only">${escapeHtml(roNum)}</span>` : (isPreWipLocked ? getLockedRoDisplayFromHtml(u.roLinks[idx], roNum) : u.roLinks[idx]);
+                                let lockTooltipHtml = isPreWipLocked && !isRepclassOnlyRow ? getLockTooltipHtml() : '';
                                 let roHtml = `<div style="display:flex; align-items:center; gap: 4px; flex-wrap: wrap;">${statusToggleHtml} ${roLinkDisplayHtml} ${noteBtnHtml} ${sourcePillHtml} ${lockTooltipHtml}</div>`;
 
-                                tableHTML += `<tr class="ro-row${isPreWipLocked ? ' locked-prewip-row' : ''}" data-oos="${u.isOOS}" data-priority="${isPri}" title="${isPreWipLocked ? PRE_WIP_LOCK_MESSAGE : ''}">`;
+                                const rowIsOpen = !!(rowRo && rowRo.isOpen);
+                                const touchedPending = rowIsOpen && !roTouchedToday(safeRo);
+                                const notePending = rowIsOpen && !roHasMeaningfulNote(safeRo);
+                                const dispatchPending = rowIsOpen && !isPreWipLocked && !isRepclassOnlyRow && !isDispatched;
+                                const ecdPending = rowIsOpen && isEcdReviewRequired(rowRo) && !isEcdMarkedUpdatedForCurrentWorkbook(rowRo);
+                                const repclassPending = !!(rowRo && (rowRo.isOpen || isRepclassOnlyRow) && hasRepairClassTransfer(rowRo) && !isRepairClassReviewCleared(rowRo));
+                                const repclassCorrected = !!(rowRo && hasRepairClassTransfer(rowRo) && isRepairClassReviewCleared(rowRo));
+
+                                tableHTML += `<tr class="ro-row${isPreWipLocked ? ' locked-prewip-row' : ''}${isRepclassOnlyRow ? ' repclass-only-row' : ''}" data-safe-ro="${safeRo}" data-open="${rowIsOpen}" data-oos="${u.isOOS}" data-priority="${isPri}" data-touch-pending="${touchedPending}" data-stale-pending="${touchedPending}" data-note-pending="${notePending}" data-dispatch-pending="${dispatchPending}" data-ecd-pending="${ecdPending}" data-repclass-pending="${repclassPending}" data-repclass-corrected="${repclassCorrected}" title="${isPreWipLocked && !isRepclassOnlyRow ? PRE_WIP_LOCK_MESSAGE : ''}">`;
                                 tableHTML += `<td style="vertical-align:top; padding-top:15px; border-bottom: ${localIdx === rowCount - 1 ? '1px solid var(--border)' : '1px dashed #eee'};">${roHtml}</td>`;
                                 
                                 let safeUnitType = u.unitType || 'UNKNOWN';
@@ -6125,12 +6656,13 @@
                                     ? `<br><span style="background-color: var(--urgent-red); color: white; padding: 2px 4px; border-radius: 3px; font-weight: 800; font-size:10px; display:inline-block; margin-top:3px; letter-spacing: 0.5px;">SCRAP</span>` 
                                     : `<br><span style="font-size:10px; color:#888;">(${safeUnitType})</span>`;
 
-                                if (localIdx === 0) {
-                                    tableHTML += `<td rowspan="${rowCount}" style="vertical-align:top; padding-top:15px; border-bottom: 1px solid var(--border); border-left: 1px dashed #eee;"><strong>${u.unitNo}</strong> ${typeBadge}</td>`;
+                                if (localIdx === 0 || forceSingleRows) {
+                                    const spanAttr = forceSingleRows ? '' : ` rowspan="${rowCount}"`;
+                                    tableHTML += `<td${spanAttr} style="vertical-align:top; padding-top:15px; border-bottom: 1px solid var(--border); border-left: 1px dashed #eee;"><strong>${u.unitNo}</strong> ${typeBadge}</td>`;
                                     if (!isPM) {
-                                        tableHTML += `<td rowspan="${rowCount}" style="vertical-align:top; padding-top:15px; border-bottom: 1px solid var(--border);">${priorityStatusBadge}</td>`;
+                                        tableHTML += `<td${spanAttr} style="vertical-align:top; padding-top:15px; border-bottom: 1px solid var(--border);">${priorityStatusBadge}</td>`;
                                     }
-                                    tableHTML += `<td rowspan="${rowCount}" style="vertical-align:top; padding-top:15px; border-bottom: 1px solid var(--border); border-right: 1px dashed #eee;">${oosBadge}</td>`;
+                                    tableHTML += `<td${spanAttr} style="vertical-align:top; padding-top:15px; border-bottom: 1px solid var(--border); border-right: 1px dashed #eee;">${oosBadge}</td>`;
                                 }
 
                                 let od = u.openedDates[idx] || '';
@@ -6173,13 +6705,39 @@
             return htmlStr;
         }
 
+        function rowMatchesSquareFilter(row, filterType) {
+            if (!row || !filterType) return true;
+            const isOpen = row.dataset.open === 'true';
+            if (filterType === 'open') return isOpen;
+            if (filterType === 'oos') return isOpen && row.dataset.oos === 'true';
+            if (filterType === 'priority') return isOpen && row.dataset.priority === 'true';
+            if (filterType === 'touched' || filterType === 'stale') return row.dataset.touchPending === 'true';
+            if (filterType === 'notes') return row.dataset.notePending === 'true';
+            if (filterType === 'dispatch') return row.dataset.dispatchPending === 'true';
+            if (filterType === 'ecd') return row.dataset.ecdPending === 'true';
+            if (filterType === 'roReview' || filterType === 'reviewNeeded' || filterType === 'repairTouched') return row.dataset.repclassPending === 'true';
+            if (filterType === 'corrected') return row.dataset.repclassCorrected === 'true';
+            return true;
+        }
+
+        function updateSquareFilterBanner(visibleCount) {
+            const banner = document.getElementById('active-square-filter-banner');
+            if (!banner) return;
+            if (!currentSquareFilter || !currentSquareFilter.type) {
+                banner.style.display = 'none';
+                banner.innerHTML = '';
+                return;
+            }
+            banner.style.display = 'flex';
+            banner.innerHTML = `<span>Showing ${visibleCount} item${visibleCount === 1 ? '' : 's'} for: ${escapeHtml(currentSquareFilter.label || 'selected tile square')}</span><button type="button" onclick="clearTileSquareFilter()">Clear Filter</button>`;
+        }
+
         function applyDrilldownFilters() {
             const container = document.getElementById('drilldown-body');
             if (!container) return;
 
             let isPM = currentOwnerView === 'ALL_PM' || pmOwners.includes(currentOwnerView);
 
-            // Hide/Show Rows based on filter
             const rows = container.querySelectorAll('.ro-row');
             rows.forEach(row => {
                 let show = true;
@@ -6187,15 +6745,20 @@
                     if (currentFilter === 'OOS' && row.dataset.oos !== 'true') show = false;
                     if (currentFilter === 'PRIORITY' && row.dataset.priority !== 'true') show = false;
                 }
+                if (show && currentSquareFilter && currentSquareFilter.type) {
+                    show = rowMatchesSquareFilter(row, currentSquareFilter.type);
+                }
                 row.style.display = show ? '' : 'none';
             });
 
-            // Re-calculate Branch Headers and hide empty ones
+            const visibleTotal = Array.from(rows).filter(r => r.style.display !== 'none').length;
+            updateSquareFilterBanner(visibleTotal);
+
             const branchNodes = container.querySelectorAll('.branch-details');
             branchNodes.forEach(branch => {
                 const visibleRows = Array.from(branch.querySelectorAll('.ro-row')).filter(r => r.style.display !== 'none');
                 branch.style.display = visibleRows.length === 0 ? 'none' : '';
-                
+                if (visibleRows.length > 0 && currentSquareFilter) branch.open = true;
                 const titleEl = branch.querySelector('.branch-title-text');
                 if (titleEl) {
                     const originalName = branch.dataset.branchName;
@@ -6203,18 +6766,18 @@
                 }
             });
 
-            // Hide empty Subregions
             const subNodes = container.querySelectorAll('.subregion-details');
             subNodes.forEach(sub => {
                 const visibleRows = Array.from(sub.querySelectorAll('.ro-row')).filter(r => r.style.display !== 'none');
                 sub.style.display = visibleRows.length === 0 ? 'none' : '';
+                if (visibleRows.length > 0 && currentSquareFilter) sub.open = true;
             });
 
-            // Hide empty Regions
             const regNodes = container.querySelectorAll('.region-details');
             regNodes.forEach(reg => {
                 const visibleRows = Array.from(reg.querySelectorAll('.ro-row')).filter(r => r.style.display !== 'none');
                 reg.style.display = visibleRows.length === 0 ? 'none' : '';
+                if (visibleRows.length > 0 && currentSquareFilter) reg.open = true;
             });
         }
 
@@ -6471,6 +7034,13 @@
                     queuesSubmenu.classList.add('open');
                     queuesToggle.classList.add('expanded');
                     queuesToggle.classList.add('active');
+                }
+                const gardaSubmenu = document.getElementById('garda-submenu');
+                const gardaToggle = document.getElementById('menu-garda');
+                if (['spend-view', 'summary-view'].includes(viewId) && gardaSubmenu && gardaToggle) {
+                    gardaSubmenu.classList.add('open');
+                    gardaToggle.classList.add('expanded');
+                    gardaToggle.classList.add('active');
                 }
             }
             
