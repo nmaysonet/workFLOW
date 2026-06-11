@@ -1397,10 +1397,20 @@
             return entries;
         }
 
+        function getWorkflowActivityFallbackNote(safeRo) {
+            const roActivity = globalWorkflowActivityState && globalWorkflowActivityState[safeRo] ? globalWorkflowActivityState[safeRo] : {};
+            const directLatest = roActivity.latestNote || roActivity.lastNote || '';
+            return isMeaningfulNote(directLatest) ? String(directLatest || '').trim() : '';
+        }
+
         function getLatestMeaningfulNote(safeRo) {
             const entries = getActivityEntries(safeRo);
             const found = entries.find(e => e.actionType === 'NOTE_ADDED' && isMeaningfulNote(e.noteText));
             if (found) return found.noteText;
+
+            const workflowActivityLatest = getWorkflowActivityFallbackNote(safeRo);
+            if (workflowActivityLatest) return workflowActivityLatest;
+
             return globalRoNotesState[safeRo] || '';
         }
 
@@ -1432,6 +1442,11 @@
             const entries = getActivityEntries(safeRo);
             const found = entries.find(e => e.actionType === 'NOTE_ADDED' && e.dateKey && e.dateKey <= dateKey && isMeaningfulNote(e.noteText));
             if (found) return true;
+
+            const roActivity = globalWorkflowActivityState && globalWorkflowActivityState[safeRo] ? globalWorkflowActivityState[safeRo] : {};
+            const workflowActivityLatest = getWorkflowActivityFallbackNote(safeRo);
+            if (workflowActivityLatest && (!roActivity.lastNoteDate || roActivity.lastNoteDate <= dateKey)) return true;
+
             const legacyNote = globalRoNotesState[safeRo] || '';
             return isMeaningfulNote(legacyNote);
         }
@@ -1453,7 +1468,9 @@
             if (!container) return;
 
             const entries = getActivityEntries(safeRo);
-            const legacyNote = globalRoNotesState[safeRo];
+            const fallbackActivityNote = getWorkflowActivityFallbackNote(safeRo);
+            const legacyNote = globalRoNotesState[safeRo] || fallbackActivityNote;
+            const legacyNoteLabel = globalRoNotesState[safeRo] ? 'Legacy Latest Note' : 'Latest Note from Workflow Activity';
             const today = getLocalDateKey(new Date());
 
             if (entries.length === 0 && (!legacyNote || !legacyNote.trim())) {
@@ -1486,7 +1503,7 @@
             });
 
             if (entries.length === 0 && legacyNote && legacyNote.trim()) {
-                html += `<div class="activity-date-group"><div class="activity-date-title">Legacy Latest Note</div><div class="activity-entry locked"><div class="activity-entry-meta">Migrated display only</div><div class="activity-entry-text">${escapeHtml(legacyNote)}</div></div></div>`;
+                html += `<div class="activity-date-group"><div class="activity-date-title">${escapeHtml(legacyNoteLabel)}</div><div class="activity-entry locked"><div class="activity-entry-meta">Recovered display source</div><div class="activity-entry-text">${escapeHtml(legacyNote)}</div></div></div>`;
             }
 
             container.innerHTML = html;
@@ -5505,13 +5522,13 @@
                     ros.forEach(ro => {
                         if (ro.roNum && !ro.roNum.startsWith('NO RO') && !ro.roNum.startsWith('SEE_OTHER:')) {
                             let safeRo = ro.roNum.replace(/[.#$\[\]]/g, '_');
-                            let n = globalRoNotesState[safeRo];
+                            let n = getLatestMeaningfulNote(safeRo);
                             if (n && n.trim() !== '') {
                                 notes.push(`<b>[${ro.roNum}]</b> ${n.trim()}`);
                             }
                         } else if (ro.roNum && (ro.roNum.startsWith('NO RO') || ro.roNum.startsWith('SEE_OTHER:'))) {
                             let safeRo = ro.roNum.replace(/[.#$\[\]]/g, '_');
-                            let n = globalRoNotesState[safeRo];
+                            let n = getLatestMeaningfulNote(safeRo);
                             if (n && n.trim() !== '') {
                                 notes.push(`<b>[NO ACTIVE RO]</b> ${n.trim()}`);
                             }
