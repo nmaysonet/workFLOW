@@ -7287,4 +7287,144 @@
 
 </script>
 </body>
-</html>
+</html><!-- NOTE SAVE FIREBASE CONFIRMATION HOTFIX -->
+<script>
+(function workflowConfirmedNoteSaveFix(){
+    function noteSaveTimeout(ms) {
+        return new Promise((_, reject) => setTimeout(() => reject(new Error('Firebase save confirmation timed out')), ms));
+    }
+
+    function getDatabaseOrNull() {
+        try {
+            if (typeof db !== 'undefined' && db) return db;
+            if (typeof firebase !== 'undefined' && firebase.apps && firebase.apps.length) {
+                db = firebase.database();
+                return db;
+            }
+        } catch (err) {
+            console.warn('Firebase database is not available for note save:', err);
+        }
+        return null;
+    }
+
+    function mergeLocalNoteState(safeRo, roNumber, noteText, entry, dateKey, actionType) {
+        try {
+            globalRoNotesState = Object.assign({}, globalRoNotesState || {}, { [safeRo]: noteText });
+            const current = Object.assign({}, (globalWorkflowActivityState || {})[safeRo] || {});
+            const activityLog = Object.assign({}, current.activityLog || {});
+            const dayLog = Object.assign({}, activityLog[dateKey] || {});
+            const entryKey = entry && entry.localKey ? entry.localKey : ('local_' + Date.now());
+            dayLog[entryKey] = Object.assign({}, entry || {}, { localKey: undefined });
+            activityLog[dateKey] = dayLog;
+            globalWorkflowActivityState = Object.assign({}, globalWorkflowActivityState || {}, {
+                [safeRo]: Object.assign({}, current, {
+                    activityLog,
+                    hasMeaningfulNote: true,
+                    latestNote: noteText,
+                    lastTouchedAt: entry.timestamp,
+                    lastTouchedDate: dateKey,
+                    lastNoteAt: entry.timestamp,
+                    lastNoteDate: dateKey,
+                    lastActionType: actionType || 'NOTE_ADDED',
+                    roNumber: roNumber || current.roNumber || '',
+                    unitNo: entry.unitNo || current.unitNo || '',
+                    branch: entry.branch || current.branch || '',
+                    lastTouchedByOwner: entry.owner || current.lastTouchedByOwner || ''
+                })
+            });
+        } catch (err) {
+            console.warn('Local note state merge failed:', err);
+        }
+    }
+
+    window.saveNote = async function confirmedFirebaseSaveNote() {
+        if (!currentEditingRo) return;
+
+        const saveBtn = document.querySelector('#note-modal .btn-save');
+        const textarea = document.getElementById('note-textarea');
+        const noteText = textarea ? String(textarea.value || '').trim() : '';
+
+        if (!isMeaningfulNote(noteText)) {
+            alert('Please enter a meaningful update with at least 15 characters.');
+            return;
+        }
+
+        const latestNote = String(getLatestMeaningfulNote(currentEditingRo) || '').trim();
+        if (latestNote && latestNote.toLowerCase() === noteText.toLowerCase()) {
+            alert('This update is the same as the latest saved note. Add a new meaningful update if something changed.');
+            return;
+        }
+
+        const safeRo = currentEditingRo;
+        const roNumber = currentEditingRoNum || currentEditingRo;
+        const database = getDatabaseOrNull();
+        if (!database) {
+            alert('Firebase is not connected. The update was not saved. Refresh the page and try again.');
+            return;
+        }
+
+        const nowIso = new Date().toISOString();
+        const dateKey = (typeof getTodayKey === 'function') ? getTodayKey() : nowIso.slice(0, 10);
+        const roContext = (typeof getRoContextBySafeRo === 'function') ? (getRoContextBySafeRo(safeRo) || {}) : {};
+        const assignedOwner = roContext.owner || roContext.queueName || roContext.queueSource || '';
+        const actionType = 'NOTE_ADDED';
+        const activityRef = database.ref(`workflowActivity/${safeRo}/activityLog/${dateKey}`).push();
+        const activityKey = activityRef.key || ('note_' + Date.now());
+
+        const entry = {
+            timestamp: nowIso,
+            dateKey,
+            actionType,
+            note: noteText,
+            roNumber: roNumber || roContext.roNum || '',
+            unitNo: roContext.unitNo || roContext.unit || '',
+            branch: roContext.branch || roContext.branchName || roContext.site || '',
+            owner: assignedOwner,
+            source: 'message-button'
+        };
+
+        const updates = {};
+        updates[`roNotes/${safeRo}`] = noteText;
+        updates[`workflowActivity/${safeRo}/activityLog/${dateKey}/${activityKey}`] = entry;
+        updates[`workflowActivity/${safeRo}/lastTouchedAt`] = nowIso;
+        updates[`workflowActivity/${safeRo}/lastTouchedDate`] = dateKey;
+        updates[`workflowActivity/${safeRo}/lastTouchedByOwner`] = assignedOwner;
+        updates[`workflowActivity/${safeRo}/lastActionType`] = actionType;
+        updates[`workflowActivity/${safeRo}/roNumber`] = roNumber || roContext.roNum || '';
+        updates[`workflowActivity/${safeRo}/unitNo`] = entry.unitNo || '';
+        updates[`workflowActivity/${safeRo}/branch`] = entry.branch || '';
+        updates[`workflowActivity/${safeRo}/hasMeaningfulNote`] = true;
+        updates[`workflowActivity/${safeRo}/lastNoteAt`] = nowIso;
+        updates[`workflowActivity/${safeRo}/lastNoteDate`] = dateKey;
+        updates[`workflowActivity/${safeRo}/latestNote`] = noteText;
+
+        if (saveBtn) {
+            saveBtn.disabled = true;
+            saveBtn.innerText = 'Saving...';
+        }
+
+        try {
+            await Promise.race([
+                database.ref().update(updates),
+                noteSaveTimeout(12000)
+            ]);
+
+            mergeLocalNoteState(safeRo, roNumber, noteText, Object.assign({ localKey: activityKey }, entry), dateKey, actionType);
+            if (textarea) textarea.value = '';
+            try { renderNoteActivityLog(safeRo); } catch(e) {}
+            try { updateAllNoteButtons(); } catch(e) {}
+            try { scheduleRealtimeComplianceRefresh('note-save-confirmed'); } catch(e) {}
+            try { refreshActiveViewPreservingDrilldown(); } catch(e) {}
+            closeNoteModal();
+        } catch (err) {
+            console.warn('Firebase note save did not complete:', err);
+            alert('The note did not save to Firebase. Please check your connection and try again.');
+        } finally {
+            if (saveBtn) {
+                saveBtn.disabled = false;
+                saveBtn.innerText = 'Save Update';
+            }
+        }
+    };
+})();
+</script>
