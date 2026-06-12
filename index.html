@@ -2185,7 +2185,11 @@
         }
 
         function isCompletedRepClassReviewOnly(ro) {
-            return !!(ro && !ro.isOpen && isCompletedOrFinalStatus(ro.status) && hasRepairClassTransfer(ro));
+            // Completed work should only appear in queue drilldowns while the REPCLASS
+            // recommendation still needs a coordinator decision. Once the coordinator
+            // accepts or declines the recommendation, it is cleared from the active
+            // drilldown queue and remains available only through the saved memo state.
+            return !!(ro && !ro.isOpen && isCompletedOrFinalStatus(ro.status) && hasRepairClassTransfer(ro) && !isRepairClassReviewCleared(ro));
         }
 
         function shouldOpenVroForRepairClassReview(ro) {
