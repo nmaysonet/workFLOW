@@ -77,11 +77,11 @@
         @keyframes bump { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-1.5px); } }
         @keyframes moveRoad { from { stroke-dashoffset: 0; } to { stroke-dashoffset: 15; } }
         
-        .logo-spin { animation: spin 4s linear infinite; transform-origin: center; display: inline-block; }
+        .logo-spin { animation: none !important; transform-origin: center; display: inline-block; }
         .moving-truck-svg { overflow: visible; }
-        .truck-body { animation: bump 0.4s ease-in-out infinite; }
-        .wheel { animation: spin 0.8s linear infinite; }
-        .road-line { animation: moveRoad 0.4s linear infinite; }
+        .truck-body { animation: none !important; }
+        .wheel { animation: none !important; }
+        .road-line { animation: none !important; }
 
         /* Main Content Area */
         .main-content { flex-grow: 1; display: flex; flex-direction: column; overflow-y: auto; overflow-x: hidden; }
@@ -220,16 +220,20 @@
             <span class="logo-plus">+</span>
         </div>
 
-        <div class="menu-item" onclick="goWorkflowTab('home-view', 'menu-home')">Home Dashboard</div>
+        <div class="menu-item" id="menu-home" onclick="goWorkflowTab('home-view', 'menu-home')">Home Dashboard</div>
         <div class="menu-item submenu-toggle" id="menu-queues" onclick="toggleQueuesMenu()">Queues</div>
         <div class="submenu" id="queues-submenu">
-            <div class="menu-item" onclick="goWorkflowTab('vended-view', 'menu-vended', true)">Vended Repair Queue</div>
-            <div class="menu-item" onclick="goWorkflowTab('pm-view', 'menu-pm', true)">PM Queue</div>
-            <div class="menu-item" onclick="goWorkflowTab('ers-view', 'menu-ers', true)">ERS Queue</div>
+            <div class="menu-item" id="menu-vended" onclick="goWorkflowTab('vended-view', 'menu-vended', true)">Vended Repair Queue</div>
+            <div class="menu-item" id="menu-pm" onclick="goWorkflowTab('pm-view', 'menu-pm', true)">PM Queue</div>
+            <div class="menu-item" id="menu-ers" onclick="goWorkflowTab('ers-view', 'menu-ers', true)">ERS Queue</div>
+            <div class="menu-item" id="menu-prebilling" onclick="goWorkflowTab('prebilling-view', 'menu-prebilling', true)">Pre-Billing Queue</div>
         </div>
-        <div class="menu-item active">Vendor Search</div>
-        <div class="menu-item" onclick="goWorkflowTab('spend-view', 'menu-spend')">Weekly Spend Matrix</div>
-        <div class="menu-item" onclick="goWorkflowTab('summary-view', 'menu-summary')">Consolidation Summary</div>
+        <div class="menu-item active" id="menu-vendor">Vendor Search</div>
+        <div class="menu-item submenu-toggle" id="menu-garda" onclick="toggleGardaMenu()">Garda Reporting Menu</div>
+        <div class="submenu" id="garda-submenu">
+            <div class="menu-item" id="menu-spend" onclick="goWorkflowTab('spend-view', 'menu-spend', false, true)">Weekly Spend Matrix</div>
+            <div class="menu-item" id="menu-summary" onclick="goWorkflowTab('summary-view', 'menu-summary', false, true)">Consolidation Summary</div>
+        </div>
         
         <div class="sidebar-truck">
             <svg width="140" height="70" viewBox="0 0 120 60" xmlns="http://www.w3.org/2000/svg" class="moving-truck-svg">
@@ -295,21 +299,32 @@
 
     <script>
 
-        function goWorkflowTab(viewId, menuId, expandQueues = false) {
+        function goWorkflowTab(viewId, menuId, expandQueues = false, expandGarda = false) {
+            const navTarget = {
+                viewId: viewId,
+                menuId: menuId,
+                expandQueues: !!expandQueues,
+                expandGarda: !!expandGarda,
+                ts: Date.now()
+            };
             try {
-                sessionStorage.setItem('workflow_nav_target', JSON.stringify({
-                    viewId: viewId,
-                    menuId: menuId,
-                    expandQueues: !!expandQueues,
-                    ts: Date.now()
-                }));
+                sessionStorage.setItem('workflow_nav_target', JSON.stringify(navTarget));
+                localStorage.setItem('workflow_nav_target', JSON.stringify(navTarget));
             } catch (e) {}
-            window.location.href = 'index.html';
+            window.location.href = 'index.html#' + encodeURIComponent(viewId);
         }
 
         function toggleQueuesMenu() {
             const submenu = document.getElementById('queues-submenu');
             const toggle = document.getElementById('menu-queues');
+            if (!submenu || !toggle) return;
+            submenu.classList.toggle('open');
+            toggle.classList.toggle('expanded');
+        }
+
+        function toggleGardaMenu() {
+            const submenu = document.getElementById('garda-submenu');
+            const toggle = document.getElementById('menu-garda');
             if (!submenu || !toggle) return;
             submenu.classList.toggle('open');
             toggle.classList.toggle('expanded');
