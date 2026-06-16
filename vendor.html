@@ -182,6 +182,41 @@
         .btn-revealed-sm { background-color: #fff; color: #334155; border: 1px solid #cbd5e1; cursor: text; user-select: all; flex: 2; font-size: 11px; }
         .btn-disabled-sm { background-color: #fff; color: #cbd5e1; cursor: not-allowed; border: 1px dashed #e2e8f0; }
 
+
+
+        /* Purple Wave Vendor Enhancements */
+        .tile-meta-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 10px; }
+        .tile-badge-stack { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; justify-content: flex-end; }
+        .priority-badge { display: inline-flex; align-items: center; gap: 5px; padding: 5px 8px; border-radius: 999px; font-size: 10px; font-weight: 900; letter-spacing: 0.45px; text-transform: uppercase; background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; white-space: nowrap; }
+        .priority-badge.priority-1 { background: #111827; color: var(--gold); border-color: #111827; }
+        .priority-badge.priority-2 { background: #fff7ed; color: #9a3412; border-color: #fed7aa; }
+        .priority-badge.priority-3 { background: #eff6ff; color: #1d4ed8; border-color: #bfdbfe; }
+        .scope-square { width: 42px; height: 42px; border-radius: 8px; border: 2px solid var(--gold); background: #fffbea; color: #111827; font-size: 10px; font-weight: 900; cursor: pointer; display: inline-flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; line-height: 1; text-transform: uppercase; box-shadow: 0 2px 4px rgba(0,0,0,0.08); transition: all 0.2s ease; flex-shrink: 0; }
+        .scope-square:hover { transform: translateY(-1px); background: var(--gold); color: #111827; box-shadow: 0 4px 9px rgba(0,0,0,0.14); }
+        .scope-square span { font-size: 15px; line-height: 1; }
+        .btn-portal { padding: 13px 10px; border: none; border-radius: 4px; font-weight: 900; font-size: 12px; text-transform: uppercase; cursor: pointer; text-align: center; transition: all 0.2s; display: inline-flex; justify-content: center; align-items: center; gap: 8px; letter-spacing: 0.5px; width: 100%; background: var(--gold); color: #111827; box-shadow: inset 0 -2px 0 rgba(0,0,0,0.12); }
+        .btn-portal:hover { background: var(--gold-hover); transform: translateY(-1px); box-shadow: 0 3px 7px rgba(0,0,0,0.15); }
+        .btn-portal-cover { min-height: 66px; font-size: 13px; }
+        .btn-portal-cover-all { min-height: 112px; font-size: 14px; }
+        .internal-simple-line { font-size: 13px; font-weight: 650; color: #334155; line-height: 1.5; margin-bottom: 9px; display: flex; gap: 8px; align-items: flex-start; }
+        .internal-simple-line strong { color: #111827; }
+        .modal-overlay { position: fixed; inset: 0; background: rgba(15, 23, 42, 0.78); z-index: 9999; display: none; align-items: center; justify-content: center; padding: 24px; }
+        .modal-overlay.open { display: flex; }
+        .portal-modal-window { width: min(96vw, 1500px); height: 92vh; background: #fff; border-radius: 10px; box-shadow: 0 24px 70px rgba(0,0,0,0.45); overflow: hidden; display: flex; flex-direction: column; border-top: 5px solid var(--gold); }
+        .modal-header { min-height: 54px; padding: 12px 16px; background: #111827; color: #fff; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+        .modal-title { font-size: 15px; font-weight: 900; letter-spacing: 0.3px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .modal-controls { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+        .modal-open-tab { color: #111827; background: var(--gold); border-radius: 4px; padding: 9px 11px; font-size: 11px; font-weight: 900; text-transform: uppercase; }
+        .modal-close { background: transparent; color: #fff; border: 1px solid rgba(255,255,255,0.35); width: 34px; height: 34px; border-radius: 4px; cursor: pointer; font-size: 20px; line-height: 1; }
+        .modal-close:hover { background: rgba(255,255,255,0.12); }
+        .portal-frame { flex: 1; width: 100%; border: none; background: #f8fafc; }
+        .scope-modal-window { width: min(760px, 94vw); max-height: 86vh; background: #fff; border-radius: 10px; box-shadow: 0 24px 70px rgba(0,0,0,0.45); overflow: hidden; border-top: 5px solid var(--gold); }
+        .scope-body { padding: 22px; overflow-y: auto; max-height: calc(86vh - 54px); }
+        .scope-subtitle { color: #64748b; font-size: 12px; font-weight: 800; text-transform: uppercase; margin-bottom: 12px; letter-spacing: 0.6px; }
+        .scope-grid { display: flex; flex-wrap: wrap; gap: 8px; }
+        .scope-chip { background: #f8fafc; border: 1px solid #cbd5e1; color: #334155; border-radius: 999px; padding: 8px 10px; font-size: 12px; font-weight: 800; }
+        .scope-note { margin-top: 14px; padding: 12px; background: #fffbea; border: 1px solid #fde68a; border-radius: 6px; color: #713f12; font-size: 12px; line-height: 1.5; font-weight: 700; }
+
         .no-data-msg { grid-column: 1 / -1; text-align: center; padding: 3rem; color: #888; font-size: 16px; font-weight: 600; background: #fff; border-radius: 6px; border: 1px dashed #ccc; }
     </style>
 </head>
@@ -297,6 +332,36 @@
         </div>
     </div>
 
+
+    <div id="portal-modal" class="modal-overlay" onclick="if(event.target === this) closePortalModal()">
+        <div class="portal-modal-window">
+            <div class="modal-header">
+                <div id="portal-modal-title" class="modal-title">Dispatch Portal</div>
+                <div class="modal-controls">
+                    <a id="portal-newtab-link" class="modal-open-tab" href="#" target="_blank" rel="noopener noreferrer">Open New Tab</a>
+                    <button class="modal-close" onclick="closePortalModal()" title="Close">×</button>
+                </div>
+            </div>
+            <iframe id="portal-frame" class="portal-frame" src="about:blank" title="Dispatch Portal"></iframe>
+        </div>
+    </div>
+
+    <div id="scope-modal" class="modal-overlay" onclick="if(event.target === this) closeScopeModal()">
+        <div class="scope-modal-window">
+            <div class="modal-header">
+                <div id="scope-modal-title" class="modal-title">Vendor Scope</div>
+                <div class="modal-controls">
+                    <button class="modal-close" onclick="closeScopeModal()" title="Close">×</button>
+                </div>
+            </div>
+            <div class="scope-body">
+                <div class="scope-subtitle">Approved / Known Scope of Work</div>
+                <div id="scope-modal-body" class="scope-grid"></div>
+                <div class="scope-note">Use this scope as the first-pass routing guide before dispatching. If the request is outside of the listed scope, move to the next priority vendor or escalate per process.</div>
+            </div>
+        </div>
+    </div>
+
     <script>
 
         function goWorkflowTab(viewId, menuId, expandQueues = false, expandGarda = false) {
@@ -382,14 +447,176 @@
         const dataList = document.getElementById('locations');
         const gridContainer = document.getElementById('vendor-grid');
 
-        window.revealRowInfo = function(btnElement, text, icon) {
-            const parent = btnElement.parentElement;
-            parent.innerHTML = `<div class="btn-revealed">${icon} ${text}</div>`;
-        };
+        function escapeHtml(value) {
+            return String(value || '')
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
+        }
 
-        window.revealSelfInfo = function(btnElement, text, icon) {
-            btnElement.outerHTML = `<div class="btn-revealed-sm">${icon} ${text}</div>`;
-        };
+        function escapeJs(value) {
+            return String(value || '')
+                .replace(/\\/g, '\\\\')
+                .replace(/'/g, "\\'")
+                .replace(/`/g, '\\`')
+                .replace(/\r/g, '')
+                .replace(/\n/g, '\\n');
+        }
+
+        function cleanValue(value) {
+            const text = String(value || '').trim();
+            if (!text || ['N/A', 'NA', 'NONE', 'NULL'].includes(text.toUpperCase())) return '';
+            return text.replace(/\.0$/, '');
+        }
+
+        function normalizeLocationCode(value) {
+            return cleanValue(value).replace(/\D/g, '');
+        }
+
+        function customerFromContactSheet(sheetName) {
+            return String(sheetName || '').replace(/\s*contact\s*$/i, '').trim();
+        }
+
+        function normalizeUrl(url) {
+            const text = cleanValue(url);
+            if (!text) return '';
+            if (/^https?:\/\//i.test(text)) return text;
+            return 'https://' + text;
+        }
+
+        function priorityNumber(priority) {
+            const match = String(priority || '').match(/\d+/);
+            return match ? parseInt(match[0], 10) : 999;
+        }
+
+        function isPurpleWaveCustomer(customer) {
+            return String(customer || '').trim().toLowerCase() === 'purple wave';
+        }
+
+        function getLookupCodeForGroup(customer, groupStr) {
+            const raw = cleanValue(groupStr);
+            if (!raw) return '';
+
+            if (isPurpleWaveCustomer(customer)) {
+                const leading = raw.match(/^\s*([A-Za-z0-9]+(?:[_-][A-Za-z0-9]+)?)/);
+                return normalizeLocationCode(leading ? leading[1] : raw);
+            }
+
+            const branchStyle = raw.match(/(\d+\s*-\s*\d+)/);
+            if (branchStyle) return normalizeLocationCode(branchStyle[1]);
+
+            const leadingDigits = raw.match(/^\D*(\d+(?:[-_]\w+)*)/);
+            return normalizeLocationCode(leadingDigits ? leadingDigits[1] : raw);
+        }
+
+        function getContactForGroup(customer, groupStr) {
+            const code = getLookupCodeForGroup(customer, groupStr);
+            if (!code) return null;
+            return allContacts[`${customer}|${code}`] || allContacts[code] || null;
+        }
+
+        function getLocationDisplay(item) {
+            const contact = getContactForGroup(item.customer, item.group);
+            if (contact && isPurpleWaveCustomer(item.customer)) {
+                const title = [contact.custId, contact.locationName].filter(Boolean).join(' - ');
+                const cityState = [contact.city, contact.st].filter(Boolean).join(', ');
+                return [item.group, title, cityState].filter(Boolean).join(' | ');
+            }
+            return item.group;
+        }
+
+        function itemMatchesSearch(item, searchTerm) {
+            if (!searchTerm) return true;
+            const contact = getContactForGroup(item.customer, item.group);
+            const contactSearchText = contact ? [
+                contact.rawNumber,
+                contact.custId,
+                contact.locationName,
+                contact.address,
+                contact.city,
+                contact.st,
+                contact.zip,
+                contact.branchPhone
+            ].join(' ') : '';
+            const haystack = [item.group, getLocationDisplay(item), item.vendor, item.scope, contactSearchText]
+                .join(' ')
+                .toLowerCase();
+            return haystack.includes(searchTerm);
+        }
+
+        function revealRowInfo(btnElement, text, icon) {
+            const parent = btnElement.parentElement;
+            parent.innerHTML = `<div class="btn-revealed">${escapeHtml(icon)} ${escapeHtml(text)}</div>`;
+        }
+        window.revealRowInfo = revealRowInfo;
+
+        function revealSelfInfo(btnElement, text, icon) {
+            btnElement.outerHTML = `<div class="btn-revealed-sm">${escapeHtml(icon)} ${escapeHtml(text)}</div>`;
+        }
+        window.revealSelfInfo = revealSelfInfo;
+
+        function shouldDispatchOpenNewTab(vendorName) {
+            const vendor = String(vendorName || '').toLowerCase();
+            return vendor.includes('goodyear') || vendor.includes('bridgestone');
+        }
+
+        function openPortalModal(rawUrl, vendorName) {
+            const url = normalizeUrl(rawUrl);
+            if (!url) return;
+            if (shouldDispatchOpenNewTab(vendorName)) {
+                window.open(url, '_blank', 'noopener,noreferrer');
+                return;
+            }
+            const modal = document.getElementById('portal-modal');
+            const frame = document.getElementById('portal-frame');
+            const title = document.getElementById('portal-modal-title');
+            const newTab = document.getElementById('portal-newtab-link');
+
+            title.innerText = `${vendorName || 'Vendor'} Dispatch Portal`;
+            newTab.href = url;
+            frame.src = url;
+            modal.classList.add('open');
+        }
+        window.openPortalModal = openPortalModal;
+
+        function closePortalModal() {
+            const modal = document.getElementById('portal-modal');
+            const frame = document.getElementById('portal-frame');
+            modal.classList.remove('open');
+            frame.src = 'about:blank';
+        }
+        window.closePortalModal = closePortalModal;
+
+        function openScopeModal(vendorName, scopeText, priorityText) {
+            const modal = document.getElementById('scope-modal');
+            const title = document.getElementById('scope-modal-title');
+            const body = document.getElementById('scope-modal-body');
+            const scopes = String(scopeText || '')
+                .split(/[,;]|\band\b/i)
+                .map(s => s.trim())
+                .filter(Boolean);
+
+            title.innerText = `${vendorName || 'Vendor'} Scope${priorityText ? ' • Priority ' + priorityText : ''}`;
+            body.innerHTML = scopes.length
+                ? scopes.map(scope => `<div class="scope-chip">${escapeHtml(scope)}</div>`).join('')
+                : '<div class="scope-chip">No scope listed</div>';
+            modal.classList.add('open');
+        }
+        window.openScopeModal = openScopeModal;
+
+        function closeScopeModal() {
+            document.getElementById('scope-modal').classList.remove('open');
+        }
+        window.closeScopeModal = closeScopeModal;
+
+        window.addEventListener('keydown', (event) => {
+            if (event.key === 'Escape') {
+                closePortalModal();
+                closeScopeModal();
+            }
+        });
 
         async function loadExcelFile() {
             const controller = new AbortController();
@@ -397,6 +624,9 @@
 
             try {
                 gridContainer.innerHTML = '<div class="no-data-msg">Loading vendor and branch network...</div>';
+                allVendors = [];
+                allContacts = {};
+                uniqueCustomers = new Set();
                 
                 const storageRef = firebase.storage().ref().child('vendor_locator.xlsx');
                 const downloadUrl = await storageRef.getDownloadURL();
@@ -414,15 +644,13 @@
                 const workbook = XLSX.read(arrayBuffer, { type: 'array' });
                 
                 workbook.SheetNames.forEach(sheetName => {
+                    const sheetData = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName]);
                     if (sheetName.toLowerCase().includes('contact')) {
-                        formatContactData(XLSX.utils.sheet_to_json(workbook.Sheets[sheetName]));
-                    } else {
-                        const sheetData = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName]);
-                        if (sheetData.length > 0) {
-                            uniqueCustomers.add(sheetName);
-                            const formattedData = formatVendorData(sheetData, sheetName);
-                            allVendors = allVendors.concat(formattedData);
-                        }
+                        formatContactData(sheetData, sheetName);
+                    } else if (sheetData.length > 0) {
+                        uniqueCustomers.add(sheetName);
+                        const formattedData = formatVendorData(sheetData, sheetName);
+                        allVendors = allVendors.concat(formattedData);
                     }
                 });
 
@@ -435,35 +663,41 @@
                 const errorMsg = error.name === 'AbortError' 
                     ? 'Firebase Storage request timed out' 
                     : `Firebase Storage fetch failed: ${error.message}`;
-                gridContainer.innerHTML = `<div class="no-data-msg" style="color: #d9534f;"><b>Error:</b> ${errorMsg}</div>`;
+                gridContainer.innerHTML = `<div class="no-data-msg" style="color: #d9534f;"><b>Error:</b> ${escapeHtml(errorMsg)}</div>`;
             } finally {
                 clearTimeout(timeout);
             }
         }
 
-        function formatContactData(jsonArray) {
+        function formatContactData(jsonArray, sheetName) {
+            const contactCustomer = customerFromContactSheet(sheetName);
+
             jsonArray.forEach(row => {
                 const keys = Object.keys(row);
                 
                 const getCol = (possibleHeaders) => {
                     for (let header of possibleHeaders) {
                         const foundKey = keys.find(k => k.trim().toLowerCase() === header.toLowerCase());
-                        if (foundKey) return (row[foundKey] || '').toString().trim();
+                        if (foundKey) return cleanValue(row[foundKey]);
                     }
                     return '';
                 };
 
-                let rawBranch = getCol(['Branch Number', 'Branch', 'BranchNum']).replace(/\.0$/, '');
-                let normBranch = rawBranch.replace(/\D/g, '');
+                let rawBranch = getCol(['Branch Number', 'Branch', 'BranchNum', 'Yard Number', 'Yard', 'Yard #', 'YardNumber']);
+                let normBranch = normalizeLocationCode(rawBranch);
                 
                 if (!normBranch) return;
 
-                allContacts[normBranch] = {
+                const contact = {
+                    customer: contactCustomer,
+                    rawNumber: rawBranch,
+                    locationName: getCol(['Yard Name', 'Sublot Name', 'Transaction Center (Branch)', 'Branch Name', 'Location Name']),
+                    custId: getCol(['CUSTID', 'CustID', 'Cust ID', 'Customer ID', 'CID']),
                     address: getCol(['Address']),
                     city: getCol(['City']),
-                    st: getCol(['ST', 'State']),
-                    zip: getCol(['Zip', 'Zip Code']).replace(/\.0$/, ''),
-                    branchPhone: getCol(['Branch Phone']),
+                    st: getCol(['ST', 'State', 'State/Province']),
+                    zip: getCol(['Zip', 'Zip Code', 'ZIP']).replace(/\.0$/, ''),
+                    branchPhone: getCol(['Phone', 'Phone Number', 'Branch Phone']),
                     branchEmail: getCol(['Branch Email Address', 'Branch Email']),
                     bmName: getCol(['Branch Manager/Operations Manager', 'Branch Manager', 'BM Name']),
                     bmEmail: getCol(['BM Email Address', 'BM Email']),
@@ -471,6 +705,9 @@
                     gmEmail: getCol(['GM Email Address', 'GM Email']),
                     gmPhone: getCol(['Cell Number', 'GM Cell Number', 'GM Phone'])
                 };
+
+                allContacts[`${contactCustomer}|${normBranch}`] = contact;
+                if (!allContacts[normBranch]) allContacts[normBranch] = contact;
             });
         }
 
@@ -480,28 +717,26 @@
                 const getCol = (possibleHeaders) => {
                     for (let header of possibleHeaders) {
                         const foundKey = keys.find(k => k.trim().toLowerCase() === header.toLowerCase());
-                        if (foundKey) return (row[foundKey] || '').toString().trim();
+                        if (foundKey) return cleanValue(row[foundKey]);
                     }
                     return '';
                 };
 
-                let emailRaw = getCol(['Contact Email', 'Email']);
-                let phoneRaw = getCol(['Contact Phone#', 'Contact Phone', 'Phone']);
-
-                if (emailRaw.toUpperCase() === 'N/A') emailRaw = '';
-                if (phoneRaw.toUpperCase() === 'N/A') phoneRaw = '';
-
                 return {
                     customer: customerName,
-                    group: getCol(['Group', 'Location']),
+                    group: getCol(['Group', 'Location', 'Yard Number', 'Branch']),
                     vendor: getCol(['Vendor', 'Vendor Name']),
-                    email: emailRaw,
-                    phone: phoneRaw
+                    email: getCol(['Contact Email', 'Email']),
+                    phone: getCol(['Contact Phone#', 'Contact Phone', 'Phone']),
+                    dispatchLink: getCol(['Dispatch Link', 'Dispatch URL', 'Portal Link', 'Vendor Portal', 'Link']),
+                    scope: getCol(['Scope of Work', 'Scope', 'Work Scope', 'Capabilities']),
+                    priority: getCol(['Priority', 'Vendor Priority', 'Rank'])
                 };
             }).filter(item => item.group !== ''); 
         }
 
         function populateCustomerDropdown() {
+            customerSelect.innerHTML = '<option value="ALL">All Customers</option>';
             Array.from(uniqueCustomers).sort().forEach(cust => {
                 const option = document.createElement('option');
                 option.value = cust;
@@ -524,7 +759,12 @@
                 filteredLocations = allVendors.filter(v => v.customer === selectedCustomer);
             }
 
-            const uniqueLocations = [...new Set(filteredLocations.map(item => item.group))].sort();
+            const locationMap = new Map();
+            filteredLocations.forEach(item => {
+                const display = getLocationDisplay(item);
+                if (display && !locationMap.has(display)) locationMap.set(display, display);
+            });
+            const uniqueLocations = Array.from(locationMap.values()).sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
             
             dataList.innerHTML = '';
             uniqueLocations.forEach(loc => {
@@ -535,25 +775,41 @@
         }
 
         function generateMiniAction(val, icon, type) {
-            if (!val) return `<div class="btn-disabled-sm">${icon} N/A</div>`;
+            if (!val) return `<div class="btn-disabled-sm">${escapeHtml(icon)} N/A</div>`;
             
-            const safeVal = val.replace(/'/g, "\\'");
+            const safeVal = escapeJs(val);
             if (type === 'mailto') {
-                return `<a href="mailto:${val}" class="btn-dispatch-sm" title="Email ${val}">${icon} MAIL</a>`;
+                return `<a href="mailto:${escapeHtml(val)}" class="btn-dispatch-sm" title="Email ${escapeHtml(val)}">${escapeHtml(icon)} MAIL</a>`;
             } else {
-                return `<button class="btn-call-sm" onclick="revealSelfInfo(this, '${safeVal}', '${icon}')" title="Call ${val}">${icon} CALL</button>`;
+                return `<button class="btn-call-sm" onclick="revealSelfInfo(this, '${safeVal}', '${escapeJs(icon)}')" title="Call ${escapeHtml(val)}">${escapeHtml(icon)} CALL</button>`;
             }
         }
 
         function buildContactTile(contact, groupStr) {
+            const fullAddress = [contact.address, contact.city, contact.st, contact.zip].filter(Boolean).join(', ').replace(', ' + contact.zip, ' ' + contact.zip);
+
+            if (isPurpleWaveCustomer(contact.customer)) {
+                const title = [contact.custId, contact.locationName || groupStr].filter(Boolean).join(' - ');
+                return `
+                    <div class="vendor-tile contact-tile">
+                        <div class="tile-header">
+                            <span class="customer-badge" style="background: #fca5a5; color: #7f1d1d;">INTERNAL BRANCH</span>
+                        </div>
+                        <div class="vendor-name" style="color: #991b1b; font-size: 17px;">${escapeHtml(title)}</div>
+                        <div class="internal-simple-line"><span>📍</span><span>${escapeHtml(fullAddress || 'Address Not Listed')}</span></div>
+                        <div class="internal-simple-line"><span>📞</span><span><strong>${escapeHtml(contact.branchPhone || 'Phone Not Listed')}</strong></span></div>
+                    </div>
+                `;
+            }
+
             return `
                 <div class="vendor-tile contact-tile">
                     <div class="tile-header">
                         <span class="customer-badge" style="background: #fca5a5; color: #7f1d1d;">INTERNAL BRANCH CONTACT</span>
                     </div>
-                    <div class="vendor-name" style="color: #991b1b; font-size: 16px;">${groupStr}</div>
+                    <div class="vendor-name" style="color: #991b1b; font-size: 16px;">${escapeHtml(groupStr)}</div>
                     <div class="vendor-location" style="margin-bottom: 15px;">
-                        <span>📍</span> ${contact.address}, ${contact.city}, ${contact.st} ${contact.zip}
+                        <span>📍</span> ${escapeHtml(fullAddress)}
                     </div>
                     
                     <hr class="divider" style="margin-bottom: 12px; border-top-color: #fca5a5;">
@@ -567,7 +823,7 @@
                     </div>
 
                     <div class="contact-section">
-                        <div class="contact-label">Branch Mgr: ${contact.bmName || 'Unlisted'}</div>
+                        <div class="contact-label">Branch Mgr: ${escapeHtml(contact.bmName || 'Unlisted')}</div>
                         <div class="tile-actions compressed">
                             ${generateMiniAction(contact.bmEmail, '✉️', 'mailto')}
                             ${generateMiniAction(contact.bmPhone, '📞', 'tel')}
@@ -585,12 +841,80 @@
             `;
         }
 
+        function buildPriorityBadge(priority) {
+            const p = priorityNumber(priority);
+            if (p === 999) return '';
+            const label = `Priority ${p}`;
+            return `<span class="priority-badge priority-${p}">${escapeHtml(label)}</span>`;
+        }
+
+        function buildScopeSquare(item) {
+            if (!item.scope) return '';
+            return `<button class="scope-square" onclick="openScopeModal('${escapeJs(item.vendor)}', '${escapeJs(item.scope)}', '${escapeJs(item.priority)}')" title="View scope of work"><span>🛠️</span>Scope</button>`;
+        }
+
+        function buildVendorTile(item) {
+            const safeEmail = escapeJs(item.email);
+            const safePhone = escapeJs(item.phone);
+            const priorityHtml = buildPriorityBadge(item.priority);
+            const scopeHtml = buildScopeSquare(item);
+            const dispatchUrl = normalizeUrl(item.dispatchLink);
+            const hasDispatchLink = !!dispatchUrl;
+            const missingEmail = !item.email;
+            const missingPhone = !item.phone;
+            const missingContactCount = (missingEmail ? 1 : 0) + (missingPhone ? 1 : 0);
+            const portalClass = `btn-portal${hasDispatchLink && missingContactCount === 1 ? ' btn-portal-cover' : ''}${hasDispatchLink && missingContactCount === 2 ? ' btn-portal-cover-all' : ''}`;
+            const openNewTab = shouldDispatchOpenNewTab(item.vendor);
+
+            const dispatchLinkHtml = hasDispatchLink
+                ? `<div class="action-row">${openNewTab
+                    ? `<a href="${escapeHtml(dispatchUrl)}" target="_blank" rel="noopener noreferrer" class="${portalClass}" title="Open Dispatch Portal in New Tab">🚀 Dispatch Portal ↗</a>`
+                    : `<button class="${portalClass}" onclick="openPortalModal('${escapeJs(dispatchUrl)}', '${escapeJs(item.vendor)}')" title="Open Dispatch Portal">🚀 Dispatch Portal</button>`
+                }</div>`
+                : '';
+
+            const emailActionHtml = item.email 
+                ? `<div class="action-row">
+                       <a href="mailto:${escapeHtml(item.email)}" class="btn-dispatch" title="Open Email Draft">✉️ DISPATCH</a>
+                       <button class="btn-view" onclick="revealRowInfo(this, '${safeEmail}', '✉️')" title="View Email Address">👁️ VIEW</button>
+                   </div>` 
+                : (hasDispatchLink ? '' : `<div class="action-row"><div class="btn-disabled">✉️ NO EMAIL</div></div>`);
+
+            const phoneActionHtml = item.phone 
+                ? `<div class="action-row">
+                       <button class="btn-call" onclick="revealRowInfo(this, '${safePhone}', '📞')" title="View Phone Number">📞 CALL</button>
+                   </div>` 
+                : (hasDispatchLink ? '' : `<div class="action-row"><div class="btn-disabled">📞 NO PHONE</div></div>`);
+
+            return `
+                <div class="vendor-tile">
+                    <div class="tile-meta-row">
+                        <span class="customer-badge">${escapeHtml(item.customer)}</span>
+                        <div class="tile-badge-stack">
+                            ${priorityHtml}
+                            ${scopeHtml}
+                        </div>
+                    </div>
+                    <div class="vendor-name">${escapeHtml(item.vendor)}</div>
+                    <div class="vendor-location">
+                        <span>📍</span> ${escapeHtml(getLocationDisplay(item))}
+                    </div>
+                    <hr class="divider">
+                    <div class="tile-actions">
+                        ${dispatchLinkHtml}
+                        ${emailActionHtml}
+                        ${phoneActionHtml}
+                    </div>
+                </div>
+            `;
+        }
+
         function renderTiles() {
             const selectedCustomer = customerSelect.value;
-            const searchTerm = searchInput.value.toLowerCase();
+            const searchTerm = searchInput.value.toLowerCase().trim();
 
             // PREVENT INITIAL DATA DUMP AND FORCE SELECTION
-            if (selectedCustomer === 'ALL' || searchTerm.trim() === '') {
+            if (selectedCustomer === 'ALL' || searchTerm === '') {
                 gridContainer.innerHTML = '<div class="no-data-msg">Please select a Customer Group AND type a Branch/Location to view vendors.</div>';
                 return;
             }
@@ -601,7 +925,7 @@
                 filteredData = filteredData.filter(item => item.customer === selectedCustomer);
             }
             if (searchTerm !== '') {
-                filteredData = filteredData.filter(item => item.group.toLowerCase().includes(searchTerm));
+                filteredData = filteredData.filter(item => itemMatchesSearch(item, searchTerm));
             }
 
             if (filteredData.length === 0) {
@@ -609,57 +933,27 @@
                 return;
             }
 
+            filteredData.sort((a, b) => {
+                const pri = priorityNumber(a.priority) - priorityNumber(b.priority);
+                if (pri !== 0) return pri;
+                return String(a.vendor || '').localeCompare(String(b.vendor || ''), undefined, { numeric: true });
+            });
+
             const dataToRender = filteredData.slice(0, 100);
             let htmlOutput = '';
 
-            const uniqueRenderedGroups = [...new Set(dataToRender.map(item => item.group))];
+            const uniqueRenderedGroups = [...new Set(dataToRender.map(item => `${item.customer}|${item.group}`))];
             
-            uniqueRenderedGroups.forEach(groupStr => {
-                let match = groupStr.match(/(\d+-\d+)/);
-                if (match) {
-                    let normCode = match[1].replace(/\D/g, '');
-                    let contact = allContacts[normCode];
-                    
-                    if (contact) {
-                        htmlOutput += buildContactTile(contact, groupStr);
-                    }
+            uniqueRenderedGroups.forEach(groupKey => {
+                const [customer, ...groupParts] = groupKey.split('|');
+                const groupStr = groupParts.join('|');
+                const contact = getContactForGroup(customer, groupStr);
+                if (contact) {
+                    htmlOutput += buildContactTile(contact, groupStr);
                 }
             });
 
-            htmlOutput += dataToRender.map(item => {
-                const safeEmail = item.email.replace(/'/g, "\\'");
-                const safePhone = item.phone.replace(/'/g, "\\'");
-
-                const emailActionHtml = item.email 
-                    ? `<div class="action-row">
-                           <a href="mailto:${item.email}" class="btn-dispatch" title="Open Email Draft">✉️ DISPATCH</a>
-                           <button class="btn-view" onclick="revealRowInfo(this, '${safeEmail}', '✉️')" title="View Email Address">👁️ VIEW</button>
-                       </div>` 
-                    : `<div class="action-row"><div class="btn-disabled">✉️ NO EMAIL</div></div>`;
-
-                const phoneActionHtml = item.phone 
-                    ? `<div class="action-row">
-                           <button class="btn-call" onclick="revealRowInfo(this, '${safePhone}', '📞')" title="View Phone Number">📞 CALL</button>
-                       </div>` 
-                    : `<div class="action-row"><div class="btn-disabled">📞 NO PHONE</div></div>`;
-
-                return `
-                    <div class="vendor-tile">
-                        <div class="tile-header">
-                            <span class="customer-badge">${item.customer}</span>
-                        </div>
-                        <div class="vendor-name">${item.vendor}</div>
-                        <div class="vendor-location">
-                            <span>📍</span> ${item.group}
-                        </div>
-                        <hr class="divider">
-                        <div class="tile-actions">
-                            ${emailActionHtml}
-                            ${phoneActionHtml}
-                        </div>
-                    </div>
-                `;
-            }).join('');
+            htmlOutput += dataToRender.map(item => buildVendorTile(item)).join('');
 
             gridContainer.innerHTML = htmlOutput;
 
@@ -667,6 +961,7 @@
                 gridContainer.innerHTML += `<div class="no-data-msg">Showing first 100 results. Please narrow down the list.</div>`;
             }
         }
+
     </script>
 </body>
 </html>
