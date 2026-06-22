@@ -371,7 +371,7 @@
         .compliance-reporting-table { min-width:1120px; table-layout:fixed; }
         .compliance-reporting-table th { background:#1F4E78; color:#fff; border-bottom:2px solid #17365d; padding:8px 6px; font-size:10px; line-height:1.15; text-align:center; vertical-align:middle; white-space:normal; }
         .compliance-reporting-table th:hover { background:#17365d; }
-        .compliance-reporting-table td { font-size:12px; padding:10px 8px; }
+        .compliance-reporting-table td { font-size:12px; padding:10px 8px; text-align:center; vertical-align:middle; }
         .compliance-sort-btn { width:100%; background:transparent; border:none; color:inherit; font:inherit; font-weight:900; text-transform:uppercase; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; gap:4px; line-height:1.15; text-align:center; white-space:normal; padding:0; }
         .compliance-sort-btn:hover { color:#fff; opacity:.92; }
         .compliance-sort-indicator { font-size:9px; opacity:.78; line-height:1; flex:0 0 auto; }
@@ -2827,14 +2827,14 @@
                     <td>${escapeHtml(r.reportDate || '')}</td>
                     <td>${renderComplianceSnapshotStatus(getComplianceSnapshotStatus(r.reportDate))}</td>
                     <td>${escapeHtml(r.team || '')}</td>
-                    <td style="font-weight:800;">${escapeHtml(r.coordinator || '')}</td>
-                    <td style="text-align:right;">${renderComplianceScore(r.workflowScore !== undefined ? r.workflowScore : r.notesScore)}</td>
-                    <td style="text-align:right;">${renderComplianceScore(r.repclassScore)}</td>
-                    <td style="text-align:right;">${renderComplianceScore(r.overallScore)}</td>
-                    <td style="text-align:right;">${Number(r.notesCompleted || 0).toLocaleString()}</td>
-                    <td style="text-align:right;">${Number(r.notesRequired || 0).toLocaleString()}</td>
-                    <td style="text-align:right;">${Number(r.repclassCompleted || 0).toLocaleString()}</td>
-                    <td style="text-align:right;">${Number(r.repclassRequired || 0).toLocaleString()}</td>
+                    <td style="font-weight:800; text-align:center;">${escapeHtml(r.coordinator || '')}</td>
+                    <td>${renderComplianceScore(r.workflowScore !== undefined ? r.workflowScore : r.notesScore)}</td>
+                    <td>${renderComplianceScore(r.repclassScore)}</td>
+                    <td>${renderComplianceScore(r.overallScore)}</td>
+                    <td>${Number(r.notesCompleted || 0).toLocaleString()}</td>
+                    <td>${Number(r.notesRequired || 0).toLocaleString()}</td>
+                    <td>${Number(r.repclassCompleted || 0).toLocaleString()}</td>
+                    <td>${Number(r.repclassRequired || 0).toLocaleString()}</td>
                     <td>${escapeHtml(formatComplianceLoggedAt(r.loggedAt))}</td>
                 </tr>`).join('');
             updateComplianceReportingSortIndicators();
