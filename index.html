@@ -350,6 +350,38 @@
         .activity-entry-text { font-size: 12px; color: #334155; line-height: 1.35; white-space: pre-wrap; }
         .activity-helper-text { font-size: 11px; color: #64748b; margin-bottom: 8px; line-height: 1.35; }
 
+
+
+        .compliance-reporting-toolbar { display:flex; align-items:flex-end; gap:12px; flex-wrap:wrap; margin-bottom:15px; padding-bottom:15px; border-bottom:1px solid var(--border); }
+        .compliance-reporting-field { display:flex; flex-direction:column; gap:5px; min-width:180px; }
+        .compliance-reporting-field label { font-size:10px; font-weight:900; color:#64748b; text-transform:uppercase; letter-spacing:0.5px; }
+        .compliance-reporting-field select,
+        .compliance-reporting-field input { padding:9px 10px; border:1px solid #cbd5e1; border-radius:4px; font-size:13px; font-weight:700; background:#fff; color:#334155; }
+        .compliance-reporting-note { font-size:12px; color:#64748b; font-weight:700; line-height:1.35; margin-bottom:12px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:6px; padding:9px 12px; }
+        .compliance-reporting-summary-grid { display:grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap:12px; margin-bottom:15px; }
+        .compliance-reporting-summary-card { background:#fff; border:1px solid #e2e8f0; border-top:4px solid var(--gold); border-radius:7px; padding:12px; box-shadow:0 1px 3px rgba(15,23,42,0.08); }
+        .compliance-reporting-summary-card .summary-label { font-size:10px; font-weight:900; color:#64748b; text-transform:uppercase; letter-spacing:.45px; margin-bottom:6px; }
+        .compliance-reporting-summary-card .summary-value { font-size:22px; font-weight:900; color:#334155; line-height:1.1; }
+        .compliance-reporting-summary-card .summary-sub { font-size:11px; font-weight:800; color:#64748b; margin-top:4px; line-height:1.25; }
+        .compliance-reporting-message { text-align:center; padding:28px 16px; color:#64748b; font-weight:800; background:#f8fafc; border:1px dashed #cbd5e1; border-radius:6px; }
+        .compliance-score-pill { display:inline-flex; align-items:center; justify-content:center; min-width:54px; padding:4px 8px; border-radius:999px; font-size:11px; font-weight:900; }
+        .compliance-score-green { background:#dcfce7; color:#166534; border:1px solid #86efac; }
+        .compliance-score-yellow { background:#fef3c7; color:#92400e; border:1px solid #fde68a; }
+        .compliance-score-red { background:#fee2e2; color:#991b1b; border:1px solid #fecaca; }
+        .compliance-reporting-table { min-width:1120px; table-layout:fixed; }
+        .compliance-reporting-table th { background:#1F4E78; color:#fff; border-bottom:2px solid #17365d; padding:8px 6px; font-size:10px; line-height:1.15; text-align:center; vertical-align:middle; white-space:normal; }
+        .compliance-reporting-table th:hover { background:#17365d; }
+        .compliance-reporting-table td { font-size:12px; padding:10px 8px; }
+        .compliance-sort-btn { width:100%; background:transparent; border:none; color:inherit; font:inherit; font-weight:900; text-transform:uppercase; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; gap:4px; line-height:1.15; text-align:center; white-space:normal; padding:0; }
+        .compliance-sort-btn:hover { color:#fff; opacity:.92; }
+        .compliance-sort-indicator { font-size:9px; opacity:.78; line-height:1; flex:0 0 auto; }
+
+        .compliance-status-pill { display:inline-block; padding:4px 7px; border-radius:999px; font-size:9px; font-weight:900; text-transform:uppercase; letter-spacing:.3px; white-space:nowrap; }
+        .compliance-status-live { background:#dbeafe; color:#1e3a8a; border:1px solid #93c5fd; }
+        .compliance-status-final { background:#dcfce7; color:#166534; border:1px solid #86efac; }
+        .btn-blue { background:#1F4E78 !important; color:#fff !important; }
+        .btn-blue:hover { background:#17365d !important; }
+
         .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center; }
         .modal-box { background: white; padding: 20px; border-radius: 8px; width: 450px; max-width: 90%; box-shadow: 0 4px 15px rgba(0,0,0,0.2); }
         .modal-header { font-size: 18px; font-weight: bold; margin-bottom: 15px; color: #333; display: flex; justify-content: space-between; align-items: center;}
@@ -404,10 +436,11 @@
             <div class="menu-item" id="menu-nonosc" onclick="navigate('nonosc-view', this)">Non-OSC Queue</div>
         </div>
         <div class="menu-item" onclick="window.location.href='vendor.html'">Vendor Search</div>
-        <div class="menu-item submenu-toggle" id="menu-garda" onclick="toggleGardaMenu()">Garda</div>
+        <div class="menu-item submenu-toggle" id="menu-garda" onclick="toggleGardaMenu()">Reporting Menu</div>
         <div class="submenu" id="garda-submenu">
             <div class="menu-item" id="menu-spend" onclick="navigate('spend-view', this)">Weekly Spend Matrix</div>
             <div class="menu-item" id="menu-summary" onclick="navigate('summary-view', this)">Consolidation Summary</div>
+            <div class="menu-item" id="menu-compliance-reporting" onclick="navigate('compliance-reporting-view', this)">Compliance Reporting</div>
         </div>
         
         <div class="sidebar-truck">
@@ -695,6 +728,81 @@
                             </tr>
                         </thead>
                         <tbody id="amerit-oos-table-body"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+
+
+        <div id="compliance-reporting-view" class="view-section">
+            <div class="view-title">
+                <span style="font-weight: 700;">Compliance Reporting</span>
+                <div class="controls-group" style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+                    <button class="btn-blue" onclick="captureComplianceSnapshotNow()">Capture Current Snapshot</button>
+                    <button class="btn-green" onclick="exportComplianceReportingToExcel()">&#11139; Export Report</button>
+                </div>
+            </div>
+            <div class="drilldown-container">
+                <div class="compliance-reporting-note">
+                    Daily coordinator scorecards are logged to Firebase by report date so prior-day and historical Notes and Repclass Compliance can be reviewed later. Current-day rows show LIVE and continue updating against the queue scores until the day closes at 11:59 PM ET; prior dates show CLOSED SCORE and remain frozen. Select a team first to load the report.
+                </div>
+                <div class="compliance-reporting-toolbar">
+                    <div class="compliance-reporting-field">
+                        <label for="compliance-team-filter">Team Required</label>
+                        <select id="compliance-team-filter" onchange="loadComplianceReporting()">
+                            <option value="">Select Team</option>
+                            <option value="Vended Repair">Vended Repair</option>
+                            <option value="PM">PM</option>
+                            <option value="Consolidated View">Consolidated View</option>
+                        </select>
+                    </div>
+                    <div class="compliance-reporting-field">
+                        <label for="compliance-date-from">Date From</label>
+                        <input type="date" id="compliance-date-from" onchange="loadComplianceReporting()">
+                    </div>
+                    <div class="compliance-reporting-field">
+                        <label for="compliance-date-to">Date To</label>
+                        <input type="date" id="compliance-date-to" onchange="loadComplianceReporting()">
+                    </div>
+                    <button class="btn-action" onclick="loadComplianceReporting()">Refresh Report</button>
+                </div>
+                <div id="compliance-reporting-summary" class="compliance-reporting-summary-grid"></div>
+                <div class="table-wrapper">
+                    <table id="compliance-reporting-table" class="compliance-reporting-table">
+                        <colgroup>
+                            <col style="width:8%;">
+                            <col style="width:9%;">
+                            <col style="width:10%;">
+                            <col style="width:15%;">
+                            <col style="width:8%;">
+                            <col style="width:8%;">
+                            <col style="width:8%;">
+                            <col style="width:9%;">
+                            <col style="width:9%;">
+                            <col style="width:9%;">
+                            <col style="width:9%;">
+                            <col style="width:8%;">
+                        </colgroup>
+                        <thead>
+                            <tr>
+                                <th><button class="compliance-sort-btn" onclick="sortComplianceReporting('reportDate')">Date <span class="compliance-sort-indicator" data-compliance-sort-indicator="reportDate">↕</span></button></th>
+                                <th><button class="compliance-sort-btn" onclick="sortComplianceReporting('status')">Status <span class="compliance-sort-indicator" data-compliance-sort-indicator="status">↕</span></button></th>
+                                <th><button class="compliance-sort-btn" onclick="sortComplianceReporting('team')">Team <span class="compliance-sort-indicator" data-compliance-sort-indicator="team">↕</span></button></th>
+                                <th><button class="compliance-sort-btn" onclick="sortComplianceReporting('coordinator')">Coordinator <span class="compliance-sort-indicator" data-compliance-sort-indicator="coordinator">↕</span></button></th>
+                                <th><button class="compliance-sort-btn" onclick="sortComplianceReporting('notesScore')">Notes Score <span class="compliance-sort-indicator" data-compliance-sort-indicator="notesScore">↕</span></button></th>
+                                <th><button class="compliance-sort-btn" onclick="sortComplianceReporting('repclassScore')">Repclass <span class="compliance-sort-indicator" data-compliance-sort-indicator="repclassScore">↕</span></button></th>
+                                <th><button class="compliance-sort-btn" onclick="sortComplianceReporting('overallScore')">Overall Score <span class="compliance-sort-indicator" data-compliance-sort-indicator="overallScore">↕</span></button></th>
+                                <th><button class="compliance-sort-btn" onclick="sortComplianceReporting('notesCompleted')">Notes Completed <span class="compliance-sort-indicator" data-compliance-sort-indicator="notesCompleted">↕</span></button></th>
+                                <th><button class="compliance-sort-btn" onclick="sortComplianceReporting('notesRequired')">Notes Required <span class="compliance-sort-indicator" data-compliance-sort-indicator="notesRequired">↕</span></button></th>
+                                <th><button class="compliance-sort-btn" onclick="sortComplianceReporting('repclassCompleted')">Repclass Completed <span class="compliance-sort-indicator" data-compliance-sort-indicator="repclassCompleted">↕</span></button></th>
+                                <th><button class="compliance-sort-btn" onclick="sortComplianceReporting('repclassRequired')">Repclass Required <span class="compliance-sort-indicator" data-compliance-sort-indicator="repclassRequired">↕</span></button></th>
+                                <th><button class="compliance-sort-btn" onclick="sortComplianceReporting('loggedAt')">Logged At <span class="compliance-sort-indicator" data-compliance-sort-indicator="loggedAt">↕</span></button></th>
+                            </tr>
+                        </thead>
+                        <tbody id="compliance-reporting-body">
+                            <tr><td colspan="12"><div class="compliance-reporting-message">Select a team to load compliance reporting.</div></td></tr>
+                        </tbody>
                     </table>
                 </div>
             </div>
@@ -1329,6 +1437,10 @@
         let currentRepairClassReviewSafeRo = null;
         let globalSpendChangeLogRows = [];
         let globalWeeklySpendHistoryRows = [];
+        let globalComplianceReportingRows = [];
+        let complianceReportingSortState = { key: 'reportDate', direction: 'desc' };
+        let complianceSnapshotLogTimer = null;
+        let complianceReportingDefaultsInitialized = false;
         let expandedWeeklySpendWeeks = {};
         let globalManualGovernorLockState = {};
         let manualGovernorResetWriteInFlight = false;
@@ -1354,18 +1466,21 @@
                         globalRoCheckState = snapshot.val() || {};
                         try { localStorage.setItem('workflow_checks', JSON.stringify(globalRoCheckState)); } catch(e) {}
                         updateAllStatusBadges();
+                        scheduleComplianceDailySnapshotLog();
                     });
 
                     db.ref('roNotes').on('value', (snapshot) => {
                         globalRoNotesState = snapshot.val() || {};
                         try { localStorage.setItem('workflow_notes', JSON.stringify(globalRoNotesState)); } catch(e) {}
                         updateAllNoteButtons();
+                        scheduleComplianceDailySnapshotLog();
                     });
 
                     db.ref('workflowActivity').on('value', (snapshot) => {
                         globalWorkflowActivityState = snapshot.val() || {};
                         try { localStorage.setItem('workflow_activity', JSON.stringify(globalWorkflowActivityState)); } catch(e) {}
                         updateAllNoteButtons();
+                        scheduleComplianceDailySnapshotLog();
                         if (processedData && processedData.length > 0) {
                             refreshActiveViewPreservingDrilldown();
                         }
@@ -1376,6 +1491,7 @@
                         globalRepairClassReviewState = snapshot.val() || {};
                         try { localStorage.setItem('repclass_review_status', JSON.stringify(globalRepairClassReviewState)); } catch(e) {}
                         updateAllRepairClassBadges();
+                        scheduleComplianceDailySnapshotLog();
                         if (processedData && processedData.length > 0) {
                             refreshActiveViewPreservingDrilldown();
                         }
@@ -1385,6 +1501,7 @@
                         globalEcdReviewState = snapshot.val() || {};
                         try { localStorage.setItem('ecd_review_status', JSON.stringify(globalEcdReviewState)); } catch(e) {}
                         updateAllEcdReviewButtons();
+                        scheduleComplianceDailySnapshotLog();
                         if (processedData && processedData.length > 0) {
                             refreshActiveViewPreservingDrilldown();
                         }
@@ -2287,6 +2404,489 @@
                     </div>
                 </div>`;
         }
+
+
+
+        function getComplianceReportingDateNY(date = new Date()) {
+            try {
+                const parts = new Intl.DateTimeFormat('en-CA', {
+                    timeZone: 'America/New_York',
+                    year: 'numeric',
+                    month: '2-digit',
+                    day: '2-digit'
+                }).formatToParts(date);
+                const out = {};
+                parts.forEach(p => { if (p.type !== 'literal') out[p.type] = p.value; });
+                return `${out.year}-${out.month}-${out.day}`;
+            } catch (e) {
+                return getLocalDateKey(date);
+            }
+        }
+
+        function getCompliancePriorDateNY() {
+            const d = new Date();
+            d.setDate(d.getDate() - 1);
+            return getComplianceReportingDateNY(d);
+        }
+
+        function normalizeComplianceKey(value) {
+            const cleaned = String(value || '').trim().toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '');
+            return safeFirebaseKey(cleaned || 'unknown');
+        }
+
+        function getComplianceTeamKey(team) {
+            return normalizeComplianceKey(team || '');
+        }
+
+
+        function getComplianceSnapshotStatus(reportDate) {
+            const dateKey = String(reportDate || getComplianceReportingDateNY());
+            const todayKey = getComplianceReportingDateNY();
+            return dateKey < todayKey ? 'CLOSED_SCORE' : 'LIVE';
+        }
+
+        function renderComplianceSnapshotStatus(status) {
+            const raw = String(status || '').toUpperCase().replace(/\s+/g, '_');
+            const clean = (raw === 'FINAL' || raw === 'CLOSED' || raw === 'CLOSED_SCORE') ? 'CLOSED_SCORE' : 'LIVE';
+            const label = clean === 'CLOSED_SCORE' ? 'CLOSED SCORE' : 'LIVE';
+            const cls = clean === 'CLOSED_SCORE' ? 'compliance-status-final' : 'compliance-status-live';
+            return `<span class="compliance-status-pill ${cls}" title="${clean === 'CLOSED_SCORE' ? 'Prior-date score is frozen for reporting.' : 'Current-day score keeps updating until the reporting date rolls over after 11:59 PM ET.'}">${label}</span>`;
+        }
+
+        function complianceDateRangeIncludesToday(filters) {
+            if (!filters || !filters.from || !filters.to) return false;
+            const todayKey = getComplianceReportingDateNY();
+            return filters.from <= todayKey && filters.to >= todayKey;
+        }
+
+        function averageScore(values) {
+            const nums = (values || []).map(v => Number(v)).filter(v => !isNaN(v));
+            if (!nums.length) return 100;
+            return Math.round(nums.reduce((a, b) => a + b, 0) / nums.length);
+        }
+
+        function scoreFromCounts(completed, required, fallbackScore = 100) {
+            const req = Number(required || 0);
+            const comp = Number(completed || 0);
+            if (req > 0) return Math.round((comp / req) * 100);
+            const fallback = Number(fallbackScore);
+            return isNaN(fallback) ? 100 : Math.round(fallback);
+        }
+
+        function getComplianceOwnerData(owner, team) {
+            const cleanTeam = String(team || '').toUpperCase();
+            if (cleanTeam === 'PM') {
+                return (processedData || []).filter(ro => ro && ro.kpiOwners && ro.kpiOwners.includes(owner));
+            }
+            return (processedData || []).filter(ro => ro && (
+                (ro.kpiOwners && ro.kpiOwners.includes(owner)) || hasDedicatedShopOwner(ro, owner)
+            ));
+        }
+
+        function buildCoordinatorComplianceRecord(owner, team, reportDate) {
+            const ownerDataAll = getComplianceOwnerData(owner, team);
+            const isPMTeam = String(team || '').toUpperCase() === 'PM';
+            const notesPopulation = getTileOpenRoPopulation(ownerDataAll, isPMTeam);
+            const repairPopulation = ownerDataAll.filter(ro => ro && (ro.isOpen || isCompletedRepClassReviewOnly(ro)));
+            const workflow = calculateWorkflowCompliance(notesPopulation, reportDate);
+            const repair = calculateRepairClassCompliance(repairPopulation);
+            const workflowScore = Number(workflow.score !== undefined ? workflow.score : 100);
+            const notesOnlyScore = Number(workflow.notesPct !== undefined ? workflow.notesPct : workflowScore);
+            const notesScore = workflowScore; // Reporting score must match the big Daily Workflow Compliance percentage shown on the coordinator tile.
+            const repclassScore = Number(repair.score !== undefined ? repair.score : 100);
+            const overallScore = averageScore([workflowScore, repclassScore]);
+            const snapshotStatus = getComplianceSnapshotStatus(reportDate);
+            const nowIso = new Date().toISOString();
+            const coordinator = String(owner || 'Unassigned').trim() || 'Unassigned';
+            const coordinatorKey = normalizeComplianceKey(coordinator);
+            const teamKey = getComplianceTeamKey(team);
+            return {
+                reportDate,
+                team,
+                teamKey,
+                coordinator,
+                coordinatorKey,
+                notesScore,
+                workflowScore,
+                notesOnlyScore,
+                repclassScore,
+                overallScore,
+                snapshotStatus,
+                scoreBasis: 'Matches coordinator tile: Daily Workflow Compliance score + Daily Repair Class Compliance score',
+                notesCompleted: Number(workflow.notes || 0),
+                notesRequired: Number(workflow.total || 0),
+                workflowTouched: Number(workflow.touched || 0),
+                workflowRequired: Number(workflow.total || 0),
+                dispatchCompleted: Number(workflow.dispatched || 0),
+                dispatchRequired: Number(workflow.dispatchTotal || 0),
+                ecdCompleted: Number(workflow.ecdUpdated || 0),
+                ecdRequired: Number(workflow.ecdTotal || 0),
+                repclassCompleted: Number(repair.reviewed || 0),
+                repclassRequired: Number(repair.total || 0),
+                repclassReviewNeeded: Number(repair.reviewNeeded || 0),
+                repclassAccepted: Number(repair.accepted || 0),
+                loggedAt: nowIso,
+                source: 'workflow_plus_daily_compliance',
+                workbookFingerprint: currentWorkbookFingerprint || ''
+            };
+        }
+
+        function combineComplianceRecordsByCoordinator(records, reportDate) {
+            const grouped = {};
+            (records || []).forEach(r => {
+                if (!r || !r.coordinatorKey) return;
+                if (!grouped[r.coordinatorKey]) {
+                    grouped[r.coordinatorKey] = {
+                        reportDate,
+                        team: 'Consolidated View',
+                        teamKey: getComplianceTeamKey('Consolidated View'),
+                        coordinator: r.coordinator || 'Unassigned',
+                        coordinatorKey: r.coordinatorKey,
+                        notesCompleted: 0,
+                        notesRequired: 0,
+                        repclassCompleted: 0,
+                        repclassRequired: 0,
+                        workflowTouched: 0,
+                        workflowRequired: 0,
+                        dispatchCompleted: 0,
+                        dispatchRequired: 0,
+                        ecdCompleted: 0,
+                        ecdRequired: 0,
+                        repclassReviewNeeded: 0,
+                        repclassAccepted: 0,
+                        sourceTeams: [],
+                        snapshotStatus: getComplianceSnapshotStatus(reportDate),
+                        source: 'workflow_plus_daily_compliance_consolidated',
+                        workbookFingerprint: currentWorkbookFingerprint || ''
+                    };
+                }
+                const g = grouped[r.coordinatorKey];
+                g.notesCompleted += Number(r.notesCompleted || 0);
+                g.notesRequired += Number(r.notesRequired || 0);
+                g.repclassCompleted += Number(r.repclassCompleted || 0);
+                g.repclassRequired += Number(r.repclassRequired || 0);
+                g.workflowTouched += Number(r.workflowTouched || 0);
+                g.workflowRequired += Number(r.workflowRequired || 0);
+                g.dispatchCompleted += Number(r.dispatchCompleted || 0);
+                g.dispatchRequired += Number(r.dispatchRequired || 0);
+                g.ecdCompleted += Number(r.ecdCompleted || 0);
+                g.ecdRequired += Number(r.ecdRequired || 0);
+                g.repclassReviewNeeded += Number(r.repclassReviewNeeded || 0);
+                g.repclassAccepted += Number(r.repclassAccepted || 0);
+                if (r.team && !g.sourceTeams.includes(r.team)) g.sourceTeams.push(r.team);
+            });
+
+            return Object.values(grouped).map(g => {
+                g.notesOnlyScore = scoreFromCounts(g.notesCompleted, g.notesRequired, 100);
+                g.repclassScore = scoreFromCounts(g.repclassCompleted, g.repclassRequired, 100);
+                g.workflowScore = scoreFromCounts(g.workflowTouched, g.workflowRequired, g.notesOnlyScore);
+                g.notesScore = g.workflowScore; // Keep reporting aligned to the tile's big workflow compliance score.
+                g.overallScore = averageScore([g.workflowScore, g.repclassScore]);
+                g.loggedAt = new Date().toISOString();
+                return g;
+            });
+        }
+
+        function buildDailyComplianceSnapshot(reportDate = getComplianceReportingDateNY()) {
+            const vendedRecords = (vendedOwners || []).map(owner => buildCoordinatorComplianceRecord(owner, 'Vended Repair', reportDate));
+            const pmRecords = (pmOwners || []).map(owner => buildCoordinatorComplianceRecord(owner, 'PM', reportDate));
+            const consolidatedRecords = combineComplianceRecordsByCoordinator(vendedRecords.concat(pmRecords), reportDate);
+            return vendedRecords.concat(pmRecords, consolidatedRecords);
+        }
+
+        function scheduleComplianceDailySnapshotLog() {
+            if (!processedData || processedData.length === 0) return;
+            if (complianceSnapshotLogTimer) clearTimeout(complianceSnapshotLogTimer);
+            complianceSnapshotLogTimer = setTimeout(() => {
+                logDailyComplianceScoresToFirebase().then(() => {
+                    const activeReport = document.getElementById('compliance-reporting-view');
+                    const filters = getComplianceReportingFilters();
+                    if (activeReport && activeReport.classList.contains('active') && filters.team && complianceDateRangeIncludesToday(filters)) {
+                        loadComplianceReporting({ skipLiveRefresh: true });
+                    }
+                }).catch(err => console.warn('Compliance reporting log failed:', err));
+            }, 900);
+        }
+
+        async function logDailyComplianceScoresToFirebase(reportDate = getComplianceReportingDateNY()) {
+            if (!processedData || processedData.length === 0) return [];
+            if (!db && typeof firebase !== 'undefined') db = firebase.database();
+            if (!db) return [];
+            const snapshot = buildDailyComplianceSnapshot(reportDate);
+            const updates = {};
+            snapshot.forEach(record => {
+                const teamKey = record.teamKey || getComplianceTeamKey(record.team);
+                const coordinatorKey = record.coordinatorKey || normalizeComplianceKey(record.coordinator);
+                updates[`complianceReportingLogs/${reportDate}/${teamKey}/${coordinatorKey}`] = record;
+            });
+            if (Object.keys(updates).length) {
+                await db.ref().update(updates);
+            }
+            return snapshot;
+        }
+
+        async function captureComplianceSnapshotNow() {
+            try {
+                const dateKey = getComplianceReportingDateNY();
+                const rows = await logDailyComplianceScoresToFirebase(dateKey);
+                alert(`Compliance snapshot saved for ${dateKey}. ${rows.length} coordinator/team record(s) updated using the same scores shown on the queue tiles.`);
+                loadComplianceReporting();
+            } catch (err) {
+                console.error('Compliance snapshot capture failed:', err);
+                alert('Compliance snapshot could not be saved. Please check Firebase access and try again.');
+            }
+        }
+
+        function initComplianceReportingDefaults() {
+            if (complianceReportingDefaultsInitialized) return;
+            complianceReportingDefaultsInitialized = true;
+            const fromEl = document.getElementById('compliance-date-from');
+            const toEl = document.getElementById('compliance-date-to');
+            if (fromEl && !fromEl.value) fromEl.value = getCompliancePriorDateNY();
+            if (toEl && !toEl.value) toEl.value = getComplianceReportingDateNY();
+        }
+
+        function formatComplianceLoggedAt(value) {
+            if (!value) return '';
+            const d = new Date(value);
+            if (isNaN(d.getTime())) return String(value);
+            return d.toLocaleString([], { month:'numeric', day:'numeric', year:'2-digit', hour:'numeric', minute:'2-digit' });
+        }
+
+        function getComplianceScoreClass(score) {
+            const n = Number(score || 0);
+            if (n >= 85) return 'compliance-score-green';
+            if (n >= 70) return 'compliance-score-yellow';
+            return 'compliance-score-red';
+        }
+
+        function renderComplianceScore(score) {
+            const n = Number(score || 0);
+            return `<span class="compliance-score-pill ${getComplianceScoreClass(n)}">${Math.round(n)}%</span>`;
+        }
+
+        function getComplianceReportingFilters() {
+            initComplianceReportingDefaults();
+            const teamEl = document.getElementById('compliance-team-filter');
+            const fromEl = document.getElementById('compliance-date-from');
+            const toEl = document.getElementById('compliance-date-to');
+            const team = teamEl ? teamEl.value : '';
+            const from = fromEl ? fromEl.value : '';
+            const to = toEl ? toEl.value : '';
+            return { team, teamKey: getComplianceTeamKey(team), from, to };
+        }
+
+        async function loadComplianceReporting(options = {}) {
+            initComplianceReportingDefaults();
+            const body = document.getElementById('compliance-reporting-body');
+            const summary = document.getElementById('compliance-reporting-summary');
+            if (!body || !summary) return;
+            const filters = getComplianceReportingFilters();
+            globalComplianceReportingRows = [];
+
+            if (!filters.team) {
+                summary.innerHTML = '';
+                body.innerHTML = '<tr><td colspan="12"><div class="compliance-reporting-message">Select a team to load compliance reporting.</div></td></tr>';
+                return;
+            }
+            if (!filters.from || !filters.to) {
+                summary.innerHTML = '';
+                body.innerHTML = '<tr><td colspan="12"><div class="compliance-reporting-message">Select both Date From and Date To.</div></td></tr>';
+                return;
+            }
+            if (filters.from > filters.to) {
+                summary.innerHTML = '';
+                body.innerHTML = '<tr><td colspan="12"><div class="compliance-reporting-message">Date From cannot be after Date To.</div></td></tr>';
+                return;
+            }
+
+            body.innerHTML = '<tr><td colspan="12"><div class="compliance-reporting-message">Loading compliance reporting...</div></td></tr>';
+            try {
+                if (!db && typeof firebase !== 'undefined') db = firebase.database();
+                if (!db) throw new Error('Firebase database is not available.');
+                if (!options.skipLiveRefresh && processedData && processedData.length > 0 && complianceDateRangeIncludesToday(filters)) {
+                    await logDailyComplianceScoresToFirebase(getComplianceReportingDateNY());
+                }
+                const snap = await db.ref('complianceReportingLogs').orderByKey().startAt(filters.from).endAt(filters.to).once('value');
+                const rows = [];
+                const dateGroups = snap.val() || {};
+                Object.keys(dateGroups).sort().forEach(dateKey => {
+                    const teamGroup = dateGroups[dateKey] && dateGroups[dateKey][filters.teamKey] ? dateGroups[dateKey][filters.teamKey] : {};
+                    Object.keys(teamGroup).forEach(coordKey => {
+                        rows.push(Object.assign({}, teamGroup[coordKey] || {}, { reportDate: dateKey }));
+                    });
+                });
+                globalComplianceReportingRows = applyComplianceReportingSort(rows);
+                renderComplianceReportingSummary(globalComplianceReportingRows, filters.team);
+                renderComplianceReportingTable(globalComplianceReportingRows);
+            } catch (err) {
+                console.error('Compliance reporting load failed:', err);
+                summary.innerHTML = '';
+                body.innerHTML = `<tr><td colspan="12"><div class="compliance-reporting-message">Compliance reporting could not load: ${escapeHtml(err.message || err)}</div></td></tr>`;
+            }
+        }
+
+        function getComplianceReportingSortValue(row, key) {
+            if (!row) return '';
+            switch (key) {
+                case 'reportDate': return String(row.reportDate || '');
+                case 'status': return getComplianceSnapshotStatus(row.reportDate) === 'CLOSED_SCORE' ? 1 : 0;
+                case 'team': return String(row.team || '').toLowerCase();
+                case 'coordinator': return String(row.coordinator || '').toLowerCase();
+                case 'notesScore': return Number((row.workflowScore !== undefined ? row.workflowScore : row.notesScore) || 0);
+                case 'repclassScore': return Number(row.repclassScore || 0);
+                case 'overallScore': return Number(row.overallScore || 0);
+                case 'notesCompleted': return Number(row.notesCompleted || 0);
+                case 'notesRequired': return Number(row.notesRequired || 0);
+                case 'repclassCompleted': return Number(row.repclassCompleted || 0);
+                case 'repclassRequired': return Number(row.repclassRequired || 0);
+                case 'loggedAt': return row.loggedAt ? Date.parse(row.loggedAt) || 0 : 0;
+                default: return String(row[key] || '').toLowerCase();
+            }
+        }
+
+        function applyComplianceReportingSort(rows) {
+            const state = complianceReportingSortState || { key: 'reportDate', direction: 'desc' };
+            const direction = state.direction === 'asc' ? 1 : -1;
+            return (rows || []).slice().sort((a, b) => {
+                const av = getComplianceReportingSortValue(a, state.key);
+                const bv = getComplianceReportingSortValue(b, state.key);
+                if (typeof av === 'number' || typeof bv === 'number') {
+                    const diff = (Number(av) || 0) - (Number(bv) || 0);
+                    if (diff !== 0) return diff * direction;
+                } else {
+                    const cmp = String(av).localeCompare(String(bv), undefined, { numeric: true, sensitivity: 'base' });
+                    if (cmp !== 0) return cmp * direction;
+                }
+                const dateCmp = String(b.reportDate || '').localeCompare(String(a.reportDate || ''));
+                if (dateCmp !== 0) return dateCmp;
+                return String(a.coordinator || '').localeCompare(String(b.coordinator || ''), undefined, { sensitivity: 'base' });
+            });
+        }
+
+        function sortComplianceReporting(key) {
+            const current = complianceReportingSortState || { key: 'reportDate', direction: 'desc' };
+            const defaultDirection = ['reportDate', 'notesScore', 'repclassScore', 'overallScore', 'notesCompleted', 'notesRequired', 'repclassCompleted', 'repclassRequired', 'loggedAt'].includes(key) ? 'desc' : 'asc';
+            complianceReportingSortState = current.key === key
+                ? { key, direction: current.direction === 'asc' ? 'desc' : 'asc' }
+                : { key, direction: defaultDirection };
+            globalComplianceReportingRows = applyComplianceReportingSort(globalComplianceReportingRows || []);
+            renderComplianceReportingTable(globalComplianceReportingRows);
+        }
+
+        function updateComplianceReportingSortIndicators() {
+            const state = complianceReportingSortState || { key: 'reportDate', direction: 'desc' };
+            document.querySelectorAll('[data-compliance-sort-indicator]').forEach(el => {
+                const key = el.getAttribute('data-compliance-sort-indicator');
+                el.textContent = key === state.key ? (state.direction === 'asc' ? '▲' : '▼') : '↕';
+            });
+        }
+
+        function renderComplianceReportingSummary(rows, team) {
+            const summary = document.getElementById('compliance-reporting-summary');
+            if (!summary) return;
+            if (!rows || !rows.length) {
+                summary.innerHTML = '';
+                return;
+            }
+            const avgNotes = averageScore(rows.map(r => r.notesScore));
+            const avgRep = averageScore(rows.map(r => r.repclassScore));
+            const avgOverall = averageScore(rows.map(r => r.overallScore));
+            const byCoordinator = {};
+            rows.forEach(r => {
+                const key = r.coordinatorKey || normalizeComplianceKey(r.coordinator);
+                if (!byCoordinator[key]) byCoordinator[key] = { name: r.coordinator || 'Unassigned', scores: [], rows: 0 };
+                byCoordinator[key].scores.push(Number(r.overallScore || 0));
+                byCoordinator[key].rows++;
+            });
+            const ranked = Object.values(byCoordinator).map(c => ({
+                name: c.name,
+                avg: averageScore(c.scores),
+                rows: c.rows
+            })).sort((a, b) => b.avg - a.avg || a.name.localeCompare(b.name));
+            const best = ranked[0];
+            const low = ranked[ranked.length - 1];
+            summary.innerHTML = `
+                <div class="compliance-reporting-summary-card"><div class="summary-label">Team</div><div class="summary-value" style="font-size:18px;">${escapeHtml(team)}</div><div class="summary-sub">Filtered reporting view</div></div>
+                <div class="compliance-reporting-summary-card"><div class="summary-label">Avg Notes Score</div><div class="summary-value">${avgNotes}%</div><div class="summary-sub">Live queue score · ${rows.length} coordinator day(s)</div></div>
+                <div class="compliance-reporting-summary-card"><div class="summary-label">Avg Repclass</div><div class="summary-value">${avgRep}%</div><div class="summary-sub">Repair class review compliance</div></div>
+                <div class="compliance-reporting-summary-card"><div class="summary-label">Avg Overall Score</div><div class="summary-value">${avgOverall}%</div><div class="summary-sub">Notes + Repclass average</div></div>
+                <div class="compliance-reporting-summary-card"><div class="summary-label">Best Coordinator</div><div class="summary-value" style="font-size:17px;">${best ? escapeHtml(best.name) : '-'}</div><div class="summary-sub">${best ? best.avg + '% avg overall' : 'No records'}</div></div>
+                <div class="compliance-reporting-summary-card"><div class="summary-label">Lowest Coordinator</div><div class="summary-value" style="font-size:17px;">${low ? escapeHtml(low.name) : '-'}</div><div class="summary-sub">${low ? low.avg + '% avg overall' : 'No records'}</div></div>`;
+        }
+
+        function renderComplianceReportingTable(rows) {
+            const body = document.getElementById('compliance-reporting-body');
+            if (!body) return;
+            if (!rows || !rows.length) {
+                body.innerHTML = '<tr><td colspan="12"><div class="compliance-reporting-message">No compliance records found for the selected team/date range. Use Capture Current Snapshot after dashboard data loads to seed today.</div></td></tr>';
+                return;
+            }
+            body.innerHTML = rows.map(r => `
+                <tr>
+                    <td>${escapeHtml(r.reportDate || '')}</td>
+                    <td>${renderComplianceSnapshotStatus(getComplianceSnapshotStatus(r.reportDate))}</td>
+                    <td>${escapeHtml(r.team || '')}</td>
+                    <td style="font-weight:800;">${escapeHtml(r.coordinator || '')}</td>
+                    <td style="text-align:right;">${renderComplianceScore(r.workflowScore !== undefined ? r.workflowScore : r.notesScore)}</td>
+                    <td style="text-align:right;">${renderComplianceScore(r.repclassScore)}</td>
+                    <td style="text-align:right;">${renderComplianceScore(r.overallScore)}</td>
+                    <td style="text-align:right;">${Number(r.notesCompleted || 0).toLocaleString()}</td>
+                    <td style="text-align:right;">${Number(r.notesRequired || 0).toLocaleString()}</td>
+                    <td style="text-align:right;">${Number(r.repclassCompleted || 0).toLocaleString()}</td>
+                    <td style="text-align:right;">${Number(r.repclassRequired || 0).toLocaleString()}</td>
+                    <td>${escapeHtml(formatComplianceLoggedAt(r.loggedAt))}</td>
+                </tr>`).join('');
+            updateComplianceReportingSortIndicators();
+        }
+
+        function exportComplianceReportingToExcel() {
+            const filters = getComplianceReportingFilters();
+            if (!filters.team) {
+                alert('Select Vended Repair, PM, or Consolidated View before exporting.');
+                return;
+            }
+            const rows = globalComplianceReportingRows || [];
+            if (!rows.length) {
+                alert('No compliance reporting rows are loaded to export. Refresh the report first.');
+                return;
+            }
+            const header = ['Date', 'Status', 'Team', 'Coordinator', 'Notes Score', 'Repclass', 'Overall Score', 'Notes Completed', 'Notes Required', 'Repclass Completed', 'Repclass Required', 'Logged At'];
+            const aoa = [header].concat(rows.map(r => [
+                r.reportDate || '',
+                getComplianceSnapshotStatus(r.reportDate) === 'CLOSED_SCORE' ? 'CLOSED SCORE' : 'LIVE',
+                r.team || '',
+                r.coordinator || '',
+                Math.round(Number((r.workflowScore !== undefined ? r.workflowScore : r.notesScore) || 0)) + '%',
+                Math.round(Number(r.repclassScore || 0)) + '%',
+                Math.round(Number(r.overallScore || 0)) + '%',
+                Number(r.notesCompleted || 0),
+                Number(r.notesRequired || 0),
+                Number(r.repclassCompleted || 0),
+                Number(r.repclassRequired || 0),
+                formatComplianceLoggedAt(r.loggedAt)
+            ]));
+            const ws = XLSX.utils.aoa_to_sheet(aoa);
+            ws['!freeze'] = { xSplit: 0, ySplit: 1 };
+            ws['!cols'] = header.map((h, idx) => {
+                const maxLen = Math.max(String(h).length, ...aoa.slice(1).map(row => String(row[idx] == null ? '' : row[idx]).length));
+                return { wch: Math.min(Math.max(maxLen + 2, 12), 28) };
+            });
+            for (let c = 0; c < header.length; c++) {
+                const cellRef = XLSX.utils.encode_cell({ r: 0, c });
+                if (!ws[cellRef]) continue;
+                ws[cellRef].s = {
+                    font: { bold: true, color: { rgb: 'FFFFFF' } },
+                    fill: { fgColor: { rgb: '1F4E78' } },
+                    alignment: { horizontal: 'center' }
+                };
+            }
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, 'Compliance Reporting');
+            const fileTeam = String(filters.team || '').replace(/[^A-Za-z0-9]+/g, '_').replace(/^_+|_+$/g, '');
+            XLSX.writeFile(wb, `Compliance_Reporting_${fileTeam}_${filters.from}_to_${filters.to}.xlsx`);
+        }
+
 
         function getRepairClassCellHtml(ro) {
             const rc = getRepairClassDataForRo(ro);
@@ -3798,7 +4398,7 @@
 
             const rows = globalSpendChangeLogRows || [];
             if (rows.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="11" style="text-align:center; padding:20px; color:#888; font-weight:700;">No spend/status changes have been logged yet. Changes will begin appearing after Firebase sees a status or RO Detail spend change.</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="12" style="text-align:center; padding:20px; color:#888; font-weight:700;">No spend/status changes have been logged yet. Changes will begin appearing after Firebase sees a status or RO Detail spend change.</td></tr>';
                 updateSpendChangeSortIndicators();
                 return;
             }
@@ -3868,7 +4468,7 @@
             });
 
             if (groups.length > displayGroups.length) {
-                html += `<tr><td colspan="11" style="text-align:center; padding:10px; color:#64748b; font-weight:700;">Showing latest ${displayGroups.length.toLocaleString()} of ${groups.length.toLocaleString()} RO groups. Export includes all loaded change rows.</td></tr>`;
+                html += `<tr><td colspan="12" style="text-align:center; padding:10px; color:#64748b; font-weight:700;">Showing latest ${displayGroups.length.toLocaleString()} of ${groups.length.toLocaleString()} RO groups. Export includes all loaded change rows.</td></tr>`;
             }
 
             tbody.innerHTML = html;
@@ -4940,6 +5540,7 @@
             else if(activeView === 'ers-view') renderKPITiles(ersOwners, 'ers-kpi-container', 'ers-view');
             else if(activeView === 'nonosc-view') renderNonOscTiles();
             else if(activeView === 'spend-view') renderSpendQueue();
+            else if(activeView === 'compliance-reporting-view') loadComplianceReporting();
             else if(activeView === 'person-view') { if(currentOwnerView) loadPersonDrilldown(currentOwnerView, currentParentView, true); }
             else if(activeView === 'summary-view') {
                 renderSummary();
@@ -4995,7 +5596,8 @@
                 'ers-view': 'menu-ers',
                 'nonosc-view': 'menu-nonosc',
                 'spend-view': 'menu-spend',
-                'summary-view': 'menu-summary'
+                'summary-view': 'menu-summary',
+                'compliance-reporting-view': 'menu-compliance-reporting'
             };
 
             const menuId = target.menuId || viewToMenu[target.viewId] || null;
@@ -5007,7 +5609,7 @@
                 if (submenu) submenu.classList.add('open');
                 if (toggle) toggle.classList.add('expanded');
             }
-            if (['spend-view', 'summary-view'].includes(target.viewId)) {
+            if (['spend-view', 'summary-view', 'compliance-reporting-view'].includes(target.viewId)) {
                 const submenu = document.getElementById('garda-submenu');
                 const toggle = document.getElementById('menu-garda');
                 if (submenu) submenu.classList.add('open');
@@ -5869,7 +6471,8 @@
             document.getElementById('home-dashboard').style.display = 'block';
             
             triggerViewUpdate();
-            updateAllNoteButtons(); 
+            updateAllNoteButtons();
+            scheduleComplianceDailySnapshotLog();
         }
 
         function renderSpendQueue() {
@@ -7041,7 +7644,7 @@
                 }
                 const gardaSubmenu = document.getElementById('garda-submenu');
                 const gardaToggle = document.getElementById('menu-garda');
-                if (['spend-view', 'summary-view'].includes(viewId) && gardaSubmenu && gardaToggle) {
+                if (['spend-view', 'summary-view', 'compliance-reporting-view'].includes(viewId) && gardaSubmenu && gardaToggle) {
                     gardaSubmenu.classList.add('open');
                     gardaToggle.classList.add('expanded');
                     gardaToggle.classList.add('active');
@@ -7054,6 +7657,7 @@
             else if (viewId === 'nonosc-view') renderNonOscTiles();
             else if (viewId === 'home-view') renderHomeDashboard();
             else if (viewId === 'spend-view') renderSpendQueue();
+            else if (viewId === 'compliance-reporting-view') loadComplianceReporting();
             else if (viewId === 'summary-view') {
                 renderSummary();
                 renderAmeritOos();
