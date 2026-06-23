@@ -2753,13 +2753,10 @@
                 const teamKey = getComplianceTeamKey(def.team);
                 const coordinatorMap = {};
 
-                getComplianceOwnerSeedList(def.team).forEach(name => {
-                    const cleanName = String(name || '').trim();
-                    if (!cleanName) return;
-                    const key = normalizeComplianceKey(cleanName);
-                    coordinatorMap[key] = { key, name: cleanName, records: [] };
-                });
-
+                // Do not seed owner lists here. Compliance Reporting should only show
+                // coordinators that actually have score records in Firebase history.
+                // This prevents blank PM rows before PM launches, while still allowing
+                // PM to appear automatically later once PM records exist.
                 Object.keys(dateGroups || {}).sort().forEach(dateKey => {
                     const teamGroup = dateGroups[dateKey] && dateGroups[dateKey][teamKey] ? dateGroups[dateKey][teamKey] : {};
                     Object.keys(teamGroup || {}).forEach(coordKey => {
@@ -2772,17 +2769,10 @@
                     });
                 });
 
-                output.push({ rowType: 'section', team: def.label });
-                const people = Object.values(coordinatorMap).sort((a, b) => String(a.name || '').localeCompare(String(b.name || ''), undefined, { sensitivity: 'base' }));
-                if (!people.length) {
-                    output.push({ rowType: 'empty', team: def.label, message: 'No coordinator score history found for this team.' });
-                    return;
-                }
-
-                people.forEach(person => {
+                const teamRows = Object.values(coordinatorMap).map(person => {
                     const records = (person.records || []).sort((a, b) => String(a.reportDate || '').localeCompare(String(b.reportDate || '')));
                     const yesterdayRecord = records.find(r => r.reportDate === reportDate) || null;
-                    output.push({
+                    const row = {
                         rowType: 'data',
                         team: def.label,
                         teamKey,
@@ -2796,8 +2786,31 @@
                         repclassT7: averageComplianceWindowScore(records, 'repclass', t7Start, reportDate),
                         repclassT30: averageComplianceWindowScore(records, 'repclass', t30Start, reportDate),
                         historyDays: records.length
-                    });
+                    };
+                    const hasAnyScore = [
+                        row.workflowYesterday,
+                        row.workflowT7,
+                        row.workflowT30,
+                        row.repclassYesterday,
+                        row.repclassT7,
+                        row.repclassT30
+                    ].some(v => v !== null && v !== undefined && !isNaN(Number(v)));
+                    return hasAnyScore ? row : null;
+                }).filter(Boolean).sort((a, b) => {
+                    const aw = Number(a.workflowYesterday);
+                    const bw = Number(b.workflowYesterday);
+                    const workflowDiff = (isNaN(bw) ? -1 : bw) - (isNaN(aw) ? -1 : aw);
+                    if (workflowDiff !== 0) return workflowDiff;
+                    const ar = Number(a.repclassYesterday);
+                    const br = Number(b.repclassYesterday);
+                    const repclassDiff = (isNaN(br) ? -1 : br) - (isNaN(ar) ? -1 : ar);
+                    if (repclassDiff !== 0) return repclassDiff;
+                    return String(a.coordinator || '').localeCompare(String(b.coordinator || ''), undefined, { sensitivity: 'base' });
                 });
+
+                if (!teamRows.length) return;
+                output.push({ rowType: 'section', team: def.label });
+                output.push(...teamRows);
             });
 
             return output;
@@ -2850,12 +2863,14 @@
             const avgRepT7 = averageScore(dataRows.map(r => r.repclassT7).filter(v => v !== null && v !== undefined));
             const vendedCount = dataRows.filter(r => r.team === 'Vended Repair').length;
             const pmCount = dataRows.filter(r => r.team === 'Preventative Maintenance').length;
+            const coordinatorBreakout = [`${vendedCount} Vended Repair`];
+            if (pmCount > 0) coordinatorBreakout.push(`${pmCount} PM`);
             summary.innerHTML = `
                 <div class="compliance-reporting-summary-card"><div class="summary-label">Avg Workflow Yesterday</div><div class="summary-value">${avgWorkflowYesterday}%</div><div class="summary-sub">Current score by selected report date</div></div>
                 <div class="compliance-reporting-summary-card"><div class="summary-label">Avg Workflow T7</div><div class="summary-value">${avgWorkflowT7}%</div><div class="summary-sub">Trailing 7-day average</div></div>
                 <div class="compliance-reporting-summary-card"><div class="summary-label">Avg Repclass Yesterday</div><div class="summary-value">${avgRepYesterday}%</div><div class="summary-sub">Current score by selected report date</div></div>
                 <div class="compliance-reporting-summary-card"><div class="summary-label">Avg Repclass T7</div><div class="summary-value">${avgRepT7}%</div><div class="summary-sub">Trailing 7-day average</div></div>
-                <div class="compliance-reporting-summary-card"><div class="summary-label">Coordinators</div><div class="summary-value">${dataRows.length}</div><div class="summary-sub">${vendedCount} Vended Repair · ${pmCount} PM</div></div>`;
+                <div class="compliance-reporting-summary-card"><div class="summary-label">Coordinators</div><div class="summary-value">${dataRows.length}</div><div class="summary-sub">${coordinatorBreakout.join(' · ')}</div></div>`;
         }
 
         function renderComplianceReportingTable(rows) {
