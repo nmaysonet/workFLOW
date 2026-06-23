@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>workFLOW + | Workflow Management</title>
+    <title>OSC+ | Workflow Management</title>
     <link href="https://fonts.googleapis.com/css2?family=Raleway:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
     
@@ -33,9 +33,10 @@
         .login-error { color: var(--urgent-red); margin-bottom: 15px; font-size: 13px; font-weight: bold; display: none; }
 
         .sidebar { width: 280px; background-color: var(--sidebar-bg); color: var(--text-light); display: flex; flex-direction: column; flex-shrink: 0; }
-        .sidebar-header { padding: 20px; font-size: 24px; font-weight: bold; display: flex; align-items: center; border-bottom: 1px solid #2a2b30; color: var(--gold); }
-        .sidebar-header .logo-text { color: white; margin-left: 8px; font-weight: 800; letter-spacing: 0.5px; }
-        .sidebar-header .logo-plus { color: var(--gold); font-size: 34px; font-weight: 800; margin-left: 3px; line-height: 1; }
+        .sidebar-header { padding: 18px 12px; min-height: 84px; font-weight: bold; display: flex; align-items: center; justify-content: center; gap: 10px; border-bottom: 1px solid #2a2b30; color: var(--gold); text-align: center; }
+        .sidebar-header .sidebar-logo-wheel { width: 44px; height: 44px; flex: 0 0 44px; display: block; }
+        .sidebar-header .logo-text { color: white; margin-left: 0; font-size: 40px; font-weight: 900; letter-spacing: 1.4px; line-height: 0.95; }
+        .sidebar-header .logo-plus { color: var(--gold); font-size: 44px; font-weight: 900; margin-left: -4px; line-height: 0.9; }
         .menu-item { padding: 15px 20px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #4a4b50; font-size: 14px; font-weight: 600; transition: 0.2s;}
         .menu-item:hover, .menu-item.active { background-color: var(--sidebar-hover); color: var(--gold); }
         .menu-item.submenu-toggle::after { content: '▸'; font-size: 12px; transition: transform 0.2s ease; }
@@ -418,7 +419,7 @@
                     <line x1="50" y1="50" x2="50" y2="15" /><line x1="50" y1="50" x2="83" y2="39" /><line x1="50" y1="50" x2="70" y2="78" /><line x1="50" y1="50" x2="30" y2="78" /><line x1="50" y1="50" x2="17" y2="39" />
                 </g>
             </svg>
-            <h2>workFLOW+ Login</h2>
+            <h2>OSC+ Login</h2>
             <div id="login-error" class="login-error">Incorrect Password</div>
             <input type="password" id="login-pass" placeholder="Enter Password" onkeypress="if(event.key === 'Enter') checkLogin()">
             <button onclick="checkLogin()">ENTER</button>
@@ -427,7 +428,7 @@
 
     <div class="sidebar">
         <div class="sidebar-header">
-            <svg class="logo-spin" width="30" height="30" viewBox="0 0 100 100">
+            <svg class="logo-spin sidebar-logo-wheel" width="44" height="44" viewBox="0 0 100 100">
                 <circle cx="50" cy="50" r="40" fill="none" stroke="var(--gold)" stroke-width="10"/>
                 <circle cx="50" cy="50" r="10" fill="var(--gold)"/>
                 <g stroke="var(--gold)" stroke-width="10" stroke-linecap="round">
@@ -438,7 +439,7 @@
                     <line x1="50" y1="50" x2="17" y2="39" />
                 </g>
             </svg>
-            <span class="logo-text">workFLOW</span>
+            <span class="logo-text">OSC</span>
             <span class="logo-plus">+</span>
         </div>
         <div class="menu-item active" id="menu-home" onclick="navigate('home-view', this)">Home Dashboard</div>
@@ -512,7 +513,7 @@
         </div>
 
         <div id="home-view" class="view-section active">
-            <h1 class="home-title">Welcome to workFLOW +</h1>
+            <h1 class="home-title">Welcome to OSC+</h1>
             <div class="upload-container" id="upload-box">
                 <h3>Loading Dashboard Data</h3>
                 <p style="color: #666; margin-bottom: 15px; font-size: 14px;">Attempting to fetch <b>master_workFLOW.xlsx</b> from Firebase Storage...</p>
@@ -758,7 +759,7 @@
                 </div>
             </div>
             <div class="drilldown-container">
-                <!-- Email-only copy for Firebase scheduled email: Subject = OSC+ Compliance Scores - selected report date. Body starts with: Good morning, Please see below the updated workFLOW+ compliance scores. This copy is intentionally hidden from the Compliance Reporting tab. -->
+                <!-- Email-only copy for Firebase scheduled email: Subject = OSC+ Compliance Scores - selected report date. Body starts with: Good morning, Please see below the updated OSC+ compliance scores. This copy is intentionally hidden from the Compliance Reporting tab. -->
                 <div class="compliance-reporting-toolbar">
                     <div class="compliance-reporting-field">
                         <label for="compliance-report-date">Report Date</label>
@@ -1160,7 +1161,7 @@
             try {
                 const aiWorkbook = XLSX.read(aiRefBuffer, { type: 'array' });
                 latestAiRefAOA = extractAiRefAOA(aiWorkbook);
-                console.log('workFLOW+ AI Ref loaded:', latestAiRefAOA.length, 'rows');
+                console.log('OSC+ AI Ref loaded:', latestAiRefAOA.length, 'rows');
                 return latestAiRefAOA;
             } catch (err) {
                 console.warn('AI Ref.xlsx could not be parsed. Repair Class Compliance will load without AI reference rows.', err);
@@ -1811,7 +1812,7 @@
             const cls = isUpdated ? 'ecd-review-btn updated' : (sameEcdNewWorkbook ? 'ecd-review-btn stale' : 'ecd-review-btn');
             const label = isUpdated ? 'UPDATED' : 'PENDING';
             const title = isUpdated
-                ? 'Marked updated for the current workbook load. On the next workbook refresh, workFLOW+ will verify whether the ECD changed.'
+                ? 'Marked updated for the current workbook load. On the next workbook refresh, OSC+ will verify whether the ECD changed.'
                 : (sameEcdNewWorkbook ? 'ECD was marked updated before, but the latest workbook still shows the same LATE/MISSING ECD. Update required again.' : 'Late/missing ECD needs to be updated. Click after updating the ECD in the VRO/source system.');
             const disabled = isUpdated ? ' disabled' : '';
             return `<button type="button" class="${cls}" data-ecd-ro="${escapeHtml(safeRo)}" title="${escapeHtml(title)}" onclick="event.preventDefault(); event.stopPropagation(); markEcdUpdated('${safeRo}')"${disabled}>${label}</button>`;
@@ -2234,7 +2235,7 @@
                 if (record.hasTransfer) reviewCount++;
             }
 
-            console.log('workFLOW+ AI Ref transfer map loaded:', loaded, 'AI Ref records;', reviewCount, 'transfer differences matched/evaluated.');
+            console.log('OSC+ AI Ref transfer map loaded:', loaded, 'AI Ref records;', reviewCount, 'transfer differences matched/evaluated.');
         }
 
         function normalizeRepClassValue(value) {
@@ -4590,7 +4591,7 @@
 
             const workbook = XLSX.utils.book_new();
             XLSX.utils.book_append_sheet(workbook, worksheet, 'Spend Status Change Log');
-            XLSX.writeFile(workbook, `workFLOW_spend_status_change_log_${getLocalDateKey(new Date())}.xlsx`);
+            XLSX.writeFile(workbook, `OSC_spend_status_change_log_${getLocalDateKey(new Date())}.xlsx`);
         }
 
         function applySpendGovernorFinancials(branchFin) {
@@ -6177,7 +6178,7 @@
             rebuildRepairClassTransferIndexFromAiRef(vroRaw);
             try {
                 const transferCount = Object.values(repairClassTransferByOrder || {}).filter(r => r && r.hasTransfer).length;
-                console.log('workFLOW+ AI Ref repair class transfer map loaded:', transferCount, 'transfer differences');
+                console.log('OSC+ AI Ref repair class transfer map loaded:', transferCount, 'transfer differences');
             } catch(e) {}
 
             processedData = vroRaw.map(row => {
