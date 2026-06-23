@@ -358,11 +358,11 @@
         .compliance-reporting-field select,
         .compliance-reporting-field input { padding:9px 10px; border:1px solid #cbd5e1; border-radius:4px; font-size:13px; font-weight:700; background:#fff; color:#334155; }
         .compliance-reporting-note { font-size:12px; color:#64748b; font-weight:700; line-height:1.35; margin-bottom:12px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:6px; padding:9px 12px; }
-        .compliance-reporting-summary-grid { display:grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap:12px; margin-bottom:15px; }
-        .compliance-reporting-summary-card { background:#fff; border:1px solid #e2e8f0; border-top:4px solid var(--gold); border-radius:7px; padding:12px; box-shadow:0 1px 3px rgba(15,23,42,0.08); }
+        .compliance-reporting-summary-grid { display:grid; grid-template-columns: repeat(auto-fit, minmax(155px, 1fr)); gap:10px; margin-bottom:12px; }
+        .compliance-reporting-summary-card { background:#fff; border:1px solid #e2e8f0; border-top:3px solid var(--gold); border-radius:6px; padding:9px 10px; box-shadow:0 1px 3px rgba(15,23,42,0.07); }
         .compliance-reporting-summary-card .summary-label { font-size:10px; font-weight:900; color:#64748b; text-transform:uppercase; letter-spacing:.45px; margin-bottom:6px; }
-        .compliance-reporting-summary-card .summary-value { font-size:22px; font-weight:900; color:#334155; line-height:1.1; }
-        .compliance-reporting-summary-card .summary-sub { font-size:11px; font-weight:800; color:#64748b; margin-top:4px; line-height:1.25; }
+        .compliance-reporting-summary-card .summary-value { font-size:18px; font-weight:900; color:#334155; line-height:1.1; }
+        .compliance-reporting-summary-card .summary-sub { font-size:10px; font-weight:800; color:#64748b; margin-top:3px; line-height:1.2; }
         .compliance-reporting-message { text-align:center; padding:28px 16px; color:#64748b; font-weight:800; background:#f8fafc; border:1px dashed #cbd5e1; border-radius:6px; }
         .compliance-score-pill { display:inline-flex; align-items:center; justify-content:center; min-width:54px; padding:4px 8px; border-radius:999px; font-size:11px; font-weight:900; }
         .compliance-score-green { background:#dcfce7; color:#166534; border:1px solid #86efac; }
@@ -381,6 +381,20 @@
         .compliance-status-final { background:#dcfce7; color:#166534; border:1px solid #86efac; }
         .btn-blue { background:#1F4E78 !important; color:#fff !important; }
         .btn-blue:hover { background:#17365d !important; }
+        .compliance-trend-table { min-width:860px; table-layout:fixed; border-collapse:collapse; background:#fff; border:1px solid #d9e2ec; box-shadow:0 1px 3px rgba(15,23,42,0.06); }
+        .compliance-trend-table th { background:#1F4E78; color:#fff; border:1px solid #9fb6c9; border-bottom:2px solid #17365d; padding:5px 5px; font-size:9.5px; line-height:1.08; text-align:center; vertical-align:middle; text-transform:none; height:34px; letter-spacing:.05px; }
+        .compliance-trend-table th:first-child { font-size:10px; }
+        .compliance-trend-table td { border:1px solid #e2e8f0; padding:3px 5px; font-size:10px; height:22px; text-align:center; vertical-align:middle; color:#1f2937; background:#fff; }
+        .compliance-trend-table td:first-child { text-align:left; font-weight:800; white-space:nowrap; }
+        .compliance-trend-section td { background:#f8fafc !important; color:#111827; font-size:12px; font-weight:900; text-align:center !important; height:24px; padding:3px 6px; border-top:2px solid #cbd5e1; border-bottom:2px solid #cbd5e1; letter-spacing:.15px; }
+        .compliance-trend-empty td { background:#fafafa; color:#64748b; font-weight:700; }
+        .compliance-email-copy-block { display:none; }
+        .compliance-email-copy-title { font-size:10px; font-weight:900; color:#64748b; text-transform:uppercase; letter-spacing:.45px; margin-bottom:6px; }
+        .compliance-trend-value { display:inline-flex; align-items:center; justify-content:center; min-width:38px; padding:1px 6px; border-radius:999px; font-weight:900; font-size:9.75px; line-height:1.25; }
+        .compliance-trend-na { color:#94a3b8; font-weight:800; }
+        .compliance-trend-score-green { background:#dcfce7; color:#166534; border:1px solid #86efac; }
+        .compliance-trend-score-yellow { background:#fef3c7; color:#92400e; border:1px solid #fde68a; }
+        .compliance-trend-score-red { background:#fee2e2; color:#991b1b; border:1px solid #fecaca; }
 
         .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center; }
         .modal-box { background: white; padding: 20px; border-radius: 8px; width: 450px; max-width: 90%; box-shadow: 0 4px 15px rgba(0,0,0,0.2); }
@@ -740,69 +754,43 @@
             <div class="view-title">
                 <span style="font-weight: 700;">Compliance Reporting</span>
                 <div class="controls-group" style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
-                    <button class="btn-blue" onclick="captureComplianceSnapshotNow()">Capture Current Snapshot</button>
                     <button class="btn-green" onclick="exportComplianceReportingToExcel()">&#11139; Export Report</button>
                 </div>
             </div>
             <div class="drilldown-container">
-                <div class="compliance-reporting-note">
-                    Daily coordinator scorecards are logged to Firebase by report date so prior-day and historical Notes and Repclass Compliance can be reviewed later. Current-day rows show LIVE and continue updating against the queue scores until the day closes at 11:59 PM ET; prior dates show CLOSED SCORE and remain frozen. Select a team first to load the report.
-                </div>
+                <!-- Email-only copy for Firebase scheduled email: Subject = OSC+ Compliance Scores - selected report date. Body starts with: Good morning, Please see below the updated workFLOW+ compliance scores. This copy is intentionally hidden from the Compliance Reporting tab. -->
                 <div class="compliance-reporting-toolbar">
                     <div class="compliance-reporting-field">
-                        <label for="compliance-team-filter">Team Required</label>
-                        <select id="compliance-team-filter" onchange="loadComplianceReporting()">
-                            <option value="">Select Team</option>
-                            <option value="Vended Repair">Vended Repair</option>
-                            <option value="PM">PM</option>
-                            <option value="Consolidated View">Consolidated View</option>
-                        </select>
-                    </div>
-                    <div class="compliance-reporting-field">
-                        <label for="compliance-date-from">Date From</label>
-                        <input type="date" id="compliance-date-from" onchange="loadComplianceReporting()">
-                    </div>
-                    <div class="compliance-reporting-field">
-                        <label for="compliance-date-to">Date To</label>
-                        <input type="date" id="compliance-date-to" onchange="loadComplianceReporting()">
+                        <label for="compliance-report-date">Report Date</label>
+                        <input type="date" id="compliance-report-date" onchange="loadComplianceReporting()">
                     </div>
                     <button class="btn-action" onclick="loadComplianceReporting()">Refresh Report</button>
                 </div>
                 <div id="compliance-reporting-summary" class="compliance-reporting-summary-grid"></div>
                 <div class="table-wrapper">
-                    <table id="compliance-reporting-table" class="compliance-reporting-table">
+                    <table id="compliance-reporting-table" class="compliance-reporting-table compliance-trend-table">
                         <colgroup>
-                            <col style="width:8%;">
-                            <col style="width:9%;">
-                            <col style="width:10%;">
-                            <col style="width:15%;">
-                            <col style="width:8%;">
-                            <col style="width:8%;">
-                            <col style="width:8%;">
-                            <col style="width:9%;">
-                            <col style="width:9%;">
-                            <col style="width:9%;">
-                            <col style="width:9%;">
-                            <col style="width:8%;">
+                            <col style="width:14%;">
+                            <col style="width:14.33%;">
+                            <col style="width:14.33%;">
+                            <col style="width:14.33%;">
+                            <col style="width:14.33%;">
+                            <col style="width:14.33%;">
+                            <col style="width:14.33%;">
                         </colgroup>
                         <thead>
                             <tr>
-                                <th><button class="compliance-sort-btn" onclick="sortComplianceReporting('reportDate')">Date <span class="compliance-sort-indicator" data-compliance-sort-indicator="reportDate">↕</span></button></th>
-                                <th><button class="compliance-sort-btn" onclick="sortComplianceReporting('status')">Status <span class="compliance-sort-indicator" data-compliance-sort-indicator="status">↕</span></button></th>
-                                <th><button class="compliance-sort-btn" onclick="sortComplianceReporting('team')">Team <span class="compliance-sort-indicator" data-compliance-sort-indicator="team">↕</span></button></th>
-                                <th><button class="compliance-sort-btn" onclick="sortComplianceReporting('coordinator')">Coordinator <span class="compliance-sort-indicator" data-compliance-sort-indicator="coordinator">↕</span></button></th>
-                                <th><button class="compliance-sort-btn" onclick="sortComplianceReporting('notesScore')">Notes Score <span class="compliance-sort-indicator" data-compliance-sort-indicator="notesScore">↕</span></button></th>
-                                <th><button class="compliance-sort-btn" onclick="sortComplianceReporting('repclassScore')">Repclass <span class="compliance-sort-indicator" data-compliance-sort-indicator="repclassScore">↕</span></button></th>
-                                <th><button class="compliance-sort-btn" onclick="sortComplianceReporting('overallScore')">Overall Score <span class="compliance-sort-indicator" data-compliance-sort-indicator="overallScore">↕</span></button></th>
-                                <th><button class="compliance-sort-btn" onclick="sortComplianceReporting('notesCompleted')">Notes Completed <span class="compliance-sort-indicator" data-compliance-sort-indicator="notesCompleted">↕</span></button></th>
-                                <th><button class="compliance-sort-btn" onclick="sortComplianceReporting('notesRequired')">Notes Required <span class="compliance-sort-indicator" data-compliance-sort-indicator="notesRequired">↕</span></button></th>
-                                <th><button class="compliance-sort-btn" onclick="sortComplianceReporting('repclassCompleted')">Repclass Completed <span class="compliance-sort-indicator" data-compliance-sort-indicator="repclassCompleted">↕</span></button></th>
-                                <th><button class="compliance-sort-btn" onclick="sortComplianceReporting('repclassRequired')">Repclass Required <span class="compliance-sort-indicator" data-compliance-sort-indicator="repclassRequired">↕</span></button></th>
-                                <th><button class="compliance-sort-btn" onclick="sortComplianceReporting('loggedAt')">Logged At <span class="compliance-sort-indicator" data-compliance-sort-indicator="loggedAt">↕</span></button></th>
+                                <th>Coordinator</th>
+                                <th>Workflow Compliance<br>Yesterday</th>
+                                <th>Workflow Compliance<br>T7 Days</th>
+                                <th>Workflow Compliance<br>T30 Days</th>
+                                <th>Rep Class Compliance<br>Yesterday</th>
+                                <th>Rep Class Compliance<br>T7 Days</th>
+                                <th>Rep Class Compliance<br>T30 Days</th>
                             </tr>
                         </thead>
                         <tbody id="compliance-reporting-body">
-                            <tr><td colspan="12"><div class="compliance-reporting-message">Select a team to load compliance reporting.</div></td></tr>
+                            <tr><td colspan="7"><div class="compliance-reporting-message">Select a report date to load compliance reporting.</div></td></tr>
                         </tbody>
                     </table>
                 </div>
@@ -2641,10 +2629,8 @@
         function initComplianceReportingDefaults() {
             if (complianceReportingDefaultsInitialized) return;
             complianceReportingDefaultsInitialized = true;
-            const fromEl = document.getElementById('compliance-date-from');
-            const toEl = document.getElementById('compliance-date-to');
-            if (fromEl && !fromEl.value) fromEl.value = getCompliancePriorDateNY();
-            if (toEl && !toEl.value) toEl.value = getComplianceReportingDateNY();
+            const reportEl = document.getElementById('compliance-report-date');
+            if (reportEl && !reportEl.value) reportEl.value = getCompliancePriorDateNY();
         }
 
         function formatComplianceLoggedAt(value) {
@@ -2666,15 +2652,154 @@
             return `<span class="compliance-score-pill ${getComplianceScoreClass(n)}">${Math.round(n)}%</span>`;
         }
 
+        function complianceDateOffset(dateKey, offsetDays) {
+            const parts = String(dateKey || getComplianceReportingDateNY()).split('-').map(Number);
+            if (parts.length !== 3 || parts.some(n => isNaN(n))) return getCompliancePriorDateNY();
+            const d = new Date(Date.UTC(parts[0], parts[1] - 1, parts[2]));
+            d.setUTCDate(d.getUTCDate() + Number(offsetDays || 0));
+            const y = d.getUTCFullYear();
+            const m = String(d.getUTCMonth() + 1).padStart(2, '0');
+            const day = String(d.getUTCDate()).padStart(2, '0');
+            return `${y}-${m}-${day}`;
+        }
+
+        function getComplianceTrendWindowStart(reportDate, days) {
+            return complianceDateOffset(reportDate, -(Number(days || 1) - 1));
+        }
+
+        function getComplianceDisplayTeamName(team) {
+            const clean = String(team || '').trim().toUpperCase();
+            if (clean === 'PM' || clean === 'PREVENTATIVE MAINTENANCE' || clean === 'PREVENTIVE MAINTENANCE') return 'Preventative Maintenance';
+            if (clean === 'VENDED_REPAIR' || clean === 'VENDED REPAIR') return 'Vended Repair';
+            return team || '';
+        }
+
         function getComplianceReportingFilters() {
             initComplianceReportingDefaults();
-            const teamEl = document.getElementById('compliance-team-filter');
-            const fromEl = document.getElementById('compliance-date-from');
-            const toEl = document.getElementById('compliance-date-to');
-            const team = teamEl ? teamEl.value : '';
-            const from = fromEl ? fromEl.value : '';
-            const to = toEl ? toEl.value : '';
-            return { team, teamKey: getComplianceTeamKey(team), from, to };
+            const reportEl = document.getElementById('compliance-report-date');
+            const reportDate = reportEl && reportEl.value ? reportEl.value : getCompliancePriorDateNY();
+            return {
+                reportDate,
+                from: getComplianceTrendWindowStart(reportDate, 30),
+                to: reportDate
+            };
+        }
+
+        function getComplianceScoreValue(record, scoreType) {
+            if (!record) return null;
+            const raw = scoreType === 'repclass'
+                ? record.repclassScore
+                : (record.workflowScore !== undefined ? record.workflowScore : record.notesScore);
+            const n = Number(raw);
+            return isNaN(n) ? null : Math.round(n);
+        }
+
+        function getComplianceTrendScoreClass(value) {
+            const n = Number(value);
+            if (value === null || value === undefined || isNaN(n)) return '';
+            if (n >= 85) return 'compliance-trend-score-green';
+            if (n >= 70) return 'compliance-trend-score-yellow';
+            return 'compliance-trend-score-red';
+        }
+
+        function formatComplianceTrendScore(value) {
+            const n = Number(value);
+            if (value === null || value === undefined || isNaN(n)) return '<span class="compliance-trend-na">-</span>';
+            const score = Math.round(n);
+            return `<span class="compliance-trend-value ${getComplianceTrendScoreClass(score)}">${score}%</span>`;
+        }
+
+        function getComplianceTrendExcelFill(value) {
+            const n = Number(value);
+            if (value === null || value === undefined || isNaN(n)) return null;
+            if (n >= 85) return 'DCFCE7';
+            if (n >= 70) return 'FEF3C7';
+            return 'FEE2E2';
+        }
+
+        function formatComplianceTrendScoreText(value) {
+            const n = Number(value);
+            if (value === null || value === undefined || isNaN(n)) return '';
+            return `${Math.round(n)}%`;
+        }
+
+        function averageComplianceWindowScore(records, scoreType, startDate, endDate) {
+            const values = (records || [])
+                .filter(r => r && r.reportDate >= startDate && r.reportDate <= endDate)
+                .map(r => getComplianceScoreValue(r, scoreType))
+                .filter(v => v !== null && v !== undefined && !isNaN(v));
+            if (!values.length) return null;
+            return averageScore(values);
+        }
+
+        function getComplianceOwnerSeedList(team) {
+            const clean = String(team || '').trim().toUpperCase();
+            if (clean === 'PM') return Array.isArray(pmOwners) ? pmOwners : [];
+            if (clean === 'VENDED REPAIR') return Array.isArray(vendedOwners) ? vendedOwners : [];
+            return [];
+        }
+
+        function buildComplianceTrendRows(dateGroups, reportDate) {
+            const teamDefinitions = [
+                { team: 'Vended Repair', label: 'Vended Repair' },
+                { team: 'PM', label: 'Preventative Maintenance' }
+            ];
+            const t7Start = getComplianceTrendWindowStart(reportDate, 7);
+            const t30Start = getComplianceTrendWindowStart(reportDate, 30);
+            const output = [];
+
+            teamDefinitions.forEach(def => {
+                const teamKey = getComplianceTeamKey(def.team);
+                const coordinatorMap = {};
+
+                getComplianceOwnerSeedList(def.team).forEach(name => {
+                    const cleanName = String(name || '').trim();
+                    if (!cleanName) return;
+                    const key = normalizeComplianceKey(cleanName);
+                    coordinatorMap[key] = { key, name: cleanName, records: [] };
+                });
+
+                Object.keys(dateGroups || {}).sort().forEach(dateKey => {
+                    const teamGroup = dateGroups[dateKey] && dateGroups[dateKey][teamKey] ? dateGroups[dateKey][teamKey] : {};
+                    Object.keys(teamGroup || {}).forEach(coordKey => {
+                        const rec = Object.assign({}, teamGroup[coordKey] || {}, { reportDate: dateKey, team: def.team });
+                        const key = rec.coordinatorKey || coordKey || normalizeComplianceKey(rec.coordinator);
+                        const name = rec.coordinator || coordKey || 'Unassigned';
+                        if (!coordinatorMap[key]) coordinatorMap[key] = { key, name, records: [] };
+                        if (rec.coordinator && coordinatorMap[key].name === coordKey) coordinatorMap[key].name = rec.coordinator;
+                        coordinatorMap[key].records.push(rec);
+                    });
+                });
+
+                output.push({ rowType: 'section', team: def.label });
+                const people = Object.values(coordinatorMap).sort((a, b) => String(a.name || '').localeCompare(String(b.name || ''), undefined, { sensitivity: 'base' }));
+                if (!people.length) {
+                    output.push({ rowType: 'empty', team: def.label, message: 'No coordinator score history found for this team.' });
+                    return;
+                }
+
+                people.forEach(person => {
+                    const records = (person.records || []).sort((a, b) => String(a.reportDate || '').localeCompare(String(b.reportDate || '')));
+                    const yesterdayRecord = records.find(r => r.reportDate === reportDate) || null;
+                    output.push({
+                        rowType: 'data',
+                        team: def.label,
+                        teamKey,
+                        coordinator: person.name,
+                        coordinatorKey: person.key,
+                        reportDate,
+                        workflowYesterday: getComplianceScoreValue(yesterdayRecord, 'workflow'),
+                        workflowT7: averageComplianceWindowScore(records, 'workflow', t7Start, reportDate),
+                        workflowT30: averageComplianceWindowScore(records, 'workflow', t30Start, reportDate),
+                        repclassYesterday: getComplianceScoreValue(yesterdayRecord, 'repclass'),
+                        repclassT7: averageComplianceWindowScore(records, 'repclass', t7Start, reportDate),
+                        repclassT30: averageComplianceWindowScore(records, 'repclass', t30Start, reportDate),
+                        historyDays: records.length
+                    });
+                });
+            });
+
+            return output;
         }
 
         async function loadComplianceReporting(options = {}) {
@@ -2685,207 +2810,160 @@
             const filters = getComplianceReportingFilters();
             globalComplianceReportingRows = [];
 
-            if (!filters.team) {
+            if (!filters.reportDate) {
                 summary.innerHTML = '';
-                body.innerHTML = '<tr><td colspan="12"><div class="compliance-reporting-message">Select a team to load compliance reporting.</div></td></tr>';
-                return;
-            }
-            if (!filters.from || !filters.to) {
-                summary.innerHTML = '';
-                body.innerHTML = '<tr><td colspan="12"><div class="compliance-reporting-message">Select both Date From and Date To.</div></td></tr>';
-                return;
-            }
-            if (filters.from > filters.to) {
-                summary.innerHTML = '';
-                body.innerHTML = '<tr><td colspan="12"><div class="compliance-reporting-message">Date From cannot be after Date To.</div></td></tr>';
+                body.innerHTML = '<tr><td colspan="7"><div class="compliance-reporting-message">Select a report date.</div></td></tr>';
                 return;
             }
 
-            body.innerHTML = '<tr><td colspan="12"><div class="compliance-reporting-message">Loading compliance reporting...</div></td></tr>';
+            body.innerHTML = '<tr><td colspan="7"><div class="compliance-reporting-message">Loading compliance trend report...</div></td></tr>';
             try {
                 if (!db && typeof firebase !== 'undefined') db = firebase.database();
                 if (!db) throw new Error('Firebase database is not available.');
-                if (!options.skipLiveRefresh && processedData && processedData.length > 0 && complianceDateRangeIncludesToday(filters)) {
+                if (!options.skipLiveRefresh && processedData && processedData.length > 0 && filters.reportDate === getComplianceReportingDateNY()) {
                     await logDailyComplianceScoresToFirebase(getComplianceReportingDateNY());
                 }
                 const snap = await db.ref('complianceReportingLogs').orderByKey().startAt(filters.from).endAt(filters.to).once('value');
-                const rows = [];
                 const dateGroups = snap.val() || {};
-                Object.keys(dateGroups).sort().forEach(dateKey => {
-                    const teamGroup = dateGroups[dateKey] && dateGroups[dateKey][filters.teamKey] ? dateGroups[dateKey][filters.teamKey] : {};
-                    Object.keys(teamGroup).forEach(coordKey => {
-                        rows.push(Object.assign({}, teamGroup[coordKey] || {}, { reportDate: dateKey }));
-                    });
-                });
-                globalComplianceReportingRows = applyComplianceReportingSort(rows);
-                renderComplianceReportingSummary(globalComplianceReportingRows, filters.team);
+                globalComplianceReportingRows = buildComplianceTrendRows(dateGroups, filters.reportDate);
+                renderComplianceReportingSummary(globalComplianceReportingRows, filters.reportDate);
                 renderComplianceReportingTable(globalComplianceReportingRows);
             } catch (err) {
                 console.error('Compliance reporting load failed:', err);
                 summary.innerHTML = '';
-                body.innerHTML = `<tr><td colspan="12"><div class="compliance-reporting-message">Compliance reporting could not load: ${escapeHtml(err.message || err)}</div></td></tr>`;
+                body.innerHTML = `<tr><td colspan="7"><div class="compliance-reporting-message">Compliance reporting could not load: ${escapeHtml(err.message || err)}</div></td></tr>`;
             }
         }
 
-        function getComplianceReportingSortValue(row, key) {
-            if (!row) return '';
-            switch (key) {
-                case 'reportDate': return String(row.reportDate || '');
-                case 'status': return getComplianceSnapshotStatus(row.reportDate) === 'CLOSED_SCORE' ? 1 : 0;
-                case 'team': return String(row.team || '').toLowerCase();
-                case 'coordinator': return String(row.coordinator || '').toLowerCase();
-                case 'notesScore': return Number((row.workflowScore !== undefined ? row.workflowScore : row.notesScore) || 0);
-                case 'repclassScore': return Number(row.repclassScore || 0);
-                case 'overallScore': return Number(row.overallScore || 0);
-                case 'notesCompleted': return Number(row.notesCompleted || 0);
-                case 'notesRequired': return Number(row.notesRequired || 0);
-                case 'repclassCompleted': return Number(row.repclassCompleted || 0);
-                case 'repclassRequired': return Number(row.repclassRequired || 0);
-                case 'loggedAt': return row.loggedAt ? Date.parse(row.loggedAt) || 0 : 0;
-                default: return String(row[key] || '').toLowerCase();
-            }
-        }
-
-        function applyComplianceReportingSort(rows) {
-            const state = complianceReportingSortState || { key: 'reportDate', direction: 'desc' };
-            const direction = state.direction === 'asc' ? 1 : -1;
-            return (rows || []).slice().sort((a, b) => {
-                const av = getComplianceReportingSortValue(a, state.key);
-                const bv = getComplianceReportingSortValue(b, state.key);
-                if (typeof av === 'number' || typeof bv === 'number') {
-                    const diff = (Number(av) || 0) - (Number(bv) || 0);
-                    if (diff !== 0) return diff * direction;
-                } else {
-                    const cmp = String(av).localeCompare(String(bv), undefined, { numeric: true, sensitivity: 'base' });
-                    if (cmp !== 0) return cmp * direction;
-                }
-                const dateCmp = String(b.reportDate || '').localeCompare(String(a.reportDate || ''));
-                if (dateCmp !== 0) return dateCmp;
-                return String(a.coordinator || '').localeCompare(String(b.coordinator || ''), undefined, { sensitivity: 'base' });
-            });
-        }
-
-        function sortComplianceReporting(key) {
-            const current = complianceReportingSortState || { key: 'reportDate', direction: 'desc' };
-            const defaultDirection = ['reportDate', 'notesScore', 'repclassScore', 'overallScore', 'notesCompleted', 'notesRequired', 'repclassCompleted', 'repclassRequired', 'loggedAt'].includes(key) ? 'desc' : 'asc';
-            complianceReportingSortState = current.key === key
-                ? { key, direction: current.direction === 'asc' ? 'desc' : 'asc' }
-                : { key, direction: defaultDirection };
-            globalComplianceReportingRows = applyComplianceReportingSort(globalComplianceReportingRows || []);
-            renderComplianceReportingTable(globalComplianceReportingRows);
-        }
-
-        function updateComplianceReportingSortIndicators() {
-            const state = complianceReportingSortState || { key: 'reportDate', direction: 'desc' };
-            document.querySelectorAll('[data-compliance-sort-indicator]').forEach(el => {
-                const key = el.getAttribute('data-compliance-sort-indicator');
-                el.textContent = key === state.key ? (state.direction === 'asc' ? '▲' : '▼') : '↕';
-            });
-        }
-
-        function renderComplianceReportingSummary(rows, team) {
+        function renderComplianceReportingSummary(rows, reportDate) {
             const summary = document.getElementById('compliance-reporting-summary');
             if (!summary) return;
-            if (!rows || !rows.length) {
+            const dataRows = (rows || []).filter(r => r && r.rowType === 'data');
+            if (!dataRows.length) {
                 summary.innerHTML = '';
                 return;
             }
-            const avgNotes = averageScore(rows.map(r => r.notesScore));
-            const avgRep = averageScore(rows.map(r => r.repclassScore));
-            const avgOverall = averageScore(rows.map(r => r.overallScore));
-            const byCoordinator = {};
-            rows.forEach(r => {
-                const key = r.coordinatorKey || normalizeComplianceKey(r.coordinator);
-                if (!byCoordinator[key]) byCoordinator[key] = { name: r.coordinator || 'Unassigned', scores: [], rows: 0 };
-                byCoordinator[key].scores.push(Number(r.overallScore || 0));
-                byCoordinator[key].rows++;
-            });
-            const ranked = Object.values(byCoordinator).map(c => ({
-                name: c.name,
-                avg: averageScore(c.scores),
-                rows: c.rows
-            })).sort((a, b) => b.avg - a.avg || a.name.localeCompare(b.name));
-            const best = ranked[0];
-            const low = ranked[ranked.length - 1];
+            const avgWorkflowYesterday = averageScore(dataRows.map(r => r.workflowYesterday).filter(v => v !== null && v !== undefined));
+            const avgWorkflowT7 = averageScore(dataRows.map(r => r.workflowT7).filter(v => v !== null && v !== undefined));
+            const avgRepYesterday = averageScore(dataRows.map(r => r.repclassYesterday).filter(v => v !== null && v !== undefined));
+            const avgRepT7 = averageScore(dataRows.map(r => r.repclassT7).filter(v => v !== null && v !== undefined));
+            const vendedCount = dataRows.filter(r => r.team === 'Vended Repair').length;
+            const pmCount = dataRows.filter(r => r.team === 'Preventative Maintenance').length;
             summary.innerHTML = `
-                <div class="compliance-reporting-summary-card"><div class="summary-label">Team</div><div class="summary-value" style="font-size:18px;">${escapeHtml(team)}</div><div class="summary-sub">Filtered reporting view</div></div>
-                <div class="compliance-reporting-summary-card"><div class="summary-label">Avg Notes Score</div><div class="summary-value">${avgNotes}%</div><div class="summary-sub">Live queue score · ${rows.length} coordinator day(s)</div></div>
-                <div class="compliance-reporting-summary-card"><div class="summary-label">Avg Repclass</div><div class="summary-value">${avgRep}%</div><div class="summary-sub">Repair class review compliance</div></div>
-                <div class="compliance-reporting-summary-card"><div class="summary-label">Avg Overall Score</div><div class="summary-value">${avgOverall}%</div><div class="summary-sub">Notes + Repclass average</div></div>
-                <div class="compliance-reporting-summary-card"><div class="summary-label">Best Coordinator</div><div class="summary-value" style="font-size:17px;">${best ? escapeHtml(best.name) : '-'}</div><div class="summary-sub">${best ? best.avg + '% avg overall' : 'No records'}</div></div>
-                <div class="compliance-reporting-summary-card"><div class="summary-label">Lowest Coordinator</div><div class="summary-value" style="font-size:17px;">${low ? escapeHtml(low.name) : '-'}</div><div class="summary-sub">${low ? low.avg + '% avg overall' : 'No records'}</div></div>`;
+                <div class="compliance-reporting-summary-card"><div class="summary-label">Avg Workflow Yesterday</div><div class="summary-value">${avgWorkflowYesterday}%</div><div class="summary-sub">Current score by selected report date</div></div>
+                <div class="compliance-reporting-summary-card"><div class="summary-label">Avg Workflow T7</div><div class="summary-value">${avgWorkflowT7}%</div><div class="summary-sub">Trailing 7-day average</div></div>
+                <div class="compliance-reporting-summary-card"><div class="summary-label">Avg Repclass Yesterday</div><div class="summary-value">${avgRepYesterday}%</div><div class="summary-sub">Current score by selected report date</div></div>
+                <div class="compliance-reporting-summary-card"><div class="summary-label">Avg Repclass T7</div><div class="summary-value">${avgRepT7}%</div><div class="summary-sub">Trailing 7-day average</div></div>
+                <div class="compliance-reporting-summary-card"><div class="summary-label">Coordinators</div><div class="summary-value">${dataRows.length}</div><div class="summary-sub">${vendedCount} Vended Repair · ${pmCount} PM</div></div>`;
         }
 
         function renderComplianceReportingTable(rows) {
             const body = document.getElementById('compliance-reporting-body');
             if (!body) return;
             if (!rows || !rows.length) {
-                body.innerHTML = '<tr><td colspan="12"><div class="compliance-reporting-message">No compliance records found for the selected team/date range. Use Capture Current Snapshot after dashboard data loads to seed today.</div></td></tr>';
+                body.innerHTML = '<tr><td colspan="7"><div class="compliance-reporting-message">No compliance score history found for this report date.</div></td></tr>';
                 return;
             }
-            body.innerHTML = rows.map(r => `
-                <tr>
-                    <td>${escapeHtml(r.reportDate || '')}</td>
-                    <td>${renderComplianceSnapshotStatus(getComplianceSnapshotStatus(r.reportDate))}</td>
-                    <td>${escapeHtml(r.team || '')}</td>
-                    <td style="font-weight:800; text-align:center;">${escapeHtml(r.coordinator || '')}</td>
-                    <td>${renderComplianceScore(r.workflowScore !== undefined ? r.workflowScore : r.notesScore)}</td>
-                    <td>${renderComplianceScore(r.repclassScore)}</td>
-                    <td>${renderComplianceScore(r.overallScore)}</td>
-                    <td>${Number(r.notesCompleted || 0).toLocaleString()}</td>
-                    <td>${Number(r.notesRequired || 0).toLocaleString()}</td>
-                    <td>${Number(r.repclassCompleted || 0).toLocaleString()}</td>
-                    <td>${Number(r.repclassRequired || 0).toLocaleString()}</td>
-                    <td>${escapeHtml(formatComplianceLoggedAt(r.loggedAt))}</td>
-                </tr>`).join('');
-            updateComplianceReportingSortIndicators();
+            body.innerHTML = rows.map(r => {
+                if (r.rowType === 'section') return `<tr class="compliance-trend-section"><td colspan="7">${escapeHtml(r.team || '')}</td></tr>`;
+                if (r.rowType === 'empty') return `<tr class="compliance-trend-empty"><td colspan="7">${escapeHtml(r.message || 'No score history found.')}</td></tr>`;
+                return `
+                    <tr>
+                        <td>${escapeHtml(r.coordinator || '')}</td>
+                        <td>${formatComplianceTrendScore(r.workflowYesterday)}</td>
+                        <td>${formatComplianceTrendScore(r.workflowT7)}</td>
+                        <td>${formatComplianceTrendScore(r.workflowT30)}</td>
+                        <td>${formatComplianceTrendScore(r.repclassYesterday)}</td>
+                        <td>${formatComplianceTrendScore(r.repclassT7)}</td>
+                        <td>${formatComplianceTrendScore(r.repclassT30)}</td>
+                    </tr>`;
+            }).join('');
         }
 
         function exportComplianceReportingToExcel() {
             const filters = getComplianceReportingFilters();
-            if (!filters.team) {
-                alert('Select Vended Repair, PM, or Consolidated View before exporting.');
-                return;
-            }
             const rows = globalComplianceReportingRows || [];
-            if (!rows.length) {
+            const dataRows = rows.filter(r => r && r.rowType === 'data');
+            if (!dataRows.length) {
                 alert('No compliance reporting rows are loaded to export. Refresh the report first.');
                 return;
             }
-            const header = ['Date', 'Status', 'Team', 'Coordinator', 'Notes Score', 'Repclass', 'Overall Score', 'Notes Completed', 'Notes Required', 'Repclass Completed', 'Repclass Required', 'Logged At'];
-            const aoa = [header].concat(rows.map(r => [
-                r.reportDate || '',
-                getComplianceSnapshotStatus(r.reportDate) === 'CLOSED_SCORE' ? 'CLOSED SCORE' : 'LIVE',
-                r.team || '',
-                r.coordinator || '',
-                Math.round(Number((r.workflowScore !== undefined ? r.workflowScore : r.notesScore) || 0)) + '%',
-                Math.round(Number(r.repclassScore || 0)) + '%',
-                Math.round(Number(r.overallScore || 0)) + '%',
-                Number(r.notesCompleted || 0),
-                Number(r.notesRequired || 0),
-                Number(r.repclassCompleted || 0),
-                Number(r.repclassRequired || 0),
-                formatComplianceLoggedAt(r.loggedAt)
-            ]));
+            const header = [
+                'Coordinator',
+                'Workflow Compliance Yesterday',
+                'Workflow Compliance T7 Days',
+                'Workflow Compliance T30 Days',
+                'Rep Class Compliance Yesterday',
+                'Rep Class Compliance T7 Days',
+                'Rep Class Compliance T30 Days'
+            ];
+            const aoa = [header];
+            const merges = [];
+            rows.forEach(r => {
+                if (r.rowType === 'section') {
+                    const rowIndex = aoa.length;
+                    aoa.push(['', r.team || '', '', '', '', '', '']);
+                    merges.push({ s: { r: rowIndex, c: 1 }, e: { r: rowIndex, c: 6 } });
+                    return;
+                }
+                if (r.rowType === 'empty') return;
+                aoa.push([
+                    r.coordinator || '',
+                    formatComplianceTrendScoreText(r.workflowYesterday),
+                    formatComplianceTrendScoreText(r.workflowT7),
+                    formatComplianceTrendScoreText(r.workflowT30),
+                    formatComplianceTrendScoreText(r.repclassYesterday),
+                    formatComplianceTrendScoreText(r.repclassT7),
+                    formatComplianceTrendScoreText(r.repclassT30)
+                ]);
+            });
             const ws = XLSX.utils.aoa_to_sheet(aoa);
             ws['!freeze'] = { xSplit: 0, ySplit: 1 };
-            ws['!cols'] = header.map((h, idx) => {
-                const maxLen = Math.max(String(h).length, ...aoa.slice(1).map(row => String(row[idx] == null ? '' : row[idx]).length));
-                return { wch: Math.min(Math.max(maxLen + 2, 12), 28) };
-            });
+            ws['!merges'] = merges;
+            ws['!cols'] = [
+                { wch: 22 }, { wch: 20 }, { wch: 20 }, { wch: 20 }, { wch: 20 }, { wch: 20 }, { wch: 20 }
+            ];
             for (let c = 0; c < header.length; c++) {
                 const cellRef = XLSX.utils.encode_cell({ r: 0, c });
                 if (!ws[cellRef]) continue;
                 ws[cellRef].s = {
-                    font: { bold: true, color: { rgb: 'FFFFFF' } },
+                    font: { bold: true, color: { rgb: 'FFFFFF' }, sz: 11 },
                     fill: { fgColor: { rgb: '1F4E78' } },
-                    alignment: { horizontal: 'center' }
+                    alignment: { horizontal: 'center', vertical: 'center', wrapText: true },
+                    border: {
+                        top: { style: 'thin', color: { rgb: 'D9D9D9' } },
+                        bottom: { style: 'thin', color: { rgb: 'D9D9D9' } },
+                        left: { style: 'thin', color: { rgb: 'D9D9D9' } },
+                        right: { style: 'thin', color: { rgb: 'D9D9D9' } }
+                    }
                 };
             }
+            for (let r = 1; r < aoa.length; r++) {
+                const isSectionRow = merges.some(m => m.s.r === r);
+                for (let c = 0; c < header.length; c++) {
+                    const cellRef = XLSX.utils.encode_cell({ r, c });
+                    if (!ws[cellRef]) ws[cellRef] = { t: 's', v: '' };
+                    ws[cellRef].s = {
+                        font: { bold: isSectionRow || c === 0, sz: isSectionRow ? 14 : 11, color: { rgb: '1F2937' } },
+                        alignment: { horizontal: isSectionRow ? 'center' : (c === 0 ? 'left' : 'center'), vertical: 'center' },
+                        border: {
+                            top: { style: 'thin', color: { rgb: 'D9D9D9' } },
+                            bottom: { style: 'thin', color: { rgb: 'D9D9D9' } },
+                            left: { style: 'thin', color: { rgb: 'D9D9D9' } },
+                            right: { style: 'thin', color: { rgb: 'D9D9D9' } }
+                        }
+                    };
+                    if (isSectionRow) {
+                        ws[cellRef].s.fill = { fgColor: { rgb: 'F8FAFC' } };
+                    } else if (c > 0) {
+                        const fillColor = getComplianceTrendExcelFill(aoa[r][c]);
+                        if (fillColor) ws[cellRef].s.fill = { fgColor: { rgb: fillColor } };
+                    }
+                }
+            }
             const wb = XLSX.utils.book_new();
-            XLSX.utils.book_append_sheet(wb, ws, 'Compliance Reporting');
-            const fileTeam = String(filters.team || '').replace(/[^A-Za-z0-9]+/g, '_').replace(/^_+|_+$/g, '');
-            XLSX.writeFile(wb, `Compliance_Reporting_${fileTeam}_${filters.from}_to_${filters.to}.xlsx`);
+            XLSX.utils.book_append_sheet(wb, ws, 'Compliance Scores');
+            XLSX.writeFile(wb, `OSC_Compliance_Scores_${filters.reportDate}.xlsx`);
         }
 
 
