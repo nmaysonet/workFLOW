@@ -2578,10 +2578,11 @@
         }
 
         function buildDailyComplianceSnapshot(reportDate = getComplianceReportingDateNY()) {
-            const vendedRecords = (vendedOwners || []).map(owner => buildCoordinatorComplianceRecord(owner, 'Vended Repair', reportDate));
-            const pmRecords = (pmOwners || []).map(owner => buildCoordinatorComplianceRecord(owner, 'PM', reportDate));
-            const consolidatedRecords = combineComplianceRecordsByCoordinator(vendedRecords.concat(pmRecords), reportDate);
-            return vendedRecords.concat(pmRecords, consolidatedRecords);
+            // This build is Vended Repair compliance reporting only.
+            // Do not seed/log PM, ERSA, or consolidated compliance rows here.
+            return (vendedOwners || [])
+                .map(owner => buildCoordinatorComplianceRecord(owner, 'Vended Repair', reportDate))
+                .filter(record => record && record.coordinator);
         }
 
         function scheduleComplianceDailySnapshotLog() {
@@ -2742,8 +2743,7 @@
 
         function buildComplianceTrendRows(dateGroups, reportDate) {
             const teamDefinitions = [
-                { team: 'Vended Repair', label: 'Vended Repair' },
-                { team: 'PM', label: 'Preventative Maintenance' }
+                { team: 'Vended Repair', label: 'Vended Repair' }
             ];
             const t7Start = getComplianceTrendWindowStart(reportDate, 7);
             const t30Start = getComplianceTrendWindowStart(reportDate, 30);
@@ -2862,9 +2862,7 @@
             const avgRepYesterday = averageScore(dataRows.map(r => r.repclassYesterday).filter(v => v !== null && v !== undefined));
             const avgRepT7 = averageScore(dataRows.map(r => r.repclassT7).filter(v => v !== null && v !== undefined));
             const vendedCount = dataRows.filter(r => r.team === 'Vended Repair').length;
-            const pmCount = dataRows.filter(r => r.team === 'Preventative Maintenance').length;
             const coordinatorBreakout = [`${vendedCount} Vended Repair`];
-            if (pmCount > 0) coordinatorBreakout.push(`${pmCount} PM`);
             summary.innerHTML = `
                 <div class="compliance-reporting-summary-card"><div class="summary-label">Avg Workflow Yesterday</div><div class="summary-value">${avgWorkflowYesterday}%</div><div class="summary-sub">Current score by selected report date</div></div>
                 <div class="compliance-reporting-summary-card"><div class="summary-label">Avg Workflow T7</div><div class="summary-value">${avgWorkflowT7}%</div><div class="summary-sub">Trailing 7-day average</div></div>
